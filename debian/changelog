@@ -1,18 +1,12 @@
 coq (8.0pl1-1) experimental; urgency=low
 
-  * Finally the version without QPL-licensed files is out,
+  * New upstream release: finally the version without QPL-licensed files is out,
     closes: #230356, #250497.
-  * Build with OCaml 3.08.
+  * Libraries are now in separate packages (coq-libs and coq7-libs).
+  * An additional package provides coqide.
+  * Built with OCaml 3.08.
 
  -- Samuel Mimram <samuel.mimram@ens-lyon.org>  Sun, 18 Jul 2004 01:10:24 +0200
-
-coq (8.0-1) unstable; urgency=low
-
-  * New upstream release.
-  * Libraries are now in separate packages (coq-libs and coq7-libs).
-  * An additionnal package provides coqide.
-
- -- Samuel Mimram <samuel.mimram@ens-lyon.org>  Thu, 15 Jul 2004 17:35:00 +0200
 
 coq (7.3.1-3) unstable; urgency=low
 
