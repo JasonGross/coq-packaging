@@ -68,7 +68,7 @@ install: build
 	install debian/coq.xpm debian/coq/usr/share/pixmaps/coq.xpm
 	install debian/coq.desktop debian/coqide/usr/share/applnk/Development
 
-	dh_install --sourcedir=$(COQPREF) --fail-missing
+	dh_install --sourcedir=$(COQPREF)
 
 binary-indep: build install
 
