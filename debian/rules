@@ -29,7 +29,7 @@ build-stamp:
 	then \
 	  echo opt > best-stamp; \
 	  $(MAKE) world \
-          || (echo WARNING: NATIVE CODE COMPILATION FAILED \
+	  || (echo WARNING: NATIVE CODE COMPILATION FAILED \
 	      && echo Trying to build coq in bytecode instead \
 	      && echo byte > best-stamp \
 	      && $(MAKE) archclean clean \
@@ -38,10 +38,10 @@ build-stamp:
 	      && echo Coq was built in bytecode instead); \
 	else \
 	  echo byte > best-stamp; \
-          $(MAKE) world; \
+	  $(MAKE) world; \
 	fi
 	touch test-suite/success/debian.v8
-	$(MAKE) BEST=$(shell cat best-stamp) check
+	$(MAKE) BEST=`cat best-stamp` check
 	touch build-stamp
 
 clean: unpatch
