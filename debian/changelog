@@ -1,4 +1,4 @@
-coq (8.0pl1-1) experimental; urgency=low
+coq (8.0pl1-1) unstable; urgency=low
 
   * New upstream release: finally the version without QPL-licensed files is out,
     closes: #230356, #250497.
