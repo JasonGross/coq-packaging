@@ -1,6 +1,7 @@
 coq (8.0pl1-3) unstable; urgency=medium
 
   * Added a dependency to ocaml-base-nox when coq is compiled in bytecode.
+  * Added enhaced manpages.
   * Enhanced the short descriptions of the packages.
 
  -- Samuel Mimram <samuel.mimram@ens-lyon.org>  Tue, 17 Aug 2004 20:54:25 +0200

@@ -24,25 +24,24 @@ build-stamp:
 	touch test-suite/success/debian.v8
 	if grep -q BEST=opt config/Makefile; \
 	then \
-		$(MAKE) check \
+		($(MAKE) check \
+		   && touch opt-stamp) \
 		|| (echo WARNING: NATIVE CODE COMPILATION FAILED \
 		   && echo Trying to build coq in bytecode instead \
 		   && $(MAKE) archclean clean \
 		   && touch test-suite/success/debian.v8 \
 		   && $(MAKE) BEST=byte HASCOQIDE=byte check \
-		   && touch byte-stamp \
 		   && echo NATIVE CODE COMPILATION FAILED \
 		   && echo Coq was built in bytecode instead); \
 	else \
-		$(MAKE) check; \
-		touch byte-stamp; \
+		$(MAKE) BEST=byte HASCOQIDE=byte check; \
 	fi
 	touch build-stamp
 
 clean:
 	dh_testdir
 	dh_testroot
-	rm -f build-stamp configure-stamp byte-stamp
+	rm -f build-stamp configure-stamp opt-stamp
 
 	-$(MAKE) clean
 	-$(MAKE) archclean
@@ -58,7 +57,11 @@ install: build
 	dh_clean -k
 	dh_installdirs
 
-	$(MAKE) $(ADDPREF) install || $(MAKE) BEST=byte HASCOQIDE=byte $(ADDPREF) install
+	if [ -e opt-stamp ]; then \
+		$(MAKE) $(ADDPREF) install; \
+	else \
+		$(MAKE) BEST=byte HASCOQIDE=byte $(ADDPREF) install; \
+	fi
 
 	-for i in $(COQPREF)/usr/bin/*.opt; do \
 		echo "Stripping: $$i"; \
@@ -69,10 +72,19 @@ install: build
 
 	dh_install --sourcedir=$(COQPREF)
 
-	cp debian/coq/usr/share/man/man1/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.opt.1
+	#TODO: change lib_ide to /usr/share/coqide
+	cp ide/index_urls.txt debian/coqide/usr/lib/coq/ide/index_urls.txt
+	if [ -e opt-stamp ]; then \
+		cp debian/coq/usr/share/man/man1/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.opt.1; \
+		cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.opt.1; \
+	fi
 	cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.1
 	cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.byte.1
-	cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.opt.1
+	cp debian/coqc.1 debian/coq/usr/share/man/man1/coqc.1
+	cp debian/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.1
+	cp debian/coq_makefile.1 debian/coq/usr/share/man/man1/coq_makefile.1
+	cp debian/coqmktop.1 debian/coq/usr/share/man/man1/coqmktop.1
+	cp debian/coqtop.1 debian/coq/usr/share/man/man1/coqtop.1
 
 binary-indep: build install
 
@@ -87,10 +99,10 @@ binary-arch: build install
 	dh_fixperms
 	dh_installdeb
 	dh_shlibdeps
-	if [ -e byte-stamp ]; then \
-		dh_gencontrol -pcoq -u-Vocaml:Runtime="ocaml-base-nox"; \
-	else \
+	if [ -e opt-stamp ]; then \
 		dh_gencontrol -pcoq -u-Vocaml:Runtime=""; \
+	else \
+		dh_gencontrol -pcoq -u-Vocaml:Runtime="ocaml-base-nox-3.08"; \
 	fi
 	dh_gencontrol -pcoqide
 	dh_gencontrol -pcoq-libs
