@@ -16,7 +16,6 @@ configure-stamp:
 	else \
 		./configure $(CONFIGUREOPTS); \
 	fi
-	if [ $(DEB_BUILD_ARCH) = powerpc ]; then ./configure $(CONFIGUREOPTS); fi
 	touch configure-stamp
 
 build: configure-stamp build-stamp
