@@ -24,23 +24,25 @@ build-stamp:
 	touch test-suite/success/debian.v8
 	if grep -q BEST=opt config/Makefile; \
 	then \
-	  $(MAKE) check \
-	  || (echo WARNING: NATIVE CODE COMPILATION FAILED \
-	      && echo Trying to build coq in bytecode instead \
-	      && $(MAKE) archclean clean \
-	      && touch test-suite/success/debian.v8 \
-	      && $(MAKE) BEST=byte HASCOQIDE=byte check \
-	      && echo NATIVE CODE COMPILATION FAILED \
-	      && echo Coq was built in bytecode instead); \
+		$(MAKE) check \
+		|| (echo WARNING: NATIVE CODE COMPILATION FAILED \
+		   && echo Trying to build coq in bytecode instead \
+		   && $(MAKE) archclean clean \
+		   && touch test-suite/success/debian.v8 \
+		   && $(MAKE) BEST=byte HASCOQIDE=byte check \
+		   && touch byte-stamp \
+		   && echo NATIVE CODE COMPILATION FAILED \
+		   && echo Coq was built in bytecode instead); \
 	else \
-	  $(MAKE) check; \
+		$(MAKE) check; \
+		touch byte-stamp; \
 	fi
 	touch build-stamp
 
 clean:
 	dh_testdir
 	dh_testroot
-	rm -f build-stamp configure-stamp
+	rm -f build-stamp configure-stamp byte-stamp
 
 	-$(MAKE) clean
 	-$(MAKE) archclean
@@ -85,7 +87,14 @@ binary-arch: build install
 	dh_fixperms
 	dh_installdeb
 	dh_shlibdeps
-	dh_gencontrol
+	if [ -e byte-stamp ]; then \
+		dh_gencontrol -pcoq -u-Vocaml:Runtime="ocaml-base-nox"; \
+	else \
+		dh_gencontrol -pcoq -u-Vocaml:Runtime=""; \
+	fi
+	dh_gencontrol -pcoqide
+	dh_gencontrol -pcoq-libs
+	dh_gencontrol -pcoq7-libs
 	dh_md5sums
 	dh_builddeb
 
