@@ -27,14 +27,8 @@ configure-stamp: patch
 build: patch-stamp configure-stamp build-stamp
 build-stamp:
 	dh_testdir
-#	if grep -q BEST=opt config/Makefile; \
-#	then ($(MAKEQ) bin/coqmktop bin/coqc bin/coqtop.byte \
-#	      && $(MAKEQ) bin/coqmktop bin/coqc bin/coqtop.byte \
-#	      && $(MAKEQ) bin/coqtop.opt bin/coqtop \
-#	      && $(MAKEQ) states \
-#	      && $(MAKEQ) world ) \
 	if grep -q BEST=opt config/Makefile; \
-	then ($(MAKE) world) \
+	then $(MAKE) world \
          || (echo WARNING: NATIVE CODE COMPILATION FAILED \
 	    && echo Trying to build coq in bytecode instead \
 	    && $(MAKE) archclean clean \
