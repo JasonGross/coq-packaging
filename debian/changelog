@@ -1,3 +1,10 @@
+coq (8.0pl1-1) unstable; urgency=low
+
+  * At least the version without QPL-licensed files is out,
+    closes: #230356, #250497.
+
+ -- Samuel Mimram <samuel.mimram@ens-lyon.org>  Sun, 18 Jul 2004 01:10:24 +0200
+
 coq (8.0-1) unstable; urgency=low
 
   * New upstream release.
