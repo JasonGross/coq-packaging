@@ -7,8 +7,6 @@ include /usr/share/dpatch/dpatch.make
 COQPREF=$(CURDIR)/debian/tmp
 ADDPREF=COQINSTALLPREFIX=$(COQPREF)
 
-MAKEQ=$(MAKE) -q
-
 CONFIGUREOPTS=--prefix /usr --mandir /usr/share/man \
 	--emacslib /usr/share/emacs/site-lisp/coq --reals all
 
@@ -28,17 +26,22 @@ build: patch-stamp configure-stamp build-stamp
 build-stamp:
 	dh_testdir
 	if grep -q BEST=opt config/Makefile; \
-	then $(MAKE) world \
-         || (echo WARNING: NATIVE CODE COMPILATION FAILED \
-	    && echo Trying to build coq in bytecode instead \
-	    && $(MAKE) archclean clean \
-	    && $(MAKE) BEST=byte world \
-	    && echo NATIVE CODE COMPILATION FAILED \
-	    && echo Coq was built in bytecode instead); \
-	else $(MAKE) world; \
-	fi
-	touch test-suite/success/debian.v8
-	$(MAKE) check
+	then \
+	  export BEST=opt; \
+	  $(MAKE) world \
+          || (echo WARNING: NATIVE CODE COMPILATION FAILED \
+	      && echo Trying to build coq in bytecode instead \
+	      && export BEST=byte \
+	      && $(MAKE) archclean clean \
+	      && $(MAKE) BEST=byte world \
+	      && echo NATIVE CODE COMPILATION FAILED \
+	      && echo Coq was built in bytecode instead); \
+	else \
+	  export BEST=byte; \
+          $(MAKE) world; \
+	fi; \
+	touch test-suite/success/debian.v8; \
+	$(MAKE) BEST=$$BEST check
 	touch build-stamp
 
 clean: unpatch
