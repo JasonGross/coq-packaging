@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inductiveops.mli,v 1.10.2.1 2004/07/16 19:30:45 herbelin Exp $ *)
+(*i $Id: inductiveops.mli,v 1.10.2.3 2005/01/21 17:19:37 herbelin Exp $ i*)
 
 open Names
 open Term
@@ -66,7 +66,7 @@ val make_arity_signature :
 val make_arity : env -> bool -> inductive_family -> sorts -> types
 val build_branch_type : env -> bool -> constr -> constructor_summary -> types
 
-(* Raise Not_found if not given an valid inductive type *)
+(* Raise [Not_found] if not given an valid inductive type *)
 val extract_mrectype : constr -> inductive * constr list
 val find_mrectype    : env -> evar_map -> constr -> inductive * constr list
 val find_rectype     : env -> evar_map -> constr -> inductive_type

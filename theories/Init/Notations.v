@@ -6,11 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Notations.v,v 1.24.2.1 2004/07/16 19:31:03 herbelin Exp $ i*)
+(*i $Id: Notations.v,v 1.24.2.2 2004/08/01 09:36:44 herbelin Exp $ i*)
 
-(** These are the notations whose level and associativity is imposed by Coq *)
+(** These are the notations whose level and associativity are imposed by Coq *)
 
-(** Notations for logical connectives *)
+(** Notations for propositional connectives *)
 
 Reserved Notation "x <-> y" (at level 95, no associativity).
 Reserved Notation "x /\ y" (at level 80, right associativity).

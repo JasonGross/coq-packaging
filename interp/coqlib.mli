@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqlib.mli,v 1.5.2.1 2004/07/16 19:30:22 herbelin Exp $ *)
+(*i $Id: coqlib.mli,v 1.5.2.3 2005/01/21 17:14:10 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -80,7 +80,7 @@ val build_coq_eq_data : coq_leibniz_eq_data delayed
 val build_coq_eqT_data : coq_leibniz_eq_data delayed
 val build_coq_idT_data : coq_leibniz_eq_data delayed
 
-val build_coq_eq : constr delayed (* = (build_coq_eq_data()).eq *)
+val build_coq_eq : constr delayed (* = [(build_coq_eq_data()).eq] *)
 val build_coq_f_equal2 : constr delayed
 val build_coq_eqT : constr delayed
 val build_coq_sym_eqT : constr delayed

@@ -1,4 +1,3 @@
-
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -7,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: refiner.mli,v 1.31.2.1 2004/07/16 19:30:49 herbelin Exp $ i*)
+(*i $Id: refiner.mli,v 1.31.2.2 2005/01/21 16:41:51 herbelin Exp $ i*)
 
 (*i*)
 open Term

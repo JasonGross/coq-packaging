@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_natsyntax.ml,v 1.19.2.1 2004/07/16 19:30:39 herbelin Exp $ *)
+(* $Id: g_natsyntax.ml,v 1.19.2.2 2004/09/08 13:47:51 herbelin Exp $ *)
 
 (* This file to allow writing (3) for (S (S (S O))) 
    and still write (S y) for (S y) *)
@@ -125,7 +125,7 @@ let nat_of_int dloc n =
   match n with
   | POS n ->
       if less_than (of_string "5000") n & Options.is_verbose () then begin
-	warning ("You may experiment stack overflow and segmentation fault\
+	warning ("You may experience stack overflow and segmentation fault\
                   \nwhile parsing numbers in nat greater than 5000");
 	flush_all ()
       end;

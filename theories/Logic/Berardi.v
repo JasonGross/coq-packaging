@@ -6,11 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Berardi.v,v 1.5.2.1 2004/07/16 19:31:06 herbelin Exp $ i*)
+(*i $Id: Berardi.v,v 1.5.2.2 2004/08/03 17:42:43 herbelin Exp $ i*)
 
 (** This file formalizes Berardi's paradox which says that in
    the calculus of constructions, excluded middle (EM) and axiom of
-   choice (AC) implie proof irrelevenace (PI).
+   choice (AC) imply proof irrelevance (PI).
    Here, the axiom of choice is not necessary because of the use
    of inductive types.
 <<

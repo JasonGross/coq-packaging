@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libobject.mli,v 1.9.8.1 2004/07/16 19:30:35 herbelin Exp $ i*)
+(*i $Id: libobject.mli,v 1.9.8.2 2005/01/21 16:41:51 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -39,7 +39,7 @@ open Libnames
      Keep      - the object is not substitutive, but survives module 
                  closing
      Anticipate - this is for objects which have to be explicitely 
-                 managed by the end_module function (like Require 
+                 managed by the [end_module] function (like Require 
                  and Read markers)
 
      The classification function is also an occasion for a cleanup

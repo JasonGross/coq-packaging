@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: rawterm.ml,v 1.43.2.2 2004/07/16 19:30:46 herbelin Exp $ *)
+(* $Id: rawterm.ml,v 1.43.2.4 2004/12/29 10:17:10 herbelin Exp $ *)
 
 (*i*)
 open Util
@@ -49,7 +49,7 @@ type 'a bindings =
 type 'a with_bindings = 'a * 'a bindings
 
 type hole_kind =
-  | ImplicitArg of global_reference * int
+  | ImplicitArg of global_reference * (int * identifier option)
   | BinderType of name
   | QuestionMark
   | CasesType
@@ -356,7 +356,7 @@ type ('a,'b) red_expr_gen =
   | Unfold of 'b occurrences list
   | Fold of 'a list
   | Pattern of 'a occurrences list
-  | ExtraRedExpr of string * 'a
+  | ExtraRedExpr of string
 
 type ('a,'b) may_eval =
   | ConstrTerm of 'a

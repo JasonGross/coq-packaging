@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq_makefile.ml4,v 1.16.2.1 2004/07/16 19:31:45 herbelin Exp $ *)
+(* $Id: coq_makefile.ml4,v 1.16.2.4 2005/01/12 16:00:19 sacerdot Exp $ *)
 
 (* créer un Makefile pour un développement Coq automatiquement *)
 
@@ -81,7 +81,7 @@ coq_makefile [subdirectory] .... [file.v] ... [file.ml] ... [-custom
 
 let standard sds =
   print "byte:\n";
-  print "\t$(MAKE) all \"OPT=\"\n\n";
+  print "\t$(MAKE) all \"OPT=-byte\"\n\n";
   print "opt:\n";
   if !opt = "" then print "\t@echo \"WARNING: opt is disabled\"\n";
   print "\t$(MAKE) all \"OPT="; print !opt; print "\"\n\n";
@@ -89,8 +89,8 @@ let standard sds =
   print ".depend depend:\n";
   if !some_file then begin
     print "\trm -f .depend\n";
-    print "\t$(COQDEP) -i $(COQLIBS) *.v *.ml *.mli >.depend\n";
-    print "\t$(COQDEP) $(COQLIBS) -suffix .html *.v >>.depend\n";
+    print "\t$(COQDEP) -i $(COQLIBS) $(VFILES) *.ml *.mli >.depend\n";
+    print "\t$(COQDEP) $(COQLIBS) -suffix .html $(VFILES) >>.depend\n";
   end;
   List.iter
     (fun x -> print "\t(cd "; print x; print " ; $(MAKE) depend)\n")
@@ -98,7 +98,7 @@ let standard sds =
   print "\n";
   print "install:\n";
   print "\tmkdir -p `$(COQC) -where`/user-contrib\n";
-  if !some_vfile then print "\tcp -f *.vo `$(COQC) -where`/user-contrib\n";
+  if !some_vfile then print "\tcp -f $(VOFILES) `$(COQC) -where`/user-contrib\n";
   if !some_mlfile then print "\tcp -f *.cmo `$(COQC) -where`/user-contrib\n";
   List.iter
     (fun x -> print "\t(cd "; print x; print " ; $(MAKE) install)\n")
@@ -115,7 +115,7 @@ let standard sds =
     print "\n";
   end;
   print "clean:\n";
-  print "\trm -f *.cmo *.cmi *.cmx *.o *.vo *.vi *.g *~\n";
+  print "\trm -f *.cmo *.cmi *.cmx *.o $(VOFILES) $(VIFILES) $(GFILES) *~\n";
   print "\trm -f all.ps all-gal.ps $(HTMLFILES) $(GHTMLFILES)\n";
   List.iter
     (fun x -> print "\t(cd "; print x; print " ; $(MAKE) clean)\n")

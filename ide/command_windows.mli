@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: command_windows.mli,v 1.1.2.1 2004/07/16 19:30:19 herbelin Exp $ *)
+(*i $Id: command_windows.mli,v 1.1.2.2 2005/01/21 17:21:33 herbelin Exp $ i*)
 
 class command_window :
   unit ->

@@ -6,10 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: egrammar.ml,v 1.48.2.1 2004/07/16 19:30:37 herbelin Exp $ *)
+(* $Id: egrammar.ml,v 1.48.2.3 2004/11/26 19:37:59 herbelin Exp $ *)
 
 open Pp
 open Util
+open Ppextend
 open Extend
 open Pcoq
 open Topconstr
@@ -20,10 +21,11 @@ open Nameops
 
 (* State of the grammar extensions *)
 
+type notation_grammar = 
+    int * Gramext.g_assoc option * notation * prod_item list * int list option
+
 type all_grammar_command =
-  | Notation of
-      (int * Gramext.g_assoc option * notation * prod_item list *
-      int list option)
+  | Notation of (precedence * tolerability list) * notation_grammar
   | Grammar of grammar_command
   | TacticGrammar of
       (string * (string * grammar_production list) * 
@@ -415,7 +417,7 @@ let add_tactic_entries gl =
 
 let extend_grammar gram =
   (match gram with
-  | Notation a -> extend_constr_notation a
+  | Notation (_,a) -> extend_constr_notation a
   | Grammar g -> extend_grammar_rules g
   | TacticGrammar l -> add_tactic_entries l);
   grammar_state := gram :: !grammar_state
@@ -428,6 +430,12 @@ let reset_extend_grammars_v8 () =
   List.iter (fun (s,gl) -> extend_tactic_grammar s gl) te;
   List.iter (fun (s,gl) -> extend_vernac_command_grammar s gl) tv
 
+let recover_notation_grammar ntn prec =
+  let l = map_succeed (function
+    | Notation (prec',(_,_,ntn',_,_ as x)) when prec = prec' & ntn = ntn' -> x
+    | _ -> failwith "") !grammar_state in
+  assert (List.length l = 1);
+  List.hd l
 
 (* Summary functions: the state of the lexer is included in that of the parser.
    Because the grammar affects the set of keywords when adding or removing

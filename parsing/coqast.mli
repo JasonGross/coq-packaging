@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coqast.mli,v 1.10.6.1 2004/07/16 19:30:37 herbelin Exp $ i*)
+(*i $Id: coqast.mli,v 1.10.6.2 2005/01/21 16:42:36 herbelin Exp $ i*)
 
 (*i*)
 open Util
@@ -43,9 +43,9 @@ val hcons_ast:
 
 val subst_ast: Names.substitution -> t -> t
 
-(*
+(*i
 val map_tactic_expr : (t -> t) -> (tactic_expr -> tactic_expr) -> tactic_expr -> tactic_expr
 val fold_tactic_expr :
   ('a -> t -> 'a) -> ('a -> tactic_expr -> 'a) -> 'a -> tactic_expr -> 'a
 val iter_tactic_expr : (tactic_expr -> unit) -> tactic_expr -> unit
-*)
+i*)

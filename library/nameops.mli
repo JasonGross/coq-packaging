@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: nameops.mli,v 1.12.2.1 2004/07/16 19:30:36 herbelin Exp $ *)
+(*i $Id: nameops.mli,v 1.12.2.3 2005/01/21 17:14:10 herbelin Exp $ i*)
 
 open Names
 
@@ -18,7 +18,7 @@ val make_ident : string -> int option -> identifier
 val repr_ident : identifier -> string * int option
 
 val atompart_of_id : identifier -> string  (* remove trailing digits *)
-val root_of_id : identifier -> identifier (* remove trailing digits, ' and _ *)
+val root_of_id : identifier -> identifier (* remove trailing digits, $'$ and $\_$ *)
 
 val add_suffix : identifier -> string -> identifier
 val add_prefix : string -> identifier -> identifier

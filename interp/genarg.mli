@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: genarg.mli,v 1.9.2.1 2004/07/16 19:30:22 herbelin Exp $ *)
+(*i $Id: genarg.mli,v 1.9.2.4 2005/01/21 17:14:10 herbelin Exp $ i*)
 
 open Util
 open Names
@@ -19,14 +19,14 @@ open Term
 type 'a or_var = ArgArg of 'a | ArgVar of identifier located
 type 'a and_short_name = 'a * identifier located option
 
-(* In globalize tactics, we need to keep the initial constr_expr to recompute*)
+(* In globalize tactics, we need to keep the initial [constr_expr] to recompute*)
 (* in the environment by the effective calls to Intro, Inversion, etc *)
-(* The constr_expr field is None in TacDef though *)
+(* The [constr_expr] field is [None] in TacDef though *)
 type rawconstr_and_expr = rawconstr * constr_expr option
 
 type open_constr = Evd.evar_map * Term.constr
-type open_constr_expr = constr_expr
-type open_rawconstr = rawconstr_and_expr
+type open_constr_expr = unit * constr_expr
+type open_rawconstr = unit * rawconstr_and_expr
 
 type intro_pattern_expr =
   | IntroOrAndPattern of case_intro_pattern_expr
@@ -39,6 +39,7 @@ val pr_case_intro_pattern : case_intro_pattern_expr -> Pp.std_ppcmds
 
 (* The route of a generic argument, from parsing to evaluation
 
+\begin{verbatim}
               parsing        in_raw                           out_raw
     char stream ----> rawtype ----> rawconstr generic_argument ---->
                                                                    |
@@ -46,16 +47,18 @@ val pr_case_intro_pattern : case_intro_pattern_expr -> Pp.std_ppcmds
                                                                    V
                           type  <---- constr generic_argument  <----
                                   out                            in
+\end{verbatim}
 
 To distinguish between the uninterpreted (raw) and the interpreted
-worlds, we annotate the type generic_argument by a phantom argument
-which is either constr_expr or constr (actually we add also a second
-argument raw_tactic_expr and tactic, but this is only for technical
+worlds, we annotate the type [generic_argument] by a phantom argument
+which is either [constr_expr] or [constr] (actually we add also a second
+argument [raw_tactic_expr] and [tactic], but this is only for technical
 reasons, because these types are undefined at the type of compilation
-of Genarg).
+of [Genarg]).
 
 Transformation for each type :
-tag   f                          raw open type          cooked closed type
+\begin{verbatim}
+tag                            raw open type            cooked closed type
 
 BoolArgType                    bool                     bool
 IntArgType                     int                      int
@@ -70,12 +73,13 @@ ConstrArgType                  constr_expr              constr
 ConstrMayEvalArgType           constr_expr may_eval     constr
 QuantHypArgType                quantified_hypothesis    quantified_hypothesis
 TacticArgType                  raw_tactic_expr          tactic
-CastedOpenConstrArgType        constr_expr              open_constr
+OpenConstrArgType              constr_expr              open_constr
 ConstrBindingsArgType      constr_expr with_bindings constr with_bindings
 List0ArgType of argument_type
 List1ArgType of argument_type
 OptArgType of argument_type
 ExtraArgType of string         '_a                      '_b
+\end{verbatim}
 *)
 
 type ('a,'co,'ta) abstract_argument_type
@@ -132,6 +136,10 @@ val rawwit_constr_may_eval : ((constr_expr,reference) may_eval,constr_expr,'ta) 
 val globwit_constr_may_eval : ((rawconstr_and_expr,evaluable_global_reference and_short_name or_var) may_eval,rawconstr_and_expr,'ta) abstract_argument_type
 val wit_constr_may_eval : (constr,constr,'ta) abstract_argument_type
 
+val rawwit_open_constr : (open_constr_expr,constr_expr,'ta) abstract_argument_type
+val globwit_open_constr : (open_rawconstr,rawconstr_and_expr,'ta) abstract_argument_type
+val wit_open_constr : (open_constr,constr,'ta) abstract_argument_type
+
 val rawwit_casted_open_constr : (open_constr_expr,constr_expr,'ta) abstract_argument_type
 val globwit_casted_open_constr : (open_rawconstr,rawconstr_and_expr,'ta) abstract_argument_type
 val wit_casted_open_constr : (open_constr,constr,'ta) abstract_argument_type
@@ -167,7 +175,7 @@ val wit_pair :
   ('b,'co,'ta) abstract_argument_type ->
       ('a * 'b,'co,'ta) abstract_argument_type
 
-(* 'a generic_argument = (Sigma t:type. t[constr/'a]) *)
+(* ['a generic_argument] = (Sigma t:type. t[[constr/'a]]) *)
 type ('a,'b) generic_argument
 
 val fold_list0 : 
@@ -227,6 +235,7 @@ type argument_type =
   | ConstrMayEvalArgType
   | QuantHypArgType
   | TacticArgType
+  | OpenConstrArgType
   | CastedOpenConstrArgType
   | ConstrWithBindingsArgType
   | BindingsArgType
@@ -247,7 +256,7 @@ val unquote : ('a,'co,'ta) abstract_argument_type -> argument_type
 
    with f a = b if a is Constr, f a = c if a is Tactic, otherwise f a = |a|
 
-   in_generic is not typable; we replace the second argument by an absurd
+   [in_generic] is not typable; we replace the second argument by an absurd
    type (with no introduction rule)
 *)
 type an_arg_of_this_type

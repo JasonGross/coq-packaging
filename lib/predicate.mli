@@ -1,5 +1,5 @@
 
-(* $Id: predicate.mli,v 1.1 2001/09/20 18:10:43 barras Exp $ *)
+(*i $Id: predicate.mli,v 1.1.14.1 2005/01/21 17:14:11 herbelin Exp $ i*)
 
 (* Module [Pred]: sets over infinite ordered types with complement. *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacmach.mli,v 1.50.2.1 2004/07/16 19:30:50 herbelin Exp $ i*)
+(*i $Id: tacmach.mli,v 1.50.2.2 2005/01/21 16:41:52 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -120,9 +120,9 @@ val top_of_tree             : pftreestate -> pftreestate
 val change_constraints_pftreestate :
   evar_map -> pftreestate -> pftreestate
 
-(*
+(*i
 val vernac_tactic : string * tactic_arg list -> tactic
-*)
+i*)
 (*s The most primitive tactics. *)
 
 val refiner                   : rule -> tactic

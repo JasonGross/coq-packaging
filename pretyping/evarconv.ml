@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evarconv.ml,v 1.44.6.1 2004/07/16 19:30:44 herbelin Exp $ *)
+(* $Id: evarconv.ml,v 1.44.6.2 2004/11/26 23:51:39 herbelin Exp $ *)
 
 open Util
 open Names
@@ -39,8 +39,11 @@ let flex_kind_of_term c l =
 let eval_flexible_term env c =
   match kind_of_term c with
   | Const c -> constant_opt_value env c
-  | Rel n -> let (_,v,_) = lookup_rel n env in option_app (lift n) v
-  | Var id -> let (_,v,_) = lookup_named id env in v
+  | Rel n ->
+      (try let (_,v,_) = lookup_rel n env in option_app (lift n) v
+      with Not_found -> None)
+  | Var id ->
+      (try let (_,v,_) = lookup_named id env in v with Not_found -> None)
   | LetIn (_,b,_,c) -> Some (subst1 b c)
   | Lambda _ -> Some c
   | _ -> assert false

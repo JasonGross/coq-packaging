@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqc.ml,v 1.25.2.1 2004/07/16 19:30:50 herbelin Exp $ *)
+(* $Id: coqc.ml,v 1.25.2.3 2004/09/04 10:34:56 herbelin Exp $ *)
 
 (* Afin de rendre Coq plus portable, ce programme Caml remplace le script
    coqc. 
@@ -130,8 +130,15 @@ let parse_args () =
 	image := f; parse (cfiles,args) rem
     | "-image" :: [] ->
 	usage ()
+    | "-libdir" :: _ :: rem ->
+        print_string "Warning: option -libdir deprecated\n"; flush stdout;
+        parse (cfiles,args) rem
+    | ("-db"|"-debugger") :: rem ->
+        print_string "Warning: option -db/-debugger deprecated\n";flush stdout;
+        parse (cfiles,args) rem
+
     | ("-?"|"-h"|"-H"|"-help"|"--help") :: _ -> usage ()
-    | ("-libdir"|"-I"|"-include"|"-outputstate"
+    | ("-I"|"-include"|"-outputstate"
       |"-inputstate"|"-is"|"-load-vernac-source"|"-l"|"-load-vernac-object"
       |"-load-ml-source"|"-require"|"-load-ml-object"|"-user"
       |"-init-file"|"-dump-glob" as o) :: rem ->
@@ -141,7 +148,7 @@ let parse_args () =
 	    | []        -> usage ()
 	end
     | "-R" as o :: s :: t :: rem -> parse (cfiles,t::s::o::args) rem
-    | ("-notactics"|"-debug"|"-db"|"-debugger"|"-nolib"|"-batch"|"-nois"
+    | ("-notactics"|"-debug"|"-nolib"|"-batch"|"-nois"
       |"-q"|"-full"|"-profile"|"-just-parsing"|"-echo" |"-unsafe"|"-quiet"
       |"-silent"|"-m"|"-xml"|"-v7"|"-v8"|"-translate"|"-strict-implicit"
       |"-dont-load-proofs"|"-impredicative-set" as o) :: rem ->

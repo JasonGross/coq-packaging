@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: lib.ml,v 1.63.2.2 2004/07/16 19:30:35 herbelin Exp $ *)
+(* $Id: lib.ml,v 1.63.2.3 2004/11/22 14:21:23 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -564,3 +564,15 @@ let library_part ref =
       else
 	(* Theorem/Lemma outside its outer section of definition *)
 	dir
+
+
+let rec file_of_mp = function
+  | MPfile dir -> Some dir
+  | MPself _ -> Some (library_dp ())
+  | MPbound _ -> None
+  | MPdot (mp,_) -> file_of_mp mp
+
+let file_part = function
+  | VarRef id -> anomaly "TODO";
+  | ConstRef kn | ConstructRef ((kn,_),_) | IndRef (kn,_) -> 
+      file_of_mp (modpath kn)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ZArith.v,v 1.5.2.1 2004/07/16 19:31:20 herbelin Exp $ i*)
+(*i $Id: ZArith.v,v 1.5.2.2 2004/08/03 17:56:30 herbelin Exp $ i*)
 
 (** Library for manipulating integers based on binary encoding *)
 
@@ -19,4 +19,3 @@ Require Export Zsqrt.
 Require Export Zpower.
 Require Export Zdiv.
 Require Export Zlogarithm.
-Require Export Zbool.

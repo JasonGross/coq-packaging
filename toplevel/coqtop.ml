@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqtop.ml,v 1.72.2.3 2004/07/16 19:31:47 herbelin Exp $ *)
+(* $Id: coqtop.ml,v 1.72.2.4 2004/09/03 15:05:23 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -68,7 +68,7 @@ let set_outputstate s = outputstate:=s
 let outputstate () = if !outputstate <> "" then extern_state !outputstate
 
 let check_coq_overwriting p = 
-  if string_of_id (List.hd (repr_dirpath p)) = "Coq" then
+  if string_of_id (list_last (repr_dirpath p)) = "Coq" then
     error "The \"Coq\" logical root directory is reserved for the Coq library"
 
 let set_include d p = push_include (d,p)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: conv_oracle.mli,v 1.3.8.2 2004/07/16 19:30:24 herbelin Exp $ *)
+(*i $Id: conv_oracle.mli,v 1.3.8.3 2005/01/21 17:14:10 herbelin Exp $ i*)
 
 open Names
 open Closure

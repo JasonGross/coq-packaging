@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: inductive.mli,v 1.57.8.1 2004/07/16 19:30:25 herbelin Exp $ i*)
+(*i $Id: inductive.mli,v 1.57.8.2 2005/01/21 16:41:49 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -62,7 +62,7 @@ val type_case_branches :
    given inductive type. *)
 val check_case_info : env -> inductive -> case_info -> unit
 
-(* Find the ultimate inductive in the mind_equiv chain *)
+(* Find the ultimate inductive in the [mind_equiv] chain *)
 
 val scrape_mind : env -> mutual_inductive -> mutual_inductive
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppvernacnew.ml,v 1.95.2.2 2004/07/16 20:48:17 herbelin Exp $ *)  
+(* $Id: ppvernacnew.ml,v 1.95.2.3 2004/10/12 10:10:29 herbelin Exp $ *)  
 
 open Pp
 open Names
@@ -622,7 +622,7 @@ let rec pr_vernac = function
       hov 1 (pr_thm_token ki ++ spc() ++ pr_lident id ++ spc() ++
       (match bl with
         | [] -> mt()
-        | _ -> error "Statements with local binders no longer supported")
+        | _ -> pr_binders bl ++ spc())
       ++ str":" ++ pr_spc_type (rename_bound_variables (snd id) c))
   | VernacEndProof Admitted -> str"Admitted"
   | VernacEndProof (Proved (opac,o)) -> (match o with

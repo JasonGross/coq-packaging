@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(* $Id: pptacticnew.mli,v 1.6.2.1 2004/07/16 19:31:52 herbelin Exp $ *)
+(*i $Id: pptacticnew.mli,v 1.6.2.3 2005/01/21 17:17:20 herbelin Exp $ i*)
 
 open Pp
 open Genarg
@@ -16,6 +16,8 @@ open Topconstr
 open Names
 
 val qsnew : string -> std_ppcmds
+
+val pr_intro_pattern : intro_pattern_expr -> std_ppcmds
 
 val pr_raw_tactic : Environ.env -> raw_tactic_expr -> std_ppcmds
  

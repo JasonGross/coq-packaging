@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evarutil.ml,v 1.64.2.3 2004/07/16 19:30:44 herbelin Exp $ *)
+(* $Id: evarutil.ml,v 1.64.2.5 2004/12/09 14:45:38 herbelin Exp $ *)
 
 open Util
 open Pp
@@ -29,25 +29,6 @@ let rec filter_unique = function
   | x::l ->
       if List.mem x l then filter_unique (List.filter (fun y -> x<>y) l)
       else x::filter_unique l
-
-(*
-let distinct_id_list = 
-  let rec drec fresh = function
-      [] -> List.rev fresh 
-    | id::rest ->
- 	let id' = next_ident_away_from id fresh in drec (id'::fresh) rest
-  in drec []
-*)
-
-(*
-let filter_sign p sign x =
-  sign_it
-    (fun id ty (v,ids,sgn) ->
-      let (disc,v') = p v (id,ty) in
-      if disc then (v', id::ids, sgn) else (v', ids, add_sign (id,ty) sgn))
-    sign
-    (x,[],nil_sign)
-*)
 
 (* Expanding existential variables (pretyping.ml) *)
 (* 1- whd_ise fails if an existential is undefined *)
@@ -183,20 +164,9 @@ let do_restrict_hyps sigma ev args =
   let evd = Evd.map sigma ev in
   let env = evar_env evd in
   let hyps = evd.evar_hyps in
-  let (_,(rsign,ncargs)) =
-    List.fold_left 
-      (fun (sign,(rs,na)) a ->
-	 (List.tl sign,
-	  if not(closed0 a) then 
-	    (rs,na)
-	  else 
-	    (add_named_decl (List.hd sign) rs, a::na)))
-      (hyps,([],[])) args 
-  in
-  let sign' = List.rev rsign in
-  let env' = reset_with_named_context sign' env in
-  let instance = make_evar_instance env' in
-  let (sigma',nc) = new_isevar_sign env' sigma evd.evar_concl instance in
+  let (sign,ncargs) = list_filter2 (fun _ a -> closed0 a) (hyps,args) in
+  let env' = reset_with_named_context sign env in
+  let (sigma',nc) = new_isevar_sign env' sigma evd.evar_concl ncargs in
   let nc = refresh_universes nc in (* needed only if nc is an inferred type *)
   let sigma'' = Evd.define sigma' ev nc in
   (sigma'', nc)

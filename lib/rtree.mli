@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: rtree.mli,v 1.2.8.1 2004/07/16 19:30:31 herbelin Exp $ i*)
+(*i $Id: rtree.mli,v 1.2.8.2 2005/01/21 16:41:52 herbelin Exp $ i*)
 
 (* Type of regular tree with nodes labelled by values of type 'a *)
 type 'a t
@@ -20,7 +20,7 @@ val mk_node  : 'a -> 'a t array -> 'a t
 val mk_rec   : 'a t array -> 'a t array
 
 (* [lift k t] increases of [k] the free parameters of [t]. Needed
-   to avoid captures when a tree appears under mk_rec *) 
+   to avoid captures when a tree appears under [mk_rec] *) 
 val lift : int -> 'a t -> 'a t
 
 val map : ('a -> 'b) -> 'a t -> 'b t

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: matching.mli,v 1.3.2.1 2004/07/16 19:30:45 herbelin Exp $ i*)
+(*i $Id: matching.mli,v 1.3.2.2 2005/01/21 16:42:37 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -42,7 +42,7 @@ val matches_conv :env -> Evd.evar_map -> constr_pattern -> constr -> patvar_map
 (* To skip to the next occurrence *)
 exception NextOccurrence of int
 
-(* Tries to match a _closed_ subterm of [c] with [pat] *)
+(* Tries to match a **closed** subterm of [c] with [pat] *)
 val sub_match : int -> constr_pattern -> constr -> patvar_map * constr
 
 (* [is_matching_conv env sigma pat c] tells if [c] matches against [pat]

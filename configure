@@ -6,8 +6,8 @@
 # 
 ##################################
 
-VERSION=8.0pl1
-DATE="Jul 2004"
+VERSION=8.0pl2
+DATE="Jan 2005"
 
 # a local which command for sh
 which () {
@@ -539,4 +539,4 @@ echo
 echo "*Warning* To compile the system for a new architecture"
 echo "          don't forget to do a 'make archclean' before './configure'."
 
-# $Id: configure,v 1.74.2.5 2004/07/17 17:06:51 herbelin Exp $
+# $Id: configure,v 1.74.2.7 2005/01/21 17:27:32 herbelin Exp $

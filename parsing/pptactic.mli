@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pptactic.mli,v 1.9.2.1 2004/07/16 19:30:40 herbelin Exp $ *)
+(*i $Id: pptactic.mli,v 1.9.2.2 2005/01/21 17:19:37 herbelin Exp $ i*)
 
 open Pp
 open Genarg

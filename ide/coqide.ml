@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqide.ml,v 1.99.2.2 2004/07/18 11:20:15 herbelin Exp $ *)
+(* $Id: coqide.ml,v 1.99.2.3 2004/10/15 14:50:12 coq Exp $ *)
 
 open Preferences
 open Vernacexpr
@@ -1030,6 +1030,7 @@ object(self)
       end_iter#nocopy#set_offset (start#offset + !Find_phrase.length);
       Some (start,end_iter)
     with
+(*
     | Find_phrase.EOF s -> 
 	(* Phrase is at the end of the buffer*)
 	let si = start#offset in
@@ -1038,6 +1039,7 @@ object(self)
 	input_buffer#insert ~iter:end_iter "\n";
 	Some (input_buffer#get_iter (`OFFSET si),
 	      input_buffer#get_iter (`OFFSET ei))
+*)
     | _ -> None
 
   method complete_at_offset (offset:int) = 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(* $Id: ppconstrnew.mli,v 1.16.2.1 2004/07/16 19:31:52 herbelin Exp $ *)
+(*i $Id: ppconstrnew.mli,v 1.16.2.2 2005/01/21 17:17:20 herbelin Exp $ i*)
 
 open Pp
 open Environ

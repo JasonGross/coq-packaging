@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqide.mli,v 1.1.2.1 2004/07/16 19:30:20 herbelin Exp $ *)
+(*i $Id: coqide.mli,v 1.1.2.2 2005/01/21 17:21:33 herbelin Exp $ i*)
 
 (* The CoqIde main module. The following function [start] will parse the
    command line, initialize the load path, load the input 

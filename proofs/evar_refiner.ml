@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evar_refiner.ml,v 1.36.2.1 2004/07/16 19:30:49 herbelin Exp $ *)
+(* $Id: evar_refiner.ml,v 1.36.2.2 2004/08/03 21:37:27 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -178,6 +178,7 @@ let instantiate_pf_com n com pfts =
       List.nth (Evd.non_instantiated sigma) (n-1) 
     with Failure _ -> 
       error "not so many uninstantiated existential variables"
+      | Invalid_argument _ -> error "incorrect existential variable index"
   in 
   let c = Constrintern.interp_constr sigma (Evarutil.evar_env evd) com in     
   let wc' = w_Define sp c wc in

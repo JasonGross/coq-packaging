@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: constrintern.ml,v 1.58.2.2 2004/07/16 20:51:12 herbelin Exp $ *)
+(* $Id: constrintern.ml,v 1.58.2.6 2004/11/22 14:21:23 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -154,8 +154,10 @@ let add_glob loc ref =
   i*)
   let sp = Nametab.sp_of_global ref in
   let id = let _,id = repr_path sp in string_of_id id in
-  let dp = string_of_dirpath (Lib.library_part ref) in
-  dump_string (Printf.sprintf "R%d %s.%s\n" (fst (unloc loc)) dp id)
+  let dir = Lib.file_part ref in
+  if dir <> None then
+    let dp = string_of_dirpath (out_some dir) in
+    dump_string (Printf.sprintf "R%d %s.%s\n" (fst (unloc loc)) dp id)
 
 let loc_of_notation f loc args ntn =
   if args=[] or ntn.[0] <> '_' then fst (unloc loc)
@@ -630,6 +632,10 @@ let check_projection isproj nargs r =
   | _, Some _ -> user_err_loc (loc_of_rawconstr r, "", str "Not a projection")
   | _, None -> ()
 
+let get_implicit_name n imps =
+  if !Options.v7 then None
+  else Some (Impargs.name_of_implicit (List.nth imps (n-1)))
+
 let set_hole_implicit i = function
   | RRef (loc,r) -> (loc,ImplicitArg (r,i))
   | RVar (loc,id) -> (loc,ImplicitArg (VarRef id,i))
@@ -680,8 +686,14 @@ let coerce_to_id = function
         str"This expression should be a simple identifier")
 
 let traverse_binder subst id (ids,tmpsc,scopes as env) =
-  let id = try coerce_to_id (fst (List.assoc id subst)) with Not_found -> id in
-  id,(Idset.add id ids,tmpsc,scopes)
+  try
+    (* Binders bound in the notation are consider first-order object *)
+    (* and binders not bound in the notation do not capture variables *)
+    (* outside the notation *)
+    let id' = coerce_to_id (fst (List.assoc id subst)) in
+    id', (Idset.add id' ids,tmpsc,scopes)
+  with Not_found ->
+    id, env
 
 let decode_constrlist_value = function
   | CAppExpl (_,_,l) -> l
@@ -895,7 +907,9 @@ let internalise sigma env allow_soapp lvar c =
 
   and intern_local_binder ((ids,ts,sc as env),bl) = function
       LocalRawAssum(nal,ty) ->
-        let ty = intern_type env ty in
+        let (loc,na) = List.hd nal in
+        (* TODO: fail if several names with different implicit types *)
+        let ty = locate_if_isevar loc na (intern_type env ty) in
         List.fold_left
           (fun ((ids,ts,sc),bl) (_,na) ->
             ((name_fold Idset.add na ids,ts,sc), (na,None,ty)::bl))
@@ -980,7 +994,7 @@ let internalise sigma env allow_soapp lvar c =
 	    (* with implicit arguments *)
 	    []
 	  else
-	    RHole (set_hole_implicit n c) :: 
+	    RHole (set_hole_implicit (n,get_implicit_name n l) c) :: 
 	      aux (n+1) impl' subscopes' eargs rargs
 	  end
       | (imp::impl', a::rargs') ->

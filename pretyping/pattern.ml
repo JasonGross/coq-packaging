@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pattern.ml,v 1.24.2.1 2004/07/16 19:30:45 herbelin Exp $ *)
+(* $Id: pattern.ml,v 1.24.2.2 2004/11/26 17:51:52 herbelin Exp $ *)
 
 open Util
 open Names
@@ -182,8 +182,7 @@ let rec pattern_of_constr t =
 	       Some (pattern_of_constr p),pattern_of_constr a,
 	       Array.map pattern_of_constr br)
     | Fix f -> PFix f
-    | CoFix _ ->
-	error "pattern_of_constr: (co)fix currently not supported"
+    | CoFix f -> PCoFix f
 
 (* To process patterns, we need a translation without typing at all. *)
 

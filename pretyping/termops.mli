@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: termops.mli,v 1.21.2.1 2004/07/16 19:30:46 herbelin Exp $ *)
+(*i $Id: termops.mli,v 1.21.2.3 2005/01/21 17:19:37 herbelin Exp $ i*)
 
 open Util
 open Pp
@@ -16,7 +16,7 @@ open Sign
 open Environ
 
 (* Universes *)
-(*val set_module : Names.dir_path -> unit*)
+(*i val set_module : Names.dir_path -> unit i*)
 val new_univ : unit -> Univ.universe
 val new_sort_in_family : sorts_family -> sorts
 

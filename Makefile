@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1        #
 ########################################################################
 
-# $Id: Makefile,v 1.459.2.10 2004/07/19 09:37:31 herbelin Exp $ 
+# $Id: Makefile,v 1.459.2.13 2005/01/21 17:15:12 herbelin Exp $ 
 
 
 # Makefile for Coq
@@ -135,8 +135,8 @@ PRETYPING=\
   pretyping/reductionops.cmo pretyping/inductiveops.cmo \
   pretyping/rawterm.cmo pretyping/pattern.cmo \
   pretyping/detyping.cmo pretyping/retyping.cmo \
-  pretyping/cbv.cmo pretyping/tacred.cmo \
-  pretyping/pretype_errors.cmo pretyping/typing.cmo \
+  pretyping/cbv.cmo pretyping/pretype_errors.cmo pretyping/typing.cmo \
+  pretyping/tacred.cmo \
   pretyping/classops.cmo pretyping/recordops.cmo pretyping/indrec.cmo \
   pretyping/evarutil.cmo pretyping/evarconv.cmo \
   pretyping/coercion.cmo pretyping/cases.cmo pretyping/pretyping.cmo \
@@ -1235,21 +1235,14 @@ install-latex:
 doc: doc/coq.tex
 	$(MAKE) -C doc coq.ps minicoq.dvi
 
-LPLIB = lib/doc.tex $(LIBREP:.cmo=.mli)
-LPKERNEL = kernel/doc.tex $(KERNEL:.cmo=.mli)
-LPLIBRARY = library/doc.tex $(LIBRARY:.cmo=.mli)
-LPPRETYPING = pretyping/doc.tex pretyping/rawterm.mli $(PRETYPING:.cmo=.mli)
-LPINTERP = $(INTERP:.cmo=.mli)
-LPPARSING = $(PARSING:.cmo=.mli) $(HIGHPARSING:.cmo=.mli)
-LPPROOFS = proofs/doc.tex $(PROOFS:.cmo=.mli)
-LPTACTICS = tactics/doc.tex $(TACTICS:.cmo=.mli) $(HIGHTACTICS:.cmo=.mli)
-LPTOPLEVEL = toplevel/doc.tex $(TOPLEVEL:.cmo=.mli)
-LPFILES = doc/macros.tex doc/intro.tex $(LPLIB) $(LPKERNEL) $(LPLIBRARY) \
-	  $(LPPRETYPING) $(LPPROOFS) $(LPTACTICS) $(LPTOPLEVEL)
-
-doc/coq.tex: $(LPFILES)
-	ocamlweb -p "\usepackage{epsfig}" $(LPFILES) -o doc/coq.tex
-#	ocamlweb $(LPFILES) -o doc/coq.tex
+doc/coq.tex:
+	ocamlweb -p "\usepackage{epsfig}" \
+	doc/macros.tex doc/intro.tex \
+	lib/{doc.tex,*.mli} kernel/{doc.tex,*.mli} library/{doc.tex,*.mli} \
+	pretyping/{doc.tex,*.mli} interp/{doc.tex,*.mli} \
+	parsing/{doc.tex,*.mli} proofs/{doc.tex,tacexpr.ml,*.mli} \
+	tactics/{doc.tex,*.mli} toplevel/{doc.tex,vernacexpr.ml,*.mli} \
+	-o doc/coq.tex
 
 clean::
 	rm -f doc/coq.tex
@@ -1398,11 +1391,11 @@ proofs/tacexpr.cmx: proofs/tacexpr.ml
 
 lib/compat.cmo: lib/compat.ml4
 	$(SHOW)'OCAMLC4  $<' 
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) -D$(CAMLVERSION) -impl" -c -impl $<
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) -impl" -c -impl $<
 
 lib/compat.cmx: lib/compat.ml4
 	$(SHOW)'OCAMLOPT  $<' 
-	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) -D$(CAMLVERSION) -impl" -c -impl $<
+	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) -impl" -c -impl $<
 
 # files compiled with camlp4 because of streams syntax
 

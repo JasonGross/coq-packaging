@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: constrextern.mli,v 1.11.2.2 2004/07/16 20:51:12 herbelin Exp $ *)
+(*i $Id: constrextern.mli,v 1.11.2.3 2005/01/21 16:41:50 herbelin Exp $ i*)
 
 (*i*)
 open Util

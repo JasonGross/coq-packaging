@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: printer.mli,v 1.26.2.1 2004/07/16 19:30:41 herbelin Exp $ i*)
+(*i $Id: printer.mli,v 1.26.2.2 2005/01/21 16:42:37 herbelin Exp $ i*)
 
 (*i*)
 open Pp
@@ -22,9 +22,9 @@ open Termops
 (*i*)
 
 (* These are the entry points for printing terms, context, tac, ... *)
-(*
+(*i
 val gentacpr  : Tacexpr.raw_tactic_expr -> std_ppcmds
-*)
+i*)
 
 val prterm_env      : env -> constr -> std_ppcmds
 val prterm_env_at_top : env -> constr -> std_ppcmds

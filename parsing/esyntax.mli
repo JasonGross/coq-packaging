@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: esyntax.mli,v 1.10.2.1 2004/07/16 19:30:37 herbelin Exp $ i*)
+(*i $Id: esyntax.mli,v 1.10.2.2 2005/01/21 16:42:36 herbelin Exp $ i*)
 
 (*i*)
 open Pp
@@ -48,16 +48,14 @@ module Ppprim :
 val declare_primitive_printer : 
   string -> scope_name -> primitive_printer -> unit
 
-(*
+(*i
 val declare_infix_symbol : Libnames.section_path -> string -> unit
-*)
+i*)
 
 (* Generic printing functions *) 
-(*
+(*i
 val token_printer: std_printer -> std_printer
-*)
-(*
 val print_syntax_entry : 
   string -> unparsing_subfunction -> Ast.env -> Ast.astpat syntax_entry -> std_ppcmds
-*)
+i*)
 val genprint : std_printer -> unparsing_subfunction

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacentries.mli,v 1.16.2.1 2004/07/16 19:31:50 herbelin Exp $ i*)
+(*i $Id: vernacentries.mli,v 1.16.2.2 2005/01/21 16:41:52 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -27,11 +27,11 @@ val show_node : unit -> unit
    in the context of the current goal, as for instance in pcoq *)
 val get_current_context_of_args : int option -> Evd.evar_map * Environ.env
 
+(*i
 (* this function is used to analyse the extra arguments in search commands.
    It is used in pcoq. *) (*i anciennement: inside_outside i*)
-(*
 val interp_search_restriction : search_restriction -> dir_path list * bool
-*)
+i*)
 
 type pcoq_hook = {
   start_proof : unit -> unit;

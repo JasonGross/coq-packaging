@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: clenv.ml,v 1.97.2.3 2004/07/16 19:30:48 herbelin Exp $ *)
+(* $Id: clenv.ml,v 1.97.2.4 2004/12/06 12:59:11 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -65,7 +65,7 @@ let exist_to_meta sigma (emap, c) =
     let ty = nf_betaiota (nf_evar emap (existential_type emap evar)) in
     let n = new_meta() in
     metamap := (n, ty) :: !metamap;
-    mkMeta n in
+    mkCast (mkMeta n, ty) in
   let rec replace c =
     match kind_of_term c with
         Evar (k,_ as ev) when not (Evd.in_dom sigma k) -> change_exist ev

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: clenv.mli,v 1.32.2.1 2004/07/16 19:30:49 herbelin Exp $ i*)
+(*i $Id: clenv.mli,v 1.32.2.2 2005/01/21 16:41:51 herbelin Exp $ i*)
 
 (*i*)
 open Util
@@ -102,9 +102,9 @@ val clenv_independent : wc clausenv -> metavariable list
 val clenv_missing : 'a clausenv -> metavariable list
 val clenv_constrain_missing_args : (* Used in user contrib Lannion *)
   constr list -> wc clausenv -> wc clausenv
-(*
+(*i
 val clenv_constrain_dep_args : constr list -> wc clausenv -> wc clausenv
-*)
+i*)
 val clenv_lookup_name : 'a clausenv -> identifier -> metavariable
 val clenv_unique_resolver : bool -> wc clausenv -> goal sigma -> wc clausenv
 

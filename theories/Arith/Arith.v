@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Arith.v,v 1.11.2.1 2004/07/16 19:30:59 herbelin Exp $ i*)
+(*i $Id: Arith.v,v 1.11.2.2 2004/08/03 17:42:42 herbelin Exp $ i*)
 
 Require Export Le.
 Require Export Lt.
@@ -15,7 +15,6 @@ Require Export Gt.
 Require Export Minus.
 Require Export Mult.
 Require Export Between.
-Require Export Minus.
 Require Export Peano_dec.
 Require Export Compare_dec.
 Require Export Factorial.

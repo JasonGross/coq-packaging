@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_vernac.ml4,v 1.93.2.2 2004/07/16 20:51:12 herbelin Exp $ *)
+(* $Id: g_vernac.ml4,v 1.93.2.3 2004/10/12 10:11:28 herbelin Exp $ *)
 
 open Names
 open Topconstr
@@ -189,8 +189,8 @@ GEXTEND Gram
   ;
   gallina:
     (* Definition, Theorem, Variable, Axiom, ... *)
-    [ [ thm = thm_token; id = identref; ":"; c = constr ->
-         VernacStartTheoremProof (thm, id, ([], c), false, (fun _ _ -> ()))
+    [ [ thm = thm_token; id = identref; bl = binders_list; ":"; c = constr ->
+         VernacStartTheoremProof (thm, id, (bl, c), false, (fun _ _ -> ()))
       | (f,d) = def_token; id = identref; b = def_body -> 
           VernacDefinition (d, id, b, f)
       | stre = assumption_token; bl = ne_params_list -> 

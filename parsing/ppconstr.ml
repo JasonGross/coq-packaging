@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppconstr.ml,v 1.32.2.1 2004/07/16 19:30:40 herbelin Exp $ *)
+(* $Id: ppconstr.ml,v 1.32.2.2 2004/12/29 10:17:11 herbelin Exp $ *)
 
 (*i*)
 open Ast
@@ -370,8 +370,7 @@ let pr_red_expr (pr_constr,pr_ref) = function
   | Fold l -> hov 1 (str "Fold" ++ prlist (pr_arg pr_constr) l)
   | Pattern l -> hov 1 (str "Pattern " ++ prlist (pr_occurrences pr_constr) l)
   | Red true -> error "Shouldn't be accessible from user"
-  | ExtraRedExpr (s,c) ->
-      hov 1 (str s ++ pr_arg pr_constr c)
+  | ExtraRedExpr s -> str s
 
 let rec pr_may_eval pr pr2 = function
   | ConstrEval (r,c) ->

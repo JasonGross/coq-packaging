@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernacexpr.ml,v 1.55.2.1 2004/07/16 19:31:50 herbelin Exp $ *)
+(*i $Id: vernacexpr.ml,v 1.55.2.2 2005/01/21 17:14:10 herbelin Exp $ i*)
 
 open Util
 open Names
