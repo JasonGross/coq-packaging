@@ -1,6 +1,8 @@
 #!/usr/bin/make -f
 # debian/rules for coq
 
+include /usr/share/dpatch/dpatch.make
+
 COQPREF=$(CURDIR)/debian/tmp
 ADDPREF=COQINSTALLPREFIX=$(COQPREF)
 
@@ -18,10 +20,9 @@ configure-stamp:
 	fi
 	touch configure-stamp
 
-build: configure-stamp build-stamp
+build: patch-stamp configure-stamp build-stamp
 build-stamp:
 	dh_testdir
-	touch test-suite/success/debian.v8
 	if grep -q BEST=opt config/Makefile; \
 	then \
 		($(MAKE) check \
@@ -38,7 +39,7 @@ build-stamp:
 	fi
 	touch build-stamp
 
-clean:
+clean: unpatch
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp configure-stamp opt-stamp
@@ -72,7 +73,6 @@ install: build
 
 	dh_install --sourcedir=$(COQPREF)
 
-	#TODO: change lib_ide to /usr/share/coqide
 	cp ide/index_urls.txt debian/coqide/usr/lib/coq/ide/index_urls.txt
 	if [ -e opt-stamp ]; then \
 		cp debian/coq/usr/share/man/man1/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.opt.1; \
