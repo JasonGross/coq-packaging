@@ -102,30 +102,21 @@ binary-common:
 	dh_installemacsen
 	dh_installman
 	dh_installchangelogs CHANGES
+	dh_desktop
 	dh_link
 	dh_compress
 	dh_fixperms
 	dh_installdeb
 	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
 
 binary-indep: build install
 	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
-	dh_gencontrol -pcoq-libs
-	dh_gencontrol -pcoq7-libs
-	dh_md5sums -i
-	dh_builddeb -i
 
 binary-arch: build install
 	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
-	if [ -e opt-stamp ]; then \
-		dh_gencontrol -pcoq -u-Vocaml:Runtime=""; \
-		dh_gencontrol -pcoqide -u-Vocaml:Runtime=""; \
-	else \
-		dh_gencontrol -pcoq -u-Vocaml:Runtime="ocaml-base-nox-3.08"; \
-		dh_gencontrol -pcoqide -u-Vocaml:Runtime="ocaml-base-nox-3.08"; \
-	fi
-	dh_md5sums -s
-	dh_builddeb -s
 
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary-common binary install configure

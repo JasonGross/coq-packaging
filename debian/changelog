@@ -1,3 +1,16 @@
+coq (8.0pl2-2) unstable; urgency=medium
+
+  * Rebuilding with OCaml 3.08.3 is necessary because of the former dependency
+    on ocaml-base-nox-3.08.
+  * Removed the dependency on ocaml-base-nox-3.08 since ocamlrun does not seem
+    to be necessary, even on non-native archs.
+  * Cleaner handling of -arch and -indep targets.
+  * Added utf8.v in coq and utf8.vo to coq-libs since utf8 can be useful for
+    non-coqide users too.
+  * Using dh_desktop to register .desktop files.
+
+ -- Samuel Mimram <smimram@debian.org>  Tue, 22 Mar 2005 17:40:08 +0100
+
 coq (8.0pl2-1) unstable; urgency=low
 
   * New upstream release.
