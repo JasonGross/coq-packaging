@@ -1,3 +1,17 @@
+coq (8.0pl2-1) unstable; urgency=low
+
+  * New upstream release.
+  * Put the libraries in arch all since they are supposed to be
+    arch-independant.
+  * Updated the README.Debian to explain that .vo are not compatible between
+    different upstream releases.
+  * Renamed coq.desktop into coqide.desktop, updated it and put it in
+    /usr/share/applications/ to be compliant with the policy.
+  * Description synopsis now begin with lowercase letters.
+  * Updated Standards-Version to 3.6.1.1.
+
+ -- Samuel Mimram <smimram@debian.org>  Mon, 31 Jan 2005 13:25:06 +0100
+
 coq (8.0pl1-5) unstable; urgency=low
 
   * Reuploaded since powerpc .deb did not include native code executable

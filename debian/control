@@ -2,16 +2,16 @@ Source: coq
 Section: math
 Priority: optional
 Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
-Uploaders: Ralf Treinen <treinen@debian.org>, Sven Luther <luther@debian.org>, Jerome Marant <jerome@debian.org>, Remi Vanicat <vanicat@debian.org>, Stefano Zacchiroli <zack@debian.org>, Samuel Mimram <samuel.mimram@ens-lyon.org>
-Standards-Version: 3.6.1
+Uploaders: Ralf Treinen <treinen@debian.org>, Sven Luther <luther@debian.org>, Jerome Marant <jerome@debian.org>, Remi Vanicat <vanicat@debian.org>, Stefano Zacchiroli <zack@debian.org>, Samuel Mimram <smimram@debian.org>
+Standards-Version: 3.6.1.1
 Build-Depends: debhelper (>= 4.0.0), dpatch, ocaml-nox-3.08, ocaml-nox (>= 3.08.2), ocaml-best-compilers, liblablgtk2-ocaml-dev (>= 2.4.0)
 
 Package: coq
 Architecture: any
-Depends: ${shlibs:Depends}, ${ocaml:Runtime}, coq-libs
-Suggests: ocaml-3.08, proofgeneral-coq, ledit, cle
+Depends: ${shlibs:Depends}, ${ocaml:Runtime}, coq-libs (= ${Source-Version})
 Recommends: coq-doc, coqide | proofgeneral-coq
-Description: Proof assistant for higher-order logic (toplevel and compiler)
+Suggests: ocaml-3.08, proofgeneral-coq, ledit, cle
+Description: proof assistant for higher-order logic (toplevel and compiler)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
  specification. It is developed using Objective Caml and Camlp4.
@@ -27,7 +27,7 @@ Description: Proof assistant for higher-order logic (toplevel and compiler)
 Package: coqide
 Architecture: any
 Depends: ${shlibs:Depends}, ${ocaml:Runtime}, coq (>= 8.0), liblablgtk2-ocaml (>= 2.4.0)
-Description: Proof assistant for higher-order logic (gtk interface)
+Description: proof assistant for higher-order logic (gtk interface)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
  specification. It is developed using Objective Caml and Camlp4.
@@ -37,10 +37,10 @@ Description: Proof assistant for higher-order logic (gtk interface)
  developing proofs.
 
 Package: coq-libs
-Architecture: any
+Architecture: all
 Recommends: coq (>= 8.0)
 Conflicts: coq (<< 8.0)
-Description: Proof assistant for higher-order logic (theories)
+Description: proof assistant for higher-order logic (theories)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
  specification. It is developed using Objective Caml and Camlp4.
@@ -50,9 +50,9 @@ Description: Proof assistant for higher-order logic (theories)
  based upon, including theories of arithmetic and Boolean values.
 
 Package: coq7-libs
-Architecture: any
+Architecture: all
 Recommends: coq (>= 8.0)
-Description: Proof assistant for higher-order logic (Coq 7 theories)
+Description: proof assistant for higher-order logic (Coq 7 theories)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
  specification. It is developed using Objective Caml and Camlp4.

@@ -30,7 +30,6 @@ build-stamp:
 		|| (echo WARNING: NATIVE CODE COMPILATION FAILED \
 		   && echo Trying to build coq in bytecode instead \
 		   && $(MAKE) archclean clean \
-		   && touch test-suite/success/debian.v8 \
 		   && $(MAKE) BEST=byte HASCOQIDE=byte check \
 		   && echo NATIVE CODE COMPILATION FAILED \
 		   && echo Coq was built in bytecode instead); \
@@ -69,13 +68,11 @@ install: build
 		strip -R .note -R .comment $$i; \
 	done
 	cp debian/coq.xpm debian/coq/usr/share/pixmaps/coq.xpm
-	cp debian/coq.desktop debian/coqide/usr/share/applnk/Development
-
-	dh_install --sourcedir=$(COQPREF)
+	cp debian/coqide.desktop debian/coqide/usr/share/applications
 
 	cp ide/index_urls.txt debian/coqide/usr/lib/coq/ide/index_urls.txt
 	if [ -e opt-stamp ]; then \
-		cp debian/coq/usr/share/man/man1/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.opt.1; \
+		cp debian/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.opt.1; \
 		cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.opt.1; \
 	fi
 	cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.1
@@ -86,6 +83,9 @@ install: build
 	cp debian/coqmktop.1 debian/coq/usr/share/man/man1/coqmktop.1
 	cp debian/coqtop.1 debian/coq/usr/share/man/man1/coqtop.1
 
+	# These are installed as docs
+	rm -f $(COQPREF)/usr/lib/coq/ide/utf8.v $(COQPREF)/usr/lib/coq/ide/FAQ
+
 binary-indep: build install
 
 binary-arch: build install
@@ -94,6 +94,7 @@ binary-arch: build install
 	dh_installdocs
 	dh_installemacsen
 	dh_installchangelogs CHANGES
+	dh_install --sourcedir=$(COQPREF) --list-missing
 	dh_link
 	dh_compress
 	dh_fixperms

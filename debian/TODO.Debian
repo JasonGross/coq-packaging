@@ -1,6 +1,3 @@
-* See if the -libs are arch-independant (I'm not sure but they should be). If
-  it's the case change them to Arch: all.
-
 * Move the coqide stuff from /usr/lib/coq/ide to /usr/share/coqide. The variable
   lib_ide should be changed to do that.
 
