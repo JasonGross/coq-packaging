@@ -26,7 +26,7 @@ Description: Proof assistant for higher-order logic (toplevel and compiler)
 
 Package: coqide
 Architecture: any
-Depends: ${shlibs:Depends}, coq (>= 8.0), liblablgtk2-ocaml (>= 2.4.0)
+Depends: ${shlibs:Depends}, ${ocaml:Runtime}, coq (>= 8.0), liblablgtk2-ocaml (>= 2.4.0)
 Description: Proof assistant for higher-order logic (gtk interface)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal

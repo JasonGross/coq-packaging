@@ -101,10 +101,11 @@ binary-arch: build install
 	dh_shlibdeps
 	if [ -e opt-stamp ]; then \
 		dh_gencontrol -pcoq -u-Vocaml:Runtime=""; \
+		dh_gencontrol -pcoqide -u-Vocaml:Runtime=""; \
 	else \
 		dh_gencontrol -pcoq -u-Vocaml:Runtime="ocaml-base-nox-3.08"; \
+		dh_gencontrol -pcoqide -u-Vocaml:Runtime="ocaml-base-nox-3.08"; \
 	fi
-	dh_gencontrol -pcoqide
 	dh_gencontrol -pcoq-libs
 	dh_gencontrol -pcoq7-libs
 	dh_md5sums
