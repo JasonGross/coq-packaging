@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
 Uploaders: Ralf Treinen <treinen@debian.org>, Sven Luther <luther@debian.org>, Jerome Marant <jerome@debian.org>, Remi Vanicat <vanicat@debian.org>, Stefano Zacchiroli <zack@debian.org>, Samuel Mimram <samuel.mimram@ens-lyon.org>
 Standards-Version: 3.6.1
-Build-Depends: debhelper (>= 4.0.0), dpatch, ocaml-nox-3.08, ocaml-best-compilers, liblablgtk2-ocaml-dev (>= 2.4.0)
+Build-Depends: debhelper (>= 4.0.0), dpatch, ocaml-nox-3.08, ocaml-nox (>= 3.08.2), ocaml-best-compilers, liblablgtk2-ocaml-dev (>= 2.4.0)
 
 Package: coq
 Architecture: any

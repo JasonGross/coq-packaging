@@ -1,3 +1,9 @@
+coq (8.0pl1-4) unstable; urgency=low
+
+  * Rebuilt against ocaml 3.08.2
+
+ -- Stefano Zacchiroli <zack@debian.org>  Tue, 30 Nov 2004 21:38:21 +0100
+
 coq (8.0pl1-3) unstable; urgency=high
 
   * Small patch to be able to compile with ocaml 3.08.1.
