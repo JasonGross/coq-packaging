@@ -2,8 +2,7 @@ coq (8.0pl1-1) unstable; urgency=low
 
   * At least the version without QPL-licensed files is out,
     closes: #230356, #250497.
-  * If compilation fails in opt, we try to build in byte (opt does not seem to
-    work on sparc).
+  * Build with OCaml 3.08.
 
  -- Samuel Mimram <samuel.mimram@ens-lyon.org>  Sun, 18 Jul 2004 01:10:24 +0200
 

@@ -4,12 +4,12 @@ Priority: optional
 Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
 Uploaders: Ralf Treinen <treinen@debian.org>, Sven Luther <luther@debian.org>, Jerome Marant <jerome@debian.org>, Remi Vanicat <vanicat@debian.org>, Stefano Zacchiroli <zack@debian.org>
 Standards-Version: 3.6.1
-Build-Depends: debhelper (>= 4.0.0), dpatch, ocaml-3.07, ocaml-best-compilers, liblablgtk2-ocaml-dev
+Build-Depends: debhelper (>= 4.0.0), ocaml-3.08, ocaml-best-compilers, liblablgtk2-ocaml-dev
 
 Package: coq
 Architecture: any
 Depends: ${shlibs:Depends}, coq-libs
-Suggests: ocaml-3.07, proofgeneral-coq, ledit, cle
+Suggests: ocaml-3.08, proofgeneral-coq, ledit, cle
 Recommends: coq-doc, coqide | proofgeneral-coq
 Description: Proof assistant for higher-order logic
  Coq is a proof assistant for higher-order logic, which allows the
