@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacexpr.ml,v 1.33.2.1 2004/07/16 19:30:49 herbelin Exp $ *)
+(*i $Id: tacexpr.ml,v 1.33.2.2 2005/01/21 17:14:09 herbelin Exp $ i*)
 
 open Names
 open Topconstr

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extend.mli,v 1.19.2.1 2004/07/16 19:30:37 herbelin Exp $ i*)
+(*i $Id: extend.mli,v 1.19.2.2 2005/01/21 16:42:37 herbelin Exp $ i*)
 
 (*i*)
 open Pp
@@ -112,10 +112,11 @@ type 'pat unparsing_hunk =
   | UNP_FNL
   | UNP_SYMBOLIC of string option * string * 'pat unparsing_hunk
 
-(*val subst_unparsing_hunk : 
+(*i
+val subst_unparsing_hunk : 
   Names.substitution -> (Names.substitution -> 'pat -> 'pat) -> 
   'pat unparsing_hunk -> 'pat unparsing_hunk
-*)
+i*)
 
 (* Checks if the precedence of the parent printer (None means the
    highest precedence), and the child's one, follow the given

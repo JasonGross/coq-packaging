@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: equality.ml,v 1.120.2.1 2004/07/16 19:30:53 herbelin Exp $ *)
+(* $Id: equality.ml,v 1.120.2.4 2004/11/21 22:24:09 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -18,6 +18,7 @@ open Termops
 open Inductive
 open Inductiveops
 open Environ
+open Libnames
 open Reductionops
 open Instantiate
 open Typeops
@@ -327,8 +328,11 @@ let descend_then sigma env head dirn =
   (dirn_nlams,
    dirn_env,
    (fun dirnval (dfltval,resty) ->
-      let arign,_ = get_arity env indf in
-      let p = it_mkLambda_or_LetIn (lift mip.mind_nrealargs resty) arign in
+      let arsign,_ = get_arity env indf in
+      let depind = build_dependent_inductive env indf in
+      let deparsign = (Anonymous,None,depind)::arsign in
+      let p =
+	it_mkLambda_or_LetIn (lift (mip.mind_nrealargs+1) resty) deparsign in
       let build_branch i =
 	let result = if i = dirn then dirnval else dfltval in
 	it_mkLambda_or_LetIn_name env result cstr.(i-1).cs_args in
@@ -371,7 +375,9 @@ let construct_discriminator sigma env dirn c sort =
   let (mib,mip) = lookup_mind_specif env ind in
   let arsign,arsort = get_arity env indf in
   let (true_0,false_0,sort_0) = build_coq_True(),build_coq_False(),Prop Null in
-  let p = it_mkLambda_or_LetIn (mkSort sort_0) arsign in
+  let depind = build_dependent_inductive env indf in
+  let deparsign = (Anonymous,None,depind)::arsign in
+  let p = it_mkLambda_or_LetIn (mkSort sort_0) deparsign in
   let cstrs = get_constructors env indf in
   let build_branch i =
     let endpt = if i = dirn then true_0 else false_0 in
@@ -419,14 +425,8 @@ let discrimination_pf e (t,t1,t2) discriminator lbeq gls =
 
 exception NotDiscriminable
 
-let discr id gls =
-  let eqn = pf_whd_betadeltaiota gls (pf_get_hyp_typ gls id) in
+let discrEq (lbeq,(t,t1,t2)) id gls =
   let sort = pf_type_of gls (pf_concl gls) in 
-  let (lbeq,(t,t1,t2)) =
-    try find_eq_data_decompose eqn
-    with PatternMatchingFailure ->
-      errorlabstrm "discr" (pr_id id ++ str": not a primitive equality here")
-  in
   let sigma = project gls in
   let env = pf_env gls in
   (match find_positions env sigma t1 t2 with
@@ -445,24 +445,40 @@ let discr id gls =
 			([onLastHyp gen_absurdity;
 			  refine (mkApp (pf, [| mkVar id |]))]))) gls)
 
-
 let not_found_message id =
   (str "The variable" ++ spc () ++ str (string_of_id id) ++ spc () ++
     str" was not found in the current environment")
 
+let onEquality tac id gls =
+  let eqn = pf_whd_betadeltaiota gls (pf_get_hyp_typ gls id) in
+  let eq =
+    try find_eq_data_decompose eqn
+    with PatternMatchingFailure ->
+      errorlabstrm "" (pr_id id ++ str": not a primitive equality") 
+  in tac eq id gls
+
+let check_equality tac id gls =
+  let eqn = pf_whd_betadeltaiota gls (pf_get_hyp_typ gls id) in
+  let eq =
+    try find_eq_data_decompose eqn
+    with PatternMatchingFailure ->
+      errorlabstrm "" (str "The goal should negate an equality")
+  in tac eq id gls
+
 let onNegatedEquality tac gls =
-  if is_matching_not (pf_concl gls) then
-    (tclTHEN (tclTHEN hnf_in_concl intro) (onLastHyp tac)) gls
-  else if is_matching_imp_False (pf_concl gls)then
-    (tclTHEN intro (onLastHyp tac)) gls
-  else 
+   if is_matching_not (pf_concl gls) then
+     (tclTHEN (tclTHEN hnf_in_concl intro) (onLastHyp(check_equality tac))) gls
+   else if is_matching_imp_False (pf_concl gls)then
+     (tclTHEN intro (onLastHyp (check_equality tac))) gls
+  else
     errorlabstrm "extract_negated_equality_then"
       (str"The goal should negate an equality")
 
-
 let discrSimpleClause = function
-  | None -> onNegatedEquality discr
-  | Some (id,_,_) -> discr id
+  | None -> onNegatedEquality discrEq
+  | Some (id,_,_) -> onEquality discrEq id
+
+let discr = onEquality discrEq
 
 let discrClause = onClauses discrSimpleClause
 
@@ -566,7 +582,7 @@ let sig_clausal_form env sigma sort_of_ty siglen ty (dFLT,dFLTty) =
   let isevars = Evarutil.create_evar_defs sigma in
   let rec sigrec_clausal_form siglen p_i =
     if siglen = 0 then
-      if Evarconv.the_conv_x env isevars p_i dFLTty then
+      if Evarconv.the_conv_x_leq env isevars dFLTty p_i then
 	(* the_conv_x had a side-effect on isevars *)
 	dFLT
       else
@@ -695,13 +711,7 @@ let try_delta_expand env sigma t =
    expands then only when the whdnf has a constructor of an inductive type
    in hd position, otherwise delta expansion is not done *)
 
-let inj id gls =
-  let eqn = pf_whd_betadeltaiota gls (pf_get_hyp_typ gls id) in
-  let (eq,(t,t1,t2))= 
-    try find_eq_data_decompose eqn
-    with PatternMatchingFailure ->
-      errorlabstrm "Inj" (pr_id id ++ str": not a primitive equality here") 
-  in
+let injEq (eq,(t,t1,t2)) id gls =
   let sigma = project gls in
   let env = pf_env gls in
   match find_positions env sigma t1 t2 with
@@ -749,17 +759,17 @@ let inj id gls =
 	     in ((tclTHENS  (cut  ty) ([tclIDTAC;refine pf]))))
 	  injectors
 	  gls
-	    
+
+let inj = onEquality injEq
+
 let injClause = function
-  | None -> onNegatedEquality inj
+  | None -> onNegatedEquality injEq
   | Some id -> try_intros_until inj id
 
 let injConcl gls  = injClause None gls
 let injHyp id gls = injClause (Some id) gls
 
-let decompEqThen ntac id gls =
-  let eqn = pf_whd_betadeltaiota gls (pf_get_hyp_typ gls id) in
-  let (lbeq,(t,t1,t2))= find_eq_data_decompose eqn in
+let decompEqThen ntac (lbeq,(t,t1,t2)) id gls =
   let sort = pf_type_of gls (pf_concl gls) in 
   let sigma = project gls in
   let env = pf_env gls in 
@@ -806,16 +816,11 @@ let decompEqThen ntac id gls =
 	      (ntac (List.length injectors)))
 	  gls))
 
-let decompEq = decompEqThen (fun x -> tclIDTAC)
-
 let dEqThen ntac = function
   | None -> onNegatedEquality (decompEqThen ntac)
-  | Some id -> try_intros_until (decompEqThen ntac) id
+  | Some id -> try_intros_until (onEquality (decompEqThen ntac)) id
 
 let dEq = dEqThen (fun x -> tclIDTAC)
-
-let dEqConcl gls = dEq None gls
-let dEqHyp id gls = dEq (Some id) gls
 
 let rewrite_msg = function 
   | None -> str "passed term is not a primitive equality" 

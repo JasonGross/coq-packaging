@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_constrnew.ml4,v 1.41.2.1 2004/07/16 19:30:38 herbelin Exp $ *)
+(* $Id: g_constrnew.ml4,v 1.41.2.2 2004/11/17 12:48:35 herbelin Exp $ *)
 
 open Pcoq
 open Constr
@@ -22,7 +22,7 @@ open Util
 let constr_kw =
   [ "forall"; "fun"; "match"; "fix"; "cofix"; "with"; "in"; "for"; 
     "end"; "as"; "let"; "if"; "then"; "else"; "return";
-    "Prop"; "Set"; "Type"; ".("; "_" ]
+    "Prop"; "Set"; "Type"; ".("; "_"; ".." ]
 
 let _ = 
   if not !Options.v7 then

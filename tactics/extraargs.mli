@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: extraargs.mli,v 1.3.2.1 2004/07/16 19:30:53 herbelin Exp $ *)
+(*i $Id: extraargs.mli,v 1.3.2.2 2005/01/21 17:14:10 herbelin Exp $ i*)
 
 open Tacexpr
 open Term

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: index.mll,v 1.2.2.1 2004/07/16 19:31:46 herbelin Exp $ i*)
+(*i $Id: index.mll,v 1.2.2.2 2004/08/03 17:31:04 herbelin Exp $ i*)
 
 {
 
@@ -197,7 +197,7 @@ rule traverse = parse
   | "Variable" 's'? space
       { current_type := Variable; index_idents lexbuf; traverse lexbuf }
 ***i*)
-  | "Require" (space+ "Export")? space+ ident
+  | "Require" (space+ ("Export"|"Import"))? space+ ident
       { ref_module (lexeme_start lexbuf) (lexeme lexbuf); traverse lexbuf }
   | begin_hide 
       { skip_hide lexbuf; traverse lexbuf }

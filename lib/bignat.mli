@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: bignat.mli,v 1.4.6.1 2004/07/16 19:30:29 herbelin Exp $ *)
+(*i $Id: bignat.mli,v 1.4.6.3 2005/01/21 17:14:11 herbelin Exp $ i*)
 
 (*i*)
 open Pp
@@ -26,7 +26,7 @@ val is_one : bignat -> bool
 val div2_with_rest : bignat -> bignat * bool (* true=odd; false=even *)
 
 val add_1 : bignat -> bignat
-val sub_1 : bignat -> bignat (* Remark: (sub_1 0)=0 *)
+val sub_1 : bignat -> bignat (* Remark: [sub_1 0]=0 *)
 val mult_2 : bignat -> bignat
 
 val less_than : bignat -> bignat -> bool

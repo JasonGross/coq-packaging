@@ -6,14 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ChoiceFacts.v,v 1.7.2.1 2004/07/16 19:31:06 herbelin Exp $ i*)
+(*i $Id: ChoiceFacts.v,v 1.7.2.2 2004/08/01 09:29:59 herbelin Exp $ i*)
 
-(* We show that the functional formulation of the axiom of Choice
+(** We show that the functional formulation of the axiom of Choice
    (usual formulation in type theory) is equivalent to its relational
    formulation (only formulation of set theory) + the axiom of
    (parametric) definite description (aka axiom of unique choice) *)
 
-(* This shows that the axiom of choice can be assumed (under its
+(** This shows that the axiom of choice can be assumed (under its
    relational formulation) without known inconsistency with classical logic,
    though definite description conflicts with classical logic *)
 
@@ -80,7 +80,7 @@ intro H; split;
 intros [H H0]; exact (description_rel_choice_imp_funct_choice H0 H).
 Qed.
 
-(* We show that the guarded relational formulation of the axiom of Choice
+(** We show that the guarded relational formulation of the axiom of Choice
    comes from the non guarded formulation in presence either of the
    independance of premises or proof-irrelevance *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modops.mli,v 1.7.6.1 2004/07/16 19:30:26 herbelin Exp $ i*)
+(*i $Id: modops.mli,v 1.7.6.2 2005/01/21 16:41:50 herbelin Exp $ i*)
 
 (*i*)
 open Util
@@ -41,7 +41,7 @@ val subst_signature_msid :
   module_signature_body -> module_signature_body
 
 (* [add_signature mp sign env] assumes that the substitution [msid]
-   \mapsto [mp] has already been performed (or is not necessary, like
+   $\mapsto$ [mp] has already been performed (or is not necessary, like
    when [mp = MPself msid]) *)
 val add_signature : 
   module_path -> module_signature_body -> env -> env

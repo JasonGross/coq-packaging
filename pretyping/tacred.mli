@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacred.mli,v 1.21.2.1 2004/07/16 19:30:46 herbelin Exp $ i*)
+(*i $Id: tacred.mli,v 1.21.2.2 2005/01/21 16:42:37 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -62,7 +62,7 @@ val reduce_to_atomic_ind : env ->  evar_map -> types -> inductive * types
 val reduce_to_quantified_ind : env ->  evar_map -> types -> inductive * types
 
 (* [reduce_to_quantified_ref env sigma ref t] try to put [t] in the form
-   [t'=(x1:A1)..(xn:An)(ref args)] and raise Not_found if not possible *)
+   [t'=(x1:A1)..(xn:An)(ref args)] and raise [Not_found] if not possible *)
 val reduce_to_quantified_ref :
   env ->  evar_map -> Libnames.global_reference -> types -> types
 

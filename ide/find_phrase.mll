@@ -6,13 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: find_phrase.mll,v 1.8.2.1 2004/07/16 19:30:20 herbelin Exp $ *)
+(* $Id: find_phrase.mll,v 1.8.2.2 2004/10/15 14:50:13 coq Exp $ *)
 
 {
   exception Lex_error of string
   let length = ref 0
   let buff = Buffer.create 513
-  exception EOF of string
 
 }
 
@@ -34,10 +33,13 @@ rule next_phrase = parse
       Buffer.contents buff}
 
   | phrase_sep eof{
+      length := !length + 1; 
+      Buffer.add_string buff (Lexing.lexeme lexbuf);
+      Buffer.contents buff}
+  | phrase_sep phrase_sep {
       length := !length + 2; 
       Buffer.add_string buff (Lexing.lexeme lexbuf);
-      Buffer.add_char buff '\n';
-      raise (EOF(Buffer.contents buff))}
+      next_phrase lexbuf}
   | _ 
       { 
 	let c = Lexing.lexeme_char lexbuf 0 in 

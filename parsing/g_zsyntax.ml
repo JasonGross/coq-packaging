@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_zsyntax.ml,v 1.16.2.1 2004/07/16 19:30:39 herbelin Exp $ *)
+(* $Id: g_zsyntax.ml,v 1.16.2.2 2004/11/10 13:00:44 herbelin Exp $ *)
 
 open Coqast
 open Pcoq
@@ -197,11 +197,14 @@ let rec pat_pos_of_bignat dloc x name =
     | (q,true) ->
         PatCstr (dloc,path_of_xH,[],name)
 
+let error_non_positive dloc = 
+  user_err_loc (dloc, "interp_positive",
+    str "No non-positive numbers in type \"positive\"!")
+
 let pat_interp_positive dloc = function
-  | POS n -> pat_pos_of_bignat dloc n
-  | NEG n ->
-      user_err_loc (dloc, "interp_positive",
-        str "No negative number in type \"positive\"!")
+  | NEG n -> error_non_positive dloc
+  | POS n ->
+     if is_nonzero n then pat_pos_of_bignat dloc n else error_non_positive dloc
 
 (**********************************************************************)
 (* Printing positive via scopes                                       *)

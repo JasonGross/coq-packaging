@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: topconstr.mli,v 1.23.2.1 2004/07/16 19:30:23 herbelin Exp $ *)
+(*i $Id: topconstr.mli,v 1.23.2.3 2005/01/21 17:14:10 herbelin Exp $ i*)
 
 (*i*)
 open Pp
@@ -23,12 +23,12 @@ open Term
 (* non global expressions such as existential variables also *)
 
 type aconstr =
-  (* Part common to rawconstr and cases_pattern *)
+  (* Part common to [rawconstr] and [cases_pattern] *)
   | ARef of global_reference
   | AVar of identifier
   | AApp of aconstr * aconstr list
   | AList of identifier * identifier * aconstr * aconstr * bool
-  (* Part only in rawconstr *)
+  (* Part only in [rawconstr] *)
   | ALambda of name * aconstr * aconstr
   | AProd of name * aconstr * aconstr
   | ALetIn of name * aconstr * aconstr
@@ -59,7 +59,7 @@ type scope_name = string
 type interpretation = 
     (identifier * (scope_name option * scope_name list)) list * aconstr
 
-val match_aconstr : (* scope_name option -> *) rawconstr -> interpretation ->
+val match_aconstr : (*i scope_name option -> i*) rawconstr -> interpretation ->
       (rawconstr * (scope_name option * scope_name list)) list
 
 (*s Concrete syntax for terms *)

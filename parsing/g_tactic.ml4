@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_tactic.ml4,v 1.83.2.2 2004/07/16 19:30:39 herbelin Exp $ *)
+(* $Id: g_tactic.ml4,v 1.83.2.4 2005/01/15 14:56:53 herbelin Exp $ *)
 
 open Pp
 open Ast
@@ -42,7 +42,7 @@ let join_to_constr loc c2 = (fst loc), snd (Topconstr.constr_loc c2)
 if !Options.v7 then
 GEXTEND Gram
   GLOBAL: simple_tactic constrarg bindings constr_with_bindings 
-  quantified_hypothesis red_expr int_or_var castedopenconstr
+  quantified_hypothesis red_expr int_or_var castedopenconstr open_constr
   simple_intropattern;
 
   int_or_var:
@@ -96,8 +96,11 @@ GEXTEND Gram
       | IDENT "Check"; c = constr -> ConstrTypeOf c
       | c = constr -> ConstrTerm c ] ]
   ;
+  open_constr:
+    [ [ c = constr -> ((),c) ] ]
+   ;
   castedopenconstr:
-    [ [ c = constr -> c ] ]
+    [ [ c = constr -> ((),c) ] ]
   ;
   induction_arg:
     [ [ n = natural -> ElimOnAnonHyp n
@@ -180,7 +183,7 @@ GEXTEND Gram
       | IDENT "Unfold"; ul = LIST1 unfold_occ -> Unfold ul
       | IDENT "Fold"; cl = LIST1 constr -> Fold cl
       | IDENT "Pattern"; pl = LIST1 pattern_occ -> Pattern pl
-      | s = IDENT; c = constr -> ExtraRedExpr (s,c) ] ]
+      | s = IDENT -> ExtraRedExpr s ] ]
   ;
   hypident:
     [ [ id = id_or_meta -> id,[],(InHyp,ref None)

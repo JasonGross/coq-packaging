@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: mod_typing.mli,v 1.2.8.1 2004/07/16 19:30:26 herbelin Exp $ *)
+(*i $Id: mod_typing.mli,v 1.2.8.2 2005/01/21 17:14:10 herbelin Exp $ i*)
 
 (*i*)
 open Declarations

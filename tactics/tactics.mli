@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tactics.mli,v 1.59.2.1 2004/07/16 19:30:55 herbelin Exp $ i*)
+(*i $Id: tactics.mli,v 1.59.2.2 2005/01/21 16:41:52 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -26,6 +26,7 @@ open Genarg
 open Tacexpr
 open Nametab
 open Rawterm
+(*i*)
 
 (* Main tactics. *)
 

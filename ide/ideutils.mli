@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ideutils.mli,v 1.6.2.1 2004/07/16 19:30:20 herbelin Exp $ *)
+(*i $Id: ideutils.mli,v 1.6.2.2 2005/01/21 17:21:33 herbelin Exp $ i*)
 
 val async : ('a -> unit) -> 'a -> unit
 val browse : (string -> unit) -> string -> unit

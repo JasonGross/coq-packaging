@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: environ.mli,v 1.66.2.1 2004/07/16 19:30:25 herbelin Exp $ i*)
+(*i $Id: environ.mli,v 1.66.2.2 2005/01/21 16:41:49 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -44,7 +44,7 @@ val engagement    : env -> engagement option
 val empty_context : env -> bool
 
 (************************************************************************)
-(*s Context of de Bruijn variables (rel_context) *)
+(*s Context of de Bruijn variables ([rel_context]) *)
 val push_rel         : rel_declaration -> env -> env
 val push_rel_context :     rel_context -> env -> env
 val push_rec_types   : rec_declaration -> env -> env

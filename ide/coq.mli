@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq.mli,v 1.14.2.2 2004/07/18 11:20:15 herbelin Exp $ *)
+(*i $Id: coq.mli,v 1.14.2.3 2005/01/21 17:21:33 herbelin Exp $ i*)
 
 open Names
 open Term

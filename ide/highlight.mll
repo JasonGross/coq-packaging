@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: highlight.mll,v 1.14.2.1 2004/07/16 19:30:20 herbelin Exp $ *)
+(* $Id: highlight.mll,v 1.14.2.2 2004/11/27 14:41:43 herbelin Exp $ *)
 
 {
 
@@ -29,18 +29,21 @@ let identchar =
 let ident = firstchar identchar*
 
 let keyword = 
-  "Add" | "CoInductive" | "Defined" | 
+  "Add" | "Defined" | 
   "End" | "Export" | "Extraction" | "Hint" |
   "Implicits" | "Import" | 
   "Infix" | "Load" | "match" | "Module" | "Module Type" |
   "Proof" | "Qed" |
-  "Record" | "Require" | "Save" | "Scheme" |
+  "Require" | "Save" | "Scheme" |
   "Section" | "Unset" |
   "Set"  
 
 let declaration = 
   "Lemma" | "Axiom" | "CoFixpoint" | "Definition"  |
   "Fixpoint" | "Hypothesis" | 
+  "Hypotheses" | "Axioms" | "Parameters" | "Subclass" |
+  "Remark" | "Fact" | "Conjecture" | "Let" |
+  "CoInductive" | "Record" | "Structure" |
   "Inductive" | "Parameter" | "Theorem" | 
   "Variable" | "Variables" 
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: undo.mli,v 1.4.2.1 2004/07/16 19:30:21 herbelin Exp $ *)
+(*i $Id: undo.mli,v 1.4.2.2 2005/01/21 17:21:33 herbelin Exp $ i*)
 
 (* An undoable view class *)
 

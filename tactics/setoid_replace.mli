@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: setoid_replace.mli,v 1.3.6.1 2004/07/16 19:30:55 herbelin Exp $ *)
+(*i $Id: setoid_replace.mli,v 1.3.6.2 2005/01/21 17:14:11 herbelin Exp $ i*)
 
 open Term
 open Proof_type

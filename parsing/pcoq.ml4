@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pcoq.ml4,v 1.80.2.1 2004/07/16 19:30:40 herbelin Exp $ i*)
+(*i $Id: pcoq.ml4,v 1.80.2.3 2005/01/15 14:56:53 herbelin Exp $ i*)
 
 open Pp
 open Util
@@ -371,6 +371,8 @@ module Tactic =
 
     (* Entries that can be refered via the string -> Gram.Entry.e table *)
     (* Typically for tactic user extensions *)
+    let open_constr = 
+      make_gen_entry utactic rawwit_open_constr "open_constr"
     let castedopenconstr = 
       make_gen_entry utactic rawwit_casted_open_constr "castedopenconstr"
     let constr_with_bindings =
@@ -774,7 +776,9 @@ let is_self from e =
 
 let is_binder_level from e =
   match from, e with
-      ETConstr(200,()), ETConstr(NumLevel 200,_) -> not !Options.v7
+      ETConstr(200,()),
+      ETConstr(NumLevel 200,(BorderProd(false,_)|InternalProd)) ->
+        not !Options.v7
     | _ -> false
 
 let rec symbol_of_production assoc from forpat typ =
@@ -799,5 +803,3 @@ let rec symbol_of_production assoc from forpat typ =
       | (eobj,Some None,_) -> Gramext.Snext
       | (eobj,Some (Some (lev,cur)),_) -> 
           Gramext.Snterml (Gram.Entry.obj eobj,constr_prod_level assoc cur lev)
-
-

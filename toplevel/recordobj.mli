@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: recordobj.mli,v 1.7.6.1 2004/07/16 19:31:49 herbelin Exp $ *)
+(*i $Id: recordobj.mli,v 1.7.6.2 2005/01/21 17:18:33 herbelin Exp $ i*)
 
 val objdef_declare : Libnames.global_reference -> unit
 val add_object_hook : Tacexpr.declaration_hook

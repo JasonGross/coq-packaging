@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacinterp.ml,v 1.84.2.4 2004/07/16 19:30:55 herbelin Exp $ *)
+(* $Id: tacinterp.ml,v 1.84.2.8 2005/01/15 14:56:54 herbelin Exp $ *)
 
 open Constrintern
 open Closure
@@ -552,8 +552,7 @@ let intern_redexp ist = function
   | Lazy f -> Lazy (intern_flag ist f)
   | Pattern l -> Pattern (List.map (intern_constr_occurrence ist) l)
   | Simpl o -> Simpl (option_app (intern_constr_occurrence ist) o)
-  | (Red _ | Hnf as r) -> r
-  | ExtraRedExpr (s,c) -> ExtraRedExpr (s, intern_constr ist c)
+  | (Red _ | Hnf | ExtraRedExpr _ as r) -> r
 
 let intern_inversion_strength lf ist = function
   | NonDepInversion (k,idl,ids) ->
@@ -879,9 +878,12 @@ and intern_genarg ist x =
       in_gen globwit_red_expr (intern_redexp ist (out_gen rawwit_red_expr x))
   | TacticArgType ->
       in_gen globwit_tactic (intern_tactic ist (out_gen rawwit_tactic x))
+  | OpenConstrArgType ->
+      in_gen globwit_open_constr
+      ((),intern_constr ist (snd (out_gen rawwit_open_constr x)))
   | CastedOpenConstrArgType ->
       in_gen globwit_casted_open_constr 
-        (intern_constr ist (out_gen rawwit_casted_open_constr x))
+        ((),intern_constr ist (snd (out_gen rawwit_casted_open_constr x)))
   | ConstrWithBindingsArgType ->
       in_gen globwit_constr_with_bindings
         (intern_constr_with_bindings ist (out_gen rawwit_constr_with_bindings x))
@@ -963,6 +965,10 @@ let is_failure = function
 let is_match_catchable = function
   | No_match | Eval_fail _ -> true
   | e -> is_failure e or Logic.catchable_exception e
+
+let hack_fail_level_shift = ref 0
+let hack_fail_level n =
+  if n >= !hack_fail_level_shift then n - !hack_fail_level_shift else 0
 
 (* Verifies if the matched list is coherent with respect to lcm *)
 let rec verify_metas_coherence gl lcm = function
@@ -1202,12 +1208,12 @@ let interp_constr ist sigma env c =
   interp_casted_constr None ist sigma env c
 
 (* Interprets an open constr expression casted by the current goal *)
-let pf_interp_casted_openconstr ist gl (c,ce) =
+let pf_interp_openconstr_gen casted ist gl (c,ce) =
   let sigma = project gl in
   let env = pf_env gl in
   let (ltacvars,l) = constr_list ist env in
   let typs = retype_list sigma env ltacvars in
-  let ocl = Some (pf_concl gl) in
+  let ocl = if casted then Some (pf_concl gl) else None in
   match ce with
   | None ->
       Pretyping.understand_gen_tcc sigma env typs ocl c
@@ -1215,6 +1221,9 @@ let pf_interp_casted_openconstr ist gl (c,ce) =
        context at globalization time: we retype with the now known
        intros/lettac/inversion hypothesis names *)
   | Some c -> interp_openconstr_gen sigma env (ltacvars,l) c ocl
+
+let pf_interp_casted_openconstr = pf_interp_openconstr_gen true
+let pf_interp_openconstr = pf_interp_openconstr_gen false
 
 (* Interprets a constr expression *)
 let pf_interp_constr ist gl =
@@ -1242,8 +1251,7 @@ let redexp_interp ist sigma env = function
   | Lazy f -> Lazy (interp_flag ist env f)
   | Pattern l -> Pattern (List.map (interp_pattern ist sigma env) l)
   | Simpl o -> Simpl (option_app (interp_pattern ist sigma env) o)
-  | (Red _ |  Hnf as r) -> r
-  | ExtraRedExpr (s,c) -> ExtraRedExpr (s,interp_constr ist sigma env c)
+  | (Red _ | Hnf | ExtraRedExpr _ as r) -> r
 
 let pf_redexp_interp ist gl = redexp_interp ist (project gl) (pf_env gl)
 
@@ -1349,7 +1357,7 @@ and eval_tactic ist = function
   | TacMatchContext _ -> assert false
   | TacMatch (c,lmr) -> assert false
   | TacId s -> tclIDTAC_MESSAGE s
-  | TacFail (n,s) -> tclFAIL (interp_int_or_var ist n) s
+  | TacFail (n,s) -> tclFAIL (hack_fail_level (interp_int_or_var ist n)) s
   | TacProgress tac -> tclPROGRESS (interp_tactic ist tac)
   | TacAbstract (tac,s) -> Tactics.tclABSTRACT s (interp_tactic ist tac)
   | TacThen (t1,t2) -> tclTHEN (interp_tactic ist t1) (interp_tactic ist t2)
@@ -1494,7 +1502,7 @@ and interp_match_context ist g lr lmr =
 	let lgoal = List.map (fun (id,c) -> (id,VConstr c)) lgoal in
         eval_with_fail { ist with lfun=lgoal@lctxt@ist.lfun } mt goal
       else
-        apply_hyps_context ist env goal mt lgoal mhyps hyps
+        apply_hyps_context ist env goal mt lctxt lgoal mhyps hyps
     with
     | e when is_failure e -> raise e
     | NextOccurrence _ -> raise No_match
@@ -1508,7 +1516,9 @@ and interp_match_context ist g lr lmr =
       begin
         db_mc_pattern_success ist.debug;
         try eval_with_fail ist t goal
-         with e when is_match_catchable e ->
+         with
+         | e when is_failure e -> raise e
+         | e when is_match_catchable e ->
            apply_match_context ist env goal (nrs+1) (List.tl lex) tl
       end
     | (Pat (mhyps,mgoal,mt))::tl ->
@@ -1529,9 +1539,10 @@ and interp_match_context ist g lr lmr =
               eval_with_fail {ist with lfun=lgoal@ist.lfun} mt goal
             end
             else
-              apply_hyps_context ist env goal mt lgoal mhyps hyps
+              apply_hyps_context ist env goal mt [] lgoal mhyps hyps
             end)
         with 
+        | e when is_failure e -> raise e
         | e when is_match_catchable e ->
           begin 
             (match e with
@@ -1542,7 +1553,9 @@ and interp_match_context ist g lr lmr =
           end)
       |	Subterm (id,mg) ->
         (try apply_goal_sub ist env goal 0 (id,mg) concl mt mhyps hyps
-         with e when is_match_catchable e ->
+         with 
+         | e when is_failure e -> raise e
+         | e when is_match_catchable e ->
            apply_match_context ist env goal (nrs+1) (List.tl lex) tl))
     | _ ->
       errorlabstrm "Tacinterp.apply_match_context" (str
@@ -1557,7 +1570,7 @@ and interp_match_context ist g lr lmr =
     (read_match_rule (project g) env (fst (constr_list ist env)) lmr)
 
 (* Tries to match the hypotheses in a Match Context *)
-and apply_hyps_context ist env goal mt lgmatch mhyps hyps =
+and apply_hyps_context ist env goal mt lctxt lgmatch mhyps hyps =
   let rec apply_hyps_context_rec lfun lmatch lhyps_rest current = function
     | Hyp ((_,hypname),mhyp)::tl as mhyps ->
         let (lids,lm,hyp_match,next) =
@@ -1578,7 +1591,7 @@ and apply_hyps_context ist env goal mt lgmatch mhyps hyps =
         db_mc_pattern_success ist.debug;
         eval_with_fail {ist with lfun=lmatch@lfun@ist.lfun} mt goal
   in
-  apply_hyps_context_rec [] lgmatch hyps (hyps,0) mhyps
+  apply_hyps_context_rec lctxt lgmatch hyps (hyps,0) mhyps
 
   (* Interprets extended tactic generic arguments *)
 and interp_genarg ist goal x =
@@ -1617,9 +1630,12 @@ and interp_genarg ist goal x =
   | RedExprArgType ->
       in_gen wit_red_expr (pf_redexp_interp ist goal (out_gen globwit_red_expr x))
   | TacticArgType -> in_gen wit_tactic (out_gen globwit_tactic x)
+  | OpenConstrArgType ->
+      in_gen wit_open_constr 
+        (pf_interp_openconstr ist goal (snd (out_gen globwit_open_constr x)))
   | CastedOpenConstrArgType ->
       in_gen wit_casted_open_constr 
-        (pf_interp_casted_openconstr ist goal (out_gen globwit_casted_open_constr x))
+        (pf_interp_casted_openconstr ist goal (snd (out_gen globwit_casted_open_constr x)))
   | ConstrWithBindingsArgType ->
       in_gen wit_constr_with_bindings
         (interp_constr_with_bindings ist goal (out_gen globwit_constr_with_bindings x))
@@ -1641,6 +1657,8 @@ and interp_match ist g constr lmr =
       let lm = List.map (fun (id,c) -> (id,VConstr c)) lm in
       val_interp {ist with lfun=lm@lctxt@ist.lfun} g mt
     with | NextOccurrence _ -> raise No_match
+         | e when is_match_catchable e -> 
+             apply_sub_match ist (nocc + 1) (id,c) csr mt
   in
   let rec apply_match ist csr = function
     | (All t)::_ ->
@@ -1668,7 +1686,14 @@ and interp_match ist g constr lmr =
       errorlabstrm "Tacinterp.apply_match" 
         (str "Argument of match does not evaluate to a term") in
   let ilr = read_match_rule (project g) env (fst (constr_list ist env)) lmr in
-  apply_match ist csr ilr
+  try
+    incr hack_fail_level_shift;
+    let x = apply_match ist csr ilr in
+    decr hack_fail_level_shift;
+    x
+  with e ->
+    decr hack_fail_level_shift;
+    raise e
 
 (* Interprets tactic expressions : returns a "tactic" *)
 and interp_tactic ist tac gl =
@@ -1829,7 +1854,7 @@ and interp_atomic ist gl = function
     | TacticArgType -> 
 	val_interp ist gl (out_gen globwit_tactic x)
     | StringArgType | BoolArgType
-    | QuantHypArgType | RedExprArgType 
+    | QuantHypArgType | RedExprArgType | OpenConstrArgType
     | CastedOpenConstrArgType | ConstrWithBindingsArgType | BindingsArgType 
     | ExtraArgType _ | List0ArgType _ | List1ArgType _ | OptArgType _ | PairArgType _ 
 	-> error "This generic type is not supported in alias"
@@ -1926,8 +1951,7 @@ let subst_redexp subst = function
   | Lazy f -> Lazy (subst_flag subst f)
   | Pattern l -> Pattern (List.map (subst_constr_occurrence subst) l)
   | Simpl o -> Simpl (option_app (subst_constr_occurrence subst) o)
-  | (Red _ | Hnf as r) -> r
-  | ExtraRedExpr (s,c) -> ExtraRedExpr (s, subst_rawconstr subst c)
+  | (Red _ | Hnf | ExtraRedExpr _ as r) -> r
 
 let subst_raw_may_eval subst = function
   | ConstrEval (r,c) -> ConstrEval (subst_redexp subst r,subst_rawconstr subst c)
@@ -2120,9 +2144,12 @@ and subst_genarg subst (x:glob_generic_argument) =
       in_gen globwit_red_expr (subst_redexp subst (out_gen globwit_red_expr x))
   | TacticArgType ->
       in_gen globwit_tactic (subst_tactic subst (out_gen globwit_tactic x))
+  | OpenConstrArgType ->
+      in_gen globwit_open_constr 
+        ((),subst_rawconstr subst (snd (out_gen globwit_open_constr x)))
   | CastedOpenConstrArgType ->
       in_gen globwit_casted_open_constr 
-        (subst_rawconstr subst (out_gen globwit_casted_open_constr x))
+        ((),subst_rawconstr subst (snd (out_gen globwit_casted_open_constr x)))
   | ConstrWithBindingsArgType ->
       in_gen globwit_constr_with_bindings
         (subst_raw_with_bindings subst (out_gen globwit_constr_with_bindings x))

@@ -6,9 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Diaconescu.v,v 1.5.2.1 2004/07/16 19:31:06 herbelin Exp $ i*)
+(*i $Id: Diaconescu.v,v 1.5.2.3 2004/08/01 09:36:44 herbelin Exp $ i*)
 
-(* R. Diaconescu [Diaconescu] showed that the Axiom of Choice in Set Theory
+(** R. Diaconescu [Diaconescu] showed that the Axiom of Choice in Set Theory
    entails Excluded-Middle; S. Lacas and B. Werner [LacasWerner]
    adapted the proof to show that the axiom of choice in equivalence
    classes entails Excluded-Middle in Type Theory.
@@ -27,12 +27,12 @@
 
 Section PredExt_GuardRelChoice_imp_EM.
 
-(* The axiom of extensionality for predicates *)
+(** The axiom of extensionality for predicates *)
 
 Definition PredicateExtensionality :=
   forall P Q:bool -> Prop, (forall b:bool, P b <-> Q b) -> P = Q.
 
-(* From predicate extensionality we get propositional extensionality
+(** From predicate extensionality we get propositional extensionality
    hence proof-irrelevance *)
 
 Require Import ClassicalFacts.
@@ -54,7 +54,7 @@ Proof.
   apply (ext_prop_dep_proof_irrel_cic prop_ext).
 Qed.
 
-(* From proof-irrelevance and relational choice, we get guarded
+(** From proof-irrelevance and relational choice, we get guarded
    relational choice *)
 
 Require Import ChoiceFacts.
@@ -73,8 +73,8 @@ Proof.
    (rel_choice_and_proof_irrel_imp_guarded_rel_choice rel_choice proof_irrel).
 Qed.
 
-(* The form of choice we need: there is a functional relation which chooses
-   an element in any non empty subset of bool *)
+(** The form of choice we need: there is a functional relation which chooses
+    an element in any non empty subset of bool *)
 
 Require Import Bool.
 
@@ -90,30 +90,30 @@ Proof.
   exact (fun _ H => H).
 Qed.
 
-(* The proof of the excluded middle *)
-(* Remark: P could have been in Set or Type *)
+(** The proof of the excluded middle *)
+(** Remark: P could have been in Set or Type *)
 
 Theorem pred_ext_and_rel_choice_imp_EM : forall P:Prop, P \/ ~ P.
 Proof.
 intro P.
 
-(* first we exhibit the choice functional relation R *)
+(** first we exhibit the choice functional relation R *)
 destruct AC as [R H].
 
 set (class_of_true := fun b => b = true \/ P).
 set (class_of_false := fun b => b = false \/ P).
 
-(* the actual "decision": is (R class_of_true) = true or false? *)
+(** the actual "decision": is (R class_of_true) = true or false? *)
 destruct (H class_of_true) as [b0 [H0 [H0' H0'']]].
 exists true; left; reflexivity.
 destruct H0.
 
-(* the actual "decision": is (R class_of_false) = true or false? *)
+(** the actual "decision": is (R class_of_false) = true or false? *)
 destruct (H class_of_false) as [b1 [H1 [H1' H1'']]].
 exists false; left; reflexivity.
 destruct H1.
 
-(* case where P is false: (R class_of_true)=true /\ (R class_of_false)=false *)
+(** case where P is false: (R class_of_true)=true /\ (R class_of_false)=false *)
 right.
 intro HP.
 assert (Hequiv : forall b:bool, class_of_true b <-> class_of_false b).
@@ -129,7 +129,7 @@ rewrite <- H0''. reflexivity.
 rewrite Heq.
 assumption.
 
-(* cases where P is true *)
+(** cases where P is true *)
 left; assumption.
 left; assumption.
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: esubst.mli,v 1.3.2.1 2004/07/16 19:30:25 herbelin Exp $ *)
+(*i $Id: esubst.mli,v 1.3.2.2 2005/01/21 17:14:10 herbelin Exp $ i*)
 
 (*s Compact representation of explicit relocations. \\
    [ELSHFT(l,n)] == lift of [n], then apply [lift l].

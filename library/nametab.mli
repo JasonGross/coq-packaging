@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: nametab.mli,v 1.43.2.1 2004/07/16 19:30:36 herbelin Exp $ i*)
+(*i $Id: nametab.mli,v 1.43.2.2 2005/01/21 16:41:51 herbelin Exp $ i*)
 
 (*i*)
 open Util
@@ -33,13 +33,14 @@ open Libnames
 
    \item [locate : qualid -> object_reference]
 
-   Finds the object referred to by [qualid] or raises Not_found 
+   Finds the object referred to by [qualid] or raises [Not_found]
    
-   \item [name_of] : object_reference -> user_name
+   \item [name_of : object_reference -> user_name]
 
    The [user_name] can be for example the shortest non ambiguous [qualid] or 
    the [full_user_name] or [identifier]. Such a function can also have a 
    local context argument. 
+   \end{itemize}
 *)
    
   
@@ -155,7 +156,7 @@ val id_of_global : global_reference -> identifier
 val pr_global_env : Idset.t -> global_reference -> std_ppcmds
 
 
-(* The [shortest_qualid] functions given an object with user_name
+(* The [shortest_qualid] functions given an object with [user_name]
    Coq.A.B.x, try to find the shortest among x, B.x, A.B.x and
    Coq.A.B.x that denotes the same object. *)
 

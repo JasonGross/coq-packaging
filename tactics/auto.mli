@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: auto.mli,v 1.22.2.1 2004/07/16 19:30:51 herbelin Exp $ i*)
+(*i $Id: auto.mli,v 1.22.2.2 2005/01/21 16:41:52 herbelin Exp $ i*)
 
 (*i*)
 open Util
@@ -105,7 +105,7 @@ val make_resolves :
 
 (* [make_resolve_hyp hname htyp].
    used to add an hypothesis to the local hint database;
-   Never raises an User_exception;
+   Never raises a user exception;
    If the hyp cannot be used as a Hint, the empty list is returned. *)
 
 val make_resolve_hyp : 

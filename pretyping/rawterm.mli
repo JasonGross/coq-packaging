@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: rawterm.mli,v 1.47.2.2 2004/07/16 19:30:46 herbelin Exp $ i*)
+(*i $Id: rawterm.mli,v 1.47.2.5 2005/01/21 16:42:37 herbelin Exp $ i*)
 
 (*i*)
 open Util
@@ -47,7 +47,7 @@ type 'a bindings =
 type 'a with_bindings = 'a * 'a bindings
 
 type hole_kind =
-  | ImplicitArg of global_reference * int
+  | ImplicitArg of global_reference * (int * identifier option)
   | BinderType of name
   | QuestionMark
   | CasesType
@@ -97,11 +97,11 @@ i*)
 
 val map_rawconstr : (rawconstr -> rawconstr) -> rawconstr -> rawconstr
 
-(*
+(*i
 val map_rawconstr_with_binders_loc : loc -> 
   (identifier -> 'a -> identifier * 'a) ->
   ('a -> rawconstr -> rawconstr) -> 'a -> rawconstr -> rawconstr
-*)
+i*)
 
 val occur_rawconstr : identifier -> rawconstr -> bool
 
@@ -130,7 +130,7 @@ type ('a,'b) red_expr_gen =
   | Unfold of 'b occurrences list
   | Fold of 'a list
   | Pattern of 'a occurrences list
-  | ExtraRedExpr of string * 'a
+  | ExtraRedExpr of string
 
 type ('a,'b) may_eval =
   | ConstrTerm of 'a

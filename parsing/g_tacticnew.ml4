@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_tacticnew.ml4,v 1.35.2.2 2004/07/16 19:30:39 herbelin Exp $ *)
+(* $Id: g_tacticnew.ml4,v 1.35.2.6 2005/01/15 14:56:53 herbelin Exp $ *)
 
 open Pp
 open Ast
@@ -78,7 +78,7 @@ open Tactic
 let mk_fix_tac (loc,id,bl,ann,ty) =
   let n =
     match bl,ann with
-        [([_],_)], None -> 0
+        [([_],_)], None -> 1
       | _, Some x ->
           let ids = List.map snd (List.flatten (List.map fst bl)) in
           (try list_index (snd x) ids
@@ -109,7 +109,8 @@ let join_to_constr loc c2 = (fst loc), snd (Topconstr.constr_loc c2)
 if not !Options.v7 then
 GEXTEND Gram
   GLOBAL: simple_tactic constr_with_bindings quantified_hypothesis
-  bindings red_expr int_or_var castedopenconstr simple_intropattern;
+  bindings red_expr int_or_var open_constr castedopenconstr 
+  simple_intropattern;
 
   int_or_var:
     [ [ n = integer  -> Genarg.ArgArg n
@@ -128,8 +129,11 @@ GEXTEND Gram
       |	id = METAIDENT -> MetaId (loc,id)
       ] ]
   ;
+  open_constr:
+    [ [ c = constr -> ((),c) ] ]
+   ;
   castedopenconstr:
-    [ [ c = constr -> c ] ]
+    [ [ c = constr -> ((),c) ] ]
   ;
   induction_arg:
     [ [ n = natural -> ElimOnAnonHyp n
@@ -212,7 +216,7 @@ GEXTEND Gram
       | IDENT "unfold"; ul = LIST1 unfold_occ -> Unfold ul
       | IDENT "fold"; cl = LIST1 constr -> Fold cl
       | IDENT "pattern"; pl = LIST1 pattern_occ -> Pattern pl
-      | s = IDENT; c = constr -> ExtraRedExpr (s,c) ] ]
+      | s = IDENT; OPT [ (* compat V8.0pl1 *) constr ] -> ExtraRedExpr s ] ]
   ;
   hypident:
     [ [ id = id_or_meta -> id,(InHyp,ref None)

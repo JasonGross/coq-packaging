@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: symbols.ml,v 1.31.2.1 2004/07/16 19:30:23 herbelin Exp $ *)
+(* $Id: symbols.ml,v 1.31.2.2 2004/11/17 09:33:38 herbelin Exp $ *)
 
 (*i*)
 open Util
@@ -270,7 +270,7 @@ let declare_notation_interpretation ntn scopt pat df pp8only =
   let scope = match scopt with Some s -> s | None -> default_scope in
   let sc = find_scope scope in
   if Stringmap.mem ntn sc.notations && Options.is_verbose () then
-    warning ("Notation "^ntn^" is already used"^
+    warning ("Notation "^ntn^" was already used"^
     (if scopt = None then "" else " in scope "^scope));
   let sc = { sc with notations = Stringmap.add ntn (pat,df,pp8only) sc.notations } in
   scope_map := Stringmap.add scope sc !scope_map;

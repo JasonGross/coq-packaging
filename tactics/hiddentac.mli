@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: hiddentac.mli,v 1.19.2.1 2004/07/16 19:30:53 herbelin Exp $ i*)
+(*i $Id: hiddentac.mli,v 1.19.2.2 2005/01/21 16:41:52 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -78,9 +78,9 @@ val h_rename          : identifier -> identifier -> tactic
 
 
 (* Constructors *)
-(*
+(*i
 val h_any_constructor : tactic -> tactic
-*)
+i*)
 val h_constructor     : int -> constr bindings -> tactic
 val h_left            : constr bindings -> tactic
 val h_right           : constr bindings -> tactic

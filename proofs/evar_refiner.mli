@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evar_refiner.mli,v 1.28.2.1 2004/07/16 19:30:49 herbelin Exp $ i*)
+(*i $Id: evar_refiner.mli,v 1.28.2.2 2005/01/21 16:41:51 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -51,7 +51,7 @@ val w_const_value       : wc -> constant -> constr
 val w_defined_evar      : wc -> existential_key -> bool
 
 val instantiate : int -> constr -> identifier Tacexpr.gsimple_clause -> tactic
-(*
+(*i
 val instantiate_tac : tactic_arg list -> tactic
-*)
+i*)
 val instantiate_pf_com : int -> Topconstr.constr_expr -> pftreestate -> pftreestate

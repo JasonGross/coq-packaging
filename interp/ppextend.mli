@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ppextend.mli,v 1.4.2.1 2004/07/16 19:30:22 herbelin Exp $ *)
+(*i $Id: ppextend.mli,v 1.4.2.2 2005/01/21 16:41:50 herbelin Exp $ i*)
 
 (*i*)
 open Pp

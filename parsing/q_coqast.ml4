@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: q_coqast.ml4,v 1.47.2.2 2004/07/16 20:51:12 herbelin Exp $ *)
+(* $Id: q_coqast.ml4,v 1.47.2.5 2005/01/15 14:56:54 herbelin Exp $ *)
 
 open Util
 open Names
@@ -21,8 +21,12 @@ let purge_str s =
 
 let anti loc x =
   let e =
-    let loc = unloc loc in
-    let loc = make_loc (1, snd loc - fst loc) in <:expr< $lid:purge_str x$ >>
+    let loc = 
+      ifdef OCAML_308 then
+        loc
+      else
+        (1, snd loc - fst loc)
+    in <:expr< $lid:purge_str x$ >>
   in
   <:expr< $anti:e$ >>
 
@@ -244,9 +248,8 @@ let mlexpr_of_red_expr = function
   | Rawterm.Pattern l ->
       let f = mlexpr_of_list mlexpr_of_occ_constr in
       <:expr< Rawterm.Pattern $f l$ >>
-  | Rawterm.ExtraRedExpr (s,c) ->
-      let l = mlexpr_of_constr c in
-      <:expr< Rawterm.ExtraRedExpr $mlexpr_of_string s$ $l$ >>
+  | Rawterm.ExtraRedExpr s ->
+      <:expr< Rawterm.ExtraRedExpr $mlexpr_of_string s$ >>
 
 let rec mlexpr_of_argtype loc = function
   | Genarg.BoolArgType -> <:expr< Genarg.BoolArgType >>
@@ -259,6 +262,7 @@ let rec mlexpr_of_argtype loc = function
   | Genarg.HypArgType -> <:expr< Genarg.HypArgType >>
   | Genarg.StringArgType -> <:expr< Genarg.StringArgType >>
   | Genarg.QuantHypArgType -> <:expr< Genarg.QuantHypArgType >>
+  | Genarg.OpenConstrArgType -> <:expr< Genarg.OpenConstrArgType >>
   | Genarg.CastedOpenConstrArgType -> <:expr< Genarg.CastedOpenConstrArgType >>
   | Genarg.ConstrWithBindingsArgType -> <:expr< Genarg.ConstrWithBindingsArgType >>
   | Genarg.BindingsArgType -> <:expr< Genarg.BindingsArgType >>

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacred.ml,v 1.75.2.2 2004/07/16 19:30:46 herbelin Exp $ *)
+(* $Id: tacred.ml,v 1.75.2.6 2004/12/29 10:17:10 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -329,7 +329,7 @@ let make_elim_fun (names,(nbfix,lv,n)) largs =
 	   mkLambda (Name(id_of_string"x"),
 		     substl (rev_firstn_liftn (n-k) (-i) la') a,
 		     c))
-	0 (applistc (mkEvalRef ref) la') lv)
+	1 (applistc (mkEvalRef ref) la') (List.rev lv))
 
 (* [f] is convertible to [Fix(recindices,bodynum),bodyvect)] make 
    the reduction using this extra information *)
@@ -808,6 +808,7 @@ let abstract_scheme env sigma (locc,a) t =
 
 let pattern_occs loccs_trm env sigma c =
   let abstr_trm = List.fold_right (abstract_scheme env sigma) loccs_trm c in
+  let _ = Typing.type_of env sigma abstr_trm in
   applist(abstr_trm, List.map snd loccs_trm)
 
 (* Generic reduction: reduction functions used in reduction tactics *)
@@ -858,7 +859,7 @@ let reduction_of_redexp = function
   | Unfold ubinds -> unfoldn ubinds
   | Fold cl -> fold_commands cl
   | Pattern lp -> pattern_occs lp
-  | ExtraRedExpr (s,c) ->
+  | ExtraRedExpr s ->
       (try Stringmap.find s !red_expr_tab
       with Not_found -> error("unknown user-defined reduction \""^s^"\""))
 (* Used in several tactics. *)
@@ -945,7 +946,10 @@ let reduce_to_ref_gen allow_product env sigma ref t =
           try 
 	    let t' = nf_betaiota (one_step_reduce env sigma t) in 
 	    elimrec env t' l
-          with NotStepReducible -> raise Not_found
+          with NotStepReducible -> 
+	    errorlabstrm ""
+	    (str "Not a statement of conclusion " ++ 
+	     Nametab.pr_global_env Idset.empty ref)
   in
   elimrec env t []
 

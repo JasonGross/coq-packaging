@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacticals.mli,v 1.38.2.1 2004/07/16 19:30:55 herbelin Exp $ i*)
+(*i $Id: tacticals.mli,v 1.38.2.2 2005/01/21 16:41:52 herbelin Exp $ i*)
 
 (*i*)
 open Names
@@ -127,7 +127,7 @@ type branch_assumptions = {
   ba        : branch_args;     (* the branch args *)
   assums    : named_context}   (* the list of assumptions introduced *)
 
-(* Useful for "as intro_pattern" modifier *)
+(* Useful for [as intro_pattern] modifier *)
 val compute_induction_names : 
   int -> intro_pattern_expr option -> intro_pattern_expr list array
 

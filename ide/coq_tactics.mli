@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq_tactics.mli,v 1.1.2.1 2004/07/16 19:30:20 herbelin Exp $ *)
+(*i $Id: coq_tactics.mli,v 1.1.2.2 2005/01/21 17:21:33 herbelin Exp $ i*)
 
 val tactics : string list
 

@@ -6,9 +6,16 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: JMeq.v,v 1.8.2.1 2004/07/16 19:31:06 herbelin Exp $ i*)
+(*i $Id: JMeq.v,v 1.8.2.2 2004/08/03 17:42:32 herbelin Exp $ i*)
 
-(** John Major's Equality as proposed by C. Mc Bride *)
+(** John Major's Equality as proposed by C. Mc Bride
+
+  Reference:
+
+  [McBride] Elimination with a Motive, Proceedings of TYPES 2000,
+  LNCS 2277, pp 197-216, 2002.
+
+*)
 
 Set Implicit Arguments.
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: heap.mli,v 1.1.2.1 2004/07/16 19:30:30 herbelin Exp $ *)
+(*i $Id: heap.mli,v 1.1.2.2 2005/01/21 17:14:11 herbelin Exp $ i*)
 
 (* Heaps *)
 

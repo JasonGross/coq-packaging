@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declaremods.mli,v 1.8.2.1 2004/07/16 19:30:35 herbelin Exp $ i*)
+(*i $Id: declaremods.mli,v 1.8.2.2 2005/01/21 16:41:50 herbelin Exp $ i*)
 
 (*i*)
 open Util
@@ -85,7 +85,7 @@ val end_library :
 
 
 (* [really_import_module mp] opens the module [mp] (in a Caml sense).
-   It modifies Nametab and performs the "open_object" function for
+   It modifies Nametab and performs the [open_object] function for
    every object of the module. *)
 
 val really_import_module : module_path -> unit
@@ -109,7 +109,7 @@ val iter_all_segments : bool -> (object_name -> obj -> unit) -> unit
 
 val debug_print_modtab : unit -> Pp.std_ppcmds
 
-(*val debug_print_modtypetab : unit -> Pp.std_ppcmds*)
+(*i val debug_print_modtypetab : unit -> Pp.std_ppcmds i*)
 
 (* For translator *)
 val process_module_bindings : module_ident list ->
