@@ -71,6 +71,9 @@ install: build
 	dh_install --sourcedir=$(COQPREF)
 
 	cp debian/coq/usr/share/man/man1/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.opt.1
+	cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.1
+	cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.byte.1
+	cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.opt.1
 
 binary-indep: build install
 
