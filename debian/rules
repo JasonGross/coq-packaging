@@ -58,7 +58,10 @@ install: build
 
 	$(MAKE) $(ADDPREF) install || $(MAKE) BEST=byte HASCOQIDE=byte $(ADDPREF) install
 
-	for i in $(COQPREF)/usr/bin/*.opt; do strip -R .note -R .comment $$i; done
+	-for i in $(COQPREF)/usr/bin/*.opt; do \
+		echo "Stripping: $$i"; \
+		strip -R .note -R .comment $$i; \
+	done
 	cp debian/coq.xpm debian/coq/usr/share/pixmaps/coq.xpm
 	cp debian/coq.desktop debian/coqide/usr/share/applnk/Development
 
