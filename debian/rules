@@ -8,7 +8,7 @@ CONFIGUREOPTS=--prefix /usr --mandir /usr/share/man \
 	--emacslib /usr/share/emacs/site-lisp/coq --reals all
 
 configure: configure-stamp
-configure-stamp: patch
+configure-stamp:
 	dh_testdir
 	if [ -e /usr/bin/ocamlc.opt ]; \
 	then \
@@ -16,7 +16,7 @@ configure-stamp: patch
 	else \
 		./configure $(CONFIGUREOPTS); \
 	fi
-	if [ `arch` = ppc ] ; then ./configure $(CONFIGUREOPTS) ; fi
+	if [ $(DEB_BUILD_ARCH) = powerpc ]; then ./configure $(CONFIGUREOPTS); fi
 	touch configure-stamp
 
 build: configure-stamp build-stamp
@@ -30,7 +30,7 @@ build-stamp:
 	      && echo Trying to build coq in bytecode instead \
 	      && $(MAKE) archclean clean \
 	      && touch test-suite/success/debian.v8 \
-	      && $(MAKE) BEST=byte check \
+	      && $(MAKE) BEST=byte HASCOQIDE=byte check \
 	      && echo NATIVE CODE COMPILATION FAILED \
 	      && echo Coq was built in bytecode instead); \
 	else \
@@ -57,7 +57,7 @@ install: build
 	dh_clean -k
 	dh_installdirs
 
-	$(MAKE) $(ADDPREF) install || $(MAKE) BEST=byte $(ADDPREF) install
+	$(MAKE) $(ADDPREF) install || $(MAKE) BEST=byte HASCOQIDE=byte $(ADDPREF) install
 
 	for i in $(COQPREF)/usr/bin/*.opt; do strip -R .note -R .comment $$i; done
 	cp debian/coq.xpm debian/coq/usr/share/pixmaps/coq.xpm
@@ -88,4 +88,4 @@ binary-arch: build install
 	dh_builddeb
 
 binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install configure patch unpatch
+.PHONY: build clean binary-indep binary-arch binary install configure

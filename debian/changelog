@@ -1,3 +1,14 @@
+coq (8.0pl1-2) unstable; urgency=medium
+
+  * Changed section to math.
+  * Versionned the dependency to liblablgtk2-ocaml(-dev).
+  * If we fallback on bytecode, we also try to build coqide in bytecode (I hope
+    this will fix the FTBFS on alpha).
+  * Added a watch file.
+  * Removed the unnecessary patch an unpatch targets in the rules.
+
+ -- Samuel Mimram <samuel.mimram@ens-lyon.org>  Mon, 16 Aug 2004 20:39:48 +0200
+
 coq (8.0pl1-1) unstable; urgency=low
 
   * New upstream release: finally the version without QPL-licensed files is out,
@@ -5,6 +16,7 @@ coq (8.0pl1-1) unstable; urgency=low
   * Libraries are now in separate packages (coq-libs and coq7-libs).
   * An additional package provides coqide.
   * Built with OCaml 3.08.
+  * Thank you Martin Ellis and Julien Cristau for your help on this package.
 
  -- Samuel Mimram <samuel.mimram@ens-lyon.org>  Sun, 18 Jul 2004 01:10:24 +0200
 
