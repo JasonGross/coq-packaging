@@ -1,6 +1,6 @@
 coq (8.0pl1-1) unstable; urgency=low
 
-  * At least the version without QPL-licensed files is out,
+  * Finally the version without QPL-licensed files is out,
     closes: #230356, #250497.
   * Build with OCaml 3.08.
 
