@@ -1,0 +1,65 @@
+Source: coq
+Section: devel
+Priority: optional
+Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
+Uploaders: Ralf Treinen <treinen@debian.org>, Sven Luther <luther@debian.org>, Jerome Marant <jerome@debian.org>, Remi Vanicat <vanicat@debian.org>, Stefano Zacchiroli <zack@debian.org>
+Standards-Version: 3.6.1
+Build-Depends: debhelper (>= 4.0.0), ocaml-3.07, ocaml-best-compilers, liblablgtk2-ocaml-dev
+
+Package: coq
+Architecture: any
+Depends: ${shlibs:Depends}, coq-libs
+Suggests: coq-doc, ocaml-3.07, proofgeneral-coq, ledit, cle
+Recommends: coq-doc, coqide | proofgeneral-coq
+Description: Proof assistant for higher-order logic
+ Coq is a proof assistant for higher-order logic, which allows the
+ development of computer programs consistent with their formal
+ specification. It is developed using Objective Caml and Camlp4.
+ For more information, see <http://coq.inria.fr/>.
+ .
+ This packages provides coqtop, a command line interface to Coq.
+ .
+ A graphical interface for Coq is provided in the coqide package.
+ Coq can also be used with ProofGeneral, which allows proofs to be
+ edited using emacs and xemacs.  This requires the proofgeneral-coq
+ package to be installed.
+
+Package: coqide
+Architecture: any
+Depends: coq (>= 8.0), ${shlibs:Depends}
+Description: Proof assistant for higher-order logic
+ Coq is a proof assistant for higher-order logic, which allows the
+ development of computer programs consistent with their formal
+ specification. It is developed using Objective Caml and Camlp4.
+ For more information, see <http://coq.inria.fr/>.
+ .
+ This package provides CoqIde, a graphical user interface for
+ developing proofs.
+
+Package: coq-libs
+Architecture: any
+Recommends: coq (>= 8.0)
+Conflicts: coq (<< 8.0)
+Description: Proof assistant for higher-order logic
+ Coq is a proof assistant for higher-order logic, which allows the
+ development of computer programs consistent with their formal
+ specification. It is developed using Objective Caml and Camlp4.
+ For more information, see <http://coq.inria.fr/>.
+ .
+ This package provides existing theories that new proofs can be
+ based upon, including theories of arithmetic and Boolean values.
+
+Package: coq7-libs
+Architecture: any
+Recommends: coq (>= 8.0)
+Description: Proof assistant for higher-order logic
+ Coq is a proof assistant for higher-order logic, which allows the
+ development of computer programs consistent with their formal
+ specification. It is developed using Objective Caml and Camlp4.
+ For more information, see <http://coq.inria.fr/>.
+ .
+ This package provides existing theories from Coq 7 in Coq 8, and
+ allows proofs that were developed in Coq 7 to be used in Coq 8.
+ It is also required to translate theories in Coq 7 syntax into 
+ the new syntax introduced in Coq 8.  However, this package does
+ not need to be installed to use Coq 7.

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Coq
+Comment=Proof Assistant
+Exec=/usr/bin/coqide
+Type=Application
+Terminal=0
+Icon=/usr/share/pixmaps/coq.xpm
