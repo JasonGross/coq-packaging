@@ -9,13 +9,6 @@ usr/bin/coqtop*
 usr/bin/coqwc
 usr/bin/gallina
 usr/share/emacs/site-lisp/coq
-usr/share/man/man1/coqc.1
-usr/share/man/man1/coqdep.1
-usr/share/man/man1/coqdoc.1
-usr/share/man/man1/coq_makefile.1
-usr/share/man/man1/coqmktop.1
-usr/share/man/man1/coq-tex.1
-usr/share/man/man1/coqtop*
-usr/share/man/man1/coqwc.1
+usr/share/man/man1/c*
 usr/share/man/man1/gallina.1
 usr/share/texmf/tex/latex/misc/*

@@ -9,7 +9,7 @@ Build-Depends: debhelper (>= 4.0.0), ocaml-3.07, ocaml-best-compilers, liblablgt
 Package: coq
 Architecture: any
 Depends: ${shlibs:Depends}, coq-libs
-Suggests: coq-doc, ocaml-3.07, proofgeneral-coq, ledit, cle
+Suggests: ocaml-3.07, proofgeneral-coq, ledit, cle
 Recommends: coq-doc, coqide | proofgeneral-coq
 Description: Proof assistant for higher-order logic
  Coq is a proof assistant for higher-order logic, which allows the

@@ -65,10 +65,12 @@ install: build
 	$(MAKE) $(ADDPREF) install || $(MAKE) BEST=byte $(ADDPREF) install
 
 	for i in $(COQPREF)/usr/bin/*.opt; do strip -R .note -R .comment $$i; done
-	install debian/coq.xpm debian/coq/usr/share/pixmaps/coq.xpm
-	install debian/coq.desktop debian/coqide/usr/share/applnk/Development
+	cp debian/coq.xpm debian/coq/usr/share/pixmaps/coq.xpm
+	cp debian/coq.desktop debian/coqide/usr/share/applnk/Development
 
 	dh_install --sourcedir=$(COQPREF)
+
+	cp debian/coq/usr/share/man/man1/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.opt.1
 
 binary-indep: build install
 
