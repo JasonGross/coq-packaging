@@ -25,29 +25,26 @@ configure-stamp: patch
 build: patch-stamp configure-stamp build-stamp
 build-stamp:
 	dh_testdir
+	touch test-suite/success/debian.v8
 	if grep -q BEST=opt config/Makefile; \
 	then \
-	  echo opt > best-stamp; \
-	  $(MAKE) world \
+	  $(MAKE) check \
 	  || (echo WARNING: NATIVE CODE COMPILATION FAILED \
 	      && echo Trying to build coq in bytecode instead \
-	      && echo byte > best-stamp \
 	      && $(MAKE) archclean clean \
-	      && $(MAKE) BEST=byte world \
+	      && touch test-suite/success/debian.v8 \
+	      && $(MAKE) BEST=byte check \
 	      && echo NATIVE CODE COMPILATION FAILED \
 	      && echo Coq was built in bytecode instead); \
 	else \
-	  echo byte > best-stamp; \
-	  $(MAKE) world; \
+	  $(MAKE) check; \
 	fi
-	touch test-suite/success/debian.v8
-	$(MAKE) BEST=`cat best-stamp` check
 	touch build-stamp
 
 clean: unpatch
 	dh_testdir
 	dh_testroot
-	rm -f build-stamp configure-stamp best-stamp
+	rm -f build-stamp configure-stamp
 
 	-$(MAKE) clean
 	-$(MAKE) archclean
