@@ -63,13 +63,12 @@ install: build
 	dh_installdirs
 
 	$(MAKE) $(ADDPREF) install || $(MAKE) BEST=byte $(ADDPREF) install
-	-strip -R .note -R .comment $(COQPREF)/usr/bin/coqtop.opt
-	-strip -R .note -R .comment $(COQPREF)/usr/bin/coqide.opt
-	-strip -R .note -R .comment $(COQPREF)/usr/bin/coq-interface.opt
-#	-strip -R .note -R .comment $(COQPREF)/usr/bin/parser.opt
+
+	for i in $(COQPREF); do strip -R .note -R .comment $$i; done
 	install debian/coq.xpm debian/coq/usr/share/pixmaps/coq.xpm
 	install debian/coq.desktop debian/coqide/usr/share/applnk/Development
-	dh_install --sourcedir=$(COQPREF)
+
+	dh_install --sourcedir=$(COQPREF) --fail-missing
 
 binary-indep: build install
 
