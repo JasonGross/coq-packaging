@@ -1,6 +1,13 @@
 #!/usr/bin/make -f
 # debian/rules for coq
 
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+# This has to be exported to make some magic below work.
+export DH_OPTIONS
+
+# We want to use dpatch
 include /usr/share/dpatch/dpatch.make
 
 COQPREF=$(CURDIR)/debian/tmp
@@ -86,20 +93,30 @@ install: build
 	# These are installed as docs
 	rm -f $(COQPREF)/usr/lib/coq/ide/utf8.v $(COQPREF)/usr/lib/coq/ide/FAQ
 
-binary-indep: build install
+	dh_install --sourcedir=$(COQPREF) --list-missing
 
-binary-arch: build install
+binary-common:
 	dh_testdir
 	dh_testroot
 	dh_installdocs
 	dh_installemacsen
+	dh_installman
 	dh_installchangelogs CHANGES
-	dh_install --sourcedir=$(COQPREF) --list-missing
 	dh_link
 	dh_compress
 	dh_fixperms
 	dh_installdeb
 	dh_shlibdeps
+
+binary-indep: build install
+	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
+	dh_gencontrol -pcoq-libs
+	dh_gencontrol -pcoq7-libs
+	dh_md5sums -i
+	dh_builddeb -i
+
+binary-arch: build install
+	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 	if [ -e opt-stamp ]; then \
 		dh_gencontrol -pcoq -u-Vocaml:Runtime=""; \
 		dh_gencontrol -pcoqide -u-Vocaml:Runtime=""; \
@@ -107,10 +124,8 @@ binary-arch: build install
 		dh_gencontrol -pcoq -u-Vocaml:Runtime="ocaml-base-nox-3.08"; \
 		dh_gencontrol -pcoqide -u-Vocaml:Runtime="ocaml-base-nox-3.08"; \
 	fi
-	dh_gencontrol -pcoq-libs
-	dh_gencontrol -pcoq7-libs
-	dh_md5sums
-	dh_builddeb
+	dh_md5sums -s
+	dh_builddeb -s
 
 binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install configure
+.PHONY: build clean binary-indep binary-arch binary-common binary install configure

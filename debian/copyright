@@ -1,14 +1,14 @@
 This package was debianized by Fernando Sanchez <fer@debian.org>
 
-I was downloaded from
+It was downloaded from
 
-ftp://ftp.inria.fr/INRIA/LogiCal/coq/V8.0pl1
+ftp://ftp.inria.fr/INRIA/LogiCal/coq/current
 
 The Coq proof assistant V7 and V8 includes software developed by the 
 Coq development team inside the LogiCal project, at INRIA, CNRS and
 University Paris Sud. 
 
-Copyright 1999-2004 The Coq development team, 
+Copyright 1999-2005 The Coq development team, 
 INRIA-CNRS, University Paris Sud, All rights reserved.
 
 This product includes also software developed by
@@ -17,7 +17,7 @@ This product includes also software developed by
         Pierre Crégut, France Telecom R & D (contrib/omega and contrib/romega)
         Pierre Courtieu, Lemme (contrib/funind)
         Loïc Pottier, Lemme, INRIA Sophia-Antipolis (contrib/fourier)
-        Claudio Sacerdoti Coen, HELM, University of Bologna, (contrib/xml)
+        Claudio Sacerdoti Coen, HELM, University of Bologna (contrib/xml)
 
 Coq includes a tactic Jp based on JProver, a theorem prover for
 first-order intuitionistic logic.  Jprover was originally implemented
