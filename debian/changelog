@@ -1,3 +1,11 @@
+coq (8.0pl2-3) unstable; urgency=low
+
+  * Added text_view_typing_error patch to avoid a typing error and solve the
+    FTBFS, closes: #326740.
+  * Added forgotten call to dh_installmenu.
+
+ -- Samuel Mimram <smimram@debian.org>  Wed,  7 Sep 2005 21:26:36 +0200
+
 coq (8.0pl2-2) unstable; urgency=medium
 
   * Rebuilding with OCaml 3.08.3 is necessary because of the former dependency
