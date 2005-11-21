@@ -3,13 +3,13 @@ Section: math
 Priority: optional
 Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
 Uploaders: Ralf Treinen <treinen@debian.org>, Sven Luther <luther@debian.org>, Remi Vanicat <vanicat@debian.org>, Stefano Zacchiroli <zack@debian.org>, Samuel Mimram <smimram@debian.org>
-Standards-Version: 3.6.1.1
-Build-Depends: debhelper (>= 4.0.0), dpatch, ocaml-nox (>= 3.08.2), ocaml-best-compilers, liblablgtk2-ocaml-dev (>= 2.4.0)
+Standards-Version: 3.6.2
+Build-Depends: debhelper (>= 4.0.0), dpatch, ocaml-nox (>= 3.09.0), ocaml-best-compilers, liblablgtk2-ocaml-dev (>= 2.4.0)
 
 Package: coq
 Architecture: any
 Depends: ${shlibs:Depends}, coq-libs (= ${Source-Version})
-Recommends: coq-doc, coqide | proofgeneral-coq
+Recommends: coqide | proofgeneral-coq
 Suggests: ocaml-nox (>= 3.08), proofgeneral-coq, ledit, cle
 Description: proof assistant for higher-order logic (toplevel and compiler)
  Coq is a proof assistant for higher-order logic, which allows the

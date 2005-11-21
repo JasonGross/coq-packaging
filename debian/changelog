@@ -1,3 +1,12 @@
+coq (8.0pl2-4) unstable; urgency=low
+
+  * Added ocaml309.dpatch patch to compile cleanly with OCaml 3.09,
+    closes: #340185.
+  * Removed recommends on coq-doc which is not in main anymore.
+  * Updated standards version to 3.6.2, no changes needed.
+
+ -- Samuel Mimram <smimram@debian.org>  Mon, 21 Nov 2005 19:52:53 +0100
+
 coq (8.0pl2-3) unstable; urgency=low
 
   * Added text_view_typing_error patch to avoid a typing error and solve the
