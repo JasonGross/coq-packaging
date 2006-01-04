@@ -21,12 +21,12 @@ Description: proof assistant for higher-order logic (toplevel and compiler)
  .
  A graphical interface for Coq is provided in the coqide package.
  Coq can also be used with ProofGeneral, which allows proofs to be
- edited using emacs and xemacs.  This requires the proofgeneral-coq
+ edited using emacs and xemacs. This requires the proofgeneral-coq
  package to be installed.
 
 Package: coqide
 Architecture: any
-Depends: ${shlibs:Depends}, coq (>= 8.0), liblablgtk2-ocaml (>= 2.4.0)
+Depends: ${shlibs:Depends}, coq (>= 8.0)
 Description: proof assistant for higher-order logic (gtk interface)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
@@ -60,6 +60,6 @@ Description: proof assistant for higher-order logic (Coq 7 theories)
  .
  This package provides existing theories from Coq 7 in Coq 8, and
  allows proofs that were developed in Coq 7 to be used in Coq 8.
- It is also required to translate theories in Coq 7 syntax into 
- the new syntax introduced in Coq 8.  However, this package does
+ It is also required to translate theories in Coq 7 syntax into
+ the new syntax introduced in Coq 8. However, this package does
  not need to be installed to use Coq 7.

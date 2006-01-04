@@ -1,3 +1,9 @@
+coq (8.0pl2-5) UNRELEASED; urgency=low
+
+  * Removed unnecessary dependency on liblablgtk2-ocaml for coqide.
+
+ -- Samuel Mimram <smimram@debian.org>  Wed,  4 Jan 2006 20:15:52 +0100
+
 coq (8.0pl2-4) unstable; urgency=low
 
   * Added ocaml309.dpatch patch to compile cleanly with OCaml 3.09,
