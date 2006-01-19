@@ -74,7 +74,13 @@ install: build
 		echo "Stripping: $$i"; \
 		strip -R .note -R .comment $$i; \
 	done
+	-for i in $(COQPREF)/usr/bin/coqide.*; do \
+		echo "Rpath for `chrpath $$i`"; \
+		echo "Removing rpath: $$i"; \
+		chrpath -d $$i; \
+	done
 	cp debian/coq.xpm debian/coq/usr/share/pixmaps/coq.xpm
+	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
 	cp debian/coqide.desktop debian/coqide/usr/share/applications
 
 	cp ide/index_urls.txt debian/coqide/usr/lib/coq/ide/index_urls.txt
@@ -89,6 +95,8 @@ install: build
 	cp debian/coq_makefile.1 debian/coq/usr/share/man/man1/coq_makefile.1
 	cp debian/coqmktop.1 debian/coq/usr/share/man/man1/coqmktop.1
 	cp debian/coqtop.1 debian/coq/usr/share/man/man1/coqtop.1
+
+	chmod -x debian/tmp/usr/lib/coq/ide/coq2.ico
 
 	# These are installed as docs
 	rm -f $(COQPREF)/usr/lib/coq/ide/utf8.v $(COQPREF)/usr/lib/coq/ide/FAQ

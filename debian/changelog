@@ -1,8 +1,12 @@
-coq (8.0pl2-5) UNRELEASED; urgency=low
+coq (8.0pl3-1) unstable; urgency=low
 
+  * New upstream release.
   * Removed unnecessary dependency on liblablgtk2-ocaml for coqide.
+  * Removed ocaml309.dpatch and text_view_typing_error.dpatch, integrated
+    upstream.
+  * Removing rpath from coqide binaries.
 
- -- Samuel Mimram <smimram@debian.org>  Wed,  4 Jan 2006 20:15:52 +0100
+ -- Samuel Mimram <smimram@debian.org>  Thu, 19 Jan 2006 22:22:39 +0100
 
 coq (8.0pl2-4) unstable; urgency=low
 
