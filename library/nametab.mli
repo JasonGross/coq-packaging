@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: nametab.mli,v 1.43.2.2 2005/01/21 16:41:51 herbelin Exp $ i*)
+(*i $Id: nametab.mli,v 1.43.2.3 2005/11/21 09:16:27 herbelin Exp $ i*)
 
 (*i*)
 open Util
@@ -144,7 +144,7 @@ val full_name_module : qualid -> dir_path
 
 val sp_of_syntactic_definition : kernel_name -> section_path
 val shortest_qualid_of_global : Idset.t -> global_reference -> qualid
-val shortest_qualid_of_syndef : kernel_name -> qualid
+val shortest_qualid_of_syndef : Idset.t -> kernel_name -> qualid
 val shortest_qualid_of_tactic : ltac_constant -> qualid
 
 val dir_of_mp : module_path -> dir_path

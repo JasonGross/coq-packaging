@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppconstrnew.ml,v 1.62.2.4 2004/12/29 10:17:11 herbelin Exp $ *)      
+(* $Id: ppconstrnew.ml,v 1.62.2.6 2005/03/08 10:13:45 herbelin Exp $ *)      
 
 (*i*)
 open Ast
@@ -118,7 +118,7 @@ let pr_optc pr = function
   | None -> mt ()
   | Some x -> pr_sep_com spc pr x
 
-let pr_universe u = str "<univ>"
+let pr_universe = Univ.pr_uni
 
 let pr_sort = function
   | RProp Term.Null -> str "Prop"

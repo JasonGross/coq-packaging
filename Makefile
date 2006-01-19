@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1        #
 ########################################################################
 
-# $Id: Makefile,v 1.459.2.13 2005/01/21 17:15:12 herbelin Exp $ 
+# $Id: Makefile,v 1.459.2.22 2006/01/11 23:18:05 barras Exp $ 
 
 
 # Makefile for Coq
@@ -80,7 +80,7 @@ MLINCLUDES=$(LOCALINCLUDES) -I $(MYCAMLP4LIB)
 BYTEFLAGS=$(MLINCLUDES) $(CAMLDEBUG)
 OPTFLAGS=$(MLINCLUDES) $(CAMLTIMEPROF)
 OCAMLDEP=ocamldep
-DEPFLAGS=$(LOCALINCLUDES)
+DEPFLAGS=-slash $(LOCALINCLUDES)
 
 OCAMLC_P4O=$(OCAMLC) -pp $(CAMLP4O) $(BYTEFLAGS)
 OCAMLOPT_P4O=$(OCAMLOPT) -pp $(CAMLP4O) $(OPTFLAGS)
@@ -331,7 +331,7 @@ $(COQTOPOPT): $(COQMKTOP) $(CMX) $(USERTACCMX)
 
 $(COQTOPBYTE): $(COQMKTOP) $(CMO) $(USERTACCMO)
 	$(SHOW)'COQMKTOP -o $@'	
-	$(HIDE)$(COQMKTOP) -top $(LOCALINCLUDES) $(CAMLDEBUG) -o $@
+	$(HIDE)$(COQMKTOP) -top $(BYTEFLAGS) -o $@
 
 $(COQTOP):
 	cd bin; ln -sf coqtop.$(BEST)$(EXE) coqtop$(EXE)
@@ -374,10 +374,6 @@ $(COQC): $(COQCCMO) $(COQTOPBYTE) $(BESTCOQTOP)
 
 clean::
 	rm -f scripts/tolink.ml
-
-archclean::
-	rm -f $(COQTOPBYTE) $(COQTOPOPT) $(BESTCOQTOP) $(COQC) $(COQMKTOP)
-	rm -f $(COQTOP)
 
 # we provide targets for each subdirectory
 
@@ -534,7 +530,7 @@ COQIDEVO=ide/utf8.vo
 $(COQIDEVO): states/initial.coq 
 	$(BOOTCOQTOP) -compile $*
 
-IDEFILES=$(COQIDEVO) ide/utf8.v ide/coq.png ide/.coqide-gtk2rc
+IDEFILES=$(COQIDEVO) ide/utf8.v ide/coq.ico ide/coq2.ico ide/.coqide-gtk2rc
 
 coqide-binaries: coqide-$(HASCOQIDE)
 coqide-no:
@@ -555,34 +551,39 @@ $(COQIDEOPT): $(COQMKTOP) $(CMX) $(USERTACCMX) ide/ide.cmxa
 
 $(COQIDEBYTE): $(COQMKTOP) $(CMO) $(USERTACCMO) ide/ide.cma
 	$(SHOW)'COQMKTOP -o $@'	
-	$(HIDE)$(COQMKTOP) -g -ide -top $(LOCALINCLUDES) $(CAMLDEBUG) -o $@
+	$(HIDE)$(COQMKTOP) -ide -top $(BYTEFLAGS) -o $@
 
 $(COQIDE):
 	cd bin; ln -sf coqide.$(HASCOQIDE)$(EXE) coqide$(EXE)
 
 ide/%.cmo: ide/%.ml
 	$(SHOW)'OCAMLC    $<'	
-	$(HIDE)$(OCAMLC) -g $(COQIDEFLAGS) $(BYTEFLAGS) -c $<
+	$(HIDE)$(OCAMLC) $(COQIDEFLAGS) $(BYTEFLAGS) -c $<
 
 ide/%.cmi: ide/%.mli
 	$(SHOW)'OCAMLC    $<'	
-	$(HIDE)$(OCAMLC) -g $(COQIDEFLAGS) $(BYTEFLAGS) -c $<
+	$(HIDE)$(OCAMLC) $(COQIDEFLAGS) $(BYTEFLAGS) -c $<
 
 ide/%.cmx: ide/%.ml
 	$(SHOW)'OCAMLOPT  $<'	
 	$(HIDE)$(OCAMLOPT) $(COQIDEFLAGS) $(OPTFLAGS) -c $<
 
-ide/utils/%.cmo: ide/%.ml
+ide/utils/%.cmo: ide/utils/%.ml
 	$(SHOW)'OCAMLC    $<'	
-	$(HIDE)$(OCAMLC) -g $(COQIDEFLAGS) $(BYTEFLAGS) -c $<
+	$(HIDE)$(OCAMLC) $(COQIDEFLAGS) $(BYTEFLAGS) -c $<
 
-ide/utils/%.cmi: ide/%.mli
+ide/utils/%.cmi: ide/utils/%.mli
 	$(SHOW)'OCAMLC    $<'	
-	$(HIDE)$(OCAMLC) -g $(COQIDEFLAGS) $(BYTEFLAGS) -c $<
+	$(HIDE)$(OCAMLC) $(COQIDEFLAGS) $(BYTEFLAGS) -c $<
 
-ide/utils/%.cmx: ide/%.ml
+ide/utils/%.cmx: ide/utils/%.ml
 	$(SHOW)'OCAMLOPT  $<'	
 	$(HIDE)$(OCAMLOPT) $(COQIDEFLAGS) $(OPTFLAGS) -c $<
+
+# Special target to select between whether lablgtk >= 2.6.0 or not
+ide/undo.cmi: ide/undo.mli
+	$(SHOW)'OCAMLC    $<'	
+	$(HIDE)$(OCAMLC) $(COQIDEFLAGS) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) $(CAMLP4COMPAT) -intf" -c -intf $<
 
 clean::
 	rm -f ide/extract_index.ml ide/find_phrase.ml ide/highlight.ml
@@ -693,8 +694,6 @@ contrib7/interface/Centaur.vo: contrib7/interface/Centaur.v $(INTERFACE)
 contrib7/interface/AddDad.vo: contrib7/interface/AddDad.v $(INTERFACE) states7/initial.coq
 	$(BESTCOQTOP) $(TRANSLATE) -boot -byte  $(COQOPTS) -compile $*
 
-clean::
-	rm -f bin/parser$(EXE) bin/coq-interface$(EXE) bin/coq-interface.opt$(EXE)
 
 # install targets
 install-pcoq:: install-pcoq-binaries install-pcoq-files install-pcoq-manpages
@@ -1104,9 +1103,6 @@ clean::
 	rm -f tools/coqwc.ml
 	rm -f tools/coqdoc/pretty.ml tools/coqdoc/index.ml
 
-archclean::
-	rm -f $(TOOLS)
-
 ###########################################################################
 # minicoq
 ###########################################################################
@@ -1121,22 +1117,19 @@ $(MINICOQ): $(MINICOQCMO)
 	$(SHOW)'OCAMLC -o $@'
 	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ -custom $(CMA) $(MINICOQCMO) $(OSDEPLIBS)
 
-archclean::
-	rm -f $(MINICOQ)
-
 ###########################################################################
 # Installation
 ###########################################################################
 
-COQINSTALLPREFIX=
-  # Can be changed for a local installation (to make packages).
-  # You must NOT put a "/" at the end (Cygnus for win32 does not like "//").
+#COQINSTALLPREFIX=
+# Can be changed for a local installation (to make packages).
+# You must NOT put a "/" at the end (Cygnus for win32 does not like "//").
 
-FULLBINDIR=$(COQINSTALLPREFIX)$(BINDIR)
-FULLCOQLIB=$(COQINSTALLPREFIX)$(COQLIB)
-FULLMANDIR=$(COQINSTALLPREFIX)$(MANDIR)
-FULLEMACSLIB=$(COQINSTALLPREFIX)$(EMACSLIB)
-FULLCOQDOCDIR=$(COQINSTALLPREFIX)$(COQDOCDIR)
+FULLBINDIR=$(BINDIR:'$(OLDROOT)%='$(COQINSTALLPREFIX)%)
+FULLCOQLIB=$(COQLIB:'$(OLDROOT)%='$(COQINSTALLPREFIX)%)
+FULLMANDIR=$(MANDIR:'$(OLDROOT)%='$(COQINSTALLPREFIX)%)
+FULLEMACSLIB=$(EMACSLIB:'$(OLDROOT)%='$(COQINSTALLPREFIX)%)
+FULLCOQDOCDIR=$(COQDOCDIR:'$(OLDROOT)%='$(COQINSTALLPREFIX)%)
 
 install-coq: install-binaries install-library install-coq-info
 install-coq8: install-binaries install-library8 install-coq-info
@@ -1222,7 +1215,7 @@ install-emacs:
 
 install-latex:
 	$(MKDIR) $(FULLCOQDOCDIR)
-	cp tools/coqdoc/coqdoc.sty $(FULLCOQDOCDIR)	
+	cp tools/coqdoc/coqdoc.sty $(FULLCOQDOCDIR)
 #	-$(UPDATETEX)
 
 ###########################################################################
@@ -1453,11 +1446,11 @@ ML4FILES += lib/pp.ml4 			\
 
 .ml4.cmx:
 	$(SHOW)'OCAMLOPT4 $<'
-	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) `$(CAMLP4DEPS) $<` -impl" -c -impl $<
+	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) `$(CAMLP4DEPS) $<` $(CAMLP4COMPAT) -impl" -c -impl $<
 
 .ml4.cmo:
 	$(SHOW)'OCAMLC4   $<'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) `$(CAMLP4DEPS) $<` -impl" -c -impl $<
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) `$(CAMLP4DEPS) $<` $(CAMLP4COMPAT) -impl" -c -impl $<
 
 #.v.vo:
 #	$(BOOTCOQTOP) -compile $*
@@ -1473,6 +1466,7 @@ ML4FILES += lib/pp.ml4 			\
 ###########################################################################
 
 archclean::
+	-rm -f bin/*
 	rm -f config/*.cmx* config/*.[soa]
 	rm -f lib/*.cmx* lib/*.[soa]
 	rm -f kernel/*.cmx* kernel/*.[soa]

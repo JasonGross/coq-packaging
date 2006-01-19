@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: global.ml,v 1.43.2.1 2004/07/16 19:30:35 herbelin Exp $ *)
+(* $Id: global.ml,v 1.43.2.2 2005/11/23 14:46:17 barras Exp $ *)
 
 open Util
 open Names
@@ -24,6 +24,8 @@ let global_env = ref empty_environment
 let safe_env () = !global_env
 
 let env () = env_of_safe_env !global_env
+
+let env_is_empty () = is_empty !global_env
 
 let _ = 
   declare_summary "Global environment"

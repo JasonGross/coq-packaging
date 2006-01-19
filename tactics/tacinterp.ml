@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacinterp.ml,v 1.84.2.8 2005/01/15 14:56:54 herbelin Exp $ *)
+(* $Id: tacinterp.ml,v 1.84.2.11 2005/11/04 09:01:27 herbelin Exp $ *)
 
 open Constrintern
 open Closure
@@ -440,20 +440,18 @@ let intern_constr_reference strict ist = function
       let loc,qid = qualid_of_reference r in
       RRef (loc,locate_reference qid), if strict then None else Some (CRef r)
 
-let intern_reference strict ist = function
-  | Ident (loc,id) when is_atomic id -> Tacexp (lookup_atomic id)
-  | r ->
-      (try Reference (intern_tac_ref ist r)
+let intern_reference strict ist r =
+  (try Reference (intern_tac_ref ist r)
+   with Not_found ->
+     (try
+       ConstrMayEval (ConstrTerm (intern_constr_reference strict ist r))
       with Not_found ->
-        (try
-          ConstrMayEval (ConstrTerm (intern_constr_reference strict ist r))
-        with Not_found ->
-          (match r with
-            | Ident (loc,id) when not strict -> 
-		IntroPattern (IntroIdentifier id)
-            | _ ->
-                let (loc,qid) = qualid_of_reference r in
-                error_global_not_found_loc loc qid)))
+        (match r with
+          | Ident (loc,id) when is_atomic id -> Tacexp (lookup_atomic id)
+          | Ident (loc,id) when not strict -> IntroPattern (IntroIdentifier id)
+          | _ ->
+              let (loc,qid) = qualid_of_reference r in
+              error_global_not_found_loc loc qid)))
 
 let rec intern_intro_pattern lf ist = function
   | IntroOrAndPattern l ->
@@ -668,12 +666,12 @@ let rec intern_atomic lf ist x =
 
   (* Automation tactics *)
   | TacTrivial l -> TacTrivial l
-  | TacAuto (n,l) -> TacAuto (n,l)
+  | TacAuto (n,l) -> TacAuto (option_app (intern_int_or_var ist) n,l)
   | TacAutoTDB n -> TacAutoTDB n
   | TacDestructHyp (b,id) -> TacDestructHyp(b,intern_hyp ist id)
   | TacDestructConcl -> TacDestructConcl
   | TacSuperAuto (n,l,b1,b2) -> TacSuperAuto (n,l,b1,b2)
-  | TacDAuto (n,p) -> TacDAuto (n,p)
+  | TacDAuto (n,p) -> TacDAuto (option_app (intern_int_or_var ist) n,p)
 
   (* Derived basic tactics *)
   | TacSimpleInduction (h,ids) ->
@@ -1558,8 +1556,7 @@ and interp_match_context ist g lr lmr =
          | e when is_match_catchable e ->
            apply_match_context ist env goal (nrs+1) (List.tl lex) tl))
     | _ ->
-      errorlabstrm "Tacinterp.apply_match_context" (str
-        "No matching clauses for match goal")
+      errorlabstrm "Tacinterp.apply_match_context"
         (v 0 (str "No matching clauses for match goal" ++
         (if ist.debug=DebugOff then
            fnl() ++ str "(use \"Debug On\" for more info)"
@@ -1744,12 +1741,12 @@ and interp_atomic ist gl = function
 
   (* Automation tactics *)
   | TacTrivial l -> Auto.h_trivial l
-  | TacAuto (n, l) -> Auto.h_auto n l
+  | TacAuto (n, l) -> Auto.h_auto (option_app (interp_int_or_var ist) n) l
   | TacAutoTDB n -> Dhyp.h_auto_tdb n
   | TacDestructHyp (b,id) -> Dhyp.h_destructHyp b (interp_hyp ist gl id)
   | TacDestructConcl -> Dhyp.h_destructConcl
   | TacSuperAuto (n,l,b1,b2) -> Auto.h_superauto n l b1 b2
-  | TacDAuto (n,p) -> Auto.h_dauto (n,p)
+  | TacDAuto (n,p) -> Auto.h_dauto (option_app (interp_int_or_var ist) n,p)
 
   (* Derived basic tactics *)
   | TacSimpleInduction (h,ids) ->

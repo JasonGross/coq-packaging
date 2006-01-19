@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pretyping.ml,v 1.123.2.3 2004/07/16 19:30:45 herbelin Exp $ *)
+(* $Id: pretyping.ml,v 1.123.2.5 2005/11/29 21:40:52 letouzey Exp $ *)
 
 open Pp
 open Util
@@ -162,11 +162,11 @@ let strip_meta id = (* For Grammar v7 compatibility *)
 let pretype_id loc env (lvar,unbndltacvars) id =
   let id = strip_meta id in (* May happen in tactics defined by Grammar *)
   try
-    List.assoc id lvar
-  with Not_found ->
-  try
     let (n,typ) = lookup_rel_id id (rel_context env) in
     { uj_val  = mkRel n; uj_type = type_app (lift n) typ }
+  with Not_found ->
+  try
+    List.assoc id lvar
   with Not_found ->
   try
     let (_,_,typ) = lookup_named id env in
@@ -238,7 +238,6 @@ let rec pretype tycon env isevars lvar = function
       anomaly "Found a pattern variable in a rawterm to type"
 	   
   | RHole (loc,k) ->
-      if !compter then nbimpl:=!nbimpl+1;
       (match tycon with
 	 | Some ty ->
 	     { uj_val = new_isevar isevars env (loc,k) ty; uj_type = ty }
@@ -892,7 +891,6 @@ let rec pretype tycon env isevars lvar = function
 (* [pretype_type valcon env isevars lvar c] coerces [c] into a type *)
 and pretype_type valcon env isevars lvar = function
   | RHole loc ->
-      if !compter then nbimpl:=!nbimpl+1;
       (match valcon with
 	 | Some v ->
              let s =

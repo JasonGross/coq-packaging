@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: refiner.ml,v 1.67.2.1 2004/07/16 19:30:49 herbelin Exp $ *)
+(* $Id: refiner.ml,v 1.67.2.3 2005/11/04 08:59:30 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -188,12 +188,8 @@ let lookup_tactic s =
 
 (* refiner r is a tactic applying the rule r *)
 
-let bad_subproof () =
-  anomalylabstrm "Refiner.refiner" (str"Bad subproof in validation.")
-
 let check_subproof_connection gl spfl =
-  if not (list_for_all2eq (fun g pf -> g=pf.goal) gl spfl)
-  then (bad_subproof (); false) else true
+  list_for_all2eq (fun g pf -> g=pf.goal) gl spfl
 
 let abstract_tactic_expr te tacfun gls =
   let (sgl_sigma,v) = tacfun gls in
@@ -778,9 +774,13 @@ let extract_pftreestate pts =
       (str"Cannot extract from a proof-tree in which we have descended;" ++
          spc () ++ str"Please ascend to the root");
   let pfterm,subgoals = extract_open_pftreestate pts in
-  if subgoals <> [] then
+  let exl = Evd.non_instantiated pts.tpfsigma in 
+  if subgoals <> [] or exl <> [] then
    errorlabstrm "extract_proof"
-   (str "Attempt to save an incomplete proof");
+   (if subgoals <> [] then 
+     str "Attempt to save an incomplete proof"
+    else
+      str "Attempt to save a proof with existential variables still non-instantiated");
   let env = Global.env_of_context pts.tpf.goal.evar_hyps in
   strong whd_betaiotaevar env pts.tpfsigma pfterm
   (***

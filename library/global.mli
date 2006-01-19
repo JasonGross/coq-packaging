@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: global.mli,v 1.40.2.1 2004/07/16 19:30:35 herbelin Exp $ i*)
+(*i $Id: global.mli,v 1.40.2.2 2005/11/23 14:46:17 barras Exp $ i*)
 
 (*i*)
 open Names
@@ -31,6 +31,8 @@ val env : unit -> Environ.env
 
 val universes : unit -> universes
 val named_context : unit -> Sign.named_context
+
+val env_is_empty : unit -> bool
 
 (*s Extending env with variables and local definitions *)
 val push_named_assum : (identifier * types) -> Univ.constraints

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: declare.ml,v 1.128.2.1 2004/07/16 19:30:34 herbelin Exp $ *)
+(* $Id: declare.ml,v 1.128.2.2 2005/11/29 21:40:52 letouzey Exp $ *)
 
 open Pp
 open Util
@@ -271,6 +271,7 @@ let dummy_one_inductive_entry mie = {
 
 (* Hack to reduce the size of .vo: we keep only what load/open needs *)
 let dummy_inductive_entry m = {
+  mind_entry_record = false;
   mind_entry_finite = true;
   mind_entry_inds = List.map dummy_one_inductive_entry m.mind_entry_inds }
 

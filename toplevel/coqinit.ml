@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqinit.ml,v 1.30.2.1 2004/07/16 19:31:47 herbelin Exp $ *)
+(* $Id: coqinit.ml,v 1.30.2.4 2006/01/11 23:18:06 barras Exp $ *)
 
 open Pp
 open System
@@ -68,16 +68,15 @@ let hm2 s =
   let n = String.length s in
   if n > 1 && s.[0] = '.' && s.[1] = '/' then String.sub s 2 (n-2) else s
 
-let getenv_else s dft = try Sys.getenv s with Not_found -> dft
-
 (* Initializes the LoadPath according to COQLIB and Coq_config *)
 let init_load_path () =
   (* developper specific directories to open *)
   let dev = if Coq_config.local then [ "dev" ] else [] in
   let coqlib =
-    if Coq_config.local || !Options.boot then Coq_config.coqtop
+    if !Options.boot then Coq_config.coqtop
       (* variable COQLIB overrides the default library *)
     else getenv_else "COQLIB" Coq_config.coqlib in
+  let coqlib = canonical_path_name coqlib in
   (* first user-contrib *)
   let user_contrib = coqlib/"user-contrib" in
   if Sys.file_exists user_contrib then 
@@ -90,6 +89,7 @@ let init_load_path () =
     (if !Options.v7 then "states7" else "states") :: dev @ vdirs in
   List.iter (fun s -> coq_add_rec_path (coqlib/s)) dirs;
   let camlp4 = getenv_else "CAMLP4LIB" Coq_config.camlp4lib in
+  let camlp4 = canonical_path_name camlp4 in
   add_ml_include camlp4;
   (* then current directory *)
   Mltop.add_path "." Nameops.default_root_prefix;

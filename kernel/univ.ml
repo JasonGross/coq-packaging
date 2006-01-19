@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: univ.ml,v 1.17.10.1 2004/07/16 19:30:28 herbelin Exp $ *)
+(* $Id: univ.ml,v 1.17.10.3 2005/09/08 12:27:46 herbelin Exp $ *)
 
 (* Universes are stratified by a partial ordering $\ge$.
    Let $\~{}$ be the associated equivalence. We also have a strict ordering
@@ -57,7 +57,7 @@ let pr_uni = function
   | Max (gel,gtl) ->
       str "max(" ++ 
       prlist_with_sep pr_coma pr_uni_level gel ++
-      if gel <> [] & gtl <> [] then pr_coma () else mt () ++
+      (if gel <> [] & gtl <> [] then pr_coma () else mt ()) ++
       prlist_with_sep pr_coma
 	(fun x -> str "(" ++ pr_uni_level x ++ str ")+1") gtl ++
       str ")"
@@ -69,9 +69,8 @@ let super = function
   | Variable u -> 
       Max ([],[u])
   | Max _ ->
-      anomaly ("Cannot take the successor of a non variable universes:\n"^
-       "you are probably typing a type already known to be the type\n"^
-       "of a user-provided term; if you really need this, please report")
+      anomaly ("Cannot take the successor of a non variable universes\n"^
+               "(maybe a bugged tactic)")
 
 (* returns the least upper bound of universes u and v. If they are not
    constrained, then a new universe is created.
@@ -412,6 +411,7 @@ let pr_arc = function
       pr_uni_level u ++ str " " ++
       v 0
         (prlist_with_sep pr_spc (fun v -> str "> " ++ pr_uni_level v) gt ++
+	(if ge <> [] & gt <> [] then spc () else mt ()) ++
          prlist_with_sep pr_spc (fun v -> str ">= " ++ pr_uni_level v) ge) ++
       fnl ()
   | Equiv (u,v) -> 

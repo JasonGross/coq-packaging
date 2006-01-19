@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: recordops.mli,v 1.15.2.1 2004/07/16 19:30:46 herbelin Exp $ i*)
+(*i $Id: recordops.mli,v 1.15.2.2 2005/11/29 21:40:52 letouzey Exp $ i*)
 
 (*i*)
 open Names
@@ -17,13 +17,6 @@ open Classops
 open Libobject
 open Library
 (*i*)
-
-val nbimpl : int ref
-val nbpathc : int ref
-val nbcoer : int ref
-val nbstruc : int ref
-val nbimplstruc : int ref
-val compter : bool ref
 
 type struc_typ = {
   s_CONST : identifier; 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pptactic.mli,v 1.9.2.2 2005/01/21 17:19:37 herbelin Exp $ i*)
+(*i $Id: pptactic.mli,v 1.9.2.3 2005/12/23 22:16:46 herbelin Exp $ i*)
 
 open Pp
 open Genarg
@@ -45,6 +45,8 @@ type grammar_terminals = string option list
   (* if the boolean is false then the extension applies only to old syntax *)
 val declare_extra_tactic_pprule : bool -> string -> 
   argument_type list * (string * grammar_terminals) -> unit
+
+val exists_extra_tactic_pprule : string -> argument_type list -> bool
 
 val pr_match_pattern : ('a -> std_ppcmds) -> 'a match_pattern -> std_ppcmds
 

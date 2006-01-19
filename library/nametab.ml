@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: nametab.ml,v 1.48.2.1 2004/07/16 19:30:36 herbelin Exp $ *)
+(* $Id: nametab.ml,v 1.48.2.2 2005/11/21 09:16:27 herbelin Exp $ *)
 
 open Util
 open Pp
@@ -472,9 +472,9 @@ let shortest_qualid_of_global ctx ref =
         let sp = Globrevtab.find (TrueGlobal ref) !the_globrevtab in
         SpTab.shortest_qualid ctx sp !the_ccitab
 
-let shortest_qualid_of_syndef kn = 
+let shortest_qualid_of_syndef ctx kn = 
   let sp = sp_of_syntactic_definition kn in
-    SpTab.shortest_qualid Idset.empty sp !the_ccitab
+    SpTab.shortest_qualid ctx sp !the_ccitab
 
 let shortest_qualid_of_module mp = 
   let dir = MPmap.find mp !the_modrevtab in

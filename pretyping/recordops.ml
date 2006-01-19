@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: recordops.ml,v 1.26.2.1 2004/07/16 19:30:46 herbelin Exp $ *)
+(* $Id: recordops.ml,v 1.26.2.2 2005/11/29 21:40:52 letouzey Exp $ *)
 
 open Util
 open Pp
@@ -19,14 +19,6 @@ open Typeops
 open Libobject
 open Library
 open Classops
-
-let nbimpl = ref 0
-let nbpathc = ref 0
-let nbcoer = ref 0
-let nbstruc = ref 0
-let nbimplstruc = ref 0
-
-let compter = ref false
 
 (*s Une structure S est un type inductif non récursif à un seul
    constructeur (de nom par défaut Build_S) *)

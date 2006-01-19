@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_ltacnew.ml4,v 1.22.2.2 2004/07/16 19:30:38 herbelin Exp $ *)
+(* $Id: g_ltacnew.ml4,v 1.22.2.3 2005/06/21 15:31:12 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -43,7 +43,7 @@ let tactic_expr = Gram.Entry.create "tactic:tactic_expr"
 
 if not !Options.v7 then
 GEXTEND Gram
-  GLOBAL: tactic Vernac_.command tactic_expr tactic_arg;
+  GLOBAL: tactic Vernac_.command tactic_expr tactic_arg constr_may_eval;
 
   tactic_expr:
     [ "5" LEFTA
@@ -108,14 +108,20 @@ GEXTEND Gram
       | c = Constr.constr -> ConstrMayEval (ConstrTerm c) ] ]
   ;
   may_eval_arg:
+    [ [ c = constr_eval -> ConstrMayEval c
+      | IDENT "fresh"; s = OPT STRING -> TacFreshId s ] ]
+  ;
+  constr_eval:
     [ [ IDENT "eval"; rtc = red_expr; "in"; c = Constr.constr ->
-	  ConstrMayEval (ConstrEval (rtc,c))
+	  ConstrEval (rtc,c)
       | IDENT "context"; id = identref; "["; c = Constr.lconstr; "]" ->
-	  ConstrMayEval (ConstrContext (id,c))
+	  ConstrContext (id,c)
       | IDENT "type"; IDENT "of"; c = Constr.constr ->
-	  ConstrMayEval (ConstrTypeOf c)
-      | IDENT "fresh"; s = OPT STRING ->
-	  TacFreshId s ] ]
+	  ConstrTypeOf c ] ]
+  ;
+  constr_may_eval: (* For extensions *)
+    [ [ c = constr_eval -> c
+      | c = Constr.constr -> ConstrTerm c ] ]
   ;
   tactic_atom:
     [ [ id = METAIDENT -> MetaIdArg (loc,id)

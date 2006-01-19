@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declarations.ml,v 1.31.2.1 2004/07/16 19:30:24 herbelin Exp $ i*)
+(*i $Id: declarations.ml,v 1.31.2.2 2005/11/29 21:40:51 letouzey Exp $ i*)
 
 (*i*)
 open Util
@@ -104,6 +104,7 @@ type one_inductive_body = {
  }
 
 type mutual_inductive_body = {
+  mind_record : bool;
   mind_finite : bool;
   mind_ntypes : int;
   mind_hyps : section_context;
@@ -139,7 +140,8 @@ let subst_mind_packet sub mbp =
 }
 
 let subst_mind sub mib = 
-  { mind_finite = mib.mind_finite ;
+  { mind_record = mib.mind_record ; 
+    mind_finite = mib.mind_finite ;
     mind_ntypes = mib.mind_ntypes ;
     mind_hyps = (assert (mib.mind_hyps=[]); []) ;
     mind_packets = array_smartmap (subst_mind_packet sub) mib.mind_packets ;

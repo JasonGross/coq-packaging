@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: record.ml,v 1.52.2.1 2004/07/16 19:31:49 herbelin Exp $ *)
+(* $Id: record.ml,v 1.52.2.2 2005/11/29 21:40:53 letouzey Exp $ *)
 
 open Pp
 open Util
@@ -226,7 +226,8 @@ let definition_structure ((is_coe,(_,idstruc)),ps,cfs,idbuild,s) =
       mind_entry_consnames = [idbuild];
       mind_entry_lc = [type_constructor] } in
   let mie =
-    { mind_entry_finite = true;
+    { mind_entry_record = true;
+      mind_entry_finite = true;
       mind_entry_inds = [mie_ind] } in
   let sp = declare_mutual_with_eliminations true mie in
   let rsp = (sp,0) in (* This is ind path of idstruc *)

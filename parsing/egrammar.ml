@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: egrammar.ml,v 1.48.2.3 2004/11/26 19:37:59 herbelin Exp $ *)
+(* $Id: egrammar.ml,v 1.48.2.4 2005/12/23 22:16:46 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -30,12 +30,13 @@ type all_grammar_command =
   | TacticGrammar of
       (string * (string * grammar_production list) * 
       (Names.dir_path * Tacexpr.raw_tactic_expr))
-      list
+      list * (string * Genarg.argument_type list *
+              (string * Pptactic.grammar_terminals)) list
 
 let subst_all_grammar_command subst = function
   | Notation _ -> anomaly "Notation not in GRAMMAR summary"
   | Grammar gc -> Grammar (subst_grammar_command subst gc)
-  | TacticGrammar g -> TacticGrammar g (* TODO ... *)
+  | TacticGrammar (g,p) -> TacticGrammar (g,p) (* TODO ... *)
 
 let (grammar_state : all_grammar_command list ref) = ref []
 
@@ -419,7 +420,7 @@ let extend_grammar gram =
   (match gram with
   | Notation (_,a) -> extend_constr_notation a
   | Grammar g -> extend_grammar_rules g
-  | TacticGrammar l -> add_tactic_entries l);
+  | TacticGrammar (l,_) -> add_tactic_entries l);
   grammar_state := gram :: !grammar_state
 
 let reset_extend_grammars_v8 () =

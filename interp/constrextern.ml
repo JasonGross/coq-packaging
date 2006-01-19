@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: constrextern.ml,v 1.85.2.2 2004/07/16 19:30:22 herbelin Exp $ *)
+(* $Id: constrextern.ml,v 1.85.2.7 2006/01/05 12:00:35 herbelin Exp $ *)
 
 (*i*)
 open Pp
@@ -1333,7 +1333,8 @@ and extern_symbol_pattern (tmp_scope,scopes as allscopes) vars t = function
                       subst in
 		  insert_pat_delimiters (make_pat_notation loc ntn l) key)
           | SynDefRule kn ->
- 	      CPatAtom (loc,Some (Qualid (loc, shortest_qualid_of_syndef kn)))
+	      let qid = shortest_qualid_of_syndef vars kn in
+ 	      CPatAtom (loc,Some (Qualid (loc, qid)))
       with
 	  No_match -> extern_symbol_pattern allscopes vars t rules
 
@@ -1494,21 +1495,38 @@ let rec share_fix_binders n rbl ty def =
     | _ -> List.rev rbl, ty, def
 
 (**********************************************************************)
+(* mapping rawterms to numerals (in presence of coercions, choose the *)
+(* one with no delimiter if possible)                                 *)
+
+let extern_possible_numeral scopes r =
+  try
+    let (sc,n) = uninterp_numeral r in
+    match Symbols.availability_of_numeral sc (make_current_scopes scopes) with
+    | None -> None
+    | Some key -> Some (insert_delimiters (CNumeral(loc_of_rawconstr r,n)) key)
+  with No_match ->
+    None
+
+let extern_optimal_numeral scopes r r' =
+  let c = extern_possible_numeral scopes r in
+  let c' = if r==r' then None else extern_possible_numeral scopes r' in
+  match c,c' with
+  | Some n, (Some (CDelimiters _) | None) | _, Some n -> n
+  | _ -> raise No_match
+
+(**********************************************************************)
 (* mapping rawterms to constr_expr                                    *)
 
 let rec extern inctx scopes vars r =
+  let r' = remove_coercions inctx r in
   try 
     if !Options.raw_print or !print_no_symbol then raise No_match;
-    extern_numeral (Rawterm.loc_of_rawconstr r)
-      scopes (Symbols.uninterp_numeral r)
+    extern_optimal_numeral scopes r r'
   with No_match ->
-
-  let r = remove_coercions inctx r in
-
   try 
     if !Options.raw_print or !print_no_symbol then raise No_match;
-    extern_symbol scopes vars r (Symbols.uninterp_notations r)
-  with No_match -> match r with
+    extern_symbol scopes vars r' (Symbols.uninterp_notations r')
+  with No_match -> match r' with
   | RRef (loc,ref) ->
       extern_global loc (implicits_of_global_out ref)
         (extern_reference loc vars ref)
@@ -1605,13 +1623,15 @@ let rec extern inctx scopes vars r =
 
   | RLetTuple (loc,nal,(na,typopt),tm,b) ->
       CLetTuple (loc,nal,
-        (Some na,option_app (extern_type scopes (add_vname vars na)) typopt),
+        (option_app (fun _ -> na) typopt,
+         option_app (extern_type scopes (add_vname vars na)) typopt),
         sub_extern false scopes vars tm,
         extern false scopes (List.fold_left add_vname vars nal) b)
 
   | RIf (loc,c,(na,typopt),b1,b2) ->
       CIf (loc,sub_extern false scopes vars c,
-        (Some na,option_app (extern_type scopes (add_vname vars na)) typopt),
+        (option_app (fun _ -> na) typopt,
+         option_app (extern_type scopes (add_vname vars na)) typopt),
         sub_extern false scopes vars b1, sub_extern false scopes vars b2)
 
   | RRec (loc,fk,idv,blv,tyv,bv) ->
@@ -1709,11 +1729,6 @@ and extern_eqn inctx scopes vars (loc,ids,pl,c) =
   (loc,List.map (extern_cases_pattern_in_scope scopes vars) pl,
    extern inctx scopes vars c)
 
-and extern_numeral loc scopes (sc,n) =
-  match Symbols.availability_of_numeral sc (make_current_scopes scopes) with
-    | None -> raise No_match
-    | Some key -> insert_delimiters (CNumeral (loc,n)) key
-
 and extern_symbol (tmp_scope,scopes as allscopes) vars t = function
   | [] -> raise No_match
   | (keyrule,pat,n as rule)::rules ->
@@ -1745,7 +1760,7 @@ and extern_symbol (tmp_scope,scopes as allscopes) vars t = function
                       subst in
 	          insert_delimiters (make_notation loc ntn l) key)
           | SynDefRule kn ->
-              CRef (Qualid (loc, shortest_qualid_of_syndef kn)) in
+              CRef (Qualid (loc, shortest_qualid_of_syndef vars kn)) in
  	if args = [] then e 
 	else
 	  (* TODO: compute scopt for the extra args, in case, head is a ref *)

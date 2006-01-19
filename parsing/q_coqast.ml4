@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: q_coqast.ml4,v 1.47.2.5 2005/01/15 14:56:54 herbelin Exp $ *)
+(* $Id: q_coqast.ml4,v 1.47.2.6 2005/05/15 12:47:05 herbelin Exp $ *)
 
 open Util
 open Names
@@ -454,7 +454,7 @@ let rec mlexpr_of_atomic_tactic = function
 
   (* Automation tactics *)
   | Tacexpr.TacAuto (n,l) ->
-      let n = mlexpr_of_option mlexpr_of_int n in
+      let n = mlexpr_of_option (mlexpr_of_or_var mlexpr_of_int) n in
       let l = mlexpr_of_option (mlexpr_of_list mlexpr_of_string) l in
       <:expr< Tacexpr.TacAuto $n$ $l$ >>
 (*

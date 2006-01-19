@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: common.ml,v 1.51.2.1 2004/07/16 19:30:07 herbelin Exp $ i*)
+(*i $Id: common.ml,v 1.51.2.4 2005/12/16 03:07:39 letouzey Exp $ i*)
 
 open Pp
 open Util
@@ -269,11 +269,18 @@ module StdParams = struct
 
   (* TODO: remettre des conditions [lang () = Haskell] disant de qualifier. *)
 
+  let unquote s = 
+    if lang () <> Scheme then s 
+    else 
+      let s = String.copy s in 
+      for i=0 to String.length s - 1 do if s.[i] = '\'' then s.[i] <- '~' done;
+      s
+
   let rec dottify = function 
     | [] -> assert false 
-    | [s] -> s 
-    | s::[""] -> s 
-    | s::l -> (dottify l)^"."^s
+    | [s] -> unquote s 
+    | s::[""] -> unquote s 
+    | s::l -> (dottify l)^"."^(unquote s)
 
   let pp_global mpl r = 
     let ls = get_renamings r in 
@@ -353,7 +360,7 @@ let preamble prm = match lang () with
   | Ocaml -> Ocaml.preamble prm   
   | Haskell -> Haskell.preamble prm
   | Scheme -> Scheme.preamble prm
-  | Toplevel -> (fun _ _ -> mt ())
+  | Toplevel -> (fun _ _ _ -> mt ())
 
 let preamble_sig prm = match lang () with 
   | Ocaml -> Ocaml.preamble_sig prm   
@@ -374,7 +381,6 @@ let info f =
     (str ("The file "^f^" has been created by extraction."))
 
 let print_structure_to_file f prm struc =
-  cons_cofix := Refset.empty;
   Hashtbl.clear renamings;
   mod_1st_level := Idmap.empty; 
   modcontents := Gset.empty;
@@ -387,9 +393,13 @@ let print_structure_to_file f prm struc =
     else (create_mono_renamings struc; [])
   in 
   let print_dummys =
-    (struct_ast_search MLdummy struc, 
+    (struct_ast_search ((=) MLdummy) struc, 
      struct_type_search Tdummy struc, 
      struct_type_search Tunknown struc)
+  in 
+  let print_magic = 
+    if lang () <> Haskell then false 
+    else struct_ast_search (function MLmagic _ -> true | _ -> false) struc
   in
   (* print the implementation *)
   let cout = option_app (fun (f,_) -> open_out f) f in 
@@ -397,7 +407,7 @@ let print_structure_to_file f prm struc =
     | None -> !Pp_control.std_ft
     | Some cout -> Pp_control.with_output_to cout in 
   begin try 
-    msg_with ft (preamble prm used_modules print_dummys);
+    msg_with ft (preamble prm used_modules print_dummys print_magic);
     msg_with ft (pp_struct struc);
     option_iter close_out cout; 
   with e -> 

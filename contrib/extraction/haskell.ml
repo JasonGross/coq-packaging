@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: haskell.ml,v 1.40.2.1 2004/07/16 19:30:08 herbelin Exp $ i*)
+(*i $Id: haskell.ml,v 1.40.2.5 2005/12/16 04:11:28 letouzey Exp $ i*)
 
 (*s Production of Haskell syntax. *)
 
@@ -27,23 +27,41 @@ let keywords =
   [ "case"; "class"; "data"; "default"; "deriving"; "do"; "else";
     "if"; "import"; "in"; "infix"; "infixl"; "infixr"; "instance"; 
     "let"; "module"; "newtype"; "of"; "then"; "type"; "where"; "_"; "__";
-    "as"; "qualified"; "hiding" ; "unit" ]
+    "as"; "qualified"; "hiding" ; "unit" ; "unsafeCoerce" ]
   Idset.empty
 
-let preamble prm used_modules (mldummy,tdummy,tunknown) =
+let preamble prm used_modules (mldummy,tdummy,tunknown) magic =
   let pp_mp = function 
     | MPfile d -> pr_upper_id (List.hd (repr_dirpath d))
     | _ -> assert false 
   in  
+  (if not magic then mt () 
+   else
+     str "{-# OPTIONS_GHC -cpp -fglasgow-exts #-}\n" ++
+     str "{- For Hugs, use the option -F\"cpp -P -traditional\" -}\n\n")
+  ++
   str "module " ++ pr_upper_id prm.mod_name ++ str " where" ++ fnl () 
   ++ fnl() ++ 
   str "import qualified Prelude" ++ fnl() ++
   prlist (fun mp -> str "import qualified " ++ pp_mp mp ++ fnl ()) used_modules
   ++ fnl () ++
-  (if mldummy then 
+  (if not magic then mt () 
+   else str "\
+#ifdef __GLASGOW_HASKELL__
+import qualified GHC.Base
+unsafeCoerce = GHC.Base.unsafeCoerce#
+#else
+-- HUGS
+import qualified IOExts
+unsafeCoerce = IOExts.unsafeCoerce
+#endif")
+  ++
+  fnl() ++ fnl() 
+  ++
+  (if not mldummy then mt () 
+   else
      str "__ = Prelude.error \"Logical or arity value used\"" 
-     ++ fnl () ++ fnl()
-   else mt())
+     ++ fnl () ++ fnl())
 
 let preamble_sig prm used_modules (mldummy,tdummy,tunknown) = failwith "TODO" 
 
@@ -61,11 +79,18 @@ module Make = functor(P : Mlpp_param) -> struct
 
 let local_mpl = ref ([] : module_path list)
 
-let pp_global r = P.pp_global !local_mpl r
+let pp_global r = 
+  if is_inline_custom r then str (find_custom r) 
+  else P.pp_global !local_mpl r
+
 let empty_env () = [], P.globals()
 
 (*s Pretty-printing of types. [par] is a boolean indicating whether parentheses
     are needed or not. *)
+
+let kn_sig = 
+  let specif = MPfile (dirpath_of_string "Coq.Init.Specif") in 
+  make_kn specif empty_dirpath (mk_label "sig")
 
 let rec pp_type par vl t =
   let rec pp_rec par = function
@@ -73,15 +98,17 @@ let rec pp_type par vl t =
     | Tvar i -> (try pr_id (List.nth vl (pred i)) with _ -> (str "a" ++ int i))
     | Tglob (r,[]) -> pp_global r	
     | Tglob (r,l) -> 
-	pp_par par 
-	  (pp_global r ++ spc () ++ prlist_with_sep spc (pp_type true vl) l)
+	if r = IndRef (kn_sig,0) then 
+	  pp_type true vl (List.hd l)
+	else 
+	  pp_par par 
+	    (pp_global r ++ spc () ++ prlist_with_sep spc (pp_type true vl) l)
     | Tarr (t1,t2) ->
 	pp_par par 
 	  (pp_rec true t1 ++ spc () ++ str "->" ++ spc () ++ pp_rec false t2)
     | Tdummy -> str "()"
     | Tunknown -> str "()"
     | Taxiom -> str "() -- AXIOM TO BE REALIZED\n"
-    | Tcustom s -> str s
  in 
   hov 0 (pp_rec par t)
 
@@ -125,16 +152,16 @@ let rec pp_expr par env args =
 		 spc () ++ hov 0 pp_a2)))
     | MLglob r -> 
 	apply (pp_global r)
-    | MLcons (r,[]) ->
+    | MLcons (_,r,[]) ->
 	assert (args=[]); pp_global r
-    | MLcons (r,[a]) ->
+    | MLcons (_,r,[a]) ->
 	assert (args=[]);
 	pp_par par (pp_global r ++ spc () ++ pp_expr true env [] a)
-    | MLcons (r,args') ->
+    | MLcons (_,r,args') ->
 	assert (args=[]);
 	pp_par par (pp_global r ++ spc () ++ 
 		    prlist_with_sep spc (pp_expr true env []) args')
-    | MLcase (t, pv) ->
+    | MLcase (_,t, pv) ->
       	apply (pp_par par' 
 		 (v 0 (str "case " ++ pp_expr false env [] t ++ str " of" ++
 		       fnl () ++ str "  " ++ pp_pat env pv)))
@@ -146,7 +173,8 @@ let rec pp_expr par env args =
 	pp_par par (str "Prelude.error" ++ spc () ++ qs s)
     | MLdummy ->
 	str "__" (* An [MLdummy] may be applied, but I don't really care. *)
-    | MLmagic a ->  pp_expr par env args a
+    | MLmagic a ->  
+	pp_apply (str "unsafeCoerce") par (pp_expr true env [] a :: args)
     | MLaxiom -> pp_par par (str "Prelude.error \"AXIOM TO BE REALIZED\"")
 
 and pp_pat env pv = 
@@ -210,7 +238,7 @@ let pp_one_ind ip pl cv =
        | [] -> (mt ()) 
        | _  -> (str " " ++
       	       	prlist_with_sep 
-		  (fun () -> (str " ")) (pp_type true (List.rev pl)) l))
+		  (fun () -> (str " ")) (pp_type true pl) l))
   in
   str (if cv = [||] then "type " else "data ") ++ 
   pp_global (IndRef ip) ++ str " " ++
@@ -239,6 +267,8 @@ let rec pp_ind first kn i ind =
 
 (*s Pretty-printing of a declaration. *)
 
+let pp_string_parameters ids = prlist (fun id -> str id ++ str " ")
+
 let pp_decl mpl = 
   local_mpl := mpl;
   function
@@ -248,21 +278,32 @@ let pp_decl mpl =
   | Dtype (r, l, t) ->
       if is_inline_custom r then mt () 
       else 
-	let l = rename_tvars keywords l in
-	let l' = List.rev l in 
-	hov 2 (str "type " ++ pp_global r ++ spc () ++ 
-	       prlist (fun id -> pr_id id ++ str " ") l ++
-	       str "=" ++ spc () ++ pp_type false l' t) ++ fnl () ++ fnl ()
+	let l = rename_tvars keywords l in 
+	let st = 
+	  try 
+	    let ids,s = find_type_custom r in 
+	    prlist (fun id -> str (id^" ")) ids ++ str "=" ++ spc () ++ str s
+	  with not_found -> 
+	    prlist (fun id -> pr_id id ++ str " ") l ++
+	    if t = Taxiom then str "= () -- AXIOM TO BE REALIZED\n"
+	    else str "=" ++ spc () ++ pp_type false l t
+	in 
+	hov 2 (str "type " ++ pp_global r ++ spc () ++ st) ++ fnl () ++ fnl ()
   | Dfix (rv, defs,_) ->
       let ppv = Array.map pp_global rv in 
       prlist_with_sep (fun () -> fnl () ++ fnl ())
 	(fun (pi,ti) -> pp_function (empty_env ()) pi ti)
 	(List.combine (Array.to_list ppv) (Array.to_list defs)) 
       ++ fnl () ++ fnl ()
-  | Dterm (r, a, _) ->
+  | Dterm (r, a, t) ->
       if is_inline_custom r then mt () 
       else 
-	hov 0 (pp_function (empty_env ()) (pp_global r) a ++ fnl () ++ fnl ())
+	let e = pp_global r in 
+	e ++ str " :: " ++ pp_type false [] t ++ fnl () ++
+	  if is_custom r then 	
+	    hov 0 (e ++ str " = " ++ str (find_custom r) ++ fnl() ++ fnl ())
+	  else 
+	    hov 0 (pp_function (empty_env ()) e a ++ fnl () ++ fnl ())
 
 let pp_structure_elem mpl = function 
   | (l,SEdecl d) -> pp_decl mpl d

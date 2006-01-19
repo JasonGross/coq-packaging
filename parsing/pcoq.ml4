@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pcoq.ml4,v 1.80.2.3 2005/01/15 14:56:53 herbelin Exp $ i*)
+(*i $Id: pcoq.ml4,v 1.80.2.4 2005/06/21 15:31:12 herbelin Exp $ i*)
 
 open Pp
 open Util
@@ -379,7 +379,8 @@ module Tactic =
       make_gen_entry utactic rawwit_constr_with_bindings "constr_with_bindings"
     let bindings =
       make_gen_entry utactic rawwit_bindings "bindings"
-    let constrarg = make_gen_entry utactic rawwit_constr_may_eval "constrarg"
+(*v7*) let constrarg = make_gen_entry utactic rawwit_constr_may_eval "constrarg"
+(*v8*) let constr_may_eval = make_gen_entry utactic rawwit_constr_may_eval "constr_may_eval"
     let quantified_hypothesis =
       make_gen_entry utactic rawwit_quant_hyp "quantified_hypothesis"
     let int_or_var = make_gen_entry utactic rawwit_int_or_var "int_or_var"

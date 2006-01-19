@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extraction.ml,v 1.136.2.1 2004/07/16 19:30:07 herbelin Exp $ i*)
+(*i $Id: extraction.ml,v 1.136.2.4 2005/12/01 11:27:15 letouzey Exp $ i*)
 
 (*i*)
 open Util
@@ -183,15 +183,17 @@ let rec extract_type env db j c args =
 	   | (Info, Default) -> 
 	       (* Standard case: two [extract_type] ... *)
 	       let mld = extract_type env' (0::db) j d [] in 
-	       if mld = Tdummy then Tdummy 
+	       if type_eq (mlt_env env) mld Tdummy then Tdummy 
 	       else Tarr (extract_type env db 0 t [], mld) 
 	   | (Info, TypeScheme) when j > 0 -> 
 	       (* A new type var. *)
 	       let mld = extract_type env' (j::db) (j+1) d [] in 
-	       if mld = Tdummy then Tdummy else Tarr (Tdummy, mld)
+	       if type_eq (mlt_env env) mld Tdummy then Tdummy 
+	       else Tarr (Tdummy, mld)
 	   | _ -> 
 	       let mld = extract_type env' (0::db) j d [] in 
-	       if mld = Tdummy then Tdummy else Tarr (Tdummy, mld))
+	       if type_eq (mlt_env env) mld Tdummy then Tdummy 
+	       else Tarr (Tdummy, mld))
     | Sort _ -> Tdummy (* The two logical cases. *)
     | _ when sort_of env (applist (c, args)) = InProp -> Tdummy 
     | Rel n -> 
@@ -343,38 +345,53 @@ and extract_ind env kn = (* kn is supposed to be in long form *)
 	if List.length l = 1 && not (type_mem_kn kn (List.hd l)) 
 	then raise (I Singleton); 
 	if l = [] then raise (I Standard);
+	if not mib.mind_record then raise (I Standard);
 	let ip = (kn, 0) in 
-	if is_custom (IndRef ip) then raise (I Standard); 
-	let projs = 
-	  try (find_structure ip).s_PROJ 
-	  with Not_found -> raise (I Standard);
+	let r = IndRef ip in 
+	if is_custom r then raise (I Standard); 
+	(* Now we're sure it's a record. *)
+	(* First, we find its field names. *)
+	let rec names_prod t = match kind_of_term t with 
+	  | Prod(n,_,t) -> n::(names_prod t)
+	  | LetIn(_,_,_,t) -> names_prod t
+	  | Cast(t,_) -> names_prod t
+	  | _ -> []
 	in 
-	let n = nb_default_params env mip0.mind_nf_arity in
-	let projs = try List.map out_some projs with _ -> raise (I Standard) in
-	let is_true_proj kn = 
-          let (_,body) = Sign.decompose_lam_assum (constant_value env kn) in
-          match kind_of_term body with
-              | Rel _ -> false
-              | Case _ -> true
-              | _ -> assert false
+	let field_names = 
+	  list_skipn mip0.mind_nparams (names_prod mip0.mind_user_lc.(0)) in 
+	assert (List.length field_names = List.length typ);
+	let projs = ref KNset.empty in 
+	let mp,d,_ = repr_kn kn in 
+	let rec select_fields l typs = match l,typs with 
+	  | [],[] -> []
+	  | (Name id)::l, typ::typs -> 
+	      if type_eq (mlt_env env) Tdummy typ then select_fields l typs 
+	      else  
+		let knp = make_kn mp d (label_of_id id) in 
+		if not (List.mem false (type_to_sign (mlt_env env) typ)) then 
+		  projs := KNset.add knp !projs; 
+		(ConstRef knp) :: (select_fields l typs)
+	  | Anonymous::l, typ::typs -> 
+	      if type_eq (mlt_env env) Tdummy typ then select_fields l typs
+	      else error_record r
+	  | _ -> assert false 
 	in 
-	let projs = List.filter is_true_proj projs in 
- 	let rec check = function 
-          | [] -> [],[]
-          | (typ, kn) :: l -> 
-              let l1,l2 = check l in 
-              if type_eq (mlt_env env) Tdummy typ then l1,l2 
-              else 
-                let r = ConstRef kn in 
-                if List.mem false (type_to_sign (mlt_env env) typ) 
-                then r :: l1, l2 
-                else r :: l1, r :: l2
-	in 
-	add_record kn n (check (List.combine typ projs)); 
-	raise (I Record)
+	let field_glob = select_fields field_names typ
+	in
+	(* Is this record officially declared with its projections ? *)
+	(* If so, we use this information. *)
+	begin try 
+	  let n = nb_default_params env mip0.mind_nf_arity in
+	  List.iter 
+	    (option_iter 
+	       (fun kn -> if KNset.mem kn !projs then add_projection n kn))
+	    (find_structure ip).s_PROJ 
+	with Not_found -> ()
+	end; 
+	Record field_glob
       with (I info) -> info
     in
-    let i = {ind_info = ind_info; ind_nparams = npar; ind_packets = packets} in 
+    let i = {ind_info = ind_info; ind_nparams = npar; ind_packets = packets} in
     add_ind kn i; 
     internal_call := KNset.remove kn !internal_call;
     i
@@ -564,7 +581,9 @@ and extract_cst_app env mle mlt kn args =
   (* Different situations depending of the number of arguments: *)
   if ls = 0 then put_magic_if magic2 head
   else if List.mem true s then 
-    if la >= ls then put_magic_if (magic2 && not magic1) (MLapp (head, mla))
+    if la >= ls || not (List.mem false s) 
+    then 
+      put_magic_if (magic2 && not magic1) (MLapp (head, mla))
     else 
       (* Not enough arguments. We complete via eta-expansion. *)
       let ls' = ls-la in
@@ -599,7 +618,7 @@ and extract_cons_app env mle mlt (((kn,i) as ip,j) as cp) args =
   let type_cons = type_recomp (types, Tglob (IndRef ip, list_tvar)) in
   let type_cons = instantiation (nb_tvars, type_cons) in 
   (* Then, the usual variables [s], [ls], [la], ... *)
-  let s = List.map ((<>) Tdummy) types in
+  let s = List.map (type_neq env Tdummy) types in
   let ls = List.length s in 
   let la = List.length args in 
   assert (la <= ls + params_nb);
@@ -614,7 +633,7 @@ and extract_cons_app env mle mlt (((kn,i) as ip,j) as cp) args =
   let head mla = 
     if mi.ind_info = Singleton then 
       put_magic_if magic1 (List.hd mla) (* assert (List.length mla = 1) *)
-    else put_magic_if magic1 (MLcons (ConstructRef cp, mla))
+    else put_magic_if magic1 (MLcons (mi.ind_info, ConstructRef cp, mla))
   in 
   (* Different situations depending of the number of arguments: *)
   if la < params_nb then 
@@ -670,10 +689,12 @@ and extract_case env mle ((kn,i) as ip,c,br) mlt =
 	(* The types of the arguments of the corresponding constructor. *)
 	let f t = type_subst_vect metas (type_expand env t) in 
 	let l = List.map f oi.ip_types.(i) in
+	(* the corresponding signature *)
+	let s = List.map (type_neq env Tdummy) oi.ip_types.(i) in
 	(* Extraction of the branch (in functional form). *)
 	let e = extract_maybe_term env mle (type_recomp (l,mlt)) br.(i) in 
 	(* We suppress dummy arguments according to signature. *)
-	let ids,e = case_expunge (List.map ((<>) Tdummy) l) e in
+	let ids,e = case_expunge s e in
 	(ConstructRef (ip,i+1), List.rev ids, e)
       in
       if mi.ind_info = Singleton then 
@@ -687,7 +708,7 @@ and extract_case env mle ((kn,i) as ip,c,br) mlt =
 	end 
       else 
 	(* Standard case: we apply [extract_branch]. *)
-	MLcase (a, Array.init br_size extract_branch)
+	MLcase (mi.ind_info, a, Array.init br_size extract_branch)
   
 (*s Extraction of a (co)-fixpoint. *)
 
@@ -726,7 +747,7 @@ let extract_std_constant env kn body typ =
   (* The real type [t']: without head lambdas, expanded, *)
   (* and with [Tvar] translated to [Tvar'] (not instantiable). *)
   let l,t' = type_decomp (type_expand env (var2var' t)) in 
-  let s = List.map ((<>) Tdummy) l in 
+  let s = List.map (type_neq env Tdummy) l in 
   (* The initial ML environment. *)
   let mle = List.fold_left Mlenv.push_std_type Mlenv.empty l in 
   (* Decomposing the top level lambdas of [body]. *)
@@ -836,7 +857,8 @@ let logical_decl = function
   | Dterm (_,MLdummy,Tdummy) -> true
   | Dtype (_,[],Tdummy) -> true 
   | Dfix (_,av,tv) -> 
-      (array_for_all ((=) MLdummy) av) && (array_for_all ((=) Tdummy) tv)
+      (array_for_all ((=) MLdummy) av) && 
+      (array_for_all ((=) Tdummy) tv)
   | Dind (_,i) -> array_for_all (fun ip -> ip.ip_logical) i.ind_packets
   | _ -> false
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: gmapl.ml,v 1.2.16.1 2004/07/16 19:30:29 herbelin Exp $ *)
+(* $Id: gmapl.ml,v 1.2.16.2 2006/01/03 20:31:16 herbelin Exp $ *)
 
 open Util
 
@@ -21,7 +21,7 @@ let fold = Gmap.fold
 let add x y m =
   try
     let l = Gmap.find x m in
-    Gmap.add x (if List.mem y l then l else y::l) m
+    Gmap.add x (y::list_except y l) m
   with Not_found ->
     Gmap.add x [y] m
 

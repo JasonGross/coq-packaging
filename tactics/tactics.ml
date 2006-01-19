@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tactics.ml,v 1.162.2.4 2004/12/04 10:26:46 herbelin Exp $ *)
+(* $Id: tactics.ml,v 1.162.2.7 2005/07/13 16:18:57 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -220,8 +220,16 @@ let pattern_option l = reduct_option (pattern_occs l)
 (* A function which reduces accordingly to a reduction expression,
    as the command Eval does. *)
 
+let needs_check = function
+  (* Expansion is not necessarily well-typed: e.g. expansion of t into x is
+     not well-typed in [H:(P t); x:=t |- G] because x is defined after H *)
+  | Fold _ -> true
+  | _ -> false
+
 let reduce redexp cl goal =
-  redin_combinator (reduction_of_redexp redexp) cl goal
+  (if needs_check redexp then with_check else (fun x -> x))
+    (redin_combinator (reduction_of_redexp redexp) cl)
+    goal
 
 (* Unfolding occurrences of a constant *)
 
@@ -741,7 +749,7 @@ let letin_tac with_eq name c occs gl =
       if not (mem_named_context x (pf_hyps gl)) then x else
 	error ("The variable "^(string_of_id x)^" is already declared") in
   let (depdecls,lastlhyp,ccl)= letin_abstract id c occs gl in 
-  let t = pf_type_of gl c in
+  let t = Evarutil.refresh_universes (pf_type_of gl c) in
   let newcl = mkNamedLetIn id c t ccl in
   tclTHENLIST
     [ convert_concl_no_check newcl;

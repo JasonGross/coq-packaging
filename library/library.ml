@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: library.ml,v 1.79.2.2 2004/11/17 14:01:26 herbelin Exp $ *)
+(* $Id: library.ml,v 1.79.2.5 2006/01/10 17:06:23 barras Exp $ *)
 
 open Pp
 open Util
@@ -29,53 +29,26 @@ let load_path = ref ([],[] : System.physical_path list * logical_path list)
 
 let get_load_path () = fst !load_path
 
-(* Hints to partially detects if two paths refer to the same repertory *)
-let rec remove_path_dot p = 
-  let curdir = Filename.concat Filename.current_dir_name "" in (* Unix: "./" *)
-  let n = String.length curdir in
-  if String.length p > n && String.sub p 0 n = curdir then
-    remove_path_dot (String.sub p n (String.length p - n))
-  else
-    p
-
-let strip_path p =
-  let cwd = Filename.concat (Sys.getcwd ()) "" in (* Unix: "`pwd`/" *)
-  let n = String.length cwd in
-  if String.length p > n && String.sub p 0 n = cwd then
-    remove_path_dot (String.sub p n (String.length p - n))
-  else
-    remove_path_dot p
-
-let canonical_path_name p =
-  let current = Sys.getcwd () in
-  try 
-    Sys.chdir p;
-    let p' = Sys.getcwd () in
-    Sys.chdir current;
-    p'
-  with Sys_error _ ->
-    (* We give up to find a canonical name and just simplify it... *)
-    strip_path p
-
 
 let find_logical_path phys_dir = 
-  let phys_dir = canonical_path_name phys_dir in
+  let phys_dir = System.canonical_path_name phys_dir in
   match list_filter2 (fun p d -> p = phys_dir) !load_path with
   | _,[dir] -> dir
   | _,[] -> Nameops.default_root_prefix
   | _,l -> anomaly ("Two logical paths are associated to "^phys_dir)
 
 let remove_path dir =
+  let dir = System.canonical_path_name dir in
   load_path := list_filter2 (fun p d -> p <> dir) !load_path
 
 let add_load_path_entry (phys_path,coq_path) =
-  let phys_path = canonical_path_name phys_path in
+  let phys_path = System.canonical_path_name phys_path in
   match list_filter2 (fun p d -> p = phys_path) !load_path with
   | _,[dir] ->
       if coq_path <> dir 
         (* If this is not the default -I . to coqtop *)
         && not
-        (phys_path = canonical_path_name Filename.current_dir_name
+        (phys_path = System.canonical_path_name Filename.current_dir_name
          && coq_path = Nameops.default_root_prefix)
       then
 	begin
@@ -290,8 +263,8 @@ let (in_import, out_import) =
 (************************************************************************)
 (*s Loading from disk to cache (preparation phase) *)
 
-let vo_magic_number7 = 07992 (* V8.0 final old syntax *)
-let vo_magic_number8 = 08002 (* V8.0 final new syntax *)
+let vo_magic_number7 = 07993 (* V8.0pl3 final old syntax *)
+let vo_magic_number8 = 08003 (* V8.0pl3 final new syntax *)
 
 let (raw_extern_library7, raw_intern_library7) =
   System.raw_extern_intern vo_magic_number7 ".vo"
@@ -453,13 +426,8 @@ let rec_intern_by_filename_only id f =
     m.library_name
 
 let locate_qualified_library qid =
-  (* Look if loaded in current environment *)
-  try 
-    let dir = Nametab.full_name_module qid in
-    (LibLoaded, dir, library_full_filename dir)
-  with Not_found ->
-  (* Look if in loadpath *)
   try
+    (* Search library in loadpath *)
     let dir, base = repr_qualid qid in 
     let loadpath =
       if repr_dirpath dir = [] then get_load_path ()
@@ -470,7 +438,12 @@ let locate_qualified_library qid =
     if loadpath = [] then raise LibUnmappedDir;
     let name =  (string_of_id base)^".vo" in
     let path, file = System.where_in_path loadpath name in
-    (LibInPath, extend_dirpath (find_logical_path path) base, file)
+    let dir = extend_dirpath (find_logical_path path) base in
+    (* Look if loaded *)
+    try 
+      (LibLoaded, dir, library_full_filename dir)      
+    with Not_found ->
+      (LibInPath, dir, file)
   with Not_found -> raise LibNotFound
 
 let rec_intern_qualified_library (loc,qid) =

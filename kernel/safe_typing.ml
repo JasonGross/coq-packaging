@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: safe_typing.ml,v 1.76.2.1 2004/07/16 19:30:26 herbelin Exp $ *)
+(* $Id: safe_typing.ml,v 1.76.2.2 2005/11/23 14:46:08 barras Exp $ *)
 
 open Util
 open Names
@@ -427,11 +427,13 @@ type compiled_library =
 (* We check that only initial state Require's were performed before 
    [start_library] was called *)
 
+let is_empty senv =
+  senv.revsign = [] &&
+  senv.modinfo.msid = initial_msid &&
+  senv.modinfo.variant = NONE
+
 let start_library dir senv =
-  if not (senv.revsign = [] &&
-	  senv.modinfo.msid = initial_msid &&
-	  senv.modinfo.variant = NONE)
-  then
+  if not (is_empty senv) then
     anomaly "Safe_typing.start_library: environment should be empty";
   let dir_path,l = 
     match (repr_dirpath dir) with

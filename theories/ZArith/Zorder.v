@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i $Id: Zorder.v,v 1.6.2.1 2004/07/16 19:31:22 herbelin Exp $ i*)
+(*i $Id: Zorder.v,v 1.6.2.3 2005/03/29 15:35:12 herbelin Exp $ i*)
 
 (** Binary Integers (Pierre Crégut (CNET, Lannion, France) *)
 
@@ -849,11 +849,14 @@ intros p H1; unfold Zgt in |- *; pattern 0 at 2 in |- *;
 intros p H; discriminate H.
 Qed.
 
-Lemma Zmult_lt_O_compat : forall n m:Z, 0 < n -> 0 < m -> 0 < n * m.
+Lemma Zmult_lt_0_compat : forall n m:Z, 0 < n -> 0 < m -> 0 < n * m.
 intros a b apos bpos.
 apply Zgt_lt.
 apply Zmult_gt_0_compat; try apply Zlt_gt; assumption.
 Qed.
+
+(* For compatibility *)
+Notation Zmult_lt_O_compat := Zmult_lt_0_compat (only parsing).
 
 Lemma Zmult_gt_0_le_0_compat : forall n m:Z, n > 0 -> 0 <= m -> 0 <= m * n.
 Proof.
@@ -958,8 +961,11 @@ intros n m H; apply Zplus_lt_reg_l with (p := m); rewrite Zplus_minus;
  assumption.
 Qed.
 
-Lemma Zlt_O_minus_lt : forall n m:Z, 0 < n - m -> m < n.
+Lemma Zlt_0_minus_lt : forall n m:Z, 0 < n - m -> m < n.
 Proof.
 intros n m H; apply Zplus_lt_reg_l with (p := - m); rewrite Zplus_opp_l;
  rewrite Zplus_comm; exact H.
 Qed.
+
+(* For compatibility *)
+Notation Zlt_O_minus_lt := Zlt_0_minus_lt (only parsing).

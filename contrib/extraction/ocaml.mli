@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ocaml.mli,v 1.26.6.1 2004/07/16 19:30:08 herbelin Exp $ i*)
+(*i $Id: ocaml.mli,v 1.26.6.3 2005/12/01 17:01:22 letouzey Exp $ i*)
 
 (*s Some utility functions to be reused in module [Haskell]. *)
 
@@ -14,8 +14,6 @@ open Pp
 open Names
 open Libnames
 open Miniml
-
-val cons_cofix : Refset.t ref
 
 val pp_par : bool -> std_ppcmds -> std_ppcmds
 val pp_abst : identifier list -> std_ppcmds
@@ -39,10 +37,10 @@ val get_db_name : int -> env -> identifier
 val keywords : Idset.t
 
 val preamble : 
-  extraction_params -> module_path list -> bool * bool * bool -> std_ppcmds
+  extraction_params -> module_path list -> bool*bool*bool -> bool -> std_ppcmds
 
 val preamble_sig : 
-  extraction_params -> module_path list -> bool * bool * bool -> std_ppcmds
+  extraction_params -> module_path list -> bool*bool*bool -> std_ppcmds
 
 (*s Production of Ocaml syntax. We export both a functor to be used for 
     extraction in the Coq toplevel and a function to extract some 

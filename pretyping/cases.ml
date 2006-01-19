@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: cases.ml,v 1.111.2.4 2004/12/09 20:07:01 herbelin Exp $ *)
+(* $Id: cases.ml,v 1.111.2.5 2005/04/29 16:31:03 herbelin Exp $ *)
 
 open Util
 open Names
@@ -171,10 +171,7 @@ let pred_case_ml env sigma isrec (IndType (indf,realargs)) (i,ft) =
 open Pp
 
 let mssg_may_need_inversion () =
-  str "This pattern-matching is not exhaustive."
-
-let mssg_this_case_cannot_occur () =
-  "This pattern-matching is not exhaustive."
+  str "Found a matching with no clauses on a term unknown to have an empty inductive type"
 
 (* Utils *)
 let make_anonymous_patvars =

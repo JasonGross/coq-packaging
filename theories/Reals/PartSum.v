@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: PartSum.v,v 1.11.2.1 2004/07/16 19:31:11 herbelin Exp $ i*)
+(*i $Id: PartSum.v,v 1.11.2.2 2005/07/13 22:28:30 herbelin Exp $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -489,8 +489,7 @@ elim s; intro.
 left; apply a.
 right; apply b.
 cut (Un_growing (fun n:nat => sum_f_R0 An n)).
-intro; set (l1 := sum_f_R0 An N).
-fold l1 in r.
+intro; set (l1 := sum_f_R0 An N) in r.
 unfold Un_cv in H; cut (0 < l1 - l).
 intro; elim (H _ H2); intros.
 set (N0 := max x N); cut (N0 >= x)%nat.
