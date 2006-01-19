@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: command.ml,v 1.116.2.3 2004/12/31 12:01:16 herbelin Exp $ *)
+(* $Id: command.ml,v 1.116.2.4 2005/11/29 21:40:53 letouzey Exp $ *)
 
 open Pp
 open Util
@@ -372,7 +372,9 @@ let interp_mutual lparams lnamearconstrs finite =
       (List.rev arityl) lnamearconstrs
   in
   States.unfreeze fs;
-  notations, { mind_entry_finite = finite; mind_entry_inds = mispecvec }
+  notations, { mind_entry_record = false; 
+	       mind_entry_finite = finite; 
+	       mind_entry_inds = mispecvec }
   with e -> States.unfreeze fs; raise e
 
 let declare_mutual_with_eliminations isrecord mie =

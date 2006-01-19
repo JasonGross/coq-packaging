@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: egrammar.mli,v 1.14.2.5 2004/11/27 09:25:44 herbelin Exp $ i*)
+(*i $Id: egrammar.mli,v 1.14.2.6 2005/12/23 22:16:46 herbelin Exp $ i*)
 
 (*i*)
 open Util
@@ -28,7 +28,8 @@ type all_grammar_command =
   | TacticGrammar of
       (string * (string * grammar_production list) * 
       (Names.dir_path * Tacexpr.raw_tactic_expr))
-      list
+      list * (string * Genarg.argument_type list *
+              (string * Pptactic.grammar_terminals)) list
 
 val extend_grammar : all_grammar_command -> unit
 

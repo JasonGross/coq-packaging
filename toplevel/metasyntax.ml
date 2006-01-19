@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: metasyntax.ml,v 1.105.2.6 2004/11/22 12:41:38 herbelin Exp $ *)
+(* $Id: metasyntax.ml,v 1.105.2.12 2006/01/04 20:31:16 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -154,12 +154,11 @@ let rec make_tags = function
 
 let declare_pprule = function
   (* Pretty-printing rules only for Grammar (Tactic Notation) *)
-  | Egrammar.TacticGrammar gl ->
-      let f (s,(s',l),tac) =
-        let pp = (make_tags l, (s',List.map make_terminal_status l)) in
-        Pptactic.declare_extra_tactic_pprule true s pp;
-        Pptactic.declare_extra_tactic_pprule false s pp in
-      List.iter f gl
+  | Egrammar.TacticGrammar (_,pp) ->
+      let f (s,t,p) =
+        Pptactic.declare_extra_tactic_pprule true s (t,p);
+        Pptactic.declare_extra_tactic_pprule false s (t,p) in
+      List.iter f pp
   | _ -> ()
 
 let cache_grammar (_,a) =
@@ -199,12 +198,24 @@ let add_grammar_obj univ entryl =
 
 (* Tactic notations *)
 
-let locate_tactic_body dir (s,p,e) = (s,p,(dir,e))
+let rec tactic_notation_key = function
+  | VTerm id :: _ -> id
+  | _ :: l -> tactic_notation_key l
+  | [] -> "terminal_free_notation"
+
+let rec next_key_away key t =
+  if Pptactic.exists_extra_tactic_pprule key t then next_key_away (key^"'") t
+  else key
+
+let locate_tactic_body dir (s,(s',prods as x),e) =
+  let tags = make_tags prods in
+  let s = if s="" then next_key_away (tactic_notation_key prods) tags else s in
+  (s,x,(dir,e)),(s,tags,(s',List.map make_terminal_status prods))
 
 let add_tactic_grammar g =
   let dir = Lib.cwd () in
-  let g = List.map (locate_tactic_body dir) g in
-  Lib.add_anonymous_leaf (inGrammar (Egrammar.TacticGrammar g))
+  let pa,pp = List.split (List.map (locate_tactic_body dir) g) in
+  Lib.add_anonymous_leaf (inGrammar (Egrammar.TacticGrammar (pa,pp)))
 
 (* Printing grammar entries *)
 
@@ -598,8 +609,12 @@ let make_hunks etyps symbols from =
     | SProdList (m,sl) :: prods ->
 	let i = list_index m vars in
 	let _,prec = precedence_of_entry_type from (List.nth typs (i-1)) in
-        (* We add NonTerminal for simulation but remove it afterwards *)
-        let _,sl' = list_sep_last (make NoBreak (sl@[NonTerminal m])) in
+        let sl' =
+          (* If no separator: add a break *)
+	  if sl = [] then add_break 1 []
+          (* We add NonTerminal for simulation but remove it afterwards *)
+	  else snd (list_sep_last (make NoBreak (sl@[NonTerminal m])))
+	in
 	UnpListMetaVar (i,prec,sl') :: make CanBreak prods
 
     | [] -> []
@@ -813,6 +828,10 @@ let pr_level ntn (from,args) =
   str "at level " ++ int from ++ spc () ++ str "with arguments" ++ spc() ++
   prlist_with_sep pr_coma (pr_arg_level from) args
 
+(* In v8: prec = Some prec8 is for both parsing and printing *)
+(* In v7 and translator: 
+     prec is for parsing (None if V8Notation), 
+     prec8 for v8 printing (v7 printing is via ast) *)
 let cache_syntax_extension (_,(_,((prec,prec8),ntn,gr,se))) =
   try 
     let oldprec, oldprec8 = Symbols.level_of_notation ntn in
@@ -869,7 +888,7 @@ let (inSyntaxExtension, outSyntaxExtension) =
        classify_function = classify_syntax_definition;
        export_function = export_syntax_definition}
 
-let interp_modifiers =
+let interp_modifiers modl =
   let onlyparsing = ref false in
   let rec interp assoc level etyps format = function
     | [] ->
@@ -898,10 +917,9 @@ let interp_modifiers =
 	onlyparsing := true;
 	interp assoc level etyps format l
     | SetFormat s :: l ->
-	if format <> None then error "A format is given more than once"
-	onlyparsing := true;
+	if format <> None then error "A format is given more than once";
 	interp assoc level etyps (Some s) l
-  in interp None None [] None
+  in interp None None [] None modl
 
 let merge_modifiers a n l =
   (match a with None -> [] | Some a -> [SetAssoc a]) @
@@ -1037,22 +1055,30 @@ let compute_syntax_data forv7 (df,modifiers) =
   ((onlyparse,recvars,vars,
     ntn_for_interp,notation),prec,ppdata,(Lib.library_dp(),df))
 
+(* Uninterpreted (reserved) notations *)
 let add_syntax_extension local mv mv8 =
+  (* from v7: 
+       if mv8 <> None: tells the translator how to print in v8
+       if mv <> None: tells how to parse and, how to print in v7
+       mv = None = mv8 does not occur   
+     from v8 (mv8 is always None and mv is always Some)
+       mv tells how to parse and print in v8
+  *)
   let data8 = option_app (compute_syntax_data false) mv8 in
   let data = option_app (compute_syntax_data !Options.v7) mv in
   let prec,gram_rule = match data with
-  | None -> None, None
+  | None -> None, None (* Case of V8Notation from v7 *)
   | Some ((_,_,_,_,notation),prec,(n,typs,symbols,_),_) -> 
       Some prec, Some (make_grammar_rule n typs symbols notation None) in
   match data, data8 with
   | None, None -> (* Nothing to do: V8Notation while not translating *) () 
   | _, Some d | Some d, None ->
-    let ((_,_,_,_,ntn),ppprec,ppdata,_) = d in
+    let ((_,_,_,_,ntn),ppprec,ppdata,_) = d in (* tells how to print *)
     let ntn' = match data with Some ((_,_,_,_,ntn),_,_,_) -> ntn | _ -> ntn in
     let pp_rule = make_pp_rule ppdata in
     Lib.add_anonymous_leaf
       (inSyntaxExtension (local,((prec,ppprec),ntn',gram_rule,pp_rule)))
-	
+
 (**********************************************************************)
 (* Distfix, Infix, Symbols *)
 
@@ -1147,7 +1173,7 @@ let contract_notation ntn =
     else ntn in
   aux ntn 0
 
-let add_notation_in_scope local df c mods omodv8 scope toks =
+let add_notation_in_scope local df c mods omodv8 scope =
   let ((onlyparse,recs,vars,intnot,notation),prec,(n,typs,symbols,_ as ppdata),df')=
     compute_syntax_data !Options.v7 (df,mods) in
   (* Declare the parsing and printing rules if not already done *)
@@ -1260,7 +1286,7 @@ let add_notation_interpretation df names c sc =
   add_notation_interpretation_core false symbs for_oldpp df a sc onlyparse 
     false gram_data
 
-let add_notation_in_scope_v8only local df c mv8 scope toks =
+let add_notation_in_scope_v8only local df c mv8 scope =
   let (_,recs,vars,intnot,notation),prec,ppdata,df' = compute_syntax_data false (df,mv8) in
   let pp_rule = make_pp_rule ppdata in
   Lib.add_anonymous_leaf
@@ -1277,7 +1303,7 @@ let add_notation_v8only local c (df,modifiers) sc =
   match toks with 
     | [String x] when (modifiers = [] or modifiers = [SetOnlyParsing]) ->
 	(* This is a ident to be declared as a rule *)
-        add_notation_in_scope_v8only local df c (SetLevel 0::modifiers) sc toks
+        add_notation_in_scope_v8only local df c (SetLevel 0::modifiers) sc
     | _ ->
 	let (assoc,lev,typs,onlyparse,fmt) = interp_modifiers modifiers	in
 	match lev with
@@ -1299,12 +1325,16 @@ let add_notation_v8only local c (df,modifiers) sc =
 		if List.for_all (function SetAssoc _ -> false | _ -> true)
 		  modifiers 
 		then SetAssoc Gramext.NonA :: modifiers else modifiers in
-	      add_notation_in_scope_v8only local df c mods sc toks
+	      add_notation_in_scope_v8only local df c mods sc
 
 let is_quoted_ident x =
   let x' = unquote_notation_token x in
   x <> x' & try Lexer.check_ident x'; true with _ -> false
 
+(* v7: dfmod=None; mv8=Some: add only v8 printing rule *)
+(*     dfmod=Some: add v7 parsing rule; mv8=Some: add v8 printing rule *)
+(*     dfmod=Some; mv8=None: same v7-parsing and v8-printing rules *)
+(* v8: dfmod=Some; mv8=None: same v8 parsing and printing rules *)
 let add_notation local c dfmod mv8 sc =
   match dfmod with
   | None -> add_notation_v8only local c (out_some mv8) sc
@@ -1313,7 +1343,7 @@ let add_notation local c dfmod mv8 sc =
   match toks with 
     | [String x] when (modifiers = [] or modifiers = [SetOnlyParsing]) ->
 	(* This is a ident to be declared as a rule *)
-        add_notation_in_scope local df c (SetLevel 0::modifiers) mv8 sc toks
+        add_notation_in_scope local df c (SetLevel 0::modifiers) mv8 sc
     | _ ->
 	let (assoc,lev,typs,onlyparse,fmt) = interp_modifiers modifiers	in
 	match lev with
@@ -1335,11 +1365,11 @@ let add_notation local c dfmod mv8 sc =
 		  add_notation_interpretation_core local symbs for_old df a
 		    sc onlyparse false gram_data
                 else
-                  add_notation_in_scope local df c modifiers mv8 sc toks
+                  add_notation_in_scope local df c modifiers mv8 sc
 	  | Some n ->
 	    (* Declare both syntax and interpretation *)
 	    let assoc = match assoc with None -> Some Gramext.NonA | a -> a in
-            add_notation_in_scope local df c modifiers mv8 sc toks
+            add_notation_in_scope local df c modifiers mv8 sc
 
 (* TODO add boxes information in the expression *)
 
@@ -1371,7 +1401,6 @@ let add_distfix local assoc n df r sc =
   let a = mkAppC (mkRefC r, vars) in
   let assoc = match assoc with None -> Gramext.LeftA | Some a -> a in
   add_notation_in_scope local df a [SetAssoc assoc;SetLevel n] None sc
-    (split_notation_string df)
 
 let make_infix_data n assoc modl mv8 =
   (* Infix defaults to LEFTA in V7 (cf doc) *)
@@ -1404,7 +1433,7 @@ let add_infix local (inf,modl) pr mv8 sc =
     else
       if n8 = None then error "Needs a level" else
       let mv8 = match a8 with None -> SetAssoc Gramext.NonA :: mv8 |_ -> mv8 in
-      add_notation_in_scope_v8only local df a mv8 sc toks
+      add_notation_in_scope_v8only local df a mv8 sc
   else begin
   let (assoc,n,onlyparse,fmt) = interp_infix_modifiers modl in
   (* check the precedence *)
@@ -1435,10 +1464,10 @@ let add_infix local (inf,modl) pr mv8 sc =
         onlyparse false gram_data
     else
       let mv,mv8 = make_infix_data n assoc modl mv8 in
-      add_notation_in_scope local df a mv mv8 sc toks
+      add_notation_in_scope local df a mv mv8 sc
   else
     let mv,mv8 = make_infix_data n assoc modl mv8 in
-    add_notation_in_scope local df a mv mv8 sc toks
+    add_notation_in_scope local df a mv mv8 sc
   end
 
 let standardise_locatable_notation ntn =

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: safe_typing.mli,v 1.33.2.1 2004/07/16 19:30:26 herbelin Exp $ i*)
+(*i $Id: safe_typing.mli,v 1.33.2.2 2005/11/23 14:46:08 barras Exp $ i*)
 
 (*i*)
 open Names
@@ -28,6 +28,8 @@ type safe_environment
 val env_of_safe_env : safe_environment -> Environ.env
 
 val empty_environment : safe_environment
+
+val is_empty : safe_environment -> bool
 
 (* Adding and removing local declarations (Local or Variables) *)
 val push_named_assum :

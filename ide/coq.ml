@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq.ml,v 1.38.2.1 2004/07/16 19:30:20 herbelin Exp $ *)
+(* $Id: coq.ml,v 1.38.2.2 2005/11/16 17:22:38 barras Exp $ *)
 
 open Vernac
 open Vernacexpr
@@ -95,10 +95,10 @@ let is_in_coq_path f =
   let _ = Library.locate_qualified_library 
 	    (Libnames.make_qualid Names.empty_dirpath 
 	       (Names.id_of_string base)) in
-  prerr_endline (f ^ "is in coq path");
+  prerr_endline (f ^ " is in coq path");
   true
   with _ ->  
-    prerr_endline (f ^ "is NOT in coq path");
+    prerr_endline (f ^ " is NOT in coq path");
     false  
 
 let is_in_proof_mode () = 

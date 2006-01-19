@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqtop.ml,v 1.72.2.4 2004/09/03 15:05:23 herbelin Exp $ *)
+(* $Id: coqtop.ml,v 1.72.2.5 2005/11/23 14:46:09 barras Exp $ *)
 
 open Pp
 open Util
@@ -295,7 +295,8 @@ let init is_ide =
       init_load_path ();
       inputstate ();
       engage ();
-      if not !batch_mode then Declaremods.start_library !toplevel_name;
+      if not !batch_mode && Global.env_is_empty() then
+        Declaremods.start_library !toplevel_name;
       init_library_roots ();
       load_vernac_obj ();
       require ();

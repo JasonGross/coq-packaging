@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inv.ml,v 1.53.2.1 2004/07/16 19:30:53 herbelin Exp $ *)
+(* $Id: inv.ml,v 1.53.2.3 2005/09/08 12:28:00 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -135,9 +135,8 @@ let make_inv_predicate env sigma indf realargs id status concl =
           else 
 	    make_iterated_tuple env' sigma (ai,ati) (xi,ti)
 	in
-        let type_type_rhs = get_sort_of env sigma (type_of env sigma rhs) in
         let sort = get_sort_of env sigma concl in 
-        let eq_term = find_eq_pattern type_type_rhs sort in
+        let eq_term = Coqlib.build_coq_eq () in
         let eqn = applist (eq_term ,[eqnty;lhs;rhs]) in 
 	build_concl ((Anonymous,lift n eqn)::eqns) (n+1) restlist
   in
@@ -191,12 +190,14 @@ let make_inv_predicate env sigma indf realargs id status concl =
    and introduces generalized hypotheis.
    Precondition: t=(mkVar id) *)
     
-let rec dependent_hyps id idlist sign = 
+let rec dependent_hyps id idlist gl = 
   let rec dep_rec =function
     | [] -> []
-    | (id1,_,id1ty as d1)::l -> 
-	if occur_var (Global.env()) id id1ty
-        then d1 :: dep_rec l
+    | (id1,_,_)::l -> 
+	(* Update the type of id1: it may have been subject to rewriting *)
+	let d = pf_get_hyp gl id1 in
+	if occur_var_in_decl (Global.env()) id d
+        then d :: dep_rec l
         else dep_rec l
   in 
   dep_rec idlist 
@@ -281,7 +282,7 @@ Nota: with Inversion_clear, only four useless hypotheses
 *)
 
 let generalizeRewriteIntros tac depids id gls = 
-  let dids = dependent_hyps id depids (pf_env gls) in
+  let dids = dependent_hyps id depids gls in
   (tclTHENSEQ
     [bring_hyps dids; tac; 
      (* may actually fail to replace if dependent in a previous eq *)

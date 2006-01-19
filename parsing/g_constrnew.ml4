@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_constrnew.ml4,v 1.41.2.2 2004/11/17 12:48:35 herbelin Exp $ *)
+(* $Id: g_constrnew.ml4,v 1.41.2.4 2005/09/21 14:47:33 herbelin Exp $ *)
 
 open Pcoq
 open Constr
@@ -285,7 +285,9 @@ GEXTEND Gram
     [ [ pl = LIST1 pattern SEP ","; "=>"; rhs = lconstr -> (loc,pl,rhs) ] ]
   ;
   pattern:
-    [ "10" LEFTA
+    [ "200" RIGHTA [ ]
+    | "99" RIGHTA [ ]
+    | "10" LEFTA
       [ p = pattern ; lp = LIST1 (pattern LEVEL "0") ->
         (match p with
           | CPatAtom (_, Some r) -> CPatCstr (loc, r, lp)

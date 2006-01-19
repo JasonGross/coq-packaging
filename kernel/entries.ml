@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: entries.ml,v 1.3.8.1 2004/07/16 19:30:25 herbelin Exp $ i*)
+(*i $Id: entries.ml,v 1.3.8.2 2005/11/29 21:40:51 letouzey Exp $ i*)
 
 (*i*)
 open Names
@@ -49,6 +49,7 @@ type one_inductive_entry = {
   mind_entry_lc : constr list }
 
 type mutual_inductive_entry = {
+  mind_entry_record : bool;
   mind_entry_finite : bool;
   mind_entry_inds : one_inductive_entry list }
 

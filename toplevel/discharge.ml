@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: discharge.ml,v 1.81.2.1 2004/07/16 19:31:48 herbelin Exp $ *)
+(* $Id: discharge.ml,v 1.81.2.2 2005/11/29 21:40:53 letouzey Exp $ *)
 
 open Pp
 open Util
@@ -118,6 +118,7 @@ let abstract_inductive sec_sp ids_to_abs hyps inds =
 
 let process_inductive sec_sp osecsp nsecsp oldenv (ids_to_discard,modlist) mib =
   assert (Array.length mib.mind_packets > 0);
+  let record = mib.mind_record in 
   let finite = mib.mind_finite in
   let inds = 
     array_map_to_list
@@ -153,7 +154,8 @@ let process_inductive sec_sp osecsp nsecsp oldenv (ids_to_discard,modlist) mib =
   in
   let indmodifs,cstrmodifs =
     List.split (list_tabulate lmodif_one_mind mib.mind_ntypes) in 
-  ({ mind_entry_finite = finite;
+  ({ mind_entry_record = record;
+     mind_entry_finite = finite;
      mind_entry_inds = inds' },
    indmodifs,
    List.flatten cstrmodifs,

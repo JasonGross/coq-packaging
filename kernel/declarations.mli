@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declarations.mli,v 1.33.2.2 2005/01/21 16:41:49 herbelin Exp $ i*)
+(*i $Id: declarations.mli,v 1.33.2.3 2005/11/29 21:40:51 letouzey Exp $ i*)
 
 (*i*)
 open Names
@@ -77,6 +77,7 @@ type one_inductive_body = {
  }
 
 type mutual_inductive_body = {
+  mind_record : bool;
   mind_finite : bool;
   mind_ntypes : int;
   mind_hyps : section_context;

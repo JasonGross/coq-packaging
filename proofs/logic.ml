@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: logic.ml,v 1.80.2.1 2004/07/16 19:30:49 herbelin Exp $ *)
+(* $Id: logic.ml,v 1.80.2.5 2005/12/17 21:15:52 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -54,7 +54,8 @@ open Pretype_errors
 let catchable_exception = function
   | Util.UserError _ | TypeError _ | RefinerError _
   | Stdpp.Exc_located(_,(Util.UserError _ | TypeError _ | RefinerError _ |
-    Nametab.GlobalizationError _ | PretypeError (_,VarNotFound _))) -> true
+    Nametab.GlobalizationError _ | PretypeError (_,VarNotFound _) | 
+    Indtypes.InductiveError (Indtypes.NotAllowedCaseAnalysis _ ))) -> true
   | _ -> false
 
 let error_cannot_unify (m,n) =
@@ -67,16 +68,9 @@ let check = ref false
 let without_check tac gl =
   let c = !check in
   check := false;
-  let r = tac gl in
-  check := c;
-  r
+  try let r = tac gl in check := c; r with e -> check := c; raise e
 
-let with_check tac gl =
-  let c = !check in
-  check := true;
-  let r = tac gl in
-  check := c;
-  r
+let with_check = Options.with_option check
    
 (************************************************************************)
 (************************************************************************)
@@ -405,9 +399,13 @@ let convert_hyp sign sigma (id,b,bt as d) =
   apply_to_hyp sign id
     (fun sign (_,c,ct) _ ->
        let env = Global.env_of_context sign in
-       if !check && not (is_conv env sigma bt ct) &&
-         not (option_compare (is_conv env sigma) b c) then
-	   error "convert-hyp rule passed non-converting term";
+       if !check && not (is_conv env sigma bt ct) then
+	 (* Just a warning in V8.0bugfix for compatibility *)
+	 msgnl (str "Compatibility warning: Hazardeous change of the type of " ++ pr_id id ++ 
+	       str " (not well-typed in current signature)");
+       if !check && not (option_compare (is_conv env sigma) b c) then
+	 msgnl (str "Compatibility warning: Hazardeous change of the body of " ++ pr_id id ++
+	       str " (not well-typed in current signature)");
        add_named_decl d sign)
 
 

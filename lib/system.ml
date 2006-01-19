@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: system.ml,v 1.31.8.1 2004/07/16 19:30:31 herbelin Exp $ *)
+(* $Id: system.ml,v 1.31.8.3 2006/01/10 17:06:23 barras Exp $ *)
 
 open Pp
 open Util
@@ -21,6 +21,8 @@ let safe_getenv_def var def =
     warning ("Environment variable "^var^" not found: using '"^def^"' .");
     flush Pervasives.stdout;
     def
+
+let getenv_else s dft = try Sys.getenv s with Not_found -> dft
 
 let home = (safe_getenv_def "HOME" ".")
 
@@ -59,6 +61,34 @@ let glob s = expand_macros true s 0
 
 type physical_path = string
 type load_path = physical_path list
+
+(* Hints to partially detects if two paths refer to the same repertory *)
+let rec remove_path_dot p = 
+  let curdir = Filename.concat Filename.current_dir_name "" in (* Unix: "./" *)
+  let n = String.length curdir in
+  if String.length p > n && String.sub p 0 n = curdir then
+    remove_path_dot (String.sub p n (String.length p - n))
+  else
+    p
+
+let strip_path p =
+  let cwd = Filename.concat (Sys.getcwd ()) "" in (* Unix: "`pwd`/" *)
+  let n = String.length cwd in
+  if String.length p > n && String.sub p 0 n = cwd then
+    remove_path_dot (String.sub p n (String.length p - n))
+  else
+    remove_path_dot p
+
+let canonical_path_name p =
+  let current = Sys.getcwd () in
+  try 
+    Sys.chdir p;
+    let p' = Sys.getcwd () in
+    Sys.chdir current;
+    p'
+  with Sys_error _ ->
+    (* We give up to find a canonical name and just simplify it... *)
+    strip_path p
 
 (* All subdirectories, recursively *)
 

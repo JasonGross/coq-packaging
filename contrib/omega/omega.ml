@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* $Id: omega.ml,v 1.7.2.1 2004/07/16 19:30:13 herbelin Exp $ *) 
+(* $Id: omega.ml,v 1.7.2.2 2005/02/17 18:25:20 herbelin Exp $ *) 
 
 open Util
 open Hashtbl
@@ -520,9 +520,11 @@ let rec depend relie_on accu = function
 	      depend (e1.id::e2.id::relie_on) (act::accu) l
             else 
 	      depend relie_on accu l
-	| STATE (e,_,_,_,_) ->
-            if List.mem e.id relie_on then depend relie_on (act::accu) l
-            else depend relie_on accu l
+	| STATE (e,_,o,_,_) ->
+            if List.mem e.id relie_on then
+	      depend (o.id::relie_on) (act::accu) l
+            else
+	      depend relie_on accu l
 	| HYP e ->   
             if List.mem e.id relie_on then depend relie_on (act::accu) l
             else depend relie_on accu l

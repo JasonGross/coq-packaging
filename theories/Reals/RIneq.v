@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: RIneq.v,v 1.23.2.1 2004/07/16 19:31:11 herbelin Exp $ i*)
+(*i $Id: RIneq.v,v 1.23.2.2 2005/03/29 15:35:13 herbelin Exp $ i*)
 
 (***************************************************************************)
 (**              Basic lemmas for the classical reals numbers              *)
@@ -1382,7 +1382,7 @@ Qed.
 
 (**********)
 Lemma lt_IZR : forall n m:Z, IZR n < IZR m -> (n < m)%Z.
-intros z1 z2 H; apply Zlt_O_minus_lt. 
+intros z1 z2 H; apply Zlt_0_minus_lt. 
 apply lt_O_IZR.
 rewrite <- Z_R_minus.
 exact (Rgt_minus (IZR z2) (IZR z1) H).

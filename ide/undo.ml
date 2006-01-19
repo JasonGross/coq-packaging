@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: undo.ml,v 1.8.2.1 2004/07/16 19:30:21 herbelin Exp $ *)
+(* $Id: undo.ml,v 1.8.2.2 2005/11/16 17:22:39 barras Exp $ *)
 
 open GText
 open Ideutils
@@ -18,7 +18,7 @@ let neg act = match act with
   | Insert (s,i,l) -> Delete (s,i,l)
   | Delete (s,i,l) -> Insert (s,i,l)
 
-class undoable_view (tv:Gtk.text_view Gtk.obj) =
+class undoable_view (tv:[>Gtk.text_view] Gtk.obj) =
   let undo_lock = ref true in 
 object(self)
   inherit GText.view tv as super

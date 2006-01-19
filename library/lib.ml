@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: lib.ml,v 1.63.2.3 2004/11/22 14:21:23 herbelin Exp $ *)
+(* $Id: lib.ml,v 1.63.2.4 2005/11/04 09:02:38 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -555,8 +555,7 @@ let library_part ref =
   let dir,_ = repr_path sp in
   match ref with
   | VarRef id -> 
-      anomaly "TODO";
-      extract_dirpath_prefix (sections_depth ()) (cwd ())
+      anomaly "library_part not supported on local variables"
   | _ ->
       if is_dirpath_prefix_of dir (cwd ()) then
         (* Not yet (fully) discharged *)

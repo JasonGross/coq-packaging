@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: haskell.mli,v 1.15.6.1 2004/07/16 19:30:08 herbelin Exp $ i*)
+(*i $Id: haskell.mli,v 1.15.6.2 2005/12/01 17:01:22 letouzey Exp $ i*)
 
 open Pp
 open Names
@@ -15,6 +15,6 @@ open Miniml
 val keywords : Idset.t
 
 val preamble : 
-  extraction_params -> module_path list -> bool * bool * bool -> std_ppcmds
+  extraction_params -> module_path list -> bool*bool*bool -> bool -> std_ppcmds
 
 module Make : functor(P : Mlpp_param) -> Mlpp

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: system.mli,v 1.17.16.1 2004/07/16 19:30:31 herbelin Exp $ i*)
+(*i $Id: system.mli,v 1.17.16.3 2006/01/10 17:06:23 barras Exp $ i*)
 
 (*s Files and load paths. Load path entries remember the original root
     given by the user. For efficiency, we keep the full path (field
@@ -16,6 +16,8 @@
 type physical_path = string
 type load_path = physical_path list
 
+val canonical_path_name : string -> physical_path
+
 val all_subdirs : unix_path:string -> (physical_path * string list) list
 val is_in_path : load_path -> string -> bool
 val where_in_path : load_path -> string -> physical_path * string
@@ -24,7 +26,7 @@ val make_suffix : string -> string -> string
 val file_readable_p : string -> bool
 
 val glob : string -> string
-
+val getenv_else : string -> string -> string
 val home : string
 
 val exists_dir : string -> bool

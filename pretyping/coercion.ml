@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: coercion.ml,v 1.38.6.1 2004/07/16 19:30:44 herbelin Exp $ *)
+(* $Id: coercion.ml,v 1.38.6.2 2005/11/29 21:40:52 letouzey Exp $ *)
 
 open Util
 open Names
@@ -60,10 +60,6 @@ let inh_pattern_coerce_to loc pat ind1 ind2 =
 (* appliquer le chemin de coercions p à hj *)
 
 let apply_coercion env p hj typ_cl =
-  if !compter then begin
-    nbpathc := !nbpathc +1; 
-    nbcoer := !nbcoer + (List.length p)
-  end;
   try 
     fst (List.fold_left
            (fun (ja,typ_cl) i -> 

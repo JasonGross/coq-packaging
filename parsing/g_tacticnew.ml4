@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_tacticnew.ml4,v 1.35.2.6 2005/01/15 14:56:53 herbelin Exp $ *)
+(* $Id: g_tacticnew.ml4,v 1.35.2.7 2005/05/15 12:47:05 herbelin Exp $ *)
 
 open Pp
 open Ast
@@ -340,7 +340,7 @@ GEXTEND Gram
 
       (* Automation tactic *)
       | IDENT "trivial"; db = hintbases -> TacTrivial db
-      | IDENT "auto"; n = OPT natural; db = hintbases -> TacAuto (n, db)
+      | IDENT "auto"; n = OPT int_or_var; db = hintbases -> TacAuto (n, db)
 
 (* Obsolete since V8.0
       | IDENT "autotdb"; n = OPT natural -> TacAutoTDB n
@@ -349,7 +349,7 @@ GEXTEND Gram
       | IDENT "dconcl"  -> TacDestructConcl
       | IDENT "superauto"; l = autoargs -> TacSuperAuto l
 *)
-      | IDENT "auto"; n = OPT natural; IDENT "decomp"; p = OPT natural ->
+      | IDENT "auto"; n = OPT int_or_var; IDENT "decomp"; p = OPT natural ->
 	  TacDAuto (n, p)
 
       (* Context management *)

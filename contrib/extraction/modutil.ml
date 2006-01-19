@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modutil.ml,v 1.7.2.1 2004/07/16 19:30:08 herbelin Exp $ i*)
+(*i $Id: modutil.ml,v 1.7.2.4 2005/12/01 17:01:22 letouzey Exp $ i*)
 
 open Names
 open Declarations
@@ -157,6 +157,10 @@ let struct_iter do_decl do_spec s =
 
 type do_ref = global_reference -> unit
 
+let record_iter_references do_term = function 
+  | Record l -> List.iter do_term l 
+  | _ -> ()
+
 let type_iter_references do_type t = 
   let rec iter = function 
     | Tglob (r,l) -> do_type r; List.iter iter l 
@@ -169,8 +173,12 @@ let ast_iter_references do_term do_cons do_type a =
     ast_iter iter a;
     match a with 
       | MLglob r -> do_term r
-      | MLcons (r,_) -> do_cons r
-      | MLcase (_,v) as a -> Array.iter (fun (r,_,_) -> do_cons r) v
+      | MLcons (i,r,_) -> 
+	  if lang () = Ocaml then record_iter_references do_term i; 
+	  do_cons r 
+      | MLcase (i,_,v) as a -> 
+	  if lang () = Ocaml then record_iter_references do_term i; 
+	  Array.iter (fun (r,_,_) -> do_cons r) v
       | _ -> ()
   in iter a
 
@@ -180,7 +188,7 @@ let ind_iter_references do_term do_cons do_type kn ind =
   let packet_iter ip p = 
     do_type (IndRef ip); Array.iteri (fun j -> cons_iter (ip,j+1)) p.ip_types 
   in
-  if ind.ind_info = Record then List.iter do_term (find_projections kn); 
+  if lang () = Ocaml then record_iter_references do_term ind.ind_info; 
   Array.iteri (fun i -> packet_iter (kn,i)) ind.ind_packets
   
 let decl_iter_references do_term do_cons do_type = 
@@ -236,7 +244,7 @@ let struct_get_references_list struc =
 exception Found
 
 let rec ast_search t a = 
-  if t = a then raise Found else ast_iter (ast_search t) a
+  if t a then raise Found else ast_iter (ast_search t) a
 
 let decl_ast_search t = function 
   | Dterm (_,a,_) -> ast_search t a

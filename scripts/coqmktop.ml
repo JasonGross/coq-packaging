@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqmktop.ml,v 1.28.2.1 2004/07/16 19:30:50 herbelin Exp $ *)
+(* $Id: coqmktop.ml,v 1.28.2.2 2005/11/04 08:20:57 herbelin Exp $ *)
 
 (* coqmktop is a script to link Coq, analogous to ocamlmktop.
    The command line contains options specific to coqmktop, options for the
@@ -189,7 +189,7 @@ let parse_args () =
         coqide := true; parse (op,fl) rem
     | "-v8" :: rem -> parse (op,fl) rem
     | "-echo" :: rem -> echo := true ; parse (op,fl) rem
-    | ("-cclib"|"-ccopt"|"-I"|"-o" as o) :: rem' ->
+    | ("-cclib"|"-ccopt"|"-I"|"-o"|"-w" as o) :: rem' ->
 	begin
 	  match rem' with
 	    | a :: rem -> parse (a::o::op,fl) rem

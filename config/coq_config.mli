@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coq_config.mli,v 1.9.16.1 2004/07/16 19:29:58 herbelin Exp $ i*)
+(*i $Id: coq_config.mli,v 1.9.16.2 2006/01/10 17:06:23 barras Exp $ i*)
 
 val local : bool        (* local use (no installation) *)
 
@@ -26,7 +26,6 @@ val osdeplibs : string  (* OS dependant link options for ocamlc *)
 (* val defined : string list  (* options for lib/ocamlpp *) *)
 
 val version : string    (* version number of Coq *)
-val versionsi : string  (* version number of Coq\_SearchIsos *)
 val date : string       (* release date *)
 val compile_date : string (* compile date *)
 

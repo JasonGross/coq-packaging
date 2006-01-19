@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacred.ml,v 1.75.2.6 2004/12/29 10:17:10 herbelin Exp $ *)
+(* $Id: tacred.ml,v 1.75.2.7 2005/11/02 13:18:43 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -204,13 +204,14 @@ let invert_name labs l na0 env sigma ref = function
 	match refi with
 	  | None -> None
 	  | Some ref ->
-	      match reference_opt_value sigma env ref with
+	      try match reference_opt_value sigma env ref with
 		| None -> None
 		| Some c -> 
 		    let labs',ccl = decompose_lam c in
 		    let _, l' = whd_betalet_stack ccl in
 		    let labs' = List.map snd labs' in
 		    if labs' = labs & l = l' then Some ref else None
+	      with Not_found (* Undefined ref *) -> None
       else Some ref
   | Anonymous -> None (* Actually, should not occur *)
 

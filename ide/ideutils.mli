@@ -6,9 +6,10 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ideutils.mli,v 1.6.2.2 2005/01/21 17:21:33 herbelin Exp $ i*)
+(*i $Id: ideutils.mli,v 1.6.2.4 2005/11/25 17:18:28 barras Exp $ i*)
 
 val async : ('a -> unit) -> 'a -> unit
+val sync  : ('a -> 'b) -> 'a -> 'b
 val browse : (string -> unit) -> string -> unit
 val browse_keyword : (string -> unit) -> string -> unit
 val byte_offset_to_char_offset : string -> int -> int
@@ -24,7 +25,7 @@ val get_insert : < get_iter_at_mark : [> `INSERT] -> 'a; .. > -> 'a
 
 val is_char_start : char -> bool
 
-val lib_ide : string
+val lib_ide_file : string -> string
 val my_stat : string -> Unix.stats option
 
 val prerr_endline : string -> unit

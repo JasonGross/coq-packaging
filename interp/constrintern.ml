@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: constrintern.ml,v 1.58.2.6 2004/11/22 14:21:23 herbelin Exp $ *)
+(* $Id: constrintern.ml,v 1.58.2.7 2005/11/19 10:34:35 herbelin Exp $ *)
 
 open Pp
 open Util
@@ -621,10 +621,10 @@ let merge_impargs l args =
 
 let check_projection isproj nargs r = 
   match (r,isproj) with
-  | RRef (loc, ref), Some nth ->
+  | RRef (loc, ref), Some _ ->
       (try
-	let n = Recordops.find_projection_nparams ref in
-	if nargs < nth then 
+	let n = Recordops.find_projection_nparams ref + 1 in
+	if nargs < n then 
 	  user_err_loc (loc,"",str "Projection has not enough parameters");
       with Not_found -> 
 	user_err_loc
