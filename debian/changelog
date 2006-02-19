@@ -1,3 +1,10 @@
+coq (8.0pl3-2) unstable; urgency=low
+
+  * Added coq-8.0pl3-ocaml-3.09.dpatch to avoid intuition to loop forever,
+    closes: #353493.
+
+ -- Samuel Mimram <smimram@debian.org>  Sun, 19 Feb 2006 11:33:21 +0000
+
 coq (8.0pl3-1) unstable; urgency=low
 
   * New upstream release.
