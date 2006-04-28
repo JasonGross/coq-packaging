@@ -2,7 +2,8 @@
 ## coqdoc_stdlib.dpatch by Samuel Mimram <smimram@debian.org>
 ##
 ## All lines beginning with `## DP:' are a description of the patch.
-## DP: No description.
+## DP: Add an option to coqdoc to be able to use a custom stdlib path in order
+## DP: to be able to build the documentation before coqdoc is installed.
 
 @DPATCH@
 diff -urNad coq-8.0pl3+8.1alpha~/doc/Makefile coq-8.0pl3+8.1alpha/doc/Makefile
