@@ -10,11 +10,10 @@ export DH_OPTIONS
 # We want to use dpatch
 include /usr/share/dpatch/dpatch.make
 
-COQPREF=$(CURDIR)/debian/tmp
-ADDPREF=COQINSTALLPREFIX=$(COQPREF)
+COQPREF := $(CURDIR)/debian/tmp
+ADDPREF := COQINSTALLPREFIX=$(COQPREF)
 
-CONFIGUREOPTS=--prefix /usr --mandir /usr/share/man \
-	--emacslib /usr/share/emacs/site-lisp/coq --reals all
+CONFIGUREOPTS := --prefix /usr --mandir /usr/share/man --emacslib /usr/share/emacs/site-lisp/coq --reals all
 
 configure: configure-stamp
 configure-stamp:
@@ -30,7 +29,8 @@ configure-stamp:
 build: patch-stamp configure-stamp build-stamp
 build-stamp:
 	dh_testdir
-	if grep -q BEST=opt config/Makefile; \
+	$(MAKE) world
+#	if grep -q BEST=opt config/Makefile; \
 	then \
 		($(MAKE) check \
 		   && touch opt-stamp) \
@@ -43,6 +43,9 @@ build-stamp:
 	else \
 		$(MAKE) BEST=byte HASCOQIDE=byte check; \
 	fi
+	$(MAKE) glob.dump
+	cp tools/coqdoc/coqdoc.sty doc/stdlib/
+	$(MAKE) -C doc stdlib
 	touch build-stamp
 
 clean: unpatch
@@ -55,6 +58,8 @@ clean: unpatch
 	rm -f bin/parser.opt
 	rm -f tools/coqdoc/*.cm[oi]
 	rm -f config/coq_config.ml config/Makefile test-suite/check.log
+	rm -f dev/ocamldebug-v7
+	rm -f ide/undo.mli glob.dump
 
 	dh_clean
 
@@ -96,7 +101,8 @@ install: build
 	cp debian/coqmktop.1 debian/coq/usr/share/man/man1/coqmktop.1
 	cp debian/coqtop.1 debian/coq/usr/share/man/man1/coqtop.1
 
-	chmod -x debian/tmp/usr/lib/coq/ide/coq2.ico
+	cp -r doc/stdlib/html debian/coq-libs/usr/share/doc/coq-libs/
+	cd debian/coq-libs/usr/share/doc/coq; ln -s ../coq-libs/html stdlib
 
 	# These are installed as docs
 	rm -f $(COQPREF)/usr/lib/coq/ide/utf8.v $(COQPREF)/usr/lib/coq/ide/FAQ

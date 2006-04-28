@@ -1,0 +1,72 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## coqdoc_stdlib.dpatch by Samuel Mimram <smimram@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: No description.
+
+@DPATCH@
+diff -urNad coq-8.0pl3+8.1alpha~/doc/Makefile coq-8.0pl3+8.1alpha/doc/Makefile
+--- coq-8.0pl3+8.1alpha~/doc/Makefile	2006-04-07 15:08:12.000000000 +0000
++++ coq-8.0pl3+8.1alpha/doc/Makefile	2006-04-28 13:43:28.000000000 +0000
+@@ -216,6 +216,7 @@
+ 	mkdir stdlib/html
+ 	(cd stdlib/html;\
+ 	 $(COQDOC) -q --multi-index --html --glob-from $(GLOBDUMP)\
++	  --coqlib_path $(COQTOP) \
+ 	  -R $(COQTOP)/theories Coq $(COQTOP)/theories/*/*.v)
+ 	mv stdlib/html/index.html stdlib/index-body.html
+ 
+@@ -232,6 +233,7 @@
+ stdlib/Library.coqdoc.tex: 
+ 	(for dir in $(LIBDIRS) ; do \
+ 	  $(COQDOC) -q --gallina --body-only --latex --stdout \
++	    --coqlib_path $(COQTOP) \
+             -R $(COQTOP)/theories Coq "$(COQTOP)/theories/$$dir/"*.v >> $@ ; done)
+ 
+ stdlib/Library.dvi: $(COMMON) stdlib/Library.coqdoc.tex stdlib/Library.tex
+diff -urNad coq-8.0pl3+8.1alpha~/tools/coqdoc/cdglobals.ml coq-8.0pl3+8.1alpha/tools/coqdoc/cdglobals.ml
+--- coq-8.0pl3+8.1alpha~/tools/coqdoc/cdglobals.ml	2006-03-08 10:47:12.000000000 +0000
++++ coq-8.0pl3+8.1alpha/tools/coqdoc/cdglobals.ml	2006-04-28 13:41:09.000000000 +0000
+@@ -44,6 +44,7 @@
+ let title = ref ""
+ let externals = ref true
+ let coqlib = ref "http://coq.inria.fr/library/"
++let coqlib_path = ref Coq_config.coqlib
+ let raw_comments = ref false
+ 
+ let charset = ref "iso-8859-1"
+diff -urNad coq-8.0pl3+8.1alpha~/tools/coqdoc/main.ml coq-8.0pl3+8.1alpha/tools/coqdoc/main.ml
+--- coq-8.0pl3+8.1alpha~/tools/coqdoc/main.ml	2006-03-28 17:34:15.000000000 +0000
++++ coq-8.0pl3+8.1alpha/tools/coqdoc/main.ml	2006-04-28 13:41:09.000000000 +0000
+@@ -54,6 +54,8 @@
+   prerr_endline "  --no-externals      no links to Coq standard library";
+   prerr_endline "  --coqlib <url>      set URL for Coq standard library";
+   prerr_endline "                      (default is http://coq.inria.fr/library/)";
++  prerr_endline "  --coqlib_path <dir> path of the coqlibrary";
++  prerr_endline ("                      (default is " ^ !Cdglobals.coqlib_path ^ ")");
+   prerr_endline "  -R <dir> <coqdir>   map physical dir to Coq dir";
+   prerr_endline "  --latin1            set ISO-8859-1 input language";
+   prerr_endline "  --utf8              set UTF-8 input language";
+@@ -315,6 +317,8 @@
+ 	Cdglobals.externals := false; parse_rec rem
+     | ("--coqlib" | "-coqlib") :: u :: rem ->
+ 	Cdglobals.coqlib := u; parse_rec rem
++    | ("--coqlib_path" | "-coqlib_path") :: u :: rem ->
++        Cdglobals.coqlib_path := u; parse_rec rem
+     | ("--coqlib" | "-coqlib") :: [] ->
+ 	usage ()
+     | f :: rem -> 
+@@ -420,11 +424,11 @@
+ let produce_document l =
+   List.iter index_module l;
+   (if !target_language=HTML then
+-    let src = (Filename.concat Coq_config.coqlib "/tools/coqdoc/coqdoc.css") in
++    let src = (Filename.concat !Cdglobals.coqlib_path "/tools/coqdoc/coqdoc.css") in
+     let dst = if !output_dir <> "" then Filename.concat !output_dir "coqdoc.css" else "coqdoc.css" in
+       copy src dst);
+   (if !target_language=LaTeX then
+-    let src = (Filename.concat Coq_config.coqlib "/tools/coqdoc/coqdoc.sty") in
++    let src = (Filename.concat !Cdglobals.coqlib_path "/tools/coqdoc/coqdoc.sty") in
+     let dst = if !output_dir <> "" then 
+       Filename.concat !output_dir "coqdoc.sty" 
+     else "coqdoc.sty" in
