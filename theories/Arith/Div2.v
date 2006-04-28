@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Div2.v,v 1.15.2.1 2004/07/16 19:31:00 herbelin Exp $ i*)
+(*i $Id: Div2.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 Require Import Lt.
 Require Import Plus.

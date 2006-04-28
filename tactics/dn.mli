@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: dn.mli,v 1.4.16.1 2004/07/16 19:30:52 herbelin Exp $ i*)
+(*i $Id: dn.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (* Discrimination nets. *)
 

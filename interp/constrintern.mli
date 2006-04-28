@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: constrintern.mli,v 1.15.2.2 2005/01/21 16:41:50 herbelin Exp $ i*)
+(*i $Id: constrintern.mli 7732 2005-12-26 13:51:24Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -17,9 +17,9 @@ open Environ
 open Libnames
 open Rawterm
 open Pattern
-open Coqast
 open Topconstr
 open Termops
+open Pretyping
 (*i*)
 
 (*s Translation from front abstract syntax of term to untyped terms (rawconstr)
@@ -34,72 +34,66 @@ open Termops
 *)
 
 (* To interpret implicits and arg scopes of recursive variables in
-   inductive types and recursive definitions *)
+   inductive types and recursive definitions; mention of a list of
+   implicits arguments in the ``rel'' part of [env]; the second
+   argument associates a list of implicit positions and scopes to
+   identifiers declared in the [rel_context] of [env] *)
+
 type var_internalisation_data =
     identifier list * Impargs.implicits_list * scope_name option list
 
 type implicits_env = (identifier * var_internalisation_data) list
 type full_implicits_env = identifier list * implicits_env
 
-type ltac_sign = 
-  identifier list * (identifier * identifier option) list
+type ltac_sign = identifier list * unbound_ltac_var_map
 
-type ltac_env = 
-  (identifier * constr) list * (identifier * identifier option) list
+(*s Internalisation performs interpretation of global names and notations *)
 
-(* Interprets global names, including syntactic defs and section variables *)
-val interp_rawconstr     : evar_map -> env -> constr_expr -> rawconstr
-val interp_rawconstr_gen : bool -> evar_map -> env -> 
-    bool -> ltac_sign -> constr_expr -> rawconstr
+val intern_constr : evar_map -> env -> constr_expr -> rawconstr
 
-(*s Composing the translation with typing *)
-val interp_constr        : evar_map -> env -> constr_expr -> constr
-val interp_casted_constr : evar_map -> env -> constr_expr -> types -> constr
-val interp_type          : evar_map -> env -> constr_expr -> types
-val interp_binder        : evar_map -> env -> name -> constr_expr -> types
-val interp_openconstr    : evar_map -> env -> constr_expr -> evar_map * constr
-val interp_casted_openconstr    :
-  evar_map -> env -> constr_expr -> constr -> evar_map * constr
+val intern_gen : bool -> evar_map -> env ->
+  ?impls:full_implicits_env -> ?allow_soapp:bool -> ?ltacvars:ltac_sign ->
+  constr_expr -> rawconstr
 
-(* [interp_type_with_implicits] extends [interp_type] by allowing
-   implicits arguments in the ``rel'' part of [env]; the extra
-   argument associates a list of implicit positions to identifiers
-   declared in the [rel_context] of [env] *)
-val interp_type_with_implicits : 
-  evar_map -> env -> full_implicits_env -> constr_expr -> types
+(*s Composing internalisation with pretyping *)
 
-val interp_casted_constr_with_implicits :
-  evar_map -> env -> implicits_env -> constr_expr -> types -> constr
+(* Main interpretation function *)
 
-val interp_rawconstr_with_implicits :
-  evar_map -> env -> identifier list -> implicits_env -> constr_expr -> 
-    rawconstr
+val interp_gen : typing_constraint -> evar_map -> env ->
+  ?impls:full_implicits_env -> ?allow_soapp:bool -> ?ltacvars:ltac_sign ->
+  constr_expr -> constr
 
-(*s Build a judgement from *)
-val judgment_of_rawconstr : evar_map -> env -> constr_expr -> unsafe_judgment
-val type_judgment_of_rawconstr :
-  evar_map -> env -> constr_expr -> unsafe_type_judgment
+(* Particular instances *)
 
-(* Interprets a constr according to two lists of instantiations (variables and
-  metas), possibly casting it*)
-val interp_constr_gen     :
-  evar_map -> env -> ltac_env -> constr_expr -> constr option -> constr
+val interp_constr : evar_map -> env -> 
+  constr_expr -> constr
 
-(* Interprets a constr according to two lists of instantiations (variables and
-  metas), possibly casting it, and turning unresolved evar into metas*)
-val interp_openconstr_gen     :
-  evar_map -> env -> ltac_env ->
-    constr_expr -> constr option -> evar_map * constr
+val interp_casted_constr : evar_map -> env -> ?impls:full_implicits_env -> 
+  constr_expr -> types -> constr
 
-(* Interprets constr patterns according to a list of instantiations
-  (variables)*)
-val interp_constrpattern_gen : evar_map -> env -> identifier list ->
-  constr_expr -> patvar list * constr_pattern
+val interp_type : evar_map -> env -> ?impls:full_implicits_env -> 
+  constr_expr -> types
+
+val interp_open_constr   : evar_map -> env -> constr_expr -> evar_map * constr
+
+(*s Build a judgment  *)
+
+val interp_constr_judgment : evar_map -> env -> constr_expr -> unsafe_judgment
+
+(* Interprets constr patterns *)
 
 val interp_constrpattern : 
   evar_map -> env -> constr_expr -> patvar list * constr_pattern
 
 val interp_reference : ltac_sign -> reference -> rawconstr
+
+(* Interpret binders *)
+
+val interp_binder  : evar_map -> env -> name -> constr_expr -> types
+
+(* Interpret contexts: returns extended env and context *)
+
+val interp_context : evar_map -> env -> local_binder list -> env * rel_context
 
 (* Locating references of constructions, possibly via a syntactic definition *)
 
@@ -110,6 +104,7 @@ val global_reference : identifier -> constr
 val global_reference_in_absolute_module : dir_path -> identifier -> constr
 
 (* Interprets into a abbreviatable constr *)
+
 val interp_aconstr : implicits_env -> identifier list -> constr_expr ->
   interpretation
 
@@ -120,7 +115,3 @@ val for_grammar : ('a -> 'b) -> 'a -> 'b
 type coqdoc_state
 val coqdoc_freeze : unit -> coqdoc_state
 val coqdoc_unfreeze : coqdoc_state -> unit
-
-(* For v8 translation *)
-val set_temporary_implicits_in :
-  (identifier * Impargs.implicits_list) list -> unit

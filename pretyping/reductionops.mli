@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: reductionops.mli,v 1.8.2.2 2004/07/16 19:30:46 herbelin Exp $ i*)
+(*i $Id: reductionops.mli 8708 2006-04-14 08:13:02Z jforest $ i*)
 
 (*i*)
 open Names
@@ -63,6 +63,7 @@ val nf_betaiota : local_reduction_function
 val nf_betadeltaiota : reduction_function
 val nf_evar : evar_map -> constr -> constr
 
+val nf_betaiotaevar_preserving_vm_cast : reduction_function
 (* Lazy strategy, weak head reduction *)
 val whd_evar :  evar_map -> constr -> constr
 val whd_beta : local_reduction_function
@@ -111,6 +112,10 @@ val whd_betadeltaiotaeta_stack :  stack_reduction_function
 val whd_betadeltaiotaeta_state :  state_reduction_function
 val whd_betadeltaiotaeta :  reduction_function
 
+
+
+
+
 val beta_applist : constr * constr list -> constr
 
 val hnf_prod_app     : env ->  evar_map -> constr -> constr -> constr
@@ -121,12 +126,14 @@ val hnf_lam_appvect  : env ->  evar_map -> constr -> constr array -> constr
 val hnf_lam_applist  : env ->  evar_map -> constr -> constr list -> constr
 
 val splay_prod : env ->  evar_map -> constr -> (name * constr) list * constr
+val splay_lambda : env ->  evar_map -> constr -> (name * constr) list * constr
 val splay_arity : env ->  evar_map -> constr -> (name * constr) list * sorts
 val sort_of_arity : env -> constr -> sorts
 val decomp_n_prod : 
   env ->  evar_map -> int -> constr -> Sign.rel_context * constr
 val splay_prod_assum :
   env ->  evar_map -> constr -> Sign.rel_context * constr
+val decomp_sort : env -> evar_map -> types -> sorts
 
 type 'a miota_args = {
   mP      : constr;     (* the result type *)
@@ -162,10 +169,6 @@ val reduce_fix : local_state_reduction_function -> fixpoint
 
 type conversion_test = constraints -> constraints
 
-type conv_pb = 
-  | CONV 
-  | CUMUL
-
 val pb_is_equal : conv_pb -> bool
 val pb_equal : conv_pb -> conv_pb
 
@@ -188,3 +191,7 @@ val instance : (metavariable * constr) list -> constr -> constr
 val hnf : env -> 'a evar_map -> constr -> constr * constr list
 i*)
 val apprec :  state_reduction_function
+
+(*s Meta-related reduction functions *)
+val meta_instance : evar_defs -> constr freelisted -> constr
+val nf_meta       : evar_defs -> constr -> constr

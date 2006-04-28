@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i 	$Id: Map.v,v 1.7.2.1 2004/07/16 19:31:04 herbelin Exp $	 i*)
+(*i 	$Id: Map.v 5920 2004-07-16 20:01:26Z herbelin $	 i*)
 
 (** Definition of finite sets as trees indexed by adresses *)
 

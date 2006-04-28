@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evarutil.mli,v 1.33.2.2 2004/07/16 19:30:44 herbelin Exp $ i*)
+(*i $Id: evarutil.mli 8695 2006-04-10 16:33:52Z msozeau $ i*)
 
 (*i*)
 open Util
@@ -21,6 +21,98 @@ open Reductionops
 
 (*s This modules provides useful functions for unification modulo evars *)
 
+(***********************************************************)
+(* Metas *)
+
+(* [new_meta] is a generator of unique meta variables *)
+val new_meta : unit -> metavariable
+val mk_new_meta : unit -> constr
+
+(* [new_untyped_evar] is a generator of unique evar keys *)
+val new_untyped_evar : unit -> existential_key
+
+(***********************************************************)
+(* Creating a fresh evar given their type and context *)
+val new_evar :
+  evar_defs -> env -> ?src:loc * hole_kind -> types -> evar_defs * constr
+(* the same with side-effects *)
+val e_new_evar :
+  evar_defs ref -> env -> ?src:loc * hole_kind -> types -> constr
+
+(* Create a fresh evar in a context different from its definition context:
+   [new_evar_instance sign evd ty inst] creates a new evar of context
+   [sign] and type [ty], [inst] is a mapping of the evar context to
+   the context where the evar should occur. This means that the terms 
+   of [inst] are typed in the occurrence context and their type (seen
+   as a telescope) is [sign] *)
+val new_evar_instance :
+ named_context_val -> evar_defs -> types -> ?src:loc * hole_kind ->
+   constr list -> evar_defs * constr
+
+(***********************************************************)
+(* Instanciate evars *)
+
+(* suspicious env ? *)
+val evar_define :
+  env -> existential -> constr -> evar_defs -> evar_defs * evar list
+
+
+(***********************************************************)
+(* Evars/Metas switching... *)
+
+(* [evars_to_metas] generates new metavariables for each non dependent
+   existential and performs the replacement in the given constr; it also
+   returns the evar_map extended with dependent evars *)
+val evars_to_metas : evar_map -> open_constr -> (evar_map * constr)
+
+val non_instantiated : evar_map -> (evar * evar_info) list
+
+(***********************************************************)
+(* Unification utils *)
+
+val is_ground_term :  evar_defs -> constr -> bool
+val is_eliminator : constr -> bool
+val head_is_embedded_evar :  evar_defs -> constr -> bool
+val solve_simple_eqn :
+  (env ->  evar_defs -> conv_pb -> constr -> constr -> evar_defs * bool)
+  -> env ->  evar_defs -> conv_pb * existential * constr ->
+    evar_defs * bool
+
+val define_evar_as_arrow : evar_defs -> existential -> evar_defs * types
+val define_evar_as_lambda : evar_defs -> existential -> evar_defs * types
+val define_evar_as_sort : evar_defs -> existential -> evar_defs * sorts
+
+(***********************************************************)
+(* Value/Type constraints *)
+
+val judge_of_new_Type : unit -> unsafe_judgment
+
+type type_constraint_type = (int * int) option * constr
+type type_constraint = type_constraint_type option
+
+type val_constraint = constr option
+
+val empty_tycon : type_constraint
+val mk_tycon_type : constr -> type_constraint_type
+val mk_abstr_tycon_type : int -> constr -> type_constraint_type
+val mk_tycon : constr -> type_constraint
+val mk_abstr_tycon : int -> constr -> type_constraint
+val empty_valcon : val_constraint
+val mk_valcon : constr -> val_constraint
+
+val split_tycon :
+  loc -> env ->  evar_defs -> type_constraint -> 
+    evar_defs * (name * type_constraint * type_constraint)
+
+val valcon_of_tycon : type_constraint -> val_constraint
+
+val lift_abstr_tycon_type : int -> type_constraint_type -> type_constraint_type
+
+val lift_tycon_type : int -> type_constraint_type -> type_constraint_type
+val lift_tycon : int -> type_constraint -> type_constraint
+
+(***********************************************************)
+
 (* [whd_ise] raise [Uninstantiated_evar] if an evar remains uninstantiated; *)
 (* *[whd_evar]* and *[nf_evar]* leave uninstantiated evar as is *)
 
@@ -33,65 +125,28 @@ val jv_nf_evar :
 val tj_nf_evar :
    evar_map -> unsafe_type_judgment -> unsafe_type_judgment
 
+val nf_evar_info : evar_map -> evar_info -> evar_info
+val nf_evars : evar_map -> evar_map
+
+(* Same for evar defs *)
+val nf_isevar :  evar_defs -> constr -> constr
+val j_nf_isevar :  evar_defs -> unsafe_judgment -> unsafe_judgment
+val jl_nf_isevar :
+   evar_defs -> unsafe_judgment list -> unsafe_judgment list
+val jv_nf_isevar :
+   evar_defs -> unsafe_judgment array -> unsafe_judgment array
+val tj_nf_isevar :
+   evar_defs -> unsafe_type_judgment -> unsafe_type_judgment
+
+val nf_evar_defs : evar_defs -> evar_defs
+
 (* Replacing all evars *)
 exception Uninstantiated_evar of existential_key
 val whd_ise :  evar_map -> constr -> constr
 val whd_castappevar :  evar_map -> constr -> constr
 
-(* Creating new existential variables *)
-val new_evar : unit -> evar
-val new_evar_in_sign : env -> constr
+(*********************************************************************)
+(* debug pretty-printer: *)
 
-val evar_env :  evar_info -> env
-
-type evar_defs
-val evars_of :  evar_defs ->  evar_map
-val create_evar_defs :  evar_map ->  evar_defs
-val evars_reset_evd :  evar_map ->  evar_defs -> unit
-val evar_source : existential_key -> evar_defs -> loc * hole_kind
-
-type evar_constraint = conv_pb * constr * constr
-val add_conv_pb :  evar_defs -> evar_constraint -> unit
-
-val is_defined_evar :  evar_defs -> existential -> bool
-val ise_try :  evar_defs -> (unit -> bool) list -> bool
-val ise_undefined :  evar_defs -> constr -> bool
-val has_undefined_isevars :  evar_defs -> constr -> bool
-
-val new_isevar_sign :
- Environ.env -> Evd.evar_map -> Term.constr -> Term.constr list ->
-  Evd.evar_map * Term.constr
-
-val new_isevar :  evar_defs -> env -> loc * hole_kind -> constr -> constr
-
-val is_eliminator : constr -> bool
-val head_is_embedded_evar :  evar_defs -> constr -> bool
-val solve_simple_eqn :
-  (env ->  evar_defs -> conv_pb -> constr -> constr -> bool)
-  -> env ->  evar_defs -> conv_pb * existential * constr -> bool
-
-val define_evar_as_arrow : evar_defs -> existential -> types
-val define_evar_as_sort : evar_defs -> existential -> sorts
-
-(* Value/Type constraints *)
-
-val new_Type_sort : unit -> sorts
-val new_Type : unit -> constr
-val judge_of_new_Type : unit -> unsafe_judgment
-val refresh_universes : types -> types
-
-type type_constraint = constr option
-type val_constraint = constr option
-
-val empty_tycon : type_constraint
-val mk_tycon : constr -> type_constraint
-val empty_valcon : val_constraint
-val mk_valcon : constr -> val_constraint
-
-val split_tycon :
-  loc -> env ->  evar_defs -> type_constraint -> 
-    name * type_constraint * type_constraint
-
-val valcon_of_tycon : type_constraint -> val_constraint
-
-val lift_tycon : type_constraint -> type_constraint
+val pr_tycon_type : env -> type_constraint_type -> Pp.std_ppcmds
+val pr_tycon : env -> type_constraint -> Pp.std_ppcmds

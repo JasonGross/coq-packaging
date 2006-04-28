@@ -6,23 +6,30 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evarconv.mli,v 1.11.14.1 2004/07/16 19:30:44 herbelin Exp $ i*)
+(*i $Id: evarconv.mli 6109 2004-09-15 16:50:56Z barras $ i*)
 
 (*i*)
 open Term
 open Sign
 open Environ
 open Reductionops
-open Evarutil
+open Evd
 (*i*)
 
-val the_conv_x : env -> evar_defs -> constr -> constr -> bool
+(* returns exception Reduction.NotConvertible if not unifiable *)
+val the_conv_x     : env -> constr -> constr -> evar_defs -> evar_defs
+val the_conv_x_leq : env -> constr -> constr -> evar_defs -> evar_defs
 
-val the_conv_x_leq : env -> evar_defs -> constr -> constr -> bool
+(* The same function resolving evars by side-effect and 
+   catching the exception *)
+val e_conv  : env -> evar_defs ref -> constr -> constr -> bool
+val e_cumul : env -> evar_defs ref -> constr -> constr -> bool
 
 (*i For debugging *)
-val evar_conv_x : env -> evar_defs -> conv_pb -> constr -> constr -> bool
+val evar_conv_x :
+  env -> evar_defs -> conv_pb -> constr -> constr -> evar_defs * bool
 val evar_eqappr_x : 
   env -> evar_defs ->
-    conv_pb -> constr * constr list -> constr * constr list -> bool
+    conv_pb -> constr * constr list -> constr * constr list ->
+      evar_defs * bool
 (*i*)

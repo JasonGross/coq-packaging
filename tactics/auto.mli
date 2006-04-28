@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: auto.mli,v 1.22.2.2 2005/01/21 16:41:52 herbelin Exp $ i*)
+(*i $Id: auto.mli 7937 2006-01-28 19:58:11Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -21,20 +21,20 @@ open Environ
 open Evd
 open Libnames
 open Vernacexpr
+open Mod_subst
 (*i*)
   
 type auto_tactic = 
-  | Res_pf     of constr * unit clausenv    (* Hint Apply *)
-  | ERes_pf    of constr * unit clausenv    (* Hint EApply *)
+  | Res_pf     of constr * clausenv    (* Hint Apply *)
+  | ERes_pf    of constr * clausenv    (* Hint EApply *)
   | Give_exact of constr                  
-  | Res_pf_THEN_trivial_fail of constr * unit clausenv (* Hint Immediate *)
-  | Unfold_nth of global_reference          (* Hint Unfold *)
+  | Res_pf_THEN_trivial_fail of constr * clausenv (* Hint Immediate *)
+  | Unfold_nth of evaluable_global_reference          (* Hint Unfold *)
   | Extern     of Tacexpr.glob_tactic_expr   (* Hint Extern *)
 
 open Rawterm
 
 type pri_auto_tactic = { 
-  hname : identifier;     (* name of the hint *)
   pri   : int;            (* A number between 0 and 4, 4 = lower priority *)
   pat   : constr_pattern option; (* A pattern for the concl of the Goal *)
   code  : auto_tactic;    (* the tactic to apply when the concl matches pat *)
@@ -48,19 +48,19 @@ module Hint_db :
   sig
     type t
     val empty : t
-    val find : constr_label -> t -> search_entry
-    val map_all : constr_label -> t -> pri_auto_tactic list
-    val map_auto : constr_label * constr -> t -> pri_auto_tactic list
-    val add_one : constr_label * pri_auto_tactic -> t -> t
-    val add_list : (constr_label * pri_auto_tactic) list -> t -> t
-    val iter : (constr_label -> stored_data list -> unit) -> t -> unit
+    val find : global_reference -> t -> search_entry
+    val map_all : global_reference -> t -> pri_auto_tactic list
+    val map_auto : global_reference * constr -> t -> pri_auto_tactic list
+    val add_one : global_reference * pri_auto_tactic -> t -> t
+    val add_list : (global_reference * pri_auto_tactic) list -> t -> t
+    val iter : (global_reference -> stored_data list -> unit) -> t -> unit
   end
 
-type frozen_hint_db_table = Hint_db.t Stringmap.t
-
-type hint_db_table = Hint_db.t Stringmap.t ref
-
 type hint_db_name = string
+
+val searchtable_map : hint_db_name -> Hint_db.t
+
+val current_db_names : unit -> hint_db_name list
 
 val add_hints : locality_flag -> hint_db_name list -> hints -> unit
 
@@ -72,25 +72,20 @@ val print_hint_ref : global_reference -> unit
 
 val print_hint_db_by_name : hint_db_name -> unit
 
-val searchtable : hint_db_table
-
 (* [make_exact_entry hint_name (c, ctyp)]. 
-   [hint_name] is the name of then hint;
    [c] is the term given as an exact proof to solve the goal;
    [ctyp] is the type of [hc]. *)
 
-val make_exact_entry :
-  identifier -> constr * constr -> constr_label * pri_auto_tactic
+val make_exact_entry : constr * constr -> global_reference * pri_auto_tactic
 
-(* [make_apply_entry (eapply,verbose) name (c,cty)].
+(* [make_apply_entry (eapply,verbose) (c,cty)].
    [eapply] is true if this hint will be used only with EApply;
-   [name] is the name of then hint;
    [c] is the term given as an exact proof to solve the goal;
    [cty] is the type of [hc]. *)
 
 val make_apply_entry :
-  env -> evar_map -> bool * bool -> identifier -> constr * constr
-      -> constr_label * pri_auto_tactic
+  env -> evar_map -> bool * bool -> constr * constr
+      -> global_reference * pri_auto_tactic
 
 (* A constr which is Hint'ed will be:
    (1) used as an Exact, if it does not start with a product
@@ -100,8 +95,8 @@ val make_apply_entry :
        has missing arguments. *)
 
 val make_resolves :
-  env -> evar_map -> identifier -> bool * bool -> constr * constr -> 
-    (constr_label * pri_auto_tactic) list
+  env -> evar_map -> bool -> constr -> 
+      (global_reference * pri_auto_tactic) list
 
 (* [make_resolve_hyp hname htyp].
    used to add an hypothesis to the local hint database;
@@ -110,13 +105,13 @@ val make_resolves :
 
 val make_resolve_hyp : 
   env -> evar_map -> named_declaration ->
-      (constr_label * pri_auto_tactic) list
+      (global_reference * pri_auto_tactic) list
 
-(* [make_extern name pri pattern tactic_expr] *)
+(* [make_extern pri pattern tactic_expr] *)
 
 val make_extern :
-  identifier -> int -> constr_pattern -> Tacexpr.glob_tactic_expr
-      -> constr_label * pri_auto_tactic
+  int -> constr_pattern -> Tacexpr.glob_tactic_expr
+      -> global_reference * pri_auto_tactic
 
 val set_extern_interp :
   (patvar_map -> Tacexpr.glob_tactic_expr -> tactic) -> unit
@@ -126,20 +121,20 @@ val set_extern_intern_tac :
   -> unit
 
 val set_extern_subst_tactic :
-  (Names.substitution -> Tacexpr.glob_tactic_expr -> Tacexpr.glob_tactic_expr)
+  (substitution -> Tacexpr.glob_tactic_expr -> Tacexpr.glob_tactic_expr)
   -> unit
 
 (* Create a Hint database from the pairs (name, constr).
    Useful to take the current goal hypotheses as hints *)
 
-val make_local_hint_db : goal sigma -> Hint_db.t
+val make_local_hint_db : constr list -> goal sigma -> Hint_db.t
 
 val priority : (int * 'a) list -> 'a list
 
 val default_search_depth : int ref
 
 (* Try unification with the precompiled clause, then use registered Apply *)
-val unify_resolve : (constr * unit clausenv) -> tactic
+val unify_resolve : (constr * clausenv) -> tactic
 
 (* [ConclPattern concl pat tacast]:
    if the term concl matches the pattern pat, (in sense of 
@@ -150,29 +145,29 @@ val conclPattern : constr -> constr_pattern -> Tacexpr.glob_tactic_expr -> tacti
 
 (* The Auto tactic *)
 
-val auto : int -> hint_db_name list -> tactic
+val auto : int -> constr list -> hint_db_name list -> tactic
 
 (* auto with default search depth and with the hint database "core" *)
 val default_auto : tactic
 
 (* auto with all hint databases except the "v62" compatibility database *)
-val full_auto : int -> tactic
+val full_auto : int -> constr list -> tactic
 
 (* auto with default search depth and with all hint databases 
    except the "v62" compatibility database *)
 val default_full_auto : tactic
 
 (* The generic form of auto (second arg [None] means all bases) *)
-val gen_auto : int option -> hint_db_name list option -> tactic
+val gen_auto : int option -> constr list -> hint_db_name list option -> tactic
 
 (* The hidden version of auto *)
-val h_auto   : int option -> hint_db_name list option -> tactic
+val h_auto   : int option -> constr list -> hint_db_name list option -> tactic
 
 (* Trivial *)
-val trivial : hint_db_name list -> tactic
-val gen_trivial : hint_db_name list option -> tactic
-val full_trivial : tactic
-val h_trivial : hint_db_name list option -> tactic
+val trivial : constr list -> hint_db_name list -> tactic
+val gen_trivial : constr list -> hint_db_name list option -> tactic
+val full_trivial : constr list -> tactic
+val h_trivial : constr list -> hint_db_name list option -> tactic
 
 val fmt_autotactic : auto_tactic -> Pp.std_ppcmds
 

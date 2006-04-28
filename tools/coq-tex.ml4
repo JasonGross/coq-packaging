@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq-tex.ml4,v 1.5.2.1 2004/07/16 19:31:45 herbelin Exp $ *)
+(* $Id: coq-tex.ml4 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (* coq-tex
  * JCF, 16/1/98

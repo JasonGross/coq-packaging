@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Field.v,v 1.6.2.1 2004/07/16 19:30:09 herbelin Exp $ *)
+(* $Id: Field.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Require Export Field_Compl.
 Require Export Field_Theory.

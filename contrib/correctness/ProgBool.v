@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: ProgBool.v,v 1.4.2.1 2004/07/16 19:30:00 herbelin Exp $ *)
+(* $Id: ProgBool.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Require Import ZArith.
 Require Export Bool_nat.

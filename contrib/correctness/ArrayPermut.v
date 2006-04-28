@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: ArrayPermut.v,v 1.3.2.1 2004/07/16 19:29:59 herbelin Exp $ *)
+(* $Id: ArrayPermut.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (****************************************************************************)
 (*                    Permutations of elements in arrays                    *)

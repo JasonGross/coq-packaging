@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pfedit.ml,v 1.47.2.1 2004/07/16 19:30:49 herbelin Exp $ *)
+(* $Id: pfedit.ml 6947 2005-04-20 16:18:41Z coq $ *)
 
 open Pp
 open Util
@@ -19,7 +19,7 @@ open Entries
 open Environ
 open Evd
 open Typing
-open Tacmach
+open Refiner
 open Proof_trees
 open Tacexpr
 open Proof_type
@@ -33,7 +33,6 @@ open Safe_typing
 
 type proof_topstate = {
   mutable top_end_tac : tactic option;
-  top_hyps : named_context * named_context;
   top_goal : goal;
   top_strength : Decl_kinds.goal_kind;
   top_hook : declaration_hook }
@@ -175,6 +174,21 @@ let undo n =
   with (Invalid_argument "Edit.undo") ->
     errorlabstrm "Pfedit.undo" (str"No focused proof" ++ msg_proofs true)
 
+(* Undo current focused proof to reach depth [n]. This is used in
+   [vernac_backtrack]. *)
+let undo_todepth n =
+  try 
+    Edit.undo_todepth proof_edits n
+  with (Invalid_argument "Edit.undo") ->
+    errorlabstrm "Pfedit.undo" (str"No focused proof" ++ msg_proofs true)
+
+(* Return the depth of the current focused proof stack, this is used
+   to put informations in coq prompt (in emacs mode). *)
+let current_proof_depth() = 
+  try
+    Edit.depth proof_edits
+  with (Invalid_argument "Edit.depth") -> -1
+
 (*********************************************************************)
 (*                  Proof cooking                                    *)
 (*********************************************************************)
@@ -192,7 +206,8 @@ let cook_proof () =
   (ident,
    ({ const_entry_body = pfterm;
       const_entry_type = Some concl;
-      const_entry_opaque = true },
+      const_entry_opaque = true;
+      const_entry_boxed = false},
     strength, ts.top_hook))
 
 let current_proof_statement () = 
@@ -231,7 +246,6 @@ let start_proof na str sign concl hook =
   let top_goal = mk_goal sign concl in
   let ts = { 
     top_end_tac = None;
-    top_hyps = (sign,empty_named_context);
     top_goal = top_goal;
     top_strength = str;
     top_hook = hook}
@@ -274,11 +288,11 @@ let common_ancestor l1 l2 =
       
 let rec traverse_up = function
   | 0 -> (function pf -> pf)
-  | n -> (function pf -> Tacmach.traverse 0 (traverse_up (n - 1) pf))
+  | n -> (function pf -> Refiner.traverse 0 (traverse_up (n - 1) pf))
 
 let rec traverse_down = function
   | [] -> (function pf -> pf)
-  | n::l -> (function pf -> Tacmach.traverse n (traverse_down l pf))
+  | n::l -> (function pf -> Refiner.traverse n (traverse_down l pf))
 
 let traverse_to path =
   let up_and_down path pfs =
@@ -305,29 +319,3 @@ let focused_goal () = let n = !focus_n in if n=0 then 1 else n
 let reset_top_of_tree () = 
   let pts = get_pftreestate () in 
   if not (is_top_pftreestate pts) then mutate top_of_tree
-
-(** Printers *)
-
-let pr_subgoals_of_pfts pfts = 
-  let gls = fst (Refiner.frontier (proof_of_pftreestate pfts)) in 
-  let sigma = project (top_goal_of_pftreestate pfts) in
-  pr_subgoals_existential sigma gls
-
-let pr_open_subgoals () =
-  let pfts = get_pftreestate () in
-  match focus() with
-    | 0 -> 
-	pr_subgoals_of_pfts pfts
-    | n -> 
-	let pf = proof_of_pftreestate pfts in
-	let gls = fst (frontier pf) in 
-	assert (n > List.length gls);
-	if List.length gls < 2 then 
-	  pr_subgoal n gls
-	else 
-	  v 0 (int(List.length gls) ++ str" subgoals" ++ cut () ++
-	  pr_subgoal n gls)
-
-let pr_nth_open_subgoal n =
-  let pf = proof_of_pftreestate (get_pftreestate ()) in
-  pr_subgoal n (fst (frontier pf))

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: common.mli,v 1.19.2.1 2004/07/16 19:30:07 herbelin Exp $ i*)
+(*i $Id: common.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 open Names
 open Miniml

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: lib.mli,v 1.41.2.3 2005/01/21 16:41:50 herbelin Exp $ i*)
+(*i $Id: lib.mli 6758 2005-02-20 18:13:28Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -14,6 +14,7 @@ open Names
 open Libnames
 open Libobject
 open Summary
+open Mod_subst
 (*i*)
 
 (*s This module provides a general mechanism to keep a trace of all operations
@@ -23,10 +24,10 @@ open Summary
 type node = 
   | Leaf of obj
   | CompilingLibrary of object_prefix
-  | OpenedModule of object_prefix * Summary.frozen
+  | OpenedModule of bool option * object_prefix * Summary.frozen
   | OpenedModtype of object_prefix * Summary.frozen
   | OpenedSection of object_prefix * Summary.frozen
-  | ClosedSection of bool * dir_path * library_segment
+  | ClosedSection
   | FrozenState of Summary.frozen
 
 and library_segment = (object_name * node) list
@@ -65,7 +66,8 @@ val add_leaves : identifier -> obj list -> object_name
 
 val add_frozen_state : unit -> unit
 val mark_end_of_command : unit -> unit
-
+val current_command_label : unit -> int
+val reset_label : int -> unit
 
 (*s The function [contents_after] returns the current library segment, 
   starting from a given section path. If not given, the entire segment
@@ -82,6 +84,7 @@ val make_path : identifier -> section_path
 (* Kernel-side names *)
 val current_prefix : unit -> module_path * dir_path
 val make_kn : identifier -> kernel_name
+val make_con : identifier -> constant
 
 (* Are we inside an opened section *)
 val sections_are_opened : unit -> bool
@@ -99,7 +102,7 @@ val what_is_opened : unit -> object_name * node
 (*s Modules and module types *)
 
 val start_module : 
-  module_ident -> module_path -> Summary.frozen -> object_prefix
+  bool option -> module_ident -> module_path -> Summary.frozen -> object_prefix
 val end_module : module_ident 
   -> object_name * object_prefix * Summary.frozen * library_segment
 
@@ -121,15 +124,10 @@ val library_dp : unit -> dir_path
 (* Extract the library part of a name even if in a section *)
 val library_part : global_reference -> dir_path
 
-(* Extract the library part of a name if not in a functor *)
-val file_part : global_reference -> dir_path option
-
 (*s Sections *)
 
-val open_section : identifier -> object_prefix
-
-val close_section : export:bool -> identifier -> 
-  object_prefix * library_segment * Summary.frozen
+val open_section : identifier -> unit
+val close_section : identifier -> unit
 
 (*s Backtracking (undo). *)
 
@@ -157,3 +155,24 @@ val reset_initial : unit -> unit
 (* XML output hooks *)
 val set_xml_open_section : (identifier -> unit) -> unit
 val set_xml_close_section : (identifier -> unit) -> unit
+
+
+(*s Section management for discharge *)
+
+val section_segment : global_reference -> Sign.named_context
+val section_instance : global_reference -> Term.constr array
+
+val add_section_variable : identifier -> unit
+val add_section_constant : constant -> Sign.named_context -> unit
+val add_section_kn : kernel_name -> Sign.named_context -> unit
+val replacement_context : unit ->
+  (identifier array Cmap.t * identifier array KNmap.t)
+
+(*s Discharge: decrease the section level if in the current section *)
+
+val discharge_kn :  kernel_name -> kernel_name
+val discharge_con : constant -> constant
+val discharge_global : global_reference -> global_reference
+val discharge_inductive : inductive -> inductive
+
+

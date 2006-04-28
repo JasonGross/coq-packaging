@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacticals.ml,v 1.60.2.1 2004/07/16 19:30:55 herbelin Exp $ *)
+(* $Id: tacticals.ml 7909 2006-01-21 11:09:18Z herbelin $ *)
 
 open Pp
 open Util
@@ -22,6 +22,7 @@ open Libnames
 open Refiner
 open Tacmach
 open Clenv
+open Clenvtac
 open Pattern
 open Matching
 open Evar_refiner
@@ -90,7 +91,7 @@ let tclLAST_HYP = tclNTH_HYP 1
 
 let tclTRY_sign (tac : constr->tactic) sign gl =
   let rec arec = function
-    | []      -> tclFAIL 0 "no applicable hypothesis"
+    | []      -> tclFAIL 0 (str "no applicable hypothesis")
     | [s]     -> tac (mkVar s) (*added in order to get useful error messages *)
     | (s::sl) -> tclORELSE (tac (mkVar s)) (arec sl) 
   in 
@@ -118,15 +119,13 @@ type clause = identifier gclause
 
 let allClauses = { onhyps=None; onconcl=true; concl_occs=[] }
 let allHyps = { onhyps=None; onconcl=false; concl_occs=[] }
-let onHyp id =
-  { onhyps=Some[(id,[],(InHyp, ref None))]; onconcl=false; concl_occs=[] }
+let onHyp id = { onhyps=Some[(id,[],InHyp)]; onconcl=false; concl_occs=[] }
 let onConcl = { onhyps=Some[]; onconcl=true; concl_occs=[] }
 
 let simple_clause_list_of cl gls =
   let hyps =
     match cl.onhyps with 
-        None ->
-          List.map (fun id -> Some(id,[],(InHyp,ref None))) (pf_ids_of_hyps gls)
+        None -> List.map (fun id -> Some(id,[],InHyp)) (pf_ids_of_hyps gls)
       | Some l -> List.map (fun h -> Some h) l in
   if cl.onconcl then None::hyps else hyps
 
@@ -134,7 +133,7 @@ let simple_clause_list_of cl gls =
 (* OR-branch *)
 let tryClauses tac cl gls = 
   let rec firstrec = function
-    | []      -> tclFAIL 0 "no applicable hypothesis"
+    | []      -> tclFAIL 0 (str "no applicable hypothesis")
     | [cls]   -> tac cls (* added in order to get a useful error message *)
     | cls::tl -> (tclORELSE (tac cls) (firstrec tl))
   in
@@ -173,8 +172,7 @@ let clause_type cls gl =
 (* Functions concerning matching of clausal environments *)
 
 let pf_is_matching gls pat n =
-  let (wc,_) = startWalk gls in 
-  is_matching_conv (w_env wc) (w_Underlying wc) pat n
+  is_matching_conv (pf_env gls) (project gls) pat n
 
 let pf_matches gls pat n =
   matches_conv (pf_env gls) (project gls) pat n
@@ -268,9 +266,9 @@ type branch_assumptions = {
   assums    : named_context}   (* the list of assumptions introduced *)
 
 let compute_induction_names n = function
-  | None ->
+  | IntroAnonymous ->
       Array.make n []
-  | Some (IntroOrAndPattern names) when List.length names = n ->
+  | IntroOrAndPattern names when List.length names = n ->
       Array.of_list names
   | _ ->
       errorlabstrm "" (str "Expects " ++ int n ++ str " lists of names")
@@ -288,7 +286,7 @@ let compute_construtor_signatures isrec (_,k as ity) =
     | _ -> anomaly "compute_construtor_signatures"
   in 
   let (mib,mip) = Global.lookup_inductive ity in
-  let n = mip.mind_nparams in
+  let n = mib.mind_nparams in
   let lc =
     Array.map (fun c -> snd (decompose_prod_n_assum n c)) mip.mind_nf_lc in
   let lrecargs = dest_subterms mip.mind_recargs in
@@ -324,23 +322,22 @@ let general_elim_then_using
   elim isrec allnames tac predicate (indbindings,elimbindings) c gl =
   let (ity,t) = pf_reduce_to_quantified_ind gl (pf_type_of gl c) in
   (* applying elimination_scheme just a little modified *)
-  let (wc,kONT)  = startWalk gl in
-  let indclause  = mk_clenv_from wc (c,t) in
+  let indclause  = mk_clenv_from gl (c,t) in
   let indclause' = clenv_constrain_with_bindings indbindings indclause in
-  let elimclause = mk_clenv_from () (elim,w_type_of wc elim) in
+  let elimclause = mk_clenv_from gl (elim,pf_type_of gl elim) in
   let indmv = 
-    match kind_of_term (last_arg (clenv_template elimclause).rebus) with
+    match kind_of_term (last_arg elimclause.templval.Evd.rebus) with
       | Meta mv -> mv
       | _         -> error "elimination"
   in
   let pmv =
-    let p, _ = decompose_app (clenv_template_type elimclause).rebus in
+    let p, _ = decompose_app elimclause.templtyp.Evd.rebus in
     match kind_of_term p with
       | Meta p -> p
       | _ ->
 	  let name_elim =
 	    match kind_of_term elim with
-	      | Const kn -> string_of_kn kn
+	      | Const kn -> string_of_con kn
 	      | Var id -> string_of_id id
 	      | _ -> "\b"
 	  in
@@ -351,7 +348,7 @@ let general_elim_then_using
   let branchsigns = compute_construtor_signatures isrec ity in
   let brnames = compute_induction_names (Array.length branchsigns) allnames in
   let after_tac ce i gl =
-    let (hd,largs) = decompose_app (clenv_template_type ce).rebus in
+    let (hd,largs) = decompose_app ce.templtyp.Evd.rebus in
     let ba = { branchsign = branchsigns.(i);
                branchnames = brnames.(i);
                nassums = 
@@ -360,8 +357,8 @@ let general_elim_then_using
                    0 branchsigns.(i);
                branchnum = i+1;
                ity = ity;
-               largs = List.map (clenv_instance_term ce) largs;
-               pred = clenv_instance_term ce hd }
+               largs = List.map (clenv_nf_meta ce) largs;
+               pred = clenv_nf_meta ce hd }
     in 
     tac ba gl
   in
@@ -369,9 +366,10 @@ let general_elim_then_using
   let elimclause' =
     match predicate with
        | None   -> elimclause'
-       | Some p -> clenv_assign pmv p elimclause'
+       | Some p ->
+           clenv_unify true Reduction.CONV (mkMeta pmv) p elimclause'
   in 
-  elim_res_pf_THEN_i kONT elimclause' branchtacs gl
+  elim_res_pf_THEN_i elimclause' branchtacs gl
 
 
 let elimination_then_using tac predicate (indbindings,elimbindings) c gl = 
@@ -379,7 +377,7 @@ let elimination_then_using tac predicate (indbindings,elimbindings) c gl =
   let elim =
     Indrec.lookup_eliminator ind (elimination_sort_of_goal gl) in
   general_elim_then_using
-    elim true None tac predicate (indbindings,elimbindings) c gl
+    elim true IntroAnonymous tac predicate (indbindings,elimbindings) c gl
 
 
 let elimination_then tac        = elimination_then_using tac None 

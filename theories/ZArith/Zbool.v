@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Zbool.v,v 1.4.2.1 2004/07/16 19:31:21 herbelin Exp $ *)
+(* $Id: Zbool.v 6295 2004-11-12 16:40:39Z gregoire $ *)
 
 Require Import BinInt.
 Require Import Zeven.
@@ -14,6 +14,8 @@ Require Import Zorder.
 Require Import Zcompare.
 Require Import ZArith_dec.
 Require Import Sumbool.
+
+Unset Boxed Definitions.
 
 (** The decidability of equality and order relations over
     type [Z] give some boolean functions with the adequate specification. *)

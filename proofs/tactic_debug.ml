@@ -6,17 +6,18 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-open Ast
 open Names
 open Constrextern
 open Pp
-open Pptactic
-open Printer
 open Tacexpr
 open Termops
 
-let pr_glob_tactic x =
-  (if !Options.v7 then pr_glob_tactic else Pptacticnew.pr_glob_tactic (Global.env())) x
+let prtac = ref (fun _ -> assert false)
+let set_tactic_printer f = prtac := f
+let prmatchpatt = ref (fun _ _ -> assert false)
+let set_match_pattern_printer f = prmatchpatt := f
+let prmatchrl = ref (fun _ -> assert false)
+let set_match_rule_printer f = prmatchrl := f
 
 (* This module intends to be a beginning of debugger for tactic expressions.
    Currently, it is quite simple and we can hope to have, in the future, a more
@@ -32,7 +33,7 @@ let explain_logic_error = ref (fun e -> mt())
 
 (* Prints the goal *)
 let db_pr_goal g =
-  msgnl (str "Goal:" ++ fnl () ++ Proof_trees.pr_goal (Tacmach.sig_it g))
+  msgnl (str "Goal:" ++ fnl () ++ Proof_trees.db_pr_goal (Refiner.sig_it g))
 
 (* Prints the commands *)
 let help () =
@@ -46,7 +47,7 @@ let help () =
 let goal_com g tac =
   begin
     db_pr_goal g;
-    msg (str "Going to execute:" ++ fnl () ++ pr_glob_tactic tac ++ fnl ())
+    msg (str "Going to execute:" ++ fnl () ++ !prtac tac ++ fnl ())
   end
 
 (* Gives the number of a run command *)
@@ -107,15 +108,14 @@ let debug_prompt lev g tac f =
 (* Prints a constr *)
 let db_constr debug env c =
   if debug <> DebugOff & !skip = 0 then
-    msgnl (str "Evaluated term: " ++ prterm_env env c)
+    msgnl (str "Evaluated term: " ++ print_constr_env env c)
 
 (* Prints the pattern rule *)
 let db_pattern_rule debug num r =
   if debug <> DebugOff & !skip = 0 then
   begin
     msgnl (str "Pattern rule " ++ int num ++ str ":");
-    msgnl (str "|" ++ spc () ++ 
-      pr_match_rule false Printer.pr_pattern pr_glob_tactic r)
+    msgnl (str "|" ++ spc () ++ !prmatchrl r)
   end
 
 (* Prints the hypothesis pattern identifier if it exists *)
@@ -128,12 +128,12 @@ let db_matched_hyp debug env (id,c) ido =
   if debug <> DebugOff & !skip = 0 then
     msgnl (str "Hypothesis " ++
            str ((Names.string_of_id id)^(hyp_bound ido)^
-                " has been matched: ") ++ prterm_env env c)
+                " has been matched: ") ++ print_constr_env env c)
 
 (* Prints the matched conclusion *)
 let db_matched_concl debug env c =
   if debug <> DebugOff & !skip = 0 then
-    msgnl (str "Conclusion has been matched: " ++ prterm_env env c)
+    msgnl (str "Conclusion has been matched: " ++ print_constr_env env c)
 
 (* Prints a success message when the goal has been matched *)
 let db_mc_pattern_success debug =
@@ -142,18 +142,16 @@ let db_mc_pattern_success debug =
            str "Let us execute the right-hand side part..." ++ fnl())
 
 let pp_match_pattern env = function
-  | Term c -> Term (extern_pattern env (names_of_rel_context env) c)
+  | Term c -> Term (extern_constr_pattern (names_of_rel_context env) c)
   | Subterm (o,c) ->
-    Subterm (o,(extern_pattern env (names_of_rel_context env) c))
+    Subterm (o,(extern_constr_pattern (names_of_rel_context env) c))
 
 (* Prints a failure message for an hypothesis pattern *)
 let db_hyp_pattern_failure debug env (na,hyp) =
   if debug <> DebugOff & !skip = 0 then
     msgnl (str ("The pattern hypothesis"^(hyp_bound na)^
                 " cannot match: ") ++
-           pr_match_pattern
-             (Printer.pr_pattern_env env (names_of_rel_context env))
-             hyp)
+           !prmatchpatt env hyp)
 
 (* Prints a matching failure message for a rule *)
 let db_matching_failure debug =
@@ -164,10 +162,10 @@ let db_matching_failure debug =
 (* Prints an evaluation failure message for a rule *)
 let db_eval_failure debug s =
   if debug <> DebugOff & !skip = 0 then
-    let s = if s="" then "no message" else "message \""^s^"\"" in
+    let s = str "message \"" ++ s ++ str "\"" in
     msgnl 
       (str "This rule has failed due to \"Fail\" tactic (" ++
-       str s ++ str ", level 0)!" ++ fnl() ++ str "Let us try the next one...")
+       s ++ str ", level 0)!" ++ fnl() ++ str "Let us try the next one...")
 
 (* Prints a logic failure message for a rule *)
 let db_logic_failure debug err =

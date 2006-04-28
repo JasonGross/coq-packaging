@@ -6,14 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: cerrors.ml,v 1.12.2.2 2004/07/16 20:48:17 herbelin Exp $ *)
+(* $Id: cerrors.ml 8003 2006-02-07 22:11:50Z herbelin $ *)
 
 open Pp
 open Util
-open Ast
 open Indtypes
 open Type_errors
 open Pretype_errors
+open Indrec
 open Lexer
 
 let print_loc loc =
@@ -47,8 +47,6 @@ let rec explain_exn_default = function
       hov 0 (str "Out of memory")
   | Stack_overflow -> 
       hov 0 (str "Stack overflow")
-  | Ast.No_match s -> 
-      hov 0 (str "Anomaly: Ast matching error: " ++ str s ++ report ())
   | Anomaly (s,pps) -> 
       hov 1 (str "Anomaly: " ++ where s ++ pps ++ report ())
   | Match_failure(filename,pos1,pos2) ->
@@ -76,9 +74,13 @@ let rec explain_exn_default = function
       hov 0 (str "Error:" ++ spc () ++ Himsg.explain_pretype_error ctx te)
   | InductiveError e -> 
       hov 0 (str "Error:" ++ spc () ++ Himsg.explain_inductive_error e)
+  | RecursionSchemeError e -> 
+      hov 0 (str "Error:" ++ spc () ++ Himsg.explain_recursion_scheme_error e)
   | Cases.PatternMatchingError (env,e) -> 
       hov 0
 	(str "Error:" ++ spc () ++ Himsg.explain_pattern_matching_error env e)
+  | Tacred.ReductionTacticError e -> 
+      hov 0 (str "Error:" ++ spc () ++ Himsg.explain_reduction_tactic_error e)
   | Logic.RefinerError e -> 
       hov 0 (str "Error:" ++ spc () ++ Himsg.explain_refiner_error e)
   | Nametab.GlobalizationError q ->
@@ -90,8 +92,7 @@ let rec explain_exn_default = function
       hov 0 (str "Error:" ++ spc () ++
 	       str "No constant of this name:" ++ spc () ++ Libnames.pr_qualid q)
   | Refiner.FailError (i,s) ->
-      let s = if s="" then "" else " \""^s^"\"" in
-      hov 0 (str "Error: Tactic failure" ++ str s ++
+      hov 0 (str "Error: Tactic failure" ++ s ++
              if i=0 then mt () else str " (level " ++ int i ++ str").")
   | Stdpp.Exc_located (loc,exc) ->
       hov 0 ((if loc = dummy_loc then (mt ())

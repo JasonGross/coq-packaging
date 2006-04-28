@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: NArithRing.v,v 1.5.2.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: NArithRing.v 6295 2004-11-12 16:40:39Z gregoire $ *)
 
 (* Instantiation of the Ring tactic for the binary natural numbers *)
 
@@ -15,7 +15,7 @@ Require Export ZArith_base.
 Require Import NArith.
 Require Import Eqdep_dec.
 
-Definition Neq (n m:N) :=
+Unboxed Definition Neq (n m:N) :=
   match (n ?= m)%N with
   | Datatypes.Eq => true
   | _ => false

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: hiddentac.mli,v 1.19.2.2 2005/01/21 16:41:52 herbelin Exp $ i*)
+(*i $Id: hiddentac.mli 8651 2006-03-21 21:54:43Z jforest $ i*)
 
 (*i*)
 open Names
@@ -29,6 +29,7 @@ val h_intros_until    : quantified_hypothesis -> tactic
 
 val h_assumption      : tactic
 val h_exact           : constr -> tactic
+val h_exact_no_check  : constr -> tactic
 
 val h_apply           : constr with_bindings -> tactic
 
@@ -45,25 +46,22 @@ val h_mutual_cofix    : identifier -> (identifier * constr) list -> tactic
 val h_cofix           : identifier option -> tactic
 
 val h_cut             : constr -> tactic 
-val h_true_cut        : name -> constr -> tactic 
 val h_generalize      : constr list -> tactic 
 val h_generalize_dep  : constr -> tactic 
-val h_forward         : bool -> name -> constr -> tactic 
 val h_let_tac         : name -> constr -> Tacticals.clause -> tactic
-val h_instantiate     : int -> constr -> Tacticals.clause -> tactic
+val h_instantiate     : int -> Rawterm.rawconstr ->
+  (identifier * hyp_location_flag, unit) location -> tactic
 
 (* Derived basic tactics *)
 
-val h_simple_induction   : quantified_hypothesis * (bool ref * intro_pattern_expr list ref list) list ref -> tactic
+val h_simple_induction   : quantified_hypothesis -> tactic
 val h_simple_destruct    : quantified_hypothesis -> tactic
 val h_new_induction   :
-  constr induction_arg -> constr with_bindings option ->
-  intro_pattern_expr option * (bool ref * intro_pattern_expr list ref list) list ref
-  -> tactic
+  constr induction_arg list -> constr with_bindings option ->
+  intro_pattern_expr -> tactic
 val h_new_destruct    :
-  constr induction_arg -> constr with_bindings option -> 
-  intro_pattern_expr option * (bool ref * intro_pattern_expr list ref list) list ref
-  -> tactic
+  constr induction_arg list -> constr with_bindings option -> 
+  intro_pattern_expr -> tactic
 val h_specialize      : int option -> constr with_bindings -> tactic
 val h_lapply          : constr -> tactic
 
@@ -71,16 +69,13 @@ val h_lapply          : constr -> tactic
 
 
 (* Context management *)
-val h_clear           : identifier list -> tactic
+val h_clear           : bool -> identifier list -> tactic
 val h_clear_body      : identifier list -> tactic
 val h_move            : bool -> identifier -> identifier -> tactic
 val h_rename          : identifier -> identifier -> tactic
 
 
 (* Constructors *)
-(*i
-val h_any_constructor : tactic -> tactic
-i*)
 val h_constructor     : int -> constr bindings -> tactic
 val h_left            : constr bindings -> tactic
 val h_right           : constr bindings -> tactic
@@ -92,7 +87,7 @@ val h_simplest_right  : tactic
 
 
 (* Conversion *)
-val h_reduce          : Tacred.red_expr -> Tacticals.clause -> tactic
+val h_reduce          : Redexpr.red_expr -> Tacticals.clause -> tactic
 val h_change          :
   constr occurrences option -> constr -> Tacticals.clause -> tactic
 

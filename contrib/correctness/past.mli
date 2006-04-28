@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: past.mli,v 1.7.6.1 2004/07/16 19:30:00 herbelin Exp $ *)
+(* $Id: past.mli 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (*s Abstract syntax of imperative programs. *)
 

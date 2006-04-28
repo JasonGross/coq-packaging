@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: common.ml,v 1.51.2.4 2005/12/16 03:07:39 letouzey Exp $ i*)
+(*i $Id: common.ml 7651 2005-12-16 03:19:20Z letouzey $ i*)
 
 open Pp
 open Util
@@ -143,7 +143,7 @@ let create_modular_renamings struc =
   in 
   (* 1) creates renamings of objects *)
   let add upper r = 
-    let mp = modpath (kn_of_r r) in 
+    let mp = modpath_of_r r in 
     let l = mp_create_modular_renamings mp in 
     let s = modular_rename upper (id_of_global r) in 
     global_ids := Idset.add (id_of_string s) !global_ids;    
@@ -184,7 +184,7 @@ let create_modular_renamings struc =
   List.iter contents_first_level used_modules; 
   let used_modules' = List.rev used_modules in 
   let needs_qualify r = 
-    let mp = modpath (kn_of_r r) in 
+    let mp = modpath_of_r r in 
     if (is_modfile mp) && mp <> current_module && 
       (clash mp [] (List.hd (get_renamings r)) used_modules')
     then to_qualify := Refset.add r !to_qualify
@@ -239,7 +239,7 @@ let rec mp_create_mono_renamings mp =
 let create_mono_renamings struc = 
   let { up = u ; down = d } = struct_get_references_list struc in 
   let add upper r = 
-    let mp = modpath (kn_of_r r) in 
+    let mp = modpath_of_r r in 
     let l = mp_create_mono_renamings mp in
     let mycase = if upper then uppercase_id else lowercase_id in 
     let id = 
@@ -285,7 +285,7 @@ module StdParams = struct
   let pp_global mpl r = 
     let ls = get_renamings r in 
     let s = List.hd ls in 
-    let mp = modpath (kn_of_r r) in 
+    let mp = modpath_of_r r in 
     let ls = 
       if mp = List.hd mpl then [s] (* simpliest situation *)
       else 
@@ -317,7 +317,6 @@ module StdParams = struct
 	(*i TODO: clash possible i*)
 	list_firstn ((mp_length mp)-(mp_length pref)) ls
       with Not_found -> (* [mp] is othogonal with every element of [mp]. *)
-	let base = base_mp mp in 
 	if !modular && (at_toplevel mp) 
 	then snd (list_sep_last ls)
 	else ls

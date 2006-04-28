@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: sign.mli,v 1.40.2.1 2004/07/16 19:30:26 herbelin Exp $ i*)
+(*i $Id: sign.mli 6737 2005-02-18 20:49:43Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -61,6 +61,9 @@ val fold_rel_context_reverse :
 
 (*s Map function of [rel_context] *)
 val map_rel_context : (constr -> constr) -> rel_context -> rel_context
+
+(*s Map function of [named_context] *)
+val map_named_context : (constr -> constr) -> named_context -> named_context
 
 (*s Term constructors *)
 

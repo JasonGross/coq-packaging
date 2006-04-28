@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pp_control.ml,v 1.8.2.1 2004/07/16 19:30:31 herbelin Exp $ *)
+(* $Id: pp_control.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (* Parameters of pretty-printing *)
 

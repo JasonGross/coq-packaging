@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: termdn.ml,v 1.15.8.1 2004/07/16 19:30:56 herbelin Exp $ *)
+(* $Id: termdn.ml 7639 2005-12-02 10:01:15Z gregoire $ *)
 
 open Util
 open Names
@@ -21,14 +21,14 @@ open Nametab
    See the module dn.ml for further explanations.
    Eduardo (5/8/97) *)
 
-type 'a t = (constr_label,constr_pattern,'a) Dn.t
+type 'a t = (global_reference,constr_pattern,'a) Dn.t
 
 (*If we have: f a b c ..., decomp gives: (f,[a;b;c;...])*)
 
 let decomp = 
   let rec decrec acc c = match kind_of_term c with
     | App (f,l) -> decrec (Array.fold_right (fun a l -> a::l) l acc) f
-    | Cast (c1,_) -> decrec acc c1
+    | Cast (c1,_,_) -> decrec acc c1
     | _ -> (c,acc)
   in 
   decrec []
@@ -45,19 +45,18 @@ let constr_pat_discr t =
     None
   else
     match decomp_pat t with
-      | PRef (IndRef sp), args -> Some(IndNode sp,args)
-      | PRef (ConstructRef sp), args -> Some(CstrNode sp,args)
-      | PRef (VarRef id), args -> Some(VarNode id,args)
+      | PRef ((IndRef _) as ref), args
+      | PRef ((ConstructRef _ ) as ref), args
+      | PRef ((VarRef _) as ref), args -> Some(ref,args)
       | _ -> None
 
 let constr_val_discr t =
   let c, l = decomp t in
   match kind_of_term c with
     (* Const _,_) -> Some(TERM c,l) *)
-    | Ind ind_sp -> Some(IndNode ind_sp,l)
-    | Construct cstr_sp -> Some(CstrNode cstr_sp,l)
-    (* Ici, comment distinguer SectionVarNode de VarNode ?? *)
-    | Var id -> Some(VarNode id,l)
+    | Ind ind_sp -> Some(IndRef ind_sp,l)
+    | Construct cstr_sp -> Some(ConstructRef cstr_sp,l)
+    | Var id -> Some(VarRef id,l)
     | _ -> None
 
 (* Les deux fonctions suivantes ecrasaient les precedentes, 

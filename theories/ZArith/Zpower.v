@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Zpower.v,v 1.11.2.1 2004/07/16 19:31:22 herbelin Exp $ i*)
+(*i $Id: Zpower.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 Require Import ZArith_base.
 Require Import Omega.

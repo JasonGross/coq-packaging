@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: Arrays_stuff.v,v 1.2.16.1 2004/07/16 19:29:59 herbelin Exp $ *)
+(* $Id: Arrays_stuff.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Require Export Exchange.
 Require Export ArrayPermut.

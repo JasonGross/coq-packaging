@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: hipattern.mli,v 1.13.2.1 2004/07/16 19:30:53 herbelin Exp $ i*)
+(*i $Id: hipattern.mli 8652 2006-03-22 08:27:14Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -36,8 +36,6 @@ open Proof_trees
    When we reach a second-order application, we ask that the
    intersection of the free-rels of the term and the current stack be
    contained in the arguments of the application *)
-
-val is_imp_term : constr -> bool
 
 (*s I implemented the following functions which test whether a term [t]
    is an inductive but non-recursive type, a general conjuction, a
@@ -98,7 +96,7 @@ val is_sigma_type           : testing_function
 
 open Coqlib
 
-(* Match terms [(eq A t u)], [(eqT A t u)] or [(identityT A t u)] *)
+(* Match terms [(eq A t u)] or [(identity A t u)] *)
 (* Returns associated lemmas and [A,t,u] *)
 val find_eq_data_decompose : constr -> 
   coq_leibniz_eq_data * (constr * constr * constr)
@@ -113,11 +111,9 @@ val match_sigma : constr -> constr * constr
 
 val is_matching_sigma : constr -> bool
 
-(* Match a term of the form [{x=y}+{_}], returns [x] and [y] *)
-val match_eqdec_partial : constr -> constr * constr
-
-(* Match a term of the form [(x,y:t){x=y}+{~x=y}], returns [t] *)
-val match_eqdec : constr -> constr
+(* Match a decidable equality judgement (e.g [{t=u:>T}+{~t=u}]), returns
+   [t,u,T] and a boolean telling if equality is on the left side *)
+val match_eqdec : constr -> bool * constr * constr * constr * constr
 
 (* Match an equality up to conversion; returns [(eq,t1,t2)] in normal form *)
 open Proof_type

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_minicoq.ml4,v 1.17.6.1 2004/07/16 19:30:38 herbelin Exp $ *)
+(* $Id: g_minicoq.ml4 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Pp
 open Util

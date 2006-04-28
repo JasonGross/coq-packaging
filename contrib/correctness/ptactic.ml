@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: ptactic.ml,v 1.30.2.1 2004/07/16 19:30:06 herbelin Exp $ *)
+(* $Id: ptactic.ml 7837 2006-01-11 09:47:32Z herbelin $ *)
 
 open Pp
 open Options
@@ -51,7 +51,7 @@ let coqast_of_prog p =
 
   (* 4a. traduction type *)
   let ty = Pmonad.trad_ml_type_c ren env c in
-  deb_print (Printer.prterm_env (Global.env())) ty;
+  deb_print (Printer.pr_lconstr_env (Global.env())) ty;
 
   (* 4b. traduction terme (terme intermédiaire de type cc_term) *)
   deb_mess 
@@ -65,12 +65,12 @@ let coqast_of_prog p =
     (fnl () ++ str"Pcic.constr_of_prog: Translation cc_term -> rawconstr..." ++ 
        fnl ());
   let r = Pcic.rawconstr_of_prog cc in
-  deb_print Printer.pr_rawterm r;
+  deb_print Printer.pr_lrawconstr r;
 
   (* 6. résolution implicites *)
   deb_mess (fnl () ++ str"Resolution implicits (? => Meta(n))..." ++ fnl ());
   let oc = understand_gen_tcc Evd.empty (Global.env()) [] None r in
-  deb_print (Printer.prterm_env (Global.env())) (snd oc);
+  deb_print (Printer.pr_lconstr_env (Global.env())) (snd oc);
 
   p,oc,ty,v
 
@@ -234,7 +234,7 @@ let correctness_hook _ ref =
   register pf_id None
 
 let correctness s p opttac =
-  Library.check_required_library ["Coq";"correctness";"Correctness"];
+  Coqlib.check_required_library ["Coq";"correctness";"Correctness"];
   Pmisc.reset_names();
   let p,oc,cty,v = coqast_of_prog p in
   let env = Global.env () in
@@ -248,7 +248,7 @@ let correctness s p opttac =
   deb_mess (str"Pred.red_cci: Reduction..." ++ fnl ());
   let oc = reduce_open_constr oc in
   deb_mess (str"AFTER REDUCTION:" ++ fnl ());
-  deb_print (Printer.prterm_env (Global.env())) (snd oc);
+  deb_print (Printer.pr_lconstr_env (Global.env())) (snd oc);
   let tac = (tclTHEN (Extratactics.refine_tac oc) automatic) in
   let tac = match opttac with 
     | None -> tac

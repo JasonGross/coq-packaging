@@ -119,11 +119,13 @@ and ct_COMMAND =
   | CT_print_about of ct_ID
   | CT_print_all
   | CT_print_classes
+  | CT_print_ltac of ct_ID
   | CT_print_coercions
   | CT_print_grammar of ct_GRAMMAR
   | CT_print_graph
   | CT_print_hint of ct_ID_OPT
   | CT_print_hintdb of ct_ID_OR_STAR
+  | CT_print_rewrite_hintdb of ct_ID
   | CT_print_id of ct_ID
   | CT_print_implicit of ct_ID
   | CT_print_loadpath
@@ -135,6 +137,7 @@ and ct_COMMAND =
   | CT_print_opaqueid of ct_ID
   | CT_print_path of ct_ID * ct_ID
   | CT_print_proof of ct_ID
+  | CT_print_setoids
   | CT_print_scope of ct_ID
   | CT_print_scopes
   | CT_print_section of ct_ID
@@ -465,8 +468,8 @@ and ct_MODULE_EXPR =
   | CT_module_app of ct_MODULE_EXPR * ct_MODULE_EXPR
 and ct_MODULE_TYPE =
     CT_coerce_ID_to_MODULE_TYPE of ct_ID
-  | CT_module_type_with_def of ct_MODULE_TYPE * ct_ID * ct_FORMULA
-  | CT_module_type_with_mod of ct_MODULE_TYPE * ct_ID * ct_ID
+  | CT_module_type_with_def of ct_MODULE_TYPE * ct_ID_LIST * ct_FORMULA
+  | CT_module_type_with_mod of ct_MODULE_TYPE * ct_ID_LIST * ct_ID
 and ct_MODULE_TYPE_CHECK =
     CT_coerce_MODULE_TYPE_OPT_to_MODULE_TYPE_CHECK of ct_MODULE_TYPE_OPT
   | CT_only_check of ct_MODULE_TYPE
@@ -530,6 +533,7 @@ and ct_RED_COM =
   | CT_lazy of ct_CONVERSION_FLAG_LIST * ct_CONV_SET
   | CT_pattern of ct_PATTERN_NE_LIST
   | CT_red
+  | CT_cbvvm
   | CT_simpl of ct_PATTERN_OPT
   | CT_unfold of ct_UNFOLD_NE_LIST
 and ct_RETURN_INFO =
@@ -637,6 +641,7 @@ and ct_TACTIC_COM =
   | CT_elim of ct_FORMULA * ct_SPEC_LIST * ct_USING
   | CT_elim_type of ct_FORMULA
   | CT_exact of ct_FORMULA
+  | CT_exact_no_check of ct_FORMULA
   | CT_exists of ct_SPEC_LIST
   | CT_fail of ct_ID_OR_INT * ct_STRING_OPT
   | CT_first of ct_TACTIC_COM * ct_TACTIC_COM list
@@ -665,8 +670,8 @@ and ct_TACTIC_COM =
   | CT_match_context_reverse of ct_CONTEXT_RULE * ct_CONTEXT_RULE list
   | CT_match_tac of ct_TACTIC_COM * ct_MATCH_TAC_RULES
   | CT_move_after of ct_ID * ct_ID
-  | CT_new_destruct of ct_FORMULA_OR_INT * ct_USING * ct_INTRO_PATT_OPT
-  | CT_new_induction of ct_FORMULA_OR_INT * ct_USING * ct_INTRO_PATT_OPT
+  | CT_new_destruct of ct_FORMULA_OR_INT list * ct_USING * ct_INTRO_PATT_OPT
+  | CT_new_induction of ct_FORMULA_OR_INT list * ct_USING * ct_INTRO_PATT_OPT
   | CT_omega
   | CT_orelse of ct_TACTIC_COM * ct_TACTIC_COM
   | CT_parallel of ct_TACTIC_COM * ct_TACTIC_COM list
@@ -679,7 +684,7 @@ and ct_TACTIC_COM =
   | CT_reflexivity
   | CT_rename of ct_ID * ct_ID
   | CT_repeat of ct_TACTIC_COM
-  | CT_replace_with of ct_FORMULA * ct_FORMULA
+  | CT_replace_with of ct_FORMULA * ct_FORMULA * ct_ID_OPT * ct_TACTIC_OPT
   | CT_rewrite_lr of ct_FORMULA * ct_SPEC_LIST * ct_ID_OPT
   | CT_rewrite_rl of ct_FORMULA * ct_SPEC_LIST * ct_ID_OPT
   | CT_right of ct_SPEC_LIST

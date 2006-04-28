@@ -24,7 +24,7 @@
 (* in Summer 1995. Several developments by E. Ledinot were an inspiration.  *)
 (****************************************************************************)
 
-(*i $Id: Relations_1.v,v 1.4.2.1 2004/07/16 19:31:18 herbelin Exp $ i*)
+(*i $Id: Relations_1.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Section Relations_1.
    Variable U : Type.

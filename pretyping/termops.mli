@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: termops.mli,v 1.21.2.3 2005/01/21 17:19:37 herbelin Exp $ i*)
+(*i $Id: termops.mli 8003 2006-02-07 22:11:50Z herbelin $ i*)
 
 open Util
 open Pp
@@ -16,14 +16,24 @@ open Sign
 open Environ
 
 (* Universes *)
-(*i val set_module : Names.dir_path -> unit i*)
 val new_univ : unit -> Univ.universe
 val new_sort_in_family : sorts_family -> sorts
+val new_Type : unit -> types
+val new_Type_sort : unit -> sorts
+val refresh_universes : types -> types
 
-(* iterators on terms *)
+(* printers *)
 val print_sort : sorts -> std_ppcmds
 val print_sort_family : sorts_family -> std_ppcmds
-val print_constr : constr -> std_ppcmds
+(* debug printer: do not use to display terms to the casual user... *)
+val set_print_constr : (env -> constr -> std_ppcmds) -> unit
+val print_constr     : constr -> std_ppcmds
+val print_constr_env : env -> constr -> std_ppcmds
+val print_named_context : env -> std_ppcmds
+val print_rel_context : env -> std_ppcmds
+val print_env : env -> std_ppcmds
+
+(* iterators on terms *)
 val prod_it : init:types -> (name * types) list -> types
 val lam_it : init:constr -> (name * types) list -> constr
 val rel_vect : int -> int -> constr array
@@ -43,6 +53,7 @@ val it_named_context_quantifier :
   (named_declaration -> 'a -> 'a) -> init:'a -> named_context -> 'a
 val it_mkNamedProd_or_LetIn   : init:types -> named_context -> types
 val it_mkNamedLambda_or_LetIn : init:constr -> named_context -> constr
+val it_mkNamedProd_wo_LetIn   : init:types -> named_context -> types
 
 (**********************************************************************)
 (* Generic iterators on constr                                        *)
@@ -113,6 +124,8 @@ val subst_term_occ : int list -> constr -> types -> types
 val subst_term_occ_decl :
   int list -> constr -> named_declaration -> named_declaration
 
+val error_invalid_occurrence : int list -> 'a
+
 (* Alternative term equalities *)
 val eta_reduce_head : constr -> constr
 val eta_eq_constr : constr -> constr -> bool
@@ -126,8 +139,14 @@ val id_of_name_using_hdchar :
   env -> types -> name -> identifier
 val named_hd : env -> types -> name -> name
 val named_hd_type : env -> types -> name -> name
-val prod_name : env -> name * types * types -> constr
+
+val mkProd_name : env -> name * types * types -> types
+val mkLambda_name : env -> name * types * constr -> constr
+
+(* Deprecated synonyms of [mkProd_name] and [mkLambda_name] *)
+val prod_name : env -> name * types * types -> types
 val lambda_name : env -> name * types * constr -> constr
+
 val prod_create : env -> types * types -> constr
 val lambda_create : env -> types * constr -> constr
 val name_assumption : env -> rel_declaration -> rel_declaration

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i      $Id: SplitAbsolu.v,v 1.6.2.1 2004/07/16 19:31:15 herbelin Exp $       i*)
+(*i      $Id: SplitAbsolu.v 5920 2004-07-16 20:01:26Z herbelin $       i*)
 
 Require Import Rbasic_fun.
 

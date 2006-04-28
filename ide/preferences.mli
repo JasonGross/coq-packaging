@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: preferences.mli,v 1.8.2.2 2005/01/21 17:21:33 herbelin Exp $ i*)
+(*i $Id: preferences.mli 6621 2005-01-21 17:24:37Z herbelin $ i*)
 
 type pref =
     {

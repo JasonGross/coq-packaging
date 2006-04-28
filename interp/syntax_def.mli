@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: syntax_def.mli,v 1.3.2.2 2004/07/16 19:30:23 herbelin Exp $ i*)
+(*i $Id: syntax_def.mli 7051 2005-05-20 15:45:51Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -22,4 +22,11 @@ val declare_syntactic_definition : bool -> identifier -> bool -> aconstr
 
 val search_syntactic_definition : loc -> kernel_name -> rawconstr
 
+
+(* [locate_global] locates global reference possibly following a chain of 
+   syntactic aliases; raise Not_found if not bound in the global env; 
+   raise an error if bound to a syntactic def that does not denote a
+   reference *)
+
+val locate_global : Libnames.qualid -> Libnames.global_reference
 

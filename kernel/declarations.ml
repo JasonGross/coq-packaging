@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declarations.ml,v 1.31.2.2 2005/11/29 21:40:51 letouzey Exp $ i*)
+(*i $Id: declarations.ml 8653 2006-03-22 09:41:17Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -14,40 +14,33 @@ open Names
 open Univ
 open Term
 open Sign
+open Mod_subst
 (*i*)
 
 (* This module defines the types of global declarations. This includes
    global constants/axioms and mutual inductive definitions *)
 
+type engagement = ImpredicativeSet
+
+
 (*s Constants (internal representation) (Definition/Axiom) *)
 
-type subst_internal = 
-  | Constr of constr 
-  | LazyConstr of substitution * constr
+type constr_substituted = constr substituted
 
-type constr_substituted = subst_internal ref
+let from_val = from_val
 
-let from_val c = ref (Constr c)
+let force = force subst_mps 
 
-let force cs = match !cs with
-    Constr c -> c
-  | LazyConstr (subst,c) -> 
-      let c' = subst_mps subst c in
-	cs := Constr c';
-	c'
-
-let subst_constr_subst subst cs = match !cs with
-    Constr c -> ref (LazyConstr (subst,c))
-  | LazyConstr (subst',c) -> 
-      let subst'' = join subst' subst in
-	ref (LazyConstr (subst'',c))
+let subst_constr_subst = subst_substituted
 
 type constant_body = {
-  const_hyps : section_context; (* New: younger hyp at top *)
-  const_body : constr_substituted option;
-  const_type : types;
-  const_constraints : constraints;
-  const_opaque : bool }
+    const_hyps : section_context; (* New: younger hyp at top *)
+    const_body : constr_substituted option;
+    const_type : types;  
+    const_body_code : Cemitcodes.to_patch_substituted;
+   (* const_type_code : Cemitcodes.to_patch; *)
+    const_constraints : constraints;
+    const_opaque : bool }
 
 (*s Inductive types (internal representation with redundant
     information). *)
@@ -82,72 +75,140 @@ let recarg_length p j =
 
 let subst_wf_paths sub p = Rtree.smartmap (subst_recarg sub) p
 
-(* [mind_typename] is the name of the inductive; [mind_arity] is
-   the arity generalized over global parameters; [mind_lc] is the list
-   of types of constructors generalized over global parameters and
-   relative to the global context enriched with the arities of the
-   inductives *) 
+(**********************************************************************)
+(* Representation of mutual inductive types in the kernel             *)
+(*
+   Inductive I1 (params) : U1 := c11 : T11 | ... | c1p1 : T1p1
+   ...
+   with      In (params) : Un := cn1 : Tn1 | ... | cnpn : Tnpn
+*)
 
 type one_inductive_body = {
-  mind_typename : identifier;
-  mind_nparams : int;
-  mind_params_ctxt : rel_context;
-  mind_nrealargs : int;
-  mind_nf_arity : types;
-  mind_user_arity : types;
-  mind_sort : sorts;
-  mind_kelim : sorts_family list;
-  mind_consnames : identifier array;
-  mind_nf_lc : types array; (* constrs and arity with pre-expanded ccl *)
-  mind_user_lc : types array;
-  mind_recargs : wf_paths;
- }
+
+(* Primitive datas *)
+
+ (* Name of the type: [Ii] *)
+    mind_typename : identifier;
+
+ (* Arity of [Ii] with parameters: [forall params, Ui] *)
+    mind_user_arity : types;
+
+ (* Names of the constructors: [cij] *)
+    mind_consnames : identifier array;
+
+ (* Types of the constructors with parameters: [forall params, Tij],
+    where the Ik are replaced by de Bruijn index in the context
+    I1:forall params, U1 ..  In:forall params, Un *)
+    mind_user_lc : types array;
+
+(* Derived datas *)
+
+ (* Head normalized arity so that the conclusion is a sort *)
+    mind_nf_arity : types;
+
+ (* Number of expected real arguments of the type (no let, no params) *)
+    mind_nrealargs : int;
+
+ (* Conclusion of the arity *)
+    mind_sort : sorts;
+
+ (* List of allowed elimination sorts *)
+    mind_kelim : sorts_family list;
+
+ (* Head normalized constructor types so that their conclusion is atomic *)
+    mind_nf_lc : types array;
+
+ (* Length of the signature of the constructors (with let, w/o params) *)
+    mind_consnrealdecls : int array;
+
+ (* Signature of recursive arguments in the constructors *)
+    mind_recargs : wf_paths;
+
+(* Datas for bytecode compilation *)
+
+ (* number of constant constructor *)
+    mind_nb_constant : int;
+
+ (* number of no constant constructor *)
+    mind_nb_args : int;
+
+    mind_reloc_tbl :  Cbytecodes.reloc_table; 
+  }
 
 type mutual_inductive_body = {
-  mind_record : bool;
-  mind_finite : bool;
-  mind_ntypes : int;
-  mind_hyps : section_context;
-  mind_packets : one_inductive_body array;
-  mind_constraints : constraints;
-  mind_equiv : kernel_name option
- }
+
+  (* The component of the mutual inductive block *)
+    mind_packets : one_inductive_body array;
+
+  (* Whether the inductive type has been declared as a record *)
+    mind_record : bool;
+
+  (* Whether the type is inductive or coinductive *)
+    mind_finite : bool;
+
+  (* Number of types in the block *)
+    mind_ntypes : int;
+
+  (* Section hypotheses on which the block depends *)
+    mind_hyps : section_context;
+
+  (* Number of expected parameters *)
+    mind_nparams : int;
+
+  (* Number of recursively uniform (i.e. ordinary) parameters *)
+    mind_nparams_rec : int;
+
+  (* The context of parameters (includes let-in declaration) *)
+    mind_params_ctxt : rel_context;
+
+  (* Universes constraints enforced by the inductive declaration *)
+    mind_constraints : constraints;
+
+  (* Source of the inductive block when aliased in a module *)
+    mind_equiv : kernel_name option
+  }
 
 (* TODO: should be changed to non-coping after Term.subst_mps *)
-let subst_const_body sub cb = 
-  { const_body = option_app (subst_constr_subst sub) cb.const_body;
-    const_type = type_app (Term.subst_mps sub) cb.const_type;
+let subst_const_body sub cb = {
     const_hyps = (assert (cb.const_hyps=[]); []);
+    const_body = option_app (subst_constr_subst sub) cb.const_body;
+    const_type = type_app (subst_mps sub) cb.const_type;
+    const_body_code = Cemitcodes.subst_to_patch_subst sub cb.const_body_code;
+    (*const_type_code = Cemitcodes.subst_to_patch sub cb.const_type_code;*)
     const_constraints = cb.const_constraints;
-    const_opaque = cb.const_opaque}
-  
+    const_opaque = cb.const_opaque } 
+
 let subst_mind_packet sub mbp = 
   { mind_consnames = mbp.mind_consnames;
+    mind_consnrealdecls = mbp.mind_consnrealdecls;
     mind_typename = mbp.mind_typename;
     mind_nf_lc = 
-      array_smartmap (type_app (Term.subst_mps sub)) mbp.mind_nf_lc;
-    mind_nf_arity = type_app (Term.subst_mps sub) mbp.mind_nf_arity;
+      array_smartmap (type_app (subst_mps sub)) mbp.mind_nf_lc;
+    mind_nf_arity = type_app (subst_mps sub) mbp.mind_nf_arity;
     mind_user_lc = 
-      array_smartmap (type_app (Term.subst_mps sub)) mbp.mind_user_lc;
-    mind_user_arity = type_app (Term.subst_mps sub) mbp.mind_user_arity;
+      array_smartmap (type_app (subst_mps sub)) mbp.mind_user_lc;
+    mind_user_arity = type_app (subst_mps sub) mbp.mind_user_arity;
     mind_sort = mbp.mind_sort;
     mind_nrealargs = mbp.mind_nrealargs;
     mind_kelim = mbp.mind_kelim;
-    mind_nparams = mbp.mind_nparams;
-    mind_params_ctxt = 
-      map_rel_context (Term.subst_mps sub) mbp.mind_params_ctxt;
-    mind_recargs = subst_wf_paths sub mbp.mind_recargs (*wf_paths*);
-}
+    mind_recargs = subst_wf_paths sub mbp.mind_recargs (*wf_paths*); 
+    mind_nb_constant = mbp.mind_nb_constant;
+    mind_nb_args = mbp.mind_nb_args;
+    mind_reloc_tbl = mbp.mind_reloc_tbl }
+
 
 let subst_mind sub mib = 
   { mind_record = mib.mind_record ; 
     mind_finite = mib.mind_finite ;
     mind_ntypes = mib.mind_ntypes ;
     mind_hyps = (assert (mib.mind_hyps=[]); []) ;
+    mind_nparams = mib.mind_nparams;
+    mind_nparams_rec = mib.mind_nparams_rec;
+    mind_params_ctxt = 
+      map_rel_context (subst_mps sub) mib.mind_params_ctxt;
     mind_packets = array_smartmap (subst_mind_packet sub) mib.mind_packets ;
     mind_constraints = mib.mind_constraints ;
-    mind_equiv = option_app (subst_kn sub) mib.mind_equiv;
-}
+    mind_equiv = option_app (subst_kn sub) mib.mind_equiv }
 
 
 (*s Modules: signature component specifications, module types, and
@@ -171,7 +232,6 @@ and module_specification_body =
       msb_equiv : module_path option; 
       msb_constraints : constraints }
 
-
 type structure_elem_body = 
   | SEBconst of constant_body
   | SEBmind of mutual_inductive_body
@@ -193,3 +253,4 @@ and module_body =
       mod_type : module_type_body;
       mod_equiv : module_path option;
       mod_constraints : constraints }
+

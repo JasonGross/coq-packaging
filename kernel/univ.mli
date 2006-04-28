@@ -6,19 +6,26 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: univ.mli,v 1.21.14.1 2004/07/16 19:30:28 herbelin Exp $ i*)
+(*i $Id: univ.mli 8673 2006-03-29 21:21:52Z herbelin $ i*)
 
 (* Universes. *)
 
 type universe
 
+val base_univ : universe
 val prop_univ : universe
 val make_univ : Names.dir_path * int -> universe
 
+val is_base : universe -> bool
+
 (* The type of a universe *)
 val super : universe -> universe
+
 (* The max of 2 universes *)
 val sup   : universe -> universe -> universe
+
+(* The max of an array of universes *)
+val sup_array : universe array -> universe
 
 (*s Graphs of universes. *)
 
@@ -47,12 +54,19 @@ exception UniverseInconsistency
 
 val merge_constraints : constraints -> universes -> universes
 
+(*s Support for sort-polymorphic inductive types *)
+
+val fresh_local_univ : unit -> universe
+
+val solve_constraints_system : universe array -> universe array -> 
+  universe array
+
+val is_empty_universe : universe -> bool
+
 (*s Pretty-printing of universes. *)
 
 val pr_uni : universe -> Pp.std_ppcmds
 val pr_universes : universes -> Pp.std_ppcmds
-
-val string_of_univ : universe -> string
 
 (*s Dumping to a file *)
 

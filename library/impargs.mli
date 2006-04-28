@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: impargs.mli,v 1.26.2.1 2004/07/16 19:30:35 herbelin Exp $ i*)
+(*i $Id: impargs.mli 7732 2005-12-26 13:51:24Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -43,7 +43,7 @@ val positions_of_implicits : implicits_list -> int list
 
 (* Computation of the positions of arguments automatically inferable
    for an object of the given type in the given env *)
-val compute_implicits : bool -> env -> types -> implicits_list
+val compute_implicits : env -> types -> implicits_list
 
 (*s Computation of implicits (done using the global environment). *)
 
@@ -64,6 +64,4 @@ val is_implicit_var : variable -> implicits_flags
 
 val implicits_of_global : global_reference -> implicits_list
 
-(* For translator *)
-val implicits_of_global_out : global_reference -> implicits_list
-val is_implicit_args_out : unit -> bool
+val implicits_flags : unit -> implicits_flags

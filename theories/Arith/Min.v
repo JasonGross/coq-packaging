@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Min.v,v 1.10.2.1 2004/07/16 19:31:00 herbelin Exp $ i*)
+(*i $Id: Min.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Require Import Arith.
 
@@ -68,16 +68,12 @@ induction n; induction m; simpl in |- *; auto with arith.
 elim (IHn m); intro H; elim H; auto.
 Qed.
 
-Lemma min_case : forall n m (P:nat -> Set), P n -> P m -> P (min n m).
+Lemma min_case : forall n m (P:nat -> Type), P n -> P m -> P (min n m).
 Proof.
 induction n; simpl in |- *; auto with arith.
 induction m; intros; simpl in |- *; auto with arith.
 pattern (min n m) in |- *; apply IHn; auto with arith.
 Qed.
 
-Lemma min_case2 : forall n m (P:nat -> Prop), P n -> P m -> P (min n m).
-Proof.
-induction n; simpl in |- *; auto with arith.
-induction m; intros; simpl in |- *; auto with arith.
-pattern (min n m) in |- *; apply IHn; auto with arith.
-Qed.
+Notation min_case2 := min_case (only parsing).
+

@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i $Id: Zorder.v,v 1.6.2.3 2005/03/29 15:35:12 herbelin Exp $ i*)
+(*i $Id: Zorder.v 6983 2005-05-02 10:47:51Z herbelin $ i*)
 
 (** Binary Integers (Pierre Crégut (CNET, Lannion, France) *)
 
@@ -905,23 +905,23 @@ Qed.
 (** Simplification of square wrt order *)
 
 Lemma Zgt_square_simpl :
- forall n m:Z, n >= 0 -> m >= 0 -> n * n > m * m -> n > m.
+ forall n m:Z, n >= 0 -> n * n > m * m -> n > m.
 Proof.
-intros x y H0 H1 H2.
-case (dec_Zlt y x).
+intros n m H0 H1.
+case (dec_Zlt m n).
 intro; apply Zlt_gt; trivial.
-intros H3; cut (y >= x).
+intros H2; cut (m >= n).
 intros H.
-elim Zgt_not_le with (1 := H2).
+elim Zgt_not_le with (1 := H1).
 apply Zge_le.
 apply Zmult_ge_compat; auto.
 apply Znot_lt_ge; trivial.
 Qed.
 
 Lemma Zlt_square_simpl :
- forall n m:Z, 0 <= n -> 0 <= m -> m * m < n * n -> m < n.
+ forall n m:Z, 0 <= n -> m * m < n * n -> m < n.
 Proof.
-intros x y H0 H1 H2.
+intros x y H0 H1.
 apply Zgt_lt.
 apply Zgt_square_simpl; try apply Zle_ge; try apply Zlt_gt; assumption.
 Qed.
@@ -965,6 +965,18 @@ Lemma Zlt_0_minus_lt : forall n m:Z, 0 < n - m -> m < n.
 Proof.
 intros n m H; apply Zplus_lt_reg_l with (p := - m); rewrite Zplus_opp_l;
  rewrite Zplus_comm; exact H.
+Qed.
+
+Lemma Zle_0_minus_le : forall n m:Z, 0 <= n - m -> m <= n.
+Proof.
+intros n m H; apply Zplus_le_reg_l with (p := - m); rewrite Zplus_opp_l;
+ rewrite Zplus_comm; exact H.
+Qed.
+
+Lemma Zle_minus_le_0 : forall n m:Z, m <= n -> 0 <= n - m.
+Proof.
+intros n m H; unfold Zminus; apply Zplus_le_reg_r with (p := m); 
+rewrite <- Zplus_assoc; rewrite Zplus_opp_l; rewrite Zplus_0_r; exact H. 
 Qed.
 
 (* For compatibility *)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Well_Ordering.v,v 1.7.2.1 2004/07/16 19:31:19 herbelin Exp $ i*)
+(*i $Id: Well_Ordering.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (** Author: Cristina Cornes.
     From: Constructing Recursion Operators in Type Theory

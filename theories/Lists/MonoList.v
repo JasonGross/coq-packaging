@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: MonoList.v,v 1.2.2.1 2004/07/16 19:31:05 herbelin Exp $ i*)
+(*i $Id: MonoList.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 (** THIS IS A OLD CONTRIB. IT IS NO LONGER MAINTAINED ***)
 

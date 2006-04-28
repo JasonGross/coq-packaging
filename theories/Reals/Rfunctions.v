@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rfunctions.v,v 1.31.2.1 2004/07/16 19:31:12 herbelin Exp $ i*)
+(*i $Id: Rfunctions.v 6338 2004-11-22 09:10:51Z gregoire $ i*)
 
 (*i Some properties about pow and sum have been made with John Harrison i*)
 (*i Some Lemmas (about pow and powerRZ) have been done by Laurent Thery i*)
@@ -63,7 +63,7 @@ Qed.
 (*          Power              *)
 (*******************************)
 (*********)
-Fixpoint pow (r:R) (n:nat) {struct n} : R :=
+Boxed Fixpoint pow (r:R) (n:nat) {struct n} : R :=
   match n with
   | O => 1
   | S n => r * pow r n
@@ -670,7 +670,7 @@ Definition decimal_exp (r:R) (z:Z) : R := (r * 10 ^Z z).
 (** Sum of n first naturals    *)
 (*******************************)
 (*********)
-Fixpoint sum_nat_f_O (f:nat -> nat) (n:nat) {struct n} : nat :=
+Boxed Fixpoint sum_nat_f_O (f:nat -> nat) (n:nat) {struct n} : nat :=
   match n with
   | O => f 0%nat
   | S n' => (sum_nat_f_O f n' + f (S n'))%nat

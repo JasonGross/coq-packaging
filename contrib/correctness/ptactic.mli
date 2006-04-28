@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: ptactic.mli,v 1.2.16.1 2004/07/16 19:30:06 herbelin Exp $ *)
+(* $Id: ptactic.mli 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (* The main tactic: takes a name N, a program P, creates a goal
  * of name N with the functional specification of P, then apply the Refine

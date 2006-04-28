@@ -2,9 +2,6 @@ open Sign;;
 open Classops;;
 open Names;;
 open Nameops
-open Coqast;;
-open Ast;;
-open Termast;;
 open Term;;
 open Impargs;;
 open Reduction;;
@@ -90,13 +87,6 @@ let implicit_args_to_ast_list sp mipv =
 	  [] -> []
 	| _ -> [VernacComments (List.rev implicit_args_descriptions)];;
 	      
-let convert_qualid qid =
-  let d, id = Libnames.repr_qualid qid in
-    match repr_dirpath d with
-	[] -> nvar id
-      | d -> ope("QUALID", List.fold_left (fun l s -> (nvar s)::l)
-		   [nvar id] d);;
-
 (* This function converts constructors for an inductive definition to a
    Coqast.t.  It is obtained directly from print_constructors in pretty.ml *)
 
@@ -142,16 +132,6 @@ let implicits_to_ast_list implicits =
     | None -> []
     | Some s -> [VernacComments [CommentString s]];;
 
-(*
-let make_variable_ast name typ implicits =
-   (ope("VARIABLE",
-    [string "VARIABLE";
-     ope("BINDERLIST",
-         [ope("BINDER",
-            [(constr_to_ast (body_of_type typ));
-             nvar name])])]))::(implicits_to_ast_list implicits)
-    ;;
-*)
 let make_variable_ast name typ implicits =
   (VernacAssumption
     ((Local,Definitional),
@@ -160,7 +140,7 @@ let make_variable_ast name typ implicits =
     
 
 let make_definition_ast name c typ implicits =
-  VernacDefinition ((Global,Definition), (dummy_loc,name), DefineBody ([], None,
+  VernacDefinition ((Global,false,Definition), (dummy_loc,name), DefineBody ([], None,
     (constr_to_ast c), Some (constr_to_ast (body_of_type typ))),
     (fun _ _ -> ()))
   ::(implicits_to_ast_list implicits);;
@@ -173,9 +153,9 @@ let constant_to_ast_list kn =
   let l = implicits_of_global (ConstRef kn) in
   (match c with
       None -> 
-	make_variable_ast (id_of_label (label kn)) typ l
+	make_variable_ast (id_of_label (con_label kn)) typ l
     | Some c1 ->
-	make_definition_ast (id_of_label (label kn)) (Declarations.force c1) typ l)
+	make_definition_ast (id_of_label (con_label kn)) (Declarations.force c1) typ l)
 
 let variable_to_ast_list sp =
   let (id, c, v) = get_variable sp in
@@ -198,7 +178,7 @@ let leaf_entry_to_ast_list ((sp,kn),lobj) =
   let tag = object_tag lobj in
   match tag with
   | "VARIABLE" -> variable_to_ast_list (basename sp)
-  | "CONSTANT" -> constant_to_ast_list kn
+  | "CONSTANT" -> constant_to_ast_list (constant_of_kn kn)
   | "INDUCTIVE" -> inductive_to_ast_list kn
   | s -> 
       errorlabstrm 
@@ -240,7 +220,7 @@ let name_to_ast ref =
 		   | Some c1 -> make_definition_ast name c1 typ [])
 	  with Not_found ->
 	    try
-	      let sp = Nametab.locate_syntactic_definition qid in
+	      let _sp = Nametab.locate_syntactic_definition qid in
 		errorlabstrm "print"
       		  (str "printing of syntax definitions not implemented")
 	    with Not_found ->

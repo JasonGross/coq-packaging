@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: IfProp.v,v 1.7.2.1 2004/07/16 19:31:03 herbelin Exp $ i*)
+(*i $Id: IfProp.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Require Import Bool.
 

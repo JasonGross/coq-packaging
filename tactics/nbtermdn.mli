@@ -6,11 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: nbtermdn.mli,v 1.8.16.1 2004/07/16 19:30:54 herbelin Exp $ i*)
+(*i $Id: nbtermdn.mli 6427 2004-12-07 17:41:10Z sacerdot $ i*)
 
 (*i*)
 open Term
 open Pattern
+open Libnames
 (*i*)
 
 (* Named, bounded-depth, term-discrimination nets. *)
@@ -34,4 +35,4 @@ val freeze : ('na,'a) t -> ('na,'a) frozen_t
 val unfreeze : ('na,'a) frozen_t -> ('na,'a) t -> unit
 val empty : ('na,'a) t -> unit
 val to2lists : ('na,'a) t -> ('na * (constr_pattern * 'a)) list * 
-                             (constr_label option * 'a Btermdn.t) list
+                             (global_reference option * 'a Btermdn.t) list

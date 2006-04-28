@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rderiv.v,v 1.15.2.1 2004/07/16 19:31:12 herbelin Exp $ i*)
+(*i $Id: Rderiv.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (*********************************************************)
 (**     Definition of the derivative,continuity          *)

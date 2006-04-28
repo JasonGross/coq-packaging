@@ -6,13 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libnames.ml,v 1.11.2.1 2004/07/16 19:30:35 herbelin Exp $ i*)
+(*i $Id: libnames.ml 7052 2005-05-20 15:54:50Z herbelin $ i*)
 
 open Pp
 open Util
 open Names
 open Nameops
 open Term
+open Mod_subst
 
 type global_reference =
   | VarRef of variable
@@ -21,29 +22,33 @@ type global_reference =
   | ConstructRef of constructor
 
 let subst_global subst ref = match ref with
-  | VarRef _ -> ref
+  | VarRef var -> ref, mkVar var
   | ConstRef kn ->
-      let kn' = subst_kn subst kn in if kn==kn' then ref else
-          ConstRef kn'
+     let kn',t = subst_con subst kn in
+      if kn==kn' then ref, mkConst kn else ConstRef kn', t
   | IndRef (kn,i) ->
-      let kn' = subst_kn subst kn in if kn==kn' then ref else
-          IndRef(kn',i)
+      let kn' = subst_kn subst kn in
+      if kn==kn' then ref, mkInd (kn,i) else IndRef(kn',i), mkInd (kn',i)
   | ConstructRef ((kn,i),j) ->
-      let kn' = subst_kn subst kn in if kn==kn' then ref else
-          ConstructRef ((kn',i),j)
+      let kn' = subst_kn subst kn in 
+      if kn==kn' then ref, mkConstruct ((kn,i),j)
+      else ConstructRef ((kn',i),j), mkConstruct ((kn',i),j)
 
-let reference_of_constr c = match kind_of_term c with
+let global_of_constr c = match kind_of_term c with
   | Const sp -> ConstRef sp
   | Ind ind_sp -> IndRef ind_sp
   | Construct cstr_cp -> ConstructRef cstr_cp
   | Var id -> VarRef id
   |  _ -> raise Not_found
 
-let constr_of_reference = function
+let constr_of_global = function
   | VarRef id -> mkVar id
   | ConstRef sp -> mkConst sp
   | ConstructRef sp -> mkConstruct sp
   | IndRef sp -> mkInd sp
+
+let constr_of_reference = constr_of_global
+let reference_of_constr = global_of_constr
 
 module RefOrdered =
   struct
@@ -54,23 +59,7 @@ module RefOrdered =
 module Refset = Set.Make(RefOrdered)
 module Refmap = Map.Make(RefOrdered)
 
-module InductiveOrdered = struct
-  type t = inductive
-  let compare (spx,ix) (spy,iy) = 
-    let c = ix - iy in if c = 0 then compare spx spy else c
-end
-
-module Indmap = Map.Make(InductiveOrdered)
-
 let inductives_table = ref Indmap.empty
-
-module ConstructorOrdered = struct
-  type t = constructor
-  let compare (indx,ix) (indy,iy) = 
-    let c = ix - iy in if c = 0 then InductiveOrdered.compare indx indy else c
-end
-
-module Constrmap = Map.Make(ConstructorOrdered)
 
 (**********************************************)
 
@@ -188,20 +177,19 @@ type extended_global_reference =
   | TrueGlobal of global_reference
   | SyntacticDef of kernel_name
 
-let subst_ext subst glref = match glref with
-  | TrueGlobal ref -> 
-      let ref' = subst_global subst ref in
-	if ref' == ref then glref else
-	  TrueGlobal ref'
-  | SyntacticDef kn ->
-      let kn' = subst_kn subst kn in
-	if kn' == kn then glref else
-	  SyntacticDef kn'
-
 let encode_kn dir id = make_kn (MPfile dir) empty_dirpath (label_of_id id)
+
+let encode_con dir id = make_con (MPfile dir) empty_dirpath (label_of_id id)
 
 let decode_kn kn = 
   let mp,sec_dir,l = repr_kn kn in
+    match mp,(repr_dirpath sec_dir) with
+	MPfile dir,[] -> (dir,id_of_label l)
+      | _ , [] -> anomaly "MPfile expected!"
+      | _ -> anomaly "Section part should be empty!"
+
+let decode_con kn = 
+  let mp,sec_dir,l = repr_con kn in
     match mp,(repr_dirpath sec_dir) with
 	MPfile dir,[] -> (dir,id_of_label l)
       | _ , [] -> anomaly "MPfile expected!"
@@ -267,3 +255,4 @@ let pr_reference = function
 let loc_of_reference = function
   | Qualid (loc,qid) -> loc
   | Ident (loc,id) -> loc
+

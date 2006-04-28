@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Setoid_ring_theory.v,v 1.16.2.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: Setoid_ring_theory.v 6662 2005-02-02 21:33:14Z sacerdot $ *)
 
 Require Export Bool.
 Require Export Setoid.
@@ -22,7 +22,7 @@ Infix Local "==" := Aequiv (at level 70, no associativity).
 
 Variable S : Setoid_Theory A Aequiv.
 
-Add Setoid A Aequiv S.
+Add Setoid A Aequiv S as Asetoid.
 
 Variable Aplus : A -> A -> A.
 Variable Amult : A -> A -> A.
@@ -37,18 +37,18 @@ Notation "0" := Azero.
 Notation "1" := Aone.
 Notation "- x" := (Aopp x).
 
-Variable
-  plus_morph : forall a a0 a1 a2:A, a == a0 -> a1 == a2 -> a + a1 == a0 + a2.
-Variable
-  mult_morph : forall a a0 a1 a2:A, a == a0 -> a1 == a2 -> a * a1 == a0 * a2.
+Variable plus_morph :
+ forall a a0:A, a == a0 -> forall a1 a2:A, a1 == a2 -> a + a1 == a0 + a2.
+Variable mult_morph :
+  forall a a0:A, a == a0 -> forall a1 a2:A, a1 == a2 -> a * a1 == a0 * a2.
 Variable opp_morph : forall a a0:A, a == a0 -> - a == - a0.
 
 Add Morphism Aplus : Aplus_ext.
-exact plus_morph.
+intros; apply plus_morph; assumption.
 Qed.
 
 Add Morphism Amult : Amult_ext.
-exact mult_morph.
+intros; apply mult_morph; assumption.
 Qed.
 
 Add Morphism Aopp : Aopp_ext.

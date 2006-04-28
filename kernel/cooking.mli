@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cooking.mli,v 1.9.8.1 2004/07/16 19:30:24 herbelin Exp $ i*)
+(*i $Id: cooking.mli 6748 2005-02-18 22:17:50Z herbelin $ i*)
 
 open Names
 open Term
@@ -16,27 +16,22 @@ open Univ
 
 (*s Cooking the constants. *)
 
-type 'a modification =
-  | NOT_OCCUR
-  | DO_ABSTRACT of 'a * constr array
-  | DO_REPLACE of constant_body
-
-type work_list =
-    (constant * constant modification) list
-    * (inductive * inductive modification) list
-    * (constructor * constructor modification) list
+type work_list = identifier array Cmap.t * identifier array KNmap.t
 
 type recipe = {
   d_from : constant_body;
-  d_abstract : identifier list;
+  d_abstract : Sign.named_context;
   d_modlist : work_list }
 
 val cook_constant :
-  env -> recipe -> constr_substituted option * constr * constraints * bool
+  env -> recipe -> 
+    constr_substituted option * constr * constraints * bool * bool
 
 (*s Utility functions used in module [Discharge]. *)
 
 val expmod_constr : work_list -> constr -> constr
-val expmod_type : work_list -> types -> types
+
+val clear_cooking_sharing : unit -> unit
+
 
 

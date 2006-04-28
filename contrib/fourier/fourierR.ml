@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: fourierR.ml,v 1.14.2.2 2004/07/19 13:28:28 herbelin Exp $ *)
+(* $Id: fourierR.ml 7760 2005-12-30 10:49:13Z herbelin $ *)
 
 
 
@@ -76,7 +76,7 @@ open Vernacexpr
 type ineq = Rlt | Rle | Rgt | Rge
 
 let string_of_R_constant kn = 
-  match Names.repr_kn kn with
+  match Names.repr_con kn with
     | MPfile dir, sec_dir, id when 
 	sec_dir = empty_dirpath && 
 	string_of_dirpath dir = "Coq.Reals.Rdefinitions" 
@@ -85,13 +85,13 @@ let string_of_R_constant kn =
 
 let rec string_of_R_constr c =
  match kind_of_term c with
-   Cast (c,t) -> string_of_R_constr c
+   Cast (c,_,_) -> string_of_R_constr c
   |Const c -> string_of_R_constant c
   | _ -> "not_of_constant"
 
 let rec rational_of_constr c =
   match kind_of_term c with
-  | Cast (c,t) -> (rational_of_constr c)
+  | Cast (c,_,_) -> (rational_of_constr c)
   | App (c,args) ->
       (match (string_of_R_constr c) with
 	 | "Ropp" -> 
@@ -122,7 +122,7 @@ let rec rational_of_constr c =
 let rec flin_of_constr c =
   try(
     match kind_of_term c with
-  | Cast (c,t) -> (flin_of_constr c)
+  | Cast (c,_,_) -> (flin_of_constr c)
   | App (c,args) ->
       (match (string_of_R_constr c) with
 	   "Ropp" -> 
@@ -221,7 +221,7 @@ let ineq1_of_constr (h,t) =
 			   hstrict=false}]
                 |_->assert false)
           | Ind (kn,i) ->
-	      if IndRef(kn,i) = Coqlib.glob_eqT then
+	      if IndRef(kn,i) = Coqlib.glob_eq then
 		           let t0= args.(0) in
                            let t1= args.(1) in
                            let t2= args.(2) in
@@ -281,7 +281,7 @@ let constant = Coqlib.gen_constant "Fourier"
 
 (* Standard library *)
 open Coqlib
-let coq_sym_eqT = lazy (build_coq_sym_eqT ())
+let coq_sym_eqT = lazy (build_coq_sym_eq ())
 let coq_False = lazy (build_coq_False ())
 let coq_not = lazy (build_coq_not ())
 let coq_eq = lazy (build_coq_eq ())
@@ -303,7 +303,7 @@ let coq_R0 = lazy (constant_real "R0")
 let coq_R1 = lazy (constant_real "R1")
 
 (* RIneq *)
-let coq_Rinv_R1 = lazy (constant ["Reals";"RIneq"] "Rinv_R1")
+let coq_Rinv_1 = lazy (constant ["Reals";"RIneq"] "Rinv_1")
 
 (* Fourier_util *)
 let constant_fourier = constant ["fourier";"Fourier_util"]
@@ -408,7 +408,7 @@ let tac_zero_infeq_false gl (n,d) =
 	      (tac_zero_inf_pos gl (-n,d)))
 ;;
 
-let create_meta () = mkMeta(new_meta());;
+let create_meta () = mkMeta(Evarutil.new_meta());;
    
 let my_cut c gl=
      let concl = pf_concl gl in
@@ -458,7 +458,7 @@ let mkAppL a =
 
 (* Résolution d'inéquations linéaires dans R *)
 let rec fourier gl=
-    Library.check_required_library ["Coq";"fourier";"Fourier"];
+    Coqlib.check_required_library ["Coq";"fourier";"Fourier"];
     let goal = strip_outer_cast (pf_concl gl) in
     let fhyp=id_of_string "new_hyp_for_fourier" in
     (* si le but est une inéquation, on introduit son contraire,
@@ -604,7 +604,7 @@ let rec fourier gl=
                                    (Ring.polynom [])
                                    tclIDTAC;
 					  (tclTHEN (apply (get coq_sym_eqT))
-						(apply (get coq_Rinv_R1)))]
+						(apply (get coq_Rinv_1)))]
                                
 					 )
 				]));

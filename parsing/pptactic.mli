@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pptactic.mli,v 1.9.2.3 2005/12/23 22:16:46 herbelin Exp $ i*)
+(*i $Id: pptactic.mli 7937 2006-01-28 19:58:11Z herbelin $ i*)
 
 open Pp
 open Genarg
@@ -15,27 +15,33 @@ open Pretyping
 open Proof_type
 open Topconstr
 open Rawterm
+open Ppextend
+open Environ
 
 val pr_or_var : ('a -> std_ppcmds) -> 'a or_var -> std_ppcmds
 val pr_or_metaid : ('a -> std_ppcmds) -> 'a or_metaid -> std_ppcmds
 val pr_and_short_name : ('a -> std_ppcmds) -> 'a and_short_name -> std_ppcmds
-val pr_located : ('a -> std_ppcmds) -> 'a Util.located -> std_ppcmds
 
 type 'a raw_extra_genarg_printer =
-    (constr_expr -> std_ppcmds) -> (raw_tactic_expr -> std_ppcmds) ->
-      'a -> std_ppcmds
+    (constr_expr -> std_ppcmds) -> 
+    (constr_expr -> std_ppcmds) -> 
+    (tolerability -> raw_tactic_expr -> std_ppcmds) ->
+    'a -> std_ppcmds
 
 type 'a glob_extra_genarg_printer =
-    (rawconstr_and_expr -> std_ppcmds) -> (glob_tactic_expr -> std_ppcmds) ->
-      'a -> std_ppcmds
+    (rawconstr_and_expr -> std_ppcmds) ->
+    (rawconstr_and_expr -> std_ppcmds) ->
+    (tolerability -> glob_tactic_expr -> std_ppcmds) ->
+    'a -> std_ppcmds
 
 type 'a extra_genarg_printer =
-    (Term.constr -> std_ppcmds) -> (glob_tactic_expr -> std_ppcmds) ->
-      'a -> std_ppcmds
+    (Term.constr -> std_ppcmds) -> 
+    (Term.constr -> std_ppcmds) -> 
+    (tolerability -> glob_tactic_expr -> std_ppcmds) ->
+    'a -> std_ppcmds
 
   (* if the boolean is false then the extension applies only to old syntax *)
 val declare_extra_genarg_pprule : 
-  bool ->
   ('c raw_abstract_argument_type * 'c raw_extra_genarg_printer) ->
   ('a glob_abstract_argument_type * 'a glob_extra_genarg_printer) ->
   ('b closed_abstract_argument_type * 'b extra_genarg_printer) -> unit
@@ -43,44 +49,42 @@ val declare_extra_genarg_pprule :
 type grammar_terminals = string option list
 
   (* if the boolean is false then the extension applies only to old syntax *)
-val declare_extra_tactic_pprule : bool -> string -> 
-  argument_type list * (string * grammar_terminals) -> unit
+val declare_extra_tactic_pprule : 
+  string * argument_type list * (int * grammar_terminals) -> unit
 
 val exists_extra_tactic_pprule : string -> argument_type list -> bool
-
-val pr_match_pattern : ('a -> std_ppcmds) -> 'a match_pattern -> std_ppcmds
-
-val pr_match_rule : bool -> ('a -> std_ppcmds) -> ('b -> std_ppcmds) ->
-  ('a,'b) match_rule -> std_ppcmds
-
-val pr_glob_tactic : glob_tactic_expr -> std_ppcmds
-
-val pr_tactic : Proof_type.tactic_expr -> std_ppcmds
-
-val pr_glob_generic:
-  (rawconstr_and_expr -> std_ppcmds) -> 
-  (rawconstr_and_expr -> std_ppcmds) -> 
-  (glob_tactic_expr -> std_ppcmds) ->
-    glob_generic_argument -> std_ppcmds
 
 val pr_raw_generic : 
   (constr_expr -> std_ppcmds) ->
   (constr_expr -> std_ppcmds) ->
-  (raw_tactic_expr -> std_ppcmds) ->
+  (tolerability -> raw_tactic_expr -> std_ppcmds) ->
   (Libnames.reference -> std_ppcmds) ->
     (constr_expr, raw_tactic_expr) generic_argument ->
       std_ppcmds
 
 val pr_raw_extend:
   (constr_expr -> std_ppcmds) -> (constr_expr -> std_ppcmds) ->
-  (raw_tactic_expr -> std_ppcmds) -> string ->
-    raw_generic_argument list -> std_ppcmds
+  (tolerability -> raw_tactic_expr -> std_ppcmds) -> int ->
+    string -> raw_generic_argument list -> std_ppcmds
 
 val pr_glob_extend:
   (rawconstr_and_expr -> std_ppcmds) -> (rawconstr_and_expr -> std_ppcmds) ->
-  (glob_tactic_expr -> std_ppcmds) -> string ->
-    glob_generic_argument list -> std_ppcmds
+  (tolerability -> glob_tactic_expr -> std_ppcmds) -> int ->
+    string -> glob_generic_argument list -> std_ppcmds
 
 val pr_extend :
   (Term.constr -> std_ppcmds) -> (Term.constr -> std_ppcmds) ->
-  (glob_tactic_expr -> std_ppcmds) -> string -> closed_generic_argument list -> std_ppcmds
+  (tolerability -> glob_tactic_expr -> std_ppcmds) -> int ->
+    string -> closed_generic_argument list -> std_ppcmds
+
+val pr_raw_tactic : env -> raw_tactic_expr -> std_ppcmds
+
+val pr_raw_tactic_level : env -> tolerability -> raw_tactic_expr -> std_ppcmds
+ 
+val pr_glob_tactic : env -> glob_tactic_expr -> std_ppcmds
+
+val pr_tactic : env -> Proof_type.tactic_expr -> std_ppcmds
+
+val pr_hintbases : string list option -> std_ppcmds
+
+val pr_auto_using : ('constr -> std_ppcmds) -> 'constr list -> std_ppcmds

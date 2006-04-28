@@ -6,9 +6,10 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacticals.mli,v 1.38.2.2 2005/01/21 16:41:52 herbelin Exp $ i*)
+(*i $Id: tacticals.mli 7909 2006-01-21 11:09:18Z herbelin $ i*)
 
 (*i*)
+open Pp
 open Names
 open Term
 open Sign
@@ -24,7 +25,7 @@ open Tacexpr
 (* Tacticals i.e. functions from tactics to tactics. *)
 
 val tclIDTAC         : tactic
-val tclIDTAC_MESSAGE : string -> tactic
+val tclIDTAC_MESSAGE : std_ppcmds -> tactic
 val tclORELSE        : tactic -> tactic -> tactic
 val tclTHEN          : tactic -> tactic -> tactic
 val tclTHENSEQ       : tactic list -> tactic
@@ -46,7 +47,7 @@ val tclTRY           : tactic -> tactic
 val tclINFO          : tactic -> tactic
 val tclCOMPLETE      : tactic -> tactic
 val tclAT_LEAST_ONCE : tactic -> tactic
-val tclFAIL          : int -> string -> tactic
+val tclFAIL          : int -> std_ppcmds -> tactic
 val tclDO            : int -> tactic -> tactic
 val tclPROGRESS      : tactic -> tactic
 val tclWEAK_PROGRESS : tactic -> tactic
@@ -129,13 +130,13 @@ type branch_assumptions = {
 
 (* Useful for [as intro_pattern] modifier *)
 val compute_induction_names : 
-  int -> intro_pattern_expr option -> intro_pattern_expr list array
+  int -> intro_pattern_expr -> intro_pattern_expr list array
 
 val elimination_sort_of_goal : goal sigma -> sorts_family
 val elimination_sort_of_hyp  : identifier -> goal sigma -> sorts_family
 
 val general_elim_then_using :
-  constr -> (* isrec: *) bool -> intro_pattern_expr option ->
+  constr -> (* isrec: *) bool -> intro_pattern_expr ->
     (branch_args -> tactic) -> constr option -> 
       (arg_bindings * arg_bindings) -> constr -> tactic
 	  
@@ -148,11 +149,11 @@ val elimination_then :
     (arg_bindings * arg_bindings) -> constr -> tactic
 
 val case_then_using :
-  intro_pattern_expr option -> (branch_args -> tactic) -> 
+  intro_pattern_expr -> (branch_args -> tactic) -> 
     constr option -> (arg_bindings * arg_bindings) -> constr -> tactic
 
 val case_nodep_then_using :
-  intro_pattern_expr option -> (branch_args -> tactic) -> 
+  intro_pattern_expr -> (branch_args -> tactic) -> 
     constr option -> (arg_bindings * arg_bindings) -> constr -> tactic
 
 val simple_elimination_then :

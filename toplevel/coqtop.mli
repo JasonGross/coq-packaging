@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coqtop.mli,v 1.5.4.1 2004/07/16 19:31:47 herbelin Exp $ i*)
+(*i $Id: coqtop.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (* The Coq main module. The following function [start] will parse the
    command line, print the banner, initialize the load path, load the input 

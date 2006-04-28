@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqtop.ml,v 1.72.2.5 2005/11/23 14:46:09 barras Exp $ *)
+(* $Id: coqtop.ml 7740 2005-12-26 20:07:21Z herbelin $ *)
 
 open Pp
 open Util
@@ -29,9 +29,8 @@ let get_version_date () =
   with _ -> Coq_config.date
 
 let print_header () =
-  Printf.printf "Welcome to Coq %s%s (%s)\n"
+  Printf.printf "Welcome to Coq %s (%s)\n" 
     Coq_config.version 
-    (if !Options.v7 then " (V7 syntax)" else "")
     (get_version_date ());
   flush stdout
 
@@ -50,8 +49,10 @@ let engage () =
   
 let set_batch_mode () = batch_mode := true
 
-let toplevel_name = ref (make_dirpath [id_of_string "Top"])
-let set_toplevel_name dir = toplevel_name := dir
+let toplevel_default_name = make_dirpath [id_of_string "Top"]
+let toplevel_name = ref (Some toplevel_default_name)
+let set_toplevel_name dir = toplevel_name := Some dir
+let unset_toplevel_name () = toplevel_name := None
 
 let remove_top_ml () = Mltop.remove ()
 
@@ -91,12 +92,13 @@ let load_vernacular () =
 let load_vernacular_obj = ref ([] : string list)
 let add_vernac_obj s = load_vernacular_obj := s :: !load_vernacular_obj
 let load_vernac_obj () = 
-  List.iter Library.read_library_from_file (List.rev !load_vernacular_obj)
+  List.iter (fun f -> Library.require_library_from_file None f None)
+    (List.rev !load_vernacular_obj)
 
 let require_list = ref ([] : string list)
 let add_require s = require_list := s :: !require_list
 let require () =
-  List.iter (fun s -> Library.require_library_from_file None None s false)
+  List.iter (fun s -> Library.require_library_from_file None s (Some false))
     (List.rev !require_list)
 
 let compile_list = ref ([] : (bool * string) list)
@@ -128,7 +130,6 @@ let re_exec is_ide =
   let s = !re_exec_version in
   let is_native = (Mltop.get()) = Mltop.Native in
   let prog = Sys.argv.(0) in
-  let coq = Filename.basename prog in
   if (is_native && s = "byte") || ((not is_native) && s = "opt")
   then begin
     let s = if s = "" then if is_native then "opt" else "byte" else s in
@@ -141,6 +142,17 @@ let re_exec is_ide =
     Sys.argv.(0) <- newprog;
     Unix.handle_unix_error (Unix.execvp newprog) Sys.argv
   end
+
+(*s options for the virtual machine *)
+
+let boxed_val = ref false
+let boxed_def = ref false
+let use_vm = ref false
+
+let set_vm_opt () =
+  Vm.set_transp_values (not !boxed_val);
+  Options.set_boxed_definitions !boxed_def;
+  Vconv.set_use_vm !use_vm
 
 (*s Parsing of the command line.
     We no longer use [Arg.parse], in order to use share [Usage.print_usage]
@@ -162,7 +174,7 @@ let parse_args is_ide =
     | [] -> ()
 
     | "-impredicative-set" :: rem -> 
-        set_engagement Environ.ImpredicativeSet; parse rem
+        set_engagement Declarations.ImpredicativeSet; parse rem
 
     | ("-I"|"-include") :: d :: rem -> set_default_include d; parse rem
     | ("-I"|"-include") :: []       -> usage ()
@@ -173,6 +185,7 @@ let parse_args is_ide =
     | "-top" :: d :: rem -> set_toplevel_name (dirpath_of_string d); parse rem
     | "-top" :: [] -> usage ()
 
+    | "-notop" :: rem -> unset_toplevel_name (); parse rem
     | "-q" :: rem -> no_load_rc (); parse rem
 
     | "-opt" :: rem -> set_opt(); parse rem
@@ -228,6 +241,7 @@ let parse_args is_ide =
 
     | "-debug" :: rem -> set_debug (); parse rem
 
+    | "-vm" :: rem -> use_vm := true; parse rem
     | "-emacs" :: rem -> Options.print_emacs := true; parse rem
 	  
     | "-where" :: _ -> print_endline Coq_config.coqlib; exit 0
@@ -253,12 +267,10 @@ let parse_args is_ide =
     | "-xml" :: rem -> Options.xml_export := true; parse rem
 
     (* Scanned in Options! *)
-    | "-v7" :: rem -> (* Options.v7 := true; *) parse rem
-    | "-v8" :: rem -> (* Options.v7 := false; *) parse rem
+    | "-v7" :: rem -> error "This version of Coq does not support v7 syntax"
+    | "-v8" :: rem -> parse rem
 
-    (* Translator options *)
-    | "-strict-implicit" :: rem -> 
-	Options.translate_strict_impargs := false; parse rem
+    | "-no-hash-consing" :: rem -> Options.hash_cons_proofs := false; parse rem
 
     | s :: rem -> 
 	if is_ide then begin
@@ -294,9 +306,10 @@ let init is_ide =
       if_verbose print_header ();
       init_load_path ();
       inputstate ();
+      set_vm_opt ();
       engage ();
-      if not !batch_mode && Global.env_is_empty() then
-        Declaremods.start_library !toplevel_name;
+      if (not !batch_mode|| !compile_list=[]) && Global.env_is_empty() then
+        option_iter Declaremods.start_library !toplevel_name;
       init_library_roots ();
       load_vernac_obj ();
       require ();

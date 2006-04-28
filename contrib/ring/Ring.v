@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Ring.v,v 1.9.2.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: Ring.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Require Export Bool.
 Require Export Ring_theory.

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: closure.mli,v 1.42.2.1 2004/07/16 19:30:24 herbelin Exp $ i*)
+(*i $Id: closure.mli 7639 2005-12-02 10:01:15Z gregoire $ i*)
 
 (*i*)
 open Pp
@@ -27,7 +27,7 @@ val with_stats: 'a Lazy.t -> 'a
   Rem: reduction of a Rel/Var bound to a term is Delta, but reduction of 
   a LetIn expression is Letin reduction *)
 
-type transparent_state = Idpred.t * KNpred.t
+
 
 val all_opaque      : transparent_state
 val all_transparent : transparent_state
@@ -82,13 +82,8 @@ val betadeltaiotanolet : reds
 
 val unfold_red : evaluable_global_reference -> reds
 
-(************************************************************************)
-
-type table_key =
-  | ConstKey of constant
-  | VarKey of identifier
-  | FarRelKey of int
-   (* FarRel: index in the [rel_context] part of {\em initial} environment *)
+(***********************************************************************)
+type table_key = id_key
 
 type 'a infos
 val ref_value_cache: 'a infos -> table_key -> 'a option
@@ -120,6 +115,7 @@ val stack_args_size : 'a stack -> int
 val app_stack : constr * constr stack -> constr
 val stack_tail : int -> 'a stack -> 'a stack
 val stack_nth : 'a stack -> int -> 'a
+val zip_term : ('a -> constr) -> constr -> 'a stack -> constr
 
 (************************************************************************)
 (*s Lazy reduction. *)
@@ -134,7 +130,7 @@ type fconstr
 type fterm =
   | FRel of int
   | FAtom of constr (* Metas and Sorts *)
-  | FCast of fconstr * fconstr
+  | FCast of fconstr * cast_kind * fconstr 
   | FFlex of table_key
   | FInd of inductive
   | FConstruct of constructor
@@ -159,6 +155,8 @@ val fterm_of : fconstr -> fterm
 val term_of_fconstr : fconstr -> constr
 val destFLambda :
   (fconstr subs -> constr -> fconstr) -> fconstr -> name * fconstr * fconstr
+(* mk_atom: prevents a term from being evaluated *)
+val mk_atom : constr -> fconstr
 
 (* Global and local constant cache *)
 type clos_infos

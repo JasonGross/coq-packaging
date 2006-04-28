@@ -6,13 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: discharge.mli,v 1.6.16.1 2004/07/16 19:31:48 herbelin Exp $ i*)
+(*i $Id: discharge.mli 6748 2005-02-18 22:17:50Z herbelin $ i*)
 
-open Names
+open Sign
+open Cooking
+open Declarations
+open Entries
 
-(* This module implements the discharge mechanism. It provides a function to
-   close the last opened section. That function calls [Lib.close_section] and
-   then re-introduce all the discharged versions of the objects that were
-   defined in the section. *)
-
-val close_section : bool -> identifier -> unit
+val process_inductive : 
+  named_context -> work_list -> mutual_inductive_body -> mutual_inductive_entry

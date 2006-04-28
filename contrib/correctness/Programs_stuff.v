@@ -8,6 +8,6 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: Programs_stuff.v,v 1.1.16.1 2004/07/16 19:30:00 herbelin Exp $ *)
+(* $Id: Programs_stuff.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Require Export Arrays_stuff.

@@ -12,7 +12,7 @@
 (*                       http://helm.cs.unibo.it                        *)
 (************************************************************************)
 
-(*i $Id: xmlcommand.mli,v 1.18.2.2 2004/07/16 19:30:15 herbelin Exp $ i*)
+(*i $Id: xmlcommand.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (* print_global qid fn                                                    *)
 (*  where qid  is a long name denoting a definition/theorem or            *)

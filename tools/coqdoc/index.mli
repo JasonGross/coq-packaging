@@ -6,9 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: index.mli,v 1.1.2.1 2004/07/16 19:31:46 herbelin Exp $ i*)
+(*i $Id: index.mli 8617 2006-03-08 10:47:12Z notin $ i*)
 
-type coq_module = string
+open Cdglobals
 
 type loc = int
 

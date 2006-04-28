@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Fourier_util.v,v 1.4.2.1 2004/07/16 19:30:11 herbelin Exp $ *)
+(* $Id: Fourier_util.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Require Export Rbase.
 Comments "Lemmas used by the tactic Fourier".

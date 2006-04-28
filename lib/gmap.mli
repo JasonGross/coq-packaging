@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: gmap.mli,v 1.4.16.1 2004/07/16 19:30:29 herbelin Exp $ i*)
+(*i $Id: gmap.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (* Maps using the generic comparison function of ocaml. Same interface as
    the module [Map] from the ocaml standard library. *)

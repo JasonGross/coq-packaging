@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: ptyping.ml,v 1.7.6.1 2004/07/16 19:30:06 herbelin Exp $ *)
+(* $Id: ptyping.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Pp
 open Util

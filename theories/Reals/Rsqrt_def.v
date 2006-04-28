@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: Rsqrt_def.v,v 1.14.2.1 2004/07/16 19:31:13 herbelin Exp $ i*)
+(*i $Id: Rsqrt_def.v 8670 2006-03-28 22:16:14Z herbelin $ i*)
 
 Require Import Sumbool.
 Require Import Rbase.
@@ -15,7 +15,7 @@ Require Import SeqSeries.
 Require Import Ranalysis1.
 Open Local Scope R_scope.
 
-Fixpoint Dichotomy_lb (x y:R) (P:R -> bool) (N:nat) {struct N} : R :=
+Boxed Fixpoint Dichotomy_lb (x y:R) (P:R -> bool) (N:nat) {struct N} : R :=
   match N with
   | O => x
   | S n =>
@@ -455,7 +455,7 @@ cut (x <= y).
 intro.
 generalize (dicho_lb_cv x y (fun z:R => cond_positivity (f z)) H3). 
 generalize (dicho_up_cv x y (fun z:R => cond_positivity (f z)) H3). 
-intros.
+intros X X0.
 elim X; intros.
 elim X0; intros.
 assert (H4 := cv_dicho _ _ _ _ _ H3 p0 p).

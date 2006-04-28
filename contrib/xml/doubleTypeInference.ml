@@ -19,7 +19,7 @@ let prerr_endline _ = ();;
 
 let cprop =
  let module N = Names in
-  N.make_kn
+  N.make_con
    (N.MPfile
      (Libnames.dirpath_of_string "CoRN.algebra.CLogic"))
    (N.make_dirpath [])
@@ -40,13 +40,13 @@ let whd_betadeltaiotacprop env evar_map ty =
 Conv_oracle.set_opaque_const cprop;
 prerr_endline "###whd_betadeltaiotacprop:" ;
 let xxx =
-(*Pp.msgerr (Printer.prterm_env env ty);*)
+(*Pp.msgerr (Printer.pr_lconstr_env env ty);*)
 prerr_endline "";
-   Tacred.reduction_of_redexp red_exp env evar_map ty
+   (fst (Redexpr.reduction_of_red_expr red_exp)) env evar_map ty
 in
 prerr_endline "###FINE" ;
 (*
-Pp.msgerr (Printer.prterm_env env xxx);
+Pp.msgerr (Printer.pr_lconstr_env env xxx);
 *)
 prerr_endline "";
 Conv_oracle.set_transparent_const cprop;
@@ -89,10 +89,11 @@ let double_type_of env sigma cstr expectedty subterms_to_types =
          "DoubleTypeInference.double_type_of: found a non-instanciated goal"
  
      | T.Evar ((n,l) as ev) ->
-        let ty = Unshare.unshare (Instantiate.existential_type sigma ev) in
+        let ty = Unshare.unshare (Evd.existential_type sigma ev) in
         let jty = execute env sigma ty None in
         let jty = assumption_of_judgment env sigma jty in
-        let evar_context = (Evd.map sigma n).Evd.evar_hyps in
+        let evar_context = 
+	  E.named_context_of_val (Evd.map sigma n).Evd.evar_hyps in
          let rec iter actual_args evar_context =
           match actual_args,evar_context with
              [],[] -> ()
@@ -124,10 +125,10 @@ let double_type_of env sigma cstr expectedty subterms_to_types =
         E.make_judge cstr (E.constant_type env c)
 	  
      | T.Ind ind ->
-        E.make_judge cstr (Inductive.type_of_inductive env ind)
+        E.make_judge cstr (Inductiveops.type_of_inductive env ind)
 	  
      | T.Construct cstruct -> 
-        E.make_judge cstr (Inductive.type_of_constructor env cstruct)
+        E.make_judge cstr (Inductiveops.type_of_constructor env cstruct)
 	  
      | T.Case (ci,p,c,lf) ->
         let expectedtype =
@@ -230,11 +231,11 @@ let double_type_of env sigma cstr expectedty subterms_to_types =
          let j3 = execute env1 sigma c3 None in
           Typeops.judge_of_letin env name j1 j2 j3
   
-     | T.Cast (c,t) ->
+     | T.Cast (c,k,t) ->
         let cj = execute env sigma c (Some (Reductionops.nf_beta t)) in
         let tj = execute env sigma t None in
 	let tj = type_judgment env sigma tj in
-        let j, _ = Typeops.judge_of_cast env cj tj in
+        let j, _ = Typeops.judge_of_cast env cj k tj in
 	 j
     in
      let synthesized = E.j_type judgement in
@@ -244,19 +245,20 @@ let double_type_of env sigma cstr expectedty subterms_to_types =
           None ->
            (* No expected type *)
            {synthesized = synthesized' ; expected = None}, synthesized
-        (*CSC: in HELM we did not considered Casts to be irrelevant. *)
-        (*CSC: does it really matter? (eq_constr is up to casts)     *)
         | Some ty when Term.eq_constr synthesized' ty ->
-           (* The expected type is synthactically equal to *)
-           (* the synthesized type. Let's forget it.       *)
-           {synthesized = synthesized' ; expected = None}, synthesized
+           (* The expected type is synthactically equal to the    *)
+           (* synthesized type. Let's forget it.                  *)
+           (* Note: since eq_constr is up to casts, it is better  *)
+           (* to keep the expected type, since it can bears casts *)
+           (* that change the innersort to CProp                  *)
+           {synthesized = ty ; expected = None}, ty
         | Some expectedty' ->
            {synthesized = synthesized' ; expected = Some expectedty'},
            expectedty'
       in
 (*CSC: debugging stuff to be removed *)
 if Acic.CicHash.mem subterms_to_types cstr then
- (Pp.ppnl (Pp.(++) (Pp.str "DUPLICATE INSERTION: ") (Printer.prterm cstr)) ; flush stdout ) ;
+ (Pp.ppnl (Pp.(++) (Pp.str "DUPLICATE INSERTION: ") (Printer.pr_lconstr cstr)) ; flush stdout ) ;
        Acic.CicHash.add subterms_to_types cstr types ;
        E.make_judge cstr res
 

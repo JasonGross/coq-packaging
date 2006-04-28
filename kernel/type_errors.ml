@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: type_errors.ml,v 1.31.2.1 2004/07/16 19:30:27 herbelin Exp $ *)
+(* $Id: type_errors.ml 8673 2006-03-29 21:21:52Z herbelin $ *)
 
 open Names
 open Term
@@ -19,7 +19,7 @@ open Reduction
 type guard_error =
   (* Fixpoints *)
   | NotEnoughAbstractionInFixBody
-  | RecursionNotOnInductiveType
+  | RecursionNotOnInductiveType of constr
   | RecursionOnIllegalTerm of int * constr * int list * int list
   | NotEnoughArgumentsForFixCall of int
   (* CoFixpoints *)
@@ -103,7 +103,7 @@ let error_cant_apply_not_functional env rator randl =
   raise (TypeError (env, CantApplyNonFunctional (rator,randl)))
 
 let error_cant_apply_bad_type env t rator randl =
-  raise(TypeError (env, CantApplyBadType (t,rator,randl)))
+  raise (TypeError (env, CantApplyBadType (t,rator,randl)))
 
 let error_ill_formed_rec_body env why lna i =
   raise (TypeError (env, IllFormedRecBody (why,lna,i)))

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: dischargedhypsmap.ml,v 1.3.2.1 2004/07/16 19:30:35 herbelin Exp $ *)
+(* $Id: dischargedhypsmap.ml 6748 2005-02-18 22:17:50Z herbelin $ *)
 
 open Util
 open Libnames
@@ -24,13 +24,16 @@ type discharged_hyps = section_path list
 
 let discharged_hyps_map = ref Spmap.empty
 
-let cache_discharged_hyps_map (_,(sp,hyps)) = 
+let load_discharged_hyps_map _ (_,(sp,hyps)) = 
   discharged_hyps_map := Spmap.add sp hyps !discharged_hyps_map
+
+let cache_discharged_hyps_map o =
+  load_discharged_hyps_map 1 o
 
 let (in_discharged_hyps_map, _) =
   declare_object { (default_object "DISCHARGED-HYPS-MAP") with
     cache_function = cache_discharged_hyps_map;
-    load_function = (fun _ -> cache_discharged_hyps_map);
+    load_function = load_discharged_hyps_map;
     export_function = (fun x -> Some x) }
 
 let set_discharged_hyps sp hyps =

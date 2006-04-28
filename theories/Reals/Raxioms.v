@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Raxioms.v,v 1.20.2.1 2004/07/16 19:31:12 herbelin Exp $ i*)
+(*i $Id: Raxioms.v 6338 2004-11-22 09:10:51Z gregoire $ i*)
 
 (*********************************************************)
 (**    Axiomatisation of the classical reals             *)
@@ -107,7 +107,7 @@ Hint Resolve Rlt_asym Rplus_lt_compat_l Rmult_lt_compat_l: real.
 (**********************************************************)
 
 (**********)
-Fixpoint INR (n:nat) : R :=
+Boxed Fixpoint INR (n:nat) : R :=
   match n with
   | O => 0
   | S O => 1

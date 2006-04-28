@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Fourier.v,v 1.4.2.1 2004/07/16 19:30:11 herbelin Exp $ *)
+(* $Id: Fourier.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (* "Fourier's method to solve linear inequations/equations systems.".*)
 

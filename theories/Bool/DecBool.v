@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: DecBool.v,v 1.6.2.1 2004/07/16 19:31:03 herbelin Exp $ i*)
+(*i $Id: DecBool.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Set Implicit Arguments.
 

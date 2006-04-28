@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq.ml,v 1.38.2.2 2005/11/16 17:22:38 barras Exp $ *)
+(* $Id: coq.ml 7837 2006-01-11 09:47:32Z herbelin $ *)
 
 open Vernac
 open Vernacexpr
@@ -249,7 +249,7 @@ type goal = hyp list * concl
 let prepare_hyp sigma env ((i,c,d) as a) =
   env, sigma,
   ((i,string_of_id i),c,d), 
-  (msg (pr_var_decl env a), msg (prterm_env_at_top env d))
+  (msg (pr_var_decl env a), msg (pr_lconstr_env_at_top env d))
 
 let prepare_hyps sigma env =
   assert (rel_context env = []);
@@ -263,7 +263,7 @@ let prepare_hyps sigma env =
 let prepare_goal sigma g =
   let env = evar_env g in
   (prepare_hyps sigma env,
-   (env, sigma, g.evar_concl, msg (prterm_env_at_top env g.evar_concl)))
+   (env, sigma, g.evar_concl, msg (pr_lconstr_env_at_top env g.evar_concl)))
 
 let get_current_goals () = 
     let pfts = get_pftreestate () in
@@ -280,7 +280,7 @@ let print_no_goal () =
     let gls = fst (Refiner.frontier (Tacmach.proof_of_pftreestate pfts)) in 
     assert (gls = []);
     let sigma = Tacmach.project (Tacmach.top_goal_of_pftreestate pfts) in
-    msg (Proof_trees.pr_subgoals_existential sigma gls)
+    msg (Printer.pr_subgoals sigma gls)
 
 
 type word_class = Normal | Kwd | Reserved
@@ -329,8 +329,8 @@ type reset_info = NoReset | Reset of Names.identifier * bool ref
 let compute_reset_info = function 
   | VernacDefinition (_, (_,id), DefineBody _, _) 
   | VernacBeginSection (_,id) 
-  | VernacDefineModule ((_,id), _, _, _) 
-  | VernacDeclareModule ((_,id), _, _, _)
+  | VernacDefineModule (_,(_,id), _, _, _) 
+  | VernacDeclareModule (_,(_,id), _, _)
   | VernacDeclareModuleType ((_,id), _, _)
   | VernacAssumption (_, (_,((_,id)::_,_))::_)
   | VernacInductive (_, ((_,id),_,_,_,_) :: _) ->
@@ -432,10 +432,8 @@ let make_cases s =
   let glob_ref = Nametab.locate qualified_name in
   match glob_ref with
     | Libnames.IndRef i -> 
-	let _,
-	{
-	  Declarations.mind_nparams = np ;
-	  Declarations.mind_consnames = carr ;
+	let {Declarations.mind_nparams = np},
+	{Declarations.mind_consnames = carr ;
 	 Declarations.mind_nf_lc = tarr } 
 	= Global.lookup_inductive i 
 	in

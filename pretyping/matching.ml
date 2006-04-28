@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: matching.ml,v 1.3.2.1 2004/07/16 19:30:45 herbelin Exp $ *)
+(* $Id: matching.ml 7970 2006-02-01 15:09:07Z herbelin $ *)
 
 (*i*)
 open Util
@@ -89,11 +89,15 @@ let matches_core convert allow_partial_app pat c =
 
       | PMeta (Some n), m ->
 	  let depth = List.length stk in
-	  let frels = Intset.elements (free_rels cT) in
-          if List.for_all (fun i -> i > depth) frels then
-	    constrain (n,lift (-depth) cT) sigma
-          else 
-	    raise PatternMatchingFailure
+          if depth = 0 then
+            (* Optimisation *)
+            constrain (n,cT) sigma
+          else
+	    let frels = Intset.elements (free_rels cT) in
+            if List.for_all (fun i -> i > depth) frels then
+	      constrain (n,lift (-depth) cT) sigma
+            else 
+	      raise PatternMatchingFailure
 
       | PMeta None, m -> sigma
 
@@ -101,13 +105,16 @@ let matches_core convert allow_partial_app pat c =
 
       | PVar v1, Var v2 when v1 = v2 -> sigma
 
-      | PRef ref, _ when constr_of_reference ref = cT -> sigma
+      | PRef ref, _ when constr_of_global ref = cT -> sigma
 
       | PRel n1, Rel n2 when n1 = n2 -> sigma
 
       | PSort (RProp c1), Sort (Prop c2) when c1 = c2 -> sigma
 
       | PSort (RType _), Sort (Type _) -> sigma
+
+      | PApp (PApp (h, a1), a2), _ ->
+          sorec stk sigma (PApp(h,Array.append a1 a2)) t
 
       | PApp (PMeta (Some n),args1), App (c2,args2) when allow_partial_app ->
           let p = Array.length args2 - Array.length args1 in
@@ -139,7 +146,7 @@ let matches_core convert allow_partial_app pat c =
 
       | PRef (ConstRef _ as ref), _ when convert <> None ->
 	  let (env,evars) = out_some convert in
-	  let c = constr_of_reference ref in
+	  let c = constr_of_global ref in
 	  if is_conv env evars c cT then sigma
 	  else raise PatternMatchingFailure
 
@@ -176,15 +183,15 @@ let special_meta = (-1)
 (* Tries to match a subterm of [c] with [pat] *)
 let rec sub_match nocc pat c =
   match kind_of_term c with
-  | Cast (c1,c2) ->
+  | Cast (c1,k,c2) ->
     (try authorized_occ nocc ((matches pat c), mkMeta special_meta) with
     | PatternMatchingFailure ->
       let (lm,lc) = try_sub_match nocc pat [c1] in
-      (lm,mkCast (List.hd lc, c2))
+      (lm,mkCast (List.hd lc, k,c2))
     | NextOccurrence nocc ->
       let (lm,lc) = try_sub_match (nocc - 1) pat [c1] in
-      (lm,mkCast (List.hd lc, c2)))
-  | Lambda (x,c1,c2) ->
+      (lm,mkCast (List.hd lc, k,c2)))
+ | Lambda (x,c1,c2) ->
     (try authorized_occ nocc ((matches pat c), mkMeta special_meta) with
     | PatternMatchingFailure ->
       let (lm,lc) = try_sub_match nocc pat [c1;c2] in
@@ -241,6 +248,10 @@ and try_sub_match nocc pat lc =
        with
       | NextOccurrence nocc -> try_sub_match_rec nocc pat (lacc@[c]) tl) in
   try_sub_match_rec nocc pat [] lc
+
+let match_subterm nocc pat c =
+  try sub_match nocc pat c
+  with NextOccurrence _ -> raise PatternMatchingFailure
 
 let is_matching pat n =
   try let _ = matches pat n in true

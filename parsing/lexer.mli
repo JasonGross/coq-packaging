@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: lexer.mli,v 1.20.2.2 2004/07/16 19:30:39 herbelin Exp $ i*)
+(*i $Id: lexer.mli 7732 2005-12-26 13:51:24Z herbelin $ i*)
 
 open Pp
 open Util
@@ -48,3 +48,5 @@ val com_state: unit -> com_state
 val restore_com_state: com_state -> unit
 
 val set_xml_output_comment : (string -> unit) -> unit
+
+val terminal : string -> string * string

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: TheoryList.v,v 1.15.2.1 2004/07/16 19:31:06 herbelin Exp $ i*)
+(*i $Id: TheoryList.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 (** Some programs and results about lists following CAML Manual *)
 

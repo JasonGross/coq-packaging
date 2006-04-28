@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: Arrays.v,v 1.9.2.1 2004/07/16 19:29:59 herbelin Exp $ *)
+(* $Id: Arrays.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (**********************************************)
 (* Functional arrays, for use in Correctness. *)

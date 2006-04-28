@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: pwp.ml,v 1.8.2.1 2004/07/16 19:30:06 herbelin Exp $ *)
+(* $Id: pwp.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Util
 open Names

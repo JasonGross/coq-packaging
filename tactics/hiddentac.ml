@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: hiddentac.ml,v 1.21.2.1 2004/07/16 19:30:53 herbelin Exp $ *)
+(* $Id: hiddentac.ml 7875 2006-01-16 09:55:24Z herbelin $ *)
 
 open Term
 open Proof_type
@@ -28,6 +28,7 @@ let h_intro x        = h_intro_move (Some x) None
 let h_intros_until x = abstract_tactic (TacIntrosUntil x) (intros_until x)
 let h_assumption     = abstract_tactic TacAssumption assumption
 let h_exact c        = abstract_tactic (TacExact c) (exact_check c)
+let h_exact_no_check c = abstract_tactic (TacExactNoCheck c) (exact_no_check c)
 let h_apply cb       = abstract_tactic (TacApply cb) (apply_with_bindings cb)
 let h_elim cb cbo    = abstract_tactic (TacElim (cb,cbo)) (elim cb cbo)
 let h_elim_type c    = abstract_tactic (TacElimType c) (elim_type c)
@@ -41,15 +42,14 @@ let h_mutual_cofix id l =
   abstract_tactic (TacMutualCofix (id,l)) (mutual_cofix id l)
 
 let h_cut c          = abstract_tactic (TacCut c) (cut c)
-let h_true_cut na c = abstract_tactic (TacTrueCut (na,c)) (true_cut na c)
-let h_forward b na c = abstract_tactic (TacForward (b,na,c)) (forward b na c)
 let h_generalize cl  = abstract_tactic (TacGeneralize cl) (generalize cl)
 let h_generalize_dep c = abstract_tactic (TacGeneralizeDep c)(generalize_dep c)
 let h_let_tac na c cl =
   abstract_tactic (TacLetTac (na,c,cl)) (letin_tac true na c cl)
-let h_instantiate n c cls = 
-  abstract_tactic (TacInstantiate (n,c,cls))
-    (Evar_refiner.instantiate n c (simple_clause_of cls))
+let h_instantiate n c ido = 
+(Evar_tactics.instantiate n c ido)
+  (* abstract_tactic (TacInstantiate (n,c,cls))
+    (Evar_refiner.instantiate n c (simple_clause_of cls)) *)
 
 (* Derived basic tactics *)
 let h_simple_induction h =
@@ -64,7 +64,8 @@ let h_specialize n d = abstract_tactic (TacSpecialize (n,d)) (new_hyp n d)
 let h_lapply c = abstract_tactic (TacLApply c) (cut_and_apply c)
 
 (* Context management *)
-let h_clear l = abstract_tactic (TacClear l) (clear l)
+let h_clear b l = abstract_tactic (TacClear (b,l))
+  ((if b then keep else clear) l)
 let h_clear_body l = abstract_tactic (TacClearBody l) (clear_body l)
 let h_move dep id1 id2 =
   abstract_tactic (TacMove (dep,id1,id2)) (move_hyp dep id1 id2)

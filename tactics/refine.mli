@@ -6,9 +6,8 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: refine.mli,v 1.7.2.1 2004/07/16 19:30:55 herbelin Exp $ i*)
+(*i $Id: refine.mli 6099 2004-09-12 11:38:09Z barras $ i*)
 
-open Term
 open Tacmach
 
-val refine : Pretyping.open_constr -> tactic
+val refine : Evd.open_constr -> tactic

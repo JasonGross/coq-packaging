@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inductiveops.ml,v 1.14.2.2 2004/12/29 12:15:00 herbelin Exp $ *)
+(* $Id: inductiveops.ml 8653 2006-03-22 09:41:17Z herbelin $ *)
 
 open Util
 open Names
@@ -17,6 +17,24 @@ open Sign
 open Declarations
 open Environ
 open Reductionops
+
+(* The following three functions are similar to the ones defined in
+   Inductive, but they expect an env *)
+
+let type_of_inductive env ind =
+ let specif = Inductive.lookup_mind_specif env ind in
+  Inductive.type_of_inductive specif
+
+(* Return type as quoted by the user *)
+let type_of_constructor env cstr =
+ let specif =
+  Inductive.lookup_mind_specif env (inductive_of_constructor cstr) in
+ Inductive.type_of_constructor cstr specif
+
+(* Return constructor types in normal form *)
+let arities_of_constructors env ind =
+ let specif = Inductive.lookup_mind_specif env ind in
+  Inductive.arities_of_constructors ind specif
 
 (* [inductive_family] = [inductive_instance] applied to global parameters *)
 type inductive_family = inductive * constr list
@@ -73,6 +91,7 @@ let mis_nf_constructor_type (ind,mib,mip) j =
   substl (list_tabulate make_Ik ntypes) specif.(j-1)
 
 (* Arity of constructors excluding parameters and local defs *)
+
 let mis_constr_nargs indsp =
   let (mib,mip) = Global.lookup_inductive indsp in
   let recargs = dest_subterms mip.mind_recargs in
@@ -87,7 +106,21 @@ let mis_constr_nargs_env env (kn,i) =
 let mis_constructor_nargs_env env ((kn,i),j) =
   let mib = Environ.lookup_mind kn env in
   let mip = mib.mind_packets.(i) in 
-  recarg_length mip.mind_recargs j + mip.mind_nparams
+  recarg_length mip.mind_recargs j + mib.mind_nparams
+
+let constructor_nrealargs env (ind,j) =
+  let (_,mip) = Inductive.lookup_mind_specif env ind in
+  recarg_length mip.mind_recargs j
+
+let constructor_nrealhyps env (ind,j) =
+  let (mib,mip) = Inductive.lookup_mind_specif env ind in
+  mip.mind_consnrealdecls.(j-1)
+
+(* Length of arity (w/o local defs) *)
+
+let inductive_nargs env ind =
+  let (mib,mip) = Inductive.lookup_mind_specif env ind in
+  mip.mind_nrealargs + rel_context_nhyps mib.mind_params_ctxt
 
 (* Annotation for cases *)
 let make_case_info env ind style pats_source =
@@ -97,7 +130,8 @@ let make_case_info env ind style pats_source =
       style     = style;
       source    = pats_source } in
   { ci_ind     = ind;
-    ci_npar    = mip.mind_nparams;
+    ci_npar    = mib.mind_nparams;
+    ci_cstr_nargs = mip.mind_consnrealdecls;
     ci_pp_info = print_info }
 
 let make_default_case_info env style ind =
@@ -122,6 +156,7 @@ let lift_constructor n cs = {
   cs_args = lift_rel_context n cs.cs_args;
   cs_concl_realargs = Array.map (liftn n (cs.cs_nargs+1)) cs.cs_concl_realargs
 }
+(* Accept less parameters than in the signature *)
 
 let instantiate_params t args sign =
   let rec inst s t = function
@@ -133,17 +168,17 @@ let instantiate_params t args sign =
 	(match kind_of_term t with
 	   | LetIn(_,_,_,t) -> inst ((substl s b)::s) t (ctxt,args)
 	   | _ -> anomaly"instantiate_params: type, ctxt and args mismatch")
-    | [], [] -> substl s t
+    | _, [] -> substl s t
     | _ -> anomaly"instantiate_params: type, ctxt and args mismatch"
   in inst [] t (List.rev sign,args)
 
 let get_constructor (ind,mib,mip,params) j =
   assert (j <= Array.length mip.mind_consnames);
   let typi = mis_nf_constructor_type (ind,mib,mip) j in
-  let typi = instantiate_params typi params mip.mind_params_ctxt in
+  let typi = instantiate_params typi params mib.mind_params_ctxt in
   let (args,ccl) = decompose_prod_assum typi in
   let (_,allargs) = decompose_app ccl in
-  let vargs = list_skipn mip.mind_nparams allargs in
+  let vargs = list_skipn (List.length params) allargs in
   { cs_cstr = ith_constructor_of_inductive ind j;
     cs_params = params;
     cs_nargs = rel_context_length args;
@@ -175,8 +210,7 @@ let build_dependent_constructor cs =
 
 let build_dependent_inductive env ((ind, params) as indf) =
   let arsign,_ = get_arity env indf in
-  let (mib,mip) = Inductive.lookup_mind_specif env ind in
-  let nrealargs = mip.mind_nrealargs in
+  let nrealargs = List.length arsign in
   applist 
     (mkInd ind,
      (List.map (lift nrealargs) params)@(extended_rel_list 0 arsign))
@@ -189,7 +223,7 @@ let make_arity_signature env dep indf =
     (* We need names everywhere *)
     name_context env
       ((Anonymous,None,build_dependent_inductive env indf)::arsign)
-      (* Costly: would be better to name one for all at definition time *)
+      (* Costly: would be better to name once for all at definition time *)
   else
     (* No need to enforce names *)
     arsign
@@ -225,7 +259,7 @@ let find_rectype env sigma c =
   match kind_of_term t with
     | Ind ind ->
         let (mib,mip) = Inductive.lookup_mind_specif env ind in
-        let (par,rargs) = list_chop mip.mind_nparams l in
+        let (par,rargs) = list_chop mib.mind_nparams l in
         IndType((ind, par),rargs)
     | _ -> raise Not_found
 
@@ -247,59 +281,60 @@ let find_coinductive env sigma c =
 
 
 (***********************************************)
-(* find appropriate names for pattern variables. Useful in the
-   Case tactic. *)
+(* find appropriate names for pattern variables. Useful in the Case
+   and Inversion (case_then_using et case_nodep_then_using) tactics. *)
 
-let is_dep_predicate env kelim pred nodep_ar = 
-  let rec srec env pval pt nodep_ar =
-    let pt' = whd_betadeltaiota env Evd.empty pt in
+let is_predicate_explicitly_dep env pred nodep_ar = 
+  let rec srec env pval nodep_ar =
     let pv' = whd_betadeltaiota env Evd.empty pval in
-    match kind_of_term pv', kind_of_term pt', kind_of_term nodep_ar with
-      | Lambda (na,t,b), Prod (_,_,a), Prod (_,_,a') ->
-	  srec (push_rel_assum (na,t) env) b a a'
-      | _,              Prod (na,t,a), Prod (_,_,a') ->
-	  srec (push_rel_assum (na,t) env) (lift 1 pv') a a'
-      | Lambda (_,_,b), Prod (_,_,_), _ -> (*dependent (mkRel 1) b*) true
-      | _, Prod (_,_,_), _ -> true
-      | _ -> false in 
-  srec env pred.uj_val pred.uj_type nodep_ar
+    match kind_of_term pv', kind_of_term nodep_ar with
+      | Lambda (na,t,b), Prod (_,_,a') ->
+	  srec (push_rel_assum (na,t) env) b a'
+      | Lambda (na,_,_), _ ->
 
-let is_dependent_elimination_predicate env pred indf =
-  let (ind,params) = indf in
-  let (_,mip) = Inductive.lookup_mind_specif env ind in
-  let kelim = mip.mind_kelim in
+       (* The following code has impact on the introduction names
+	  given by the tactics "case" and "inversion": when the
+	  elimination is not dependent, "case" uses Anonymous for
+	  inductive types in Prop and names created by mkProd_name for
+	  inductive types in Set/Type while "inversion" uses anonymous
+	  for inductive types both in Prop and Set/Type !!
+
+	  Previously, whether names were created or not relied on
+	  whether the predicate created in Indrec.make_case_com had a
+	  dependent arity or not. To avoid different predicates
+	  printed the same in v8, all predicates built in indrec.ml
+	  got a dependent arity (Aug 2004). The new way to decide
+	  whether names have to be created or not is to use an
+	  Anonymous or Named variable to enforce the expected
+	  dependency status (of course, Anonymous implies non
+	  dependent, but not conversely).
+
+          At the end, this is only to preserve the compatibility: a
+          check whether the predicate is actually dependent or not
+          would indeed be more natural! *)
+
+	  na <> Anonymous
+
+      | _ -> anomaly "Non eta-expanded dep-expanded \"match\" predicate"
+  in
+  srec env pred nodep_ar
+
+let is_elim_predicate_explicitly_dependent env pred indf =
   let arsign,s = get_arity env indf in
   let glob_t = it_mkProd_or_LetIn (mkSort s) arsign in
-  is_dep_predicate env kelim pred glob_t
-
-let is_dep_arity env kelim predty nodep_ar = 
-  let rec srec pt nodep_ar =
-    let pt' = whd_betadeltaiota env Evd.empty pt in
-    match kind_of_term pt', kind_of_term nodep_ar with
-      | Prod (_,a1,a2), Prod (_,a1',a2') -> srec a2 a2'
-      | Prod (_,a1,a2), _ -> true
-      | _ -> false in 
-  srec predty nodep_ar
-
-let is_dependent_elimination env predty indf =
-  let (ind,params) = indf in
-  let (_,mip) = Inductive.lookup_mind_specif env ind in
-  let kelim = mip.mind_kelim in
-  let arsign,s = get_arity env indf in
-  let glob_t = it_mkProd_or_LetIn (mkSort s) arsign in
-  is_dep_arity env kelim predty glob_t
+  is_predicate_explicitly_dep env pred glob_t
 
 let set_names env n brty =
   let (ctxt,cl) = decompose_prod_n_assum n brty in
   it_mkProd_or_LetIn_name env cl ctxt
 
 let set_pattern_names env ind brv =
-  let (_,mip) = Inductive.lookup_mind_specif env ind in
+  let (mib,mip) = Inductive.lookup_mind_specif env ind in
   let arities =
     Array.map
       (fun c ->
         rel_context_length (fst (decompose_prod_assum c)) -
-        mip.mind_nparams)
+        mib.mind_nparams)
       mip.mind_nf_lc in
   array_map2 (set_names env) arities brv
 
@@ -308,8 +343,8 @@ let type_case_branches_with_names env indspec pj c =
   let (ind,args) = indspec in
   let (lbrty,conclty,_) = Inductive.type_case_branches env indspec pj c in
   let (mib,mip) = Inductive.lookup_mind_specif env ind in
-  let params = list_firstn mip.mind_nparams args in
-  if is_dependent_elimination_predicate env pj (ind,params) then
+  let params = list_firstn mib.mind_nparams args in
+  if is_elim_predicate_explicitly_dependent env pj.uj_val (ind,params) then
     (set_pattern_names env ind lbrty, conclty)
   else (lbrty, conclty)
 
@@ -342,11 +377,15 @@ let control_only_guard env =
 	Array.iter control_rec tys;
 	Array.iter control_rec bds;
     | Case(_,p,c,b) -> control_rec p;control_rec c;Array.iter control_rec b
-    | Evar (_,cl)         -> Array.iter control_rec cl
+    | Evar (_,cl)        -> Array.iter control_rec cl
     | App (c,cl)         -> control_rec c; Array.iter control_rec cl
-    | Cast (c1,c2)       -> control_rec c1; control_rec c2
+    | Cast (c1,_, c2)  -> control_rec c1; control_rec c2
     | Prod (_,c1,c2)     -> control_rec c1; control_rec c2
     | Lambda (_,c1,c2)   -> control_rec c1; control_rec c2
     | LetIn (_,c1,c2,c3) -> control_rec c1; control_rec c2; control_rec c3
   in 
   control_rec 
+
+let subst_inductive subst (kn,i as ind) = 
+  let kn' = Mod_subst.subst_kn subst kn in
+  if kn == kn' then ind else (kn',i)

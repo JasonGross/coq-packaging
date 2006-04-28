@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modops.mli,v 1.7.6.2 2005/01/21 16:41:50 herbelin Exp $ i*)
+(*i $Id: modops.mli 6616 2005-01-21 17:18:23Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -15,6 +15,7 @@ open Univ
 open Environ
 open Declarations
 open Entries
+open Mod_subst
 (*i*)
 
 (* Various operations on modules and module types *)
@@ -91,6 +92,11 @@ val error_not_a_constant : label -> 'a
 
 val error_with_incorrect : label -> 'a
 
+val error_a_generative_module_expected : label -> 'a
+
 val error_local_context : label option -> 'a
 
 val error_circular_with_module : identifier -> 'a
+
+val resolver_of_environment :
+ mod_bound_id -> module_type_body -> module_path -> env -> resolver

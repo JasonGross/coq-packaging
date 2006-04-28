@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: edit.mli,v 1.5.2.1 2004/07/16 19:30:29 herbelin Exp $ i*)
+(*i $Id: edit.mli 6947 2005-04-20 16:18:41Z coq $ i*)
 
 (* The type of editors.
  * An editor is a finite map, ['a -> 'b], which knows how to apply
@@ -54,3 +54,10 @@ val delete : ('a,'b,'c) t -> 'a -> unit
 val dom : ('a,'b,'c) t -> 'a list
 
 val clear : ('a,'b,'c) t -> unit
+
+(* [depth e] Returns the depth of the focused proof stack of [e], this
+   is used to put informations in coq prompt (in emacs mode). *)
+val depth : ('a,'b,'c) t -> int
+
+(* [undo_todepth e n] Undoes focused proof of [e] to reach depth [n] *)
+val undo_todepth : ('a,'b,'c) t -> int -> unit

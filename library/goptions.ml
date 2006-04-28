@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: goptions.ml,v 1.22.2.1 2004/07/16 19:30:35 herbelin Exp $ *)
+(* $Id: goptions.ml 6304 2004-11-16 15:49:08Z sacerdot $ *)
 
 (* This module manages customization parameters at the vernacular level     *)
 
@@ -17,6 +17,7 @@ open Names
 open Libnames
 open Term
 open Nametab
+open Mod_subst
 
 (****************************************************************************)
 (* 0- Common things                                                         *)

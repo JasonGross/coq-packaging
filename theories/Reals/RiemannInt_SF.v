@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: RiemannInt_SF.v,v 1.16.2.1 2004/07/16 19:31:13 herbelin Exp $ i*)
+(*i $Id: RiemannInt_SF.v 6338 2004-11-22 09:10:51Z gregoire $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -147,7 +147,7 @@ Definition subdivision_val (a b:R) (f:StepFun a b) : Rlist :=
   | existT a b => a
   end.
 
-Fixpoint Int_SF (l k:Rlist) {struct l} : R :=
+Boxed Fixpoint Int_SF (l k:Rlist) {struct l} : R :=
   match l with
   | nil => 0
   | cons a l' =>

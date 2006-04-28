@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: profile.mli,v 1.7.16.2 2005/01/21 17:14:11 herbelin Exp $ i*)
+(*i $Id: profile.mli 6621 2005-01-21 17:24:37Z herbelin $ i*)
 
 (*s This program is a small time and allocation profiler for Objective Caml *)
 

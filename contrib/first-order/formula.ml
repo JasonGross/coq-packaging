@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: formula.ml,v 1.18.2.1 2004/07/16 19:30:10 herbelin Exp $ *)
+(* $Id: formula.ml 7493 2005-11-02 22:12:16Z mohring $ *)
 
 open Hipattern
 open Names
@@ -47,14 +47,14 @@ let rec nb_prod_after n c=
 
 let construct_nhyps ind gls =
   let env=pf_env gls in
-  let nparams = (snd (Global.lookup_inductive ind)).mind_nparams in
-  let constr_types = Inductive.arities_of_constructors (pf_env gls) ind in 
+  let nparams = (fst (Global.lookup_inductive ind)).mind_nparams in
+  let constr_types = Inductiveops.arities_of_constructors (pf_env gls) ind in 
   let hyp = nb_prod_after nparams in	
     Array.map hyp constr_types
 
 (* indhyps builds the array of arrays of constructor hyps for (ind largs)*)
 let ind_hyps nevar ind largs gls= 
-  let types= Inductive.arities_of_constructors (pf_env gls) ind in 
+  let types= Inductiveops.arities_of_constructors (pf_env gls) ind in 
   let lp=Array.length types in     
   let myhyps i=
     let t1=Term.prod_applist types.(i) largs in
@@ -99,7 +99,7 @@ let rec kind_of_formula gl term =
 			let has_realargs=(n>0) in
 			let is_trivial=
 			  let is_constant c =
-			    nb_prod c = mip.mind_nparams in  
+			    nb_prod c = mib.mind_nparams in  
 			    array_exists is_constant mip.mind_nf_lc in 
 			  if Inductiveops.mis_is_recursive (ind,mib,mip) ||
 			    (has_realargs && not is_trivial)

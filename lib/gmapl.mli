@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: gmapl.mli,v 1.4.16.1 2004/07/16 19:30:30 herbelin Exp $ i*)
+(*i $Id: gmapl.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (* Maps from ['a] to lists of ['b]. *)
 

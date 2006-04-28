@@ -1,27 +1,35 @@
-id is not a defined object
-K.id is not a defined object
-N.K.id is not a defined object
+Constant Top.Q.N.K.id
+  (shorter name to refer to it in current context is Q.N.K.id)
+Constant Top.Q.N.K.id
+  (shorter name to refer to it in current context is Q.N.K.id)
+Constant Top.Q.N.K.id
+  (shorter name to refer to it in current context is Q.N.K.id)
 Constant Top.Q.N.K.id
 Constant Top.Q.N.K.id
-K is not a defined object
-N.K is not a defined object
+  (shorter name to refer to it in current context is Q.N.K.id)
+No module is referred to by basename K
+No module is referred to by name N.K
 Module Top.Q.N.K
 Module Top.Q.N.K
-N is not a defined object
+No module is referred to by basename N
 Module Top.Q.N
 Module Top.Q.N
 Module Top.Q
 Module Top.Q
-id is not a defined object
 Constant Top.Q.N.K.id
-N.K.id is not a defined object
+  (shorter name to refer to it in current context is K.id)
 Constant Top.Q.N.K.id
 Constant Top.Q.N.K.id
+  (shorter name to refer to it in current context is K.id)
+Constant Top.Q.N.K.id
+  (shorter name to refer to it in current context is K.id)
+Constant Top.Q.N.K.id
+  (shorter name to refer to it in current context is K.id)
 Module Top.Q.N.K
-N.K is not a defined object
+No module is referred to by name N.K
 Module Top.Q.N.K
 Module Top.Q.N.K
-N is not a defined object
+No module is referred to by basename N
 Module Top.Q.N
 Module Top.Q.N
 Module Top.Q

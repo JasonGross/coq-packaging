@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: indtypes.ml,v 1.59.2.4 2005/12/30 15:58:59 barras Exp $ *)
+(* $Id: indtypes.ml 8653 2006-03-22 09:41:17Z herbelin $ *)
 
 open Util
 open Names
@@ -26,14 +26,14 @@ let weaker_noccur_between env x nvars t =
   if noccur_between x nvars t then Some t
   else
    let t' = whd_betadeltaiota env t in
-   if noccur_between x nvars t then Some t'
+   if noccur_between x nvars t' then Some t'
    else None
 
 (************************************************************************)
 (* Various well-formedness check for inductive declarations            *)
 
+(* Errors related to inductive constructions *)
 type inductive_error =
-  (* These are errors related to inductive constructions in this module *)
   | NonPos of env * constr * constr
   | NotEnoughArgs of env * constr * constr
   | NotConstructor of env * constr * constr
@@ -43,10 +43,6 @@ type inductive_error =
   | SameNamesOverlap of identifier list
   | NotAnArity of identifier
   | BadEntry
-  (* These are errors related to recursors building in Indrec *)
-  | NotAllowedCaseAnalysis of bool * sorts * inductive
-  | BadInduction of bool * identifier * sorts
-  | NotMutualInScheme
 
 exception InductiveError of inductive_error
 
@@ -141,7 +137,7 @@ let rec infos_and_sort env t =
 	let logic = not (is_info_type env varj) in
 	let small = Term.is_small varj.utj_type in
 	(logic,small) :: (infos_and_sort env1 c2)
-    | Cast (c,_) -> infos_and_sort env c
+    | Cast (c,_,_) -> infos_and_sort env c
     | _ -> []
 
 let small_unit constrsinfos =
@@ -175,19 +171,19 @@ let type_one_constructor env_ar_par params arsort c =
 
   (infos, full_cstr_type, cst2)
 
-let infer_constructor_packet env_ar params arsort vc =
+let infer_constructor_packet env_ar params arsort lc =
   let env_ar_par = push_rel_context params env_ar in
   let (constrsinfos,jlc,cst) = 
     List.fold_right
       (fun c (infosl,l,cst) ->
-	 let (infos,ct,cst') =
+	 let (infos,ct,cst') = 
 	   type_one_constructor env_ar_par params arsort c in
 	 (infos::infosl,ct::l, Constraint.union cst cst'))
-      vc
+      lc
       ([],[],Constraint.empty) in
-  let vc' = Array.of_list jlc in
+  let lc' = Array.of_list jlc in
   let issmall,isunit = small_unit constrsinfos in
-  (issmall,isunit,vc', cst)
+  (issmall,isunit,lc',cst)
 
 (* Type-check an inductive definition. Does not check positivity
    conditions. *)
@@ -196,16 +192,15 @@ let typecheck_inductive env mie =
   (* Check unicity of names *)
   mind_check_names mie;
   mind_check_arities env mie;
-  (* We first type params and arity of each inductive definition *)
+         (* Params are typed-checked here *)
+  let params = mie.mind_entry_params in
+  let env_params, params, cstp = infer_local_decls env params in
+  (* We first type arity of each inductive definition *)
   (* This allows to build the environment of arities and to share *)
   (* the set of constraints *)
   let cst, arities, rev_params_arity_list =
     List.fold_left
       (fun (cst,arities,l) ind ->
-         (* Params are typed-checked here *)
-	 let params = ind.mind_entry_params in
-	 let env_params, params, cst1 =
-           infer_local_decls env params in
          (* Arities (without params) are typed-checked here *)
 	 let arity, cst2 =
            infer_type env_params ind.mind_entry_arity in
@@ -215,10 +210,10 @@ let typecheck_inductive env mie =
 	    upper universe will be generated *)
 	 let id = ind.mind_entry_typename in
 	 let full_arity = it_mkProd_or_LetIn arity.utj_val params in
-	 Constraint.union cst (Constraint.union cst1 cst2),
+	 Constraint.union cst cst2,
 	 Sign.add_rel_decl (Name id, None, full_arity) arities,
          (params, id, full_arity, arity.utj_val)::l)
-      (Constraint.empty,empty_rel_context,[])
+      (cstp,empty_rel_context,[])
       mie.mind_entry_inds in
 
   let env_arities = push_rel_context arities env in
@@ -234,13 +229,13 @@ let typecheck_inductive env mie =
 	 let (issmall,isunit,lc',cst') =
 	   infer_constructor_packet env_arities params arsort lc in
 	 let consnames = ind.mind_entry_consnames in
-	 let ind' = (params,id,full_arity,consnames,issmall,isunit,lc')
+	 let ind' = (id,full_arity,consnames,issmall,isunit,lc')
 	 in
 	 (ind'::inds, Constraint.union cst cst'))
       mie.mind_entry_inds
       params_arity_list
       ([],cst) in
-  (env_arities, Array.of_list inds, cst)
+  (env_arities, params, Array.of_list inds, cst)
 
 (************************************************************************)
 (************************************************************************)
@@ -276,13 +271,18 @@ let explain_ind_err ntyp env0 nbpar c err =
 	raise (InductiveError 
 		 (NonPar (env,c',n,mkRel (nbpar-n+1), mkRel (l+nbpar))))
 
+let failwith_non_pos n ntypes c =
+  for k = n to n + ntypes - 1 do
+    if not (noccurn k c) then raise (IllFormedInd (LocalNonPos (k-n+1)))
+  done
+
 let failwith_non_pos_vect n ntypes v =
-  for i = 0 to Array.length v - 1 do
-    for k = n to n + ntypes - 1 do
-      if not (noccurn k v.(i)) then raise (IllFormedInd (LocalNonPos (k-n+1)))
-    done
-  done;
-  anomaly "failwith_non_pos_vect: some k in [n;n+ntypes-1] should occur in v"
+  Array.iter (failwith_non_pos n ntypes) v;
+  anomaly "failwith_non_pos_vect: some k in [n;n+ntypes-1] should occur"
+
+let failwith_non_pos_list n ntypes l =
+  List.iter (failwith_non_pos n ntypes) l;
+  anomaly "failwith_non_pos_list: some k in [n;n+ntypes-1] should occur"
 
 (* Check the inductive type is called with the expected parameters *)
 let check_correct_par (env,n,ntypes,_) hyps l largs =
@@ -302,6 +302,26 @@ let check_correct_par (env,n,ntypes,_) hyps l largs =
   in check (nparams-1) (n-nhyps) hyps;
   if not (array_for_all (noccur_between n ntypes) largs') then 
     failwith_non_pos_vect n ntypes largs'
+
+(* Computes the maximum number of recursive parameters : 
+    the first parameters which are constant in recursive arguments 
+    n is the current depth, nmr is the maximum number of possible 
+    recursive parameters *)
+
+let compute_rec_par (env,n,_,_) hyps nmr largs = 
+if nmr = 0 then 0 else
+(* start from 0, hyps will be in reverse order *)
+  let (lpar,_) = list_chop nmr largs in
+  let rec find k index = 
+      function 
+	  ([],_) -> nmr
+	| (_,[]) -> assert false (* |hyps|>=nmr *)
+	| (lp,(_,Some _,_)::hyps) -> find k (index-1) (lp,hyps)
+	| (p::lp,_::hyps) ->
+       ( match kind_of_term (whd_betadeltaiota env p) with
+	  | Rel w when w = index -> find (k+1) (index-1) (lp,hyps)
+          | _ -> k)
+  in find 0 (n-1) (lpar,List.rev hyps)
 
 (* This removes global parameters of the inductive types in lc (for
    nested inductive types only ) *)
@@ -326,9 +346,10 @@ let ienv_push_var (env, n, ntypes, lra) (x,a,ra) =
 
 let ienv_push_inductive (env, n, ntypes, ra_env) (mi,lpar) =
   let auxntyp = 1 in
+  let specif = lookup_mind_specif env mi in
   let env' =
     push_rel (Anonymous,None,
-              hnf_prod_applist env (type_of_inductive env mi) lpar) env in
+              hnf_prod_applist env (type_of_inductive specif) lpar) env in
   let ra_env' = 
     (Imbr mi,Rtree.mk_param 0) ::
     List.map (fun (r,t) -> (r,Rtree.lift 1 t)) ra_env in
@@ -336,46 +357,50 @@ let ienv_push_inductive (env, n, ntypes, ra_env) (mi,lpar) =
   let newidx = n + auxntyp in
   (env', newidx, ntypes, ra_env')
 
+let array_min nmr a = if nmr = 0 then 0 else
+  Array.fold_left (fun k (nmri,_) -> min k nmri) nmr a
+
 (* The recursive function that checks positivity and builds the list
    of recursive arguments *)
 let check_positivity_one (env, _,ntypes,_ as ienv) hyps i indlc =
-  let nparams = rel_context_length hyps in
+  let lparams = rel_context_length hyps in
+  let nmr = rel_context_nhyps hyps in
   (* check the inductive types occur positively in [c] *)
-  let rec check_pos (env, n, ntypes, ra_env as ienv) c = 
+  let rec check_pos (env, n, ntypes, ra_env as ienv) nmr c = 
     let x,largs = decompose_app (whd_betadeltaiota env c) in
     match kind_of_term x with
       | Prod (na,b,d) ->
 	  assert (largs = []);
           (match weaker_noccur_between env n ntypes b with
-              None -> raise (IllFormedInd (LocalNonPos n));
+              None -> failwith_non_pos_list n ntypes [b]
             | Some b ->
-	        check_pos (ienv_push_var ienv (na, b, mk_norec)) d)
+	        check_pos (ienv_push_var ienv (na, b, mk_norec)) nmr d)
       | Rel k ->
-          let (ra,rarg) =
-            try List.nth ra_env (k-1)
-            with Failure _ | Invalid_argument _ -> (Norec,mk_norec) in
-          (match ra with
-              Mrec _ -> check_correct_par ienv hyps (k-n+1) largs
-            | _ ->
-                if not (List.for_all (noccur_between n ntypes) largs)
-	        then raise (IllFormedInd (LocalNonPos n)));
-          rarg
+           (try let (ra,rarg) = List.nth ra_env (k-1) in 
+		let nmr1 =
+	       (match ra with
+                 Mrec _ -> compute_rec_par ienv hyps nmr largs
+		  |  _ -> nmr)
+		in 
+		  if not (List.for_all (noccur_between n ntypes) largs)
+	          then failwith_non_pos_list n ntypes largs
+		  else (nmr1,rarg)
+            with Failure _ | Invalid_argument _ -> (nmr,mk_norec))
       | Ind ind_kn ->
           (* If the inductive type being defined appears in a
              parameter, then we have an imbricated type *)
-          if List.for_all (noccur_between n ntypes) largs then mk_norec
-          else check_positive_imbr ienv (ind_kn, largs)
+          if List.for_all (noccur_between n ntypes) largs then (nmr,mk_norec)
+          else check_positive_imbr ienv nmr (ind_kn, largs)
       | err -> 
 	  if noccur_between n ntypes x &&
              List.for_all (noccur_between n ntypes) largs 
-	  then mk_norec
-	  else raise (IllFormedInd (LocalNonPos n))
+	  then (nmr,mk_norec)
+	  else failwith_non_pos_list n ntypes (x::largs)
 
-  (* accesses to the environment are not factorised, but does it worth
-     it? *)
-  and check_positive_imbr (env,n,ntypes,ra_env as ienv) (mi, largs) =
+  (* accesses to the environment are not factorised, but is it worth? *)
+  and check_positive_imbr (env,n,ntypes,ra_env as ienv) nmr (mi, largs) =
     let (mib,mip) = lookup_mind_specif env mi in
-    let auxnpar = mip.mind_nparams in
+    let auxnpar = mib.mind_nparams_rec in
     let (lpar,auxlargs) =
       try list_chop auxnpar largs 
       with Failure _ -> raise (IllFormedInd (LocalNonPos n)) in 
@@ -393,31 +418,34 @@ let check_positivity_one (env, _,ntypes,_ as ienv) hyps i indlc =
     let (env',_,_,_ as ienv') = ienv_push_inductive ienv (mi,lpar) in
     (* Parameters expressed in env' *)
     let lpar' = List.map (lift auxntyp) lpar in
-    let irecargs = 
+    let irecargs_nmr = 
       (* fails if the inductive type occurs non positively *)
       (* when substituted *) 
       Array.map 
 	(function c -> 
 	  let c' = hnf_prod_applist env' c lpar' in 
-	  check_constructors ienv' false c') 
+	  check_constructors ienv' false nmr c') 
 	auxlcvect
+    in
+    let irecargs = Array.map snd irecargs_nmr
+    and nmr' = array_min nmr irecargs_nmr
     in 
-    (Rtree.mk_rec [|mk_paths (Imbr mi) irecargs|]).(0)
+    (nmr',(Rtree.mk_rec [|mk_paths (Imbr mi) irecargs|]).(0))
   
   (* check the inductive types occur positively in the products of C, if
      check_head=true, also check the head corresponds to a constructor of
      the ith type *) 
 
-  and check_constructors ienv check_head c = 
-    let rec check_constr_rec (env,n,ntypes,ra_env as ienv) lrec c = 
+  and check_constructors ienv check_head nmr c = 
+    let rec check_constr_rec (env,n,ntypes,ra_env as ienv) nmr lrec c = 
       let x,largs = decompose_app (whd_betadeltaiota env c) in
       match kind_of_term x with
 
         | Prod (na,b,d) -> 
 	    assert (largs = []);
-            let recarg = check_pos ienv b in 
+            let nmr',recarg = check_pos ienv nmr b in 
             let ienv' = ienv_push_var ienv (na,b,mk_norec) in
-	    check_constr_rec ienv' (recarg::lrec) d
+	    check_constr_rec ienv' nmr' (recarg::lrec) d
 
 	| hd ->
 	    if check_head then
@@ -428,32 +456,39 @@ let check_positivity_one (env, _,ntypes,_ as ienv) hyps i indlc =
 	    else
 	      if not (List.for_all (noccur_between n ntypes) largs)
               then raise (IllFormedInd (LocalNonPos n));
-	    List.rev lrec
-    in check_constr_rec ienv [] c
+	    (nmr,List.rev lrec)
+    in check_constr_rec ienv nmr [] c
   in
-  mk_paths (Mrec i)
-    (Array.map
+  let irecargs_nmr =
+     Array.map
       (fun c ->
-        let c = body_of_type c in
-        let sign, rawc = mind_extract_params nparams c in
-        let env' = push_rel_context sign env in
+        let _,rawc = mind_extract_params lparams c in
         try
-	  check_constructors ienv true rawc
+	  check_constructors ienv true nmr rawc
         with IllFormedInd err -> 
-	  explain_ind_err (ntypes-i) env nparams c err)
-      indlc)
+	  explain_ind_err (ntypes-i) env lparams c err)
+      indlc
+  in
+  let irecargs = Array.map snd irecargs_nmr
+  and nmr' = array_min nmr irecargs_nmr
+  in (nmr', mk_paths (Mrec i) irecargs)
 
-let check_positivity env_ar inds =
+let check_positivity env_ar params inds =
   let ntypes = Array.length inds in
   let lra_ind =
     List.rev (list_tabulate (fun j -> (Mrec j, Rtree.mk_param j)) ntypes) in
-  let check_one i (params,_,_,_,_,_,lc) =
-    let nparams = rel_context_length params in
+  let lparams = rel_context_length params in
+  let nmr = rel_context_nhyps params in
+  let check_one i (_,_,_,_,_,lc) =
     let ra_env =
-      list_tabulate (fun _ -> (Norec,mk_norec)) nparams @ lra_ind in
-    let ienv = (env_ar, 1+nparams, ntypes, ra_env) in
-    check_positivity_one ienv params i lc in
-  Rtree.mk_rec (Array.mapi check_one inds)
+      list_tabulate (fun _ -> (Norec,mk_norec)) lparams @ lra_ind in
+    let ienv = (env_ar, 1+lparams, ntypes, ra_env) in
+    check_positivity_one ienv params i lc 
+  in
+  let irecargs_nmr = Array.mapi check_one inds in 
+  let irecargs = Array.map snd irecargs_nmr
+  and nmr' = array_min nmr irecargs_nmr
+  in (nmr',Rtree.mk_rec irecargs)
 
 
 (************************************************************************)
@@ -480,67 +515,77 @@ let allowed_sorts env issmall isunit = function
       if issmall then all_sorts
       else impredicative_sorts
   | Prop Null -> 
-(* Added InType which is derivable :when the type is unit and small *)
-(* unit+small types have all elimination 
-   In predicative system, the 
-   other inductive definitions have only Prop elimination.
-   In impredicative system, large unit type have also Set elimination
-*)   if isunit then 
-	if issmall then all_sorts
-	else if Environ.engagement env = None 
-        then logical_sorts else impredicative_sorts
+(* 29/1/02: added InType which is derivable when the type is unit and small *)
+      if isunit then all_sorts
       else logical_sorts
 
-let build_inductive env env_ar record finite inds recargs cst =
+let fold_inductive_blocks f =
+  Array.fold_left (fun acc (_,ar,_,_,_,lc) -> f (Array.fold_left f acc lc) ar)
+
+let used_section_variables env inds =
+  let ids = fold_inductive_blocks
+    (fun l c -> Idset.union (Environ.global_vars_set env c) l)
+      Idset.empty inds in
+  keep_hyps env ids
+
+let build_inductive env env_ar params isrecord isfinite inds nmr recargs cst =
   let ntypes = Array.length inds in
   (* Compute the set of used section variables *)
-  let ids = 
-    Array.fold_left 
-      (fun acc (_,_,ar,_,_,_,lc) -> 
-	 Idset.union (Environ.global_vars_set env (body_of_type ar))
-	   (Array.fold_left
-	      (fun acc c ->
-                Idset.union (global_vars_set env (body_of_type c)) acc)
-	      acc
-	      lc))
-      Idset.empty inds in
-  let hyps = keep_hyps env ids in
+  let hyps =  used_section_variables env inds in
+  let nparamargs = rel_context_nhyps params in
   (* Check one inductive *)
-  let build_one_packet (params,id,ar,cnames,issmall,isunit,lc) recarg =
+  let build_one_packet (id,ar,cnames,issmall,isunit,lc) recarg =
     (* Arity in normal form *)
-    let nparamargs = rel_context_nhyps params in
     let (ar_sign,ar_sort) = dest_arity env ar in
-    let nf_ar =
-      if isArity (body_of_type ar) then ar
-      else it_mkProd_or_LetIn (mkSort ar_sort) ar_sign in
+    let nf_ar = if isArity ar then ar else mkArity (ar_sign,ar_sort) in
     (* Type of constructors in normal form *)
     let splayed_lc = Array.map (dest_prod_assum env_ar) lc in
-    let nf_lc =
-      array_map2 (fun (d,b) c -> it_mkProd_or_LetIn b d) splayed_lc lc in
+    let nf_lc = Array.map (fun (d,b) -> it_mkProd_or_LetIn b d) splayed_lc in
     let nf_lc = if nf_lc = lc then lc else nf_lc in
+    let consnrealargs =
+      Array.map (fun (d,_) -> rel_context_length d - rel_context_length params)
+	splayed_lc in
     (* Elimination sorts *)
     let isunit = isunit && ntypes = 1 && (not (is_recursive recargs.(0))) in
     let kelim = allowed_sorts env issmall isunit ar_sort in
+    let nconst, nblock = ref 0, ref 0 in 
+    let transf num =
+      let arity = List.length (dest_subterms recarg).(num) in
+      if arity = 0 then 
+	let p  = (!nconst, 0) in
+	incr nconst; p
+      else 
+	let p = (!nblock + 1, arity) in
+	incr nblock; p
+     (* les tag des constructeur constant commence a 0,
+	les tag des constructeur non constant a 1 (0 => accumulator) *)
+    in 
+    let rtbl = Array.init (List.length cnames) transf in
     (* Build the inductive packet *)
     { mind_typename = id;
-      mind_nparams = nparamargs;
-      mind_params_ctxt = params;
       mind_user_arity  = ar;
       mind_nf_arity = nf_ar;
       mind_nrealargs = rel_context_nhyps ar_sign - nparamargs;
       mind_sort = ar_sort;
       mind_kelim = kelim;
       mind_consnames = Array.of_list cnames;
+      mind_consnrealdecls = consnrealargs;
       mind_user_lc = lc;
       mind_nf_lc = nf_lc;
-      mind_recargs = recarg;
+      mind_recargs = recarg;    
+      mind_nb_constant = !nconst;
+      mind_nb_args = !nblock;
+      mind_reloc_tbl = rtbl;
     } in
   let packets = array_map2 build_one_packet inds recargs in
   (* Build the mutual inductive *)
-  { mind_record = record;
+  { mind_record = isrecord;
     mind_ntypes = ntypes;
-    mind_finite = finite;
+    mind_finite = isfinite;
     mind_hyps = hyps;
+    mind_nparams = nparamargs;
+    mind_nparams_rec = nmr;  
+    mind_params_ctxt = params;
     mind_packets = packets;
     mind_constraints = cst;
     mind_equiv = None;
@@ -551,10 +596,9 @@ let build_inductive env env_ar record finite inds recargs cst =
 
 let check_inductive env mie =
   (* First type-check the inductive definition *)
-  let (env_arities, inds, cst) = typecheck_inductive env mie in
+  let (env_ar, params, inds, cst) = typecheck_inductive env mie in
   (* Then check positivity conditions *)
-  let recargs = check_positivity env_arities inds in
+  let (nmr,recargs) = check_positivity env_ar params inds in
   (* Build the inductive packets *)
-  build_inductive env env_arities mie.mind_entry_record mie.mind_entry_finite 
-    inds recargs cst
-
+  build_inductive env env_ar params mie.mind_entry_record mie.mind_entry_finite 
+    inds nmr recargs cst

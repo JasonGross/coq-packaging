@@ -6,11 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: term.mli,v 1.101.2.1 2004/07/16 19:30:26 herbelin Exp $ i*)
+(*i $Id: term.mli 8049 2006-02-16 10:42:18Z coq $ i*)
 
 (*i*)
 open Names
 (*i*)
+
 
 (*s The sorts of CCI. *)
 
@@ -49,6 +50,7 @@ type case_printing =
 type case_info =
   { ci_ind        : inductive;
     ci_npar       : int;
+    ci_cstr_nargs : int array; (* number of real args of each constructor *)
     ci_pp_info    : case_printing (* not interpreted by the kernel *)
   }
 
@@ -99,9 +101,13 @@ val mkProp : types
 val mkSet  : types
 val mkType : Univ.universe -> types
 
+
+(* This defines the strategy to use for verifiying a Cast *)
+type cast_kind = VMcast | DEFAULTcast 
+
 (* Constructs the term [t1::t2], i.e. the term $t_1$ casted with the 
    type $t_2$ (that means t2 is declared as the type of t1). *)
-val mkCast : constr * types -> constr
+val mkCast : constr * cast_kind * constr -> constr
 
 (* Constructs the product [(x:t1)t2] *)
 val mkProd : name * types * types -> types
@@ -192,7 +198,7 @@ type ('constr, 'types) kind_of_term =
   | Meta      of metavariable
   | Evar      of 'constr pexistential
   | Sort      of sorts
-  | Cast      of 'constr * 'types
+  | Cast      of 'constr * cast_kind * 'types
   | Prod      of name * 'types * 'types
   | Lambda    of name * 'types * 'constr
   | LetIn     of name * 'constr * 'types * 'constr
@@ -213,7 +219,7 @@ val kind_of_term : constr -> (constr, types) kind_of_term
 (* Experimental *)
 type ('constr, 'types) kind_of_type =
   | SortType   of sorts
-  | CastType   of 'types * 'types
+  | CastType   of 'types * 'types 
   | ProdType   of name * 'types * 'types
   | LetInType  of name * 'constr * 'types * 'types
   | AtomicType of 'constr * 'constr array
@@ -230,6 +236,7 @@ val isMeta : constr -> bool
 val isSort : constr -> bool
 val isCast : constr -> bool
 val isApp : constr -> bool
+val isProd : constr -> bool
 val isConst : constr -> bool
 val isConstruct : constr -> bool
 
@@ -258,7 +265,7 @@ val destVar : constr -> identifier
 val destSort : constr -> sorts
 
 (* Destructs a casted term *)
-val destCast : constr -> constr * types
+val destCast : constr -> constr * cast_kind * constr
 
 (* Destructs the product $(x:t_1)t_2$ *)
 val destProd : types -> name * types * types
@@ -270,8 +277,12 @@ val destLambda : constr -> name * types * constr
 val destLetIn : constr -> name * constr * types * constr
 
 (* Destructs an application *)
+val destApp : constr -> constr * constr array
+
+(* Obsolete synonym of destApp *)
 val destApplication : constr -> constr * constr array
-(* ... removing casts *)
+
+(* Decompose any term as an applicative term; the list of args can be empty *)
 val decompose_app : constr -> constr * constr list
 
 (* Destructs a constant *)
@@ -410,6 +421,9 @@ val strip_outer_cast : constr -> constr
 (* Apply a function letting Casted types in place *)
 val under_casts : (constr -> constr) -> constr -> constr
 
+(* Apply a function under components of Cast if any *)
+val under_outer_cast : (constr -> constr) -> constr -> constr
+
 (*s Occur checks *)
 
 (* [closed0 M] is true iff [M] is a (deBruijn) closed term *)
@@ -460,11 +474,6 @@ val subst_vars : identifier list -> constr -> constr
 val substn_vars : int -> identifier list -> constr -> constr
 
 
-(* [subst_mps sub c] performs the substitution [sub] on all kernel
-   names appearing in [c] *)
-val subst_mps : substitution -> constr -> constr
-
-
 (*s Functionals working on the immediate subterm of a construction *)
 
 (* [fold_constr f acc c] folds [f] on the immediate subterms of [c]
@@ -512,6 +521,7 @@ val compare_constr : (constr -> constr -> bool) -> constr -> constr -> bool
 (*********************************************************************)
 
 val hcons_constr:
+  (constant -> constant) *
   (kernel_name -> kernel_name) *
   (dir_path -> dir_path) *
   (name -> name) *
@@ -523,3 +533,7 @@ val hcons_constr:
 
 val hcons1_constr : constr -> constr
 val hcons1_types : types -> types
+
+(**************************************)
+
+type values

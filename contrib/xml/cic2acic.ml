@@ -83,16 +83,28 @@ let get_uri_of_var v pvars =
 ;;
 
 type tag =
-   Constant
- | Inductive
- | Variable
+   Constant of Names.constant
+ | Inductive of Names.kernel_name
+ | Variable of Names.kernel_name
 ;;
+
+type etag =
+   TConstant
+ | TInductive
+ | TVariable
+;;
+
+let etag_of_tag =
+ function
+    Constant _ -> TConstant
+  | Inductive _ -> TInductive
+  | Variable _ -> TVariable
 
 let ext_of_tag =
  function
-    Constant  -> "con"
-  | Inductive -> "ind"
-  | Variable  -> "var"
+    TConstant -> "con"
+  | TInductive -> "ind"
+  | TVariable -> "var"
 ;;
 
 exception FunctorsXMLExportationNotImplementedYet;;
@@ -147,23 +159,24 @@ let token_list_of_path dir id tag =
    List.rev_map N.string_of_id (N.repr_dirpath dirpath) in
   token_list_of_dirpath dir @ [N.string_of_id id ^ "." ^ (ext_of_tag tag)]
 
-let token_list_of_kernel_name kn tag =
+let token_list_of_kernel_name tag =
  let module N = Names in
  let module LN = Libnames in
- let dir = match tag with
-   | Variable -> 
-       Lib.cwd ()
-   | Constant -> 
-       Lib.library_part (LN.ConstRef kn)
-   | Inductive ->
+ let id,dir = match tag with
+   | Variable kn -> 
+       N.id_of_label (N.label kn), Lib.cwd ()
+   | Constant con -> 
+       N.id_of_label (N.con_label con),
+       Lib.library_part (LN.ConstRef con)
+   | Inductive kn ->
+       N.id_of_label (N.label kn),
        Lib.library_part (LN.IndRef (kn,0))
  in
- let id = N.id_of_label (N.label kn) in
- token_list_of_path dir id tag
+ token_list_of_path dir id (etag_of_tag tag)
 ;;
 
-let uri_of_kernel_name kn tag =
-  let tokens = token_list_of_kernel_name kn tag in
+let uri_of_kernel_name tag =
+  let tokens = token_list_of_kernel_name tag in
    "cic:/" ^ String.concat "/" tokens
 
 let uri_of_declaration id tag =
@@ -229,10 +242,10 @@ let typeur sigma metamap =
     | T.Const c ->
         let cb = Environ.lookup_constant c env in
         T.body_of_type cb.Declarations.const_type
-    | T.Evar ev -> Instantiate.existential_type sigma ev
-    | T.Ind ind -> T.body_of_type (Inductive.type_of_inductive env ind)
+    | T.Evar ev -> Evd.existential_type sigma ev
+    | T.Ind ind -> T.body_of_type (Inductiveops.type_of_inductive env ind)
     | T.Construct cstr ->
-       T.body_of_type (Inductive.type_of_constructor env cstr)
+       T.body_of_type (Inductiveops.type_of_constructor env cstr)
     | T.Case (_,p,c,lf) ->
         let Inductiveops.IndType(_,realargs) =
           try Inductiveops.find_rectype env sigma (type_of env c)
@@ -250,7 +263,7 @@ let typeur sigma metamap =
     | T.App(f,args)->
         T.strip_outer_cast
           (subst_type env sigma (type_of env f) (Array.to_list args))
-    | T.Cast (c,t) -> t
+    | T.Cast (c,_, t) -> t
     | T.Sort _ | T.Prod _ ->
        match sort_of env cstr with
           Coq_sort T.InProp -> T.mkProp
@@ -260,7 +273,7 @@ let typeur sigma metamap =
                                                                                 
   and sort_of env t =
     match Term.kind_of_term t with
-    | T.Cast (c,s) when T.isSort s -> family_of_term s
+    | T.Cast (c,_, s) when T.isSort s -> family_of_term s
     | T.Sort (T.Prop c) -> Coq_sort T.InType
     | T.Sort (T.Type u) -> Coq_sort T.InType
     | T.Prod (name,t,c2) ->
@@ -270,7 +283,7 @@ let typeur sigma metamap =
           | Coq_sort T.InSet, (Coq_sort T.InSet as s) -> s
           | Coq_sort T.InType, (Coq_sort T.InSet as s)
           | CProp, (Coq_sort T.InSet as s) when
-              Environ.engagement env = Some Environ.ImpredicativeSet -> s
+              Environ.engagement env = Some Declarations.ImpredicativeSet -> s
           | Coq_sort T.InType, Coq_sort T.InSet
           | CProp, Coq_sort T.InSet -> Coq_sort T.InType
           | _, (Coq_sort T.InType as s) -> s (*Type Univ.dummy_univ*)
@@ -282,7 +295,7 @@ let typeur sigma metamap =
                                                                                 
   and sort_family_of env t =
     match T.kind_of_term t with
-    | T.Cast (c,s) when T.isSort s -> family_of_term s
+    | T.Cast (c,_, s) when T.isSort s -> family_of_term s
     | T.Sort (T.Prop c) -> Coq_sort T.InType
     | T.Sort (T.Type u) -> Coq_sort T.InType
     | T.Prod (name,t,c2) -> sort_family_of (Environ.push_rel (name,None,t) env) c2
@@ -375,7 +388,7 @@ try
           Acic.CicHash.find terms_to_types tt
 with _ ->
 (*CSC: Warning: it really happens, for example in Ring_theory!!! *)
-Pp.ppnl (Pp.(++) (Pp.str "BUG: this subterm was not visited during the double-type-inference: ") (Printer.prterm tt)) ; assert false
+Pp.ppnl (Pp.(++) (Pp.str "BUG: this subterm was not visited during the double-type-inference: ") (Printer.pr_lconstr tt)) ; assert false
          else
           (* We are already in an inner-type and Coscoy's double *)
           (* type inference algorithm has not been applied.      *)
@@ -384,19 +397,33 @@ Pp.ppnl (Pp.(++) (Pp.str "BUG: this subterm was not visited during the double-ty
           {D.synthesized =
             Reductionops.nf_beta
              (CPropRetyping.get_type_of env evar_map
-              (Evarutil.refresh_universes tt)) ;
+              (Termops.refresh_universes tt)) ;
            D.expected = None}
         in
 (* Debugging only:
 print_endline "TERMINE:" ; flush stdout ;
-Pp.ppnl (Printer.prterm tt) ; flush stdout ;
+Pp.ppnl (Printer.pr_lconstr tt) ; flush stdout ;
 print_endline "TIPO:" ; flush stdout ;
-Pp.ppnl (Printer.prterm synthesized) ; flush stdout ;
+Pp.ppnl (Printer.pr_lconstr synthesized) ; flush stdout ;
 print_endline "ENVIRONMENT:" ; flush stdout ;
 Pp.ppnl (Printer.pr_context_of env) ; flush stdout ;
 print_endline "FINE_ENVIRONMENT" ; flush stdout ;
 *)
-         let innersort = get_sort_family_of env evar_map synthesized in
+         let innersort =
+          let synthesized_innersort =
+           get_sort_family_of env evar_map synthesized
+          in
+           match expected with
+              None -> synthesized_innersort
+            | Some ty ->
+              let expected_innersort =
+               get_sort_family_of env evar_map ty
+              in
+               match expected_innersort, synthesized_innersort with
+                  CProp, _
+                | _, CProp -> CProp
+                | _, _ -> expected_innersort
+         in
 (* Debugging only:
 print_endline "PASSATO" ; flush stdout ;
 *)
@@ -441,7 +468,7 @@ print_endline "PASSATO" ; flush stdout ;
           let subst,residual_args,uninst_vars =
            let variables,basedir =
              try
-               let g = Libnames.reference_of_constr h in
+               let g = Libnames.global_of_constr h in
                let sp =
                 match g with
                    Libnames.ConstructRef ((induri,_),_)
@@ -533,7 +560,7 @@ print_endline "PASSATO" ; flush stdout ;
                (fresh_id'', n, Array.to_list (Array.map (aux' env idrefs) l))
            | T.Meta _ -> Util.anomaly "Meta met during exporting to XML"
            | T.Sort s -> A.ASort (fresh_id'', s)
-           | T.Cast (v,t) ->
+           | T.Cast (v,_, t) ->
               Hashtbl.add ids_to_inner_sorts fresh_id'' innersort ;
               if is_a_Prop innersort then
                add_inner_type fresh_id'' ;
@@ -670,7 +697,7 @@ print_endline "PASSATO" ; flush stdout ;
               let
                compute_result_if_eta_expansion_not_required subst residual_args
               =
-               let residual_args_not_empty = List.length residual_args > 0 in
+               let residual_args_not_empty = residual_args <> [] in
                let h' =
                 if residual_args_not_empty then
                  aux' env idrefs ~subst:(None,subst) h
@@ -695,7 +722,7 @@ print_endline "PASSATO" ; flush stdout ;
               if is_a_Prop innersort  && expected_available then
                add_inner_type fresh_id'' ;
               let compute_result_if_eta_expansion_not_required _ _ =
-               A.AConst (fresh_id'', subst, (uri_of_kernel_name kn Constant))
+               A.AConst (fresh_id'', subst, (uri_of_kernel_name (Constant kn)))
               in
                let (_,subst') = subst in
                 explicit_substitute_and_eta_expand_if_required tt []
@@ -703,7 +730,7 @@ print_endline "PASSATO" ; flush stdout ;
                  compute_result_if_eta_expansion_not_required
            | T.Ind (kn,i) ->
               let compute_result_if_eta_expansion_not_required _ _ =
-               A.AInd (fresh_id'', subst, (uri_of_kernel_name kn Inductive), i)
+               A.AInd (fresh_id'', subst, (uri_of_kernel_name (Inductive kn)), i)
               in
                let (_,subst') = subst in
                 explicit_substitute_and_eta_expand_if_required tt []
@@ -715,7 +742,7 @@ print_endline "PASSATO" ; flush stdout ;
                add_inner_type fresh_id'' ;
               let compute_result_if_eta_expansion_not_required _ _ =
                A.AConstruct
-                (fresh_id'', subst, (uri_of_kernel_name kn Inductive), i, j)
+                (fresh_id'', subst, (uri_of_kernel_name (Inductive kn)), i, j)
               in
                let (_,subst') = subst in
                 explicit_substitute_and_eta_expand_if_required tt []
@@ -729,7 +756,7 @@ print_endline "PASSATO" ; flush stdout ;
                Array.fold_right (fun x i -> (aux' env idrefs x)::i) a []
               in
                A.ACase
-                (fresh_id'', (uri_of_kernel_name kn Inductive), i,
+                (fresh_id'', (uri_of_kernel_name (Inductive kn)), i,
                   aux' env idrefs ty, aux' env idrefs term, a')
            | T.Fix ((ai,i),(f,t,b)) ->
               Hashtbl.add ids_to_inner_sorts fresh_id'' innersort ;

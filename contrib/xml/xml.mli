@@ -12,7 +12,7 @@
 (*                       http://helm.cs.unibo.it                        *)
 (************************************************************************)
 
-(*i $Id: xml.mli,v 1.5.2.2 2004/07/16 19:30:15 herbelin Exp $ i*)
+(*i $Id: xml.mli 6681 2005-02-04 18:20:16Z herbelin $ i*)
 
 (* Tokens for XML cdata, empty elements and not-empty elements           *)
 (* Usage:                                                                *)
@@ -30,6 +30,8 @@ val xml_empty : string -> (string * string) list -> token Stream.t
 val xml_nempty :
   string -> (string * string) list -> token Stream.t -> token Stream.t
 val xml_cdata : string -> token Stream.t
+
+val pp_ch : token Stream.t -> out_channel -> unit
 
 (* The pretty printer for streams of token                                  *)
 (* Usage:                                                                   *)

@@ -1,12 +1,12 @@
-(************************************************************************)
-(*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
-(*   \VV/  **************************************************************)
-(*    //   *      This file is distributed under the terms of the       *)
-(*         *       GNU Lesser General Public License Version 2.1        *)
-(************************************************************************)
+(***********************************************************************)
+(*  v      *   The Coq Proof Assistant  /  The Coq Development Team    *)
+(* <O___,, *        INRIA-Rocquencourt  &  LRI-CNRS-Orsay              *)
+(*   \VV/  *************************************************************)
+(*    //   *      This file is distributed under the terms of the      *)
+(*         *       GNU Lesser General Public License Version 2.1       *)
+(***********************************************************************)
 
-(*i $Id: util.mli,v 1.84.2.2 2004/07/16 20:43:46 herbelin Exp $ i*)
+(*i $Id: util.mli 8672 2006-03-29 21:06:33Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -68,15 +68,12 @@ val explode : string -> string list
 val implode : string list -> string
 val string_index_from : string -> int -> string -> int
 val string_string_contains : where:string -> what:string -> bool
+val plural : int -> string -> string
 
 val parse_loadpath : string -> string list
 
 module Stringset : Set.S with type elt = string
-
 module Stringmap : Map.S with type key = string
-
-val stringmap_to_list : 'a Stringmap.t -> (string * 'a) list 
-val stringmap_dom : 'a Stringmap.t -> string list
 
 (*s Lists. *)
 
@@ -109,6 +106,8 @@ val list_fold_right_and_left :
     ('a -> 'b -> 'b list -> 'a) -> 'b list -> 'a -> 'a
 val list_for_all_i : (int -> 'a -> bool) -> int -> 'a list -> bool
 val list_except : 'a -> 'a list -> 'a list
+val list_remove : 'a -> 'a list -> 'a list
+val list_remove_first : 'a -> 'a list -> 'a list
 val list_for_all2eq : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
 val list_sep_last : 'a list -> 'a * 'a list
 val list_try_find_i : (int -> 'a -> 'b) -> int -> 'a list -> 'b
@@ -130,8 +129,8 @@ val list_share_tails : 'a list -> 'a list -> 'a list * 'a list * 'a list
 val list_join_map : ('a -> 'b list) -> 'a list -> 'b list
 (* [list_fold_map f e_0 [l_1...l_n] = e_n,[k_1...k_n]]
    where [(e_i,k_i)=f e_{i-1} l_i] *)
-val list_fold_map : 
-  ('a -> 'b -> 'a * 'c) -> 'a -> 'b list -> 'a * 'c list 
+val list_fold_map : ('a -> 'b -> 'a * 'c) -> 'a -> 'b list -> 'a * 'c list
+val list_fold_map' : ('b -> 'a -> 'c * 'a) -> 'b list -> 'a -> 'c list * 'a
 val list_map_assoc : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
 
 (*s Arrays. *)
@@ -170,6 +169,7 @@ val array_map3 :
 val array_map_left : ('a -> 'b) -> 'a array -> 'b array
 val array_map_left_pair : ('a -> 'b) -> 'a array -> ('c -> 'd) -> 'c array ->
   'b array * 'd array
+val array_fold_map' : ('a -> 'c -> 'b * 'c) -> 'a array -> 'c -> 'b array * 'c
 
 (*s Matrices *)
 
@@ -223,6 +223,8 @@ val pr_coma : unit -> std_ppcmds
 val pr_semicolon : unit -> std_ppcmds
 val pr_bar : unit -> std_ppcmds
 val pr_ord : int -> std_ppcmds
+val pr_arg : ('a -> std_ppcmds) -> 'a -> std_ppcmds
+val pr_opt : ('a -> std_ppcmds) -> 'a option -> std_ppcmds
 
 val prlist : ('a -> std_ppcmds) -> 'a list -> std_ppcmds
 val prvecti : (int -> 'a -> std_ppcmds) -> 'a array -> std_ppcmds

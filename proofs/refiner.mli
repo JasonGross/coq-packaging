@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: refiner.mli,v 1.31.2.2 2005/01/21 16:41:51 herbelin Exp $ i*)
+(*i $Id: refiner.mli 7911 2006-01-21 11:18:36Z herbelin $ i*)
 
 (*i*)
 open Term
@@ -20,9 +20,10 @@ open Tacexpr
 (* The refiner (handles primitive rules and high-level tactics). *)
 
 val sig_it  : 'a sigma -> 'a
-val sig_sig : 'a sigma -> evar_map
+val project : 'a sigma -> evar_map
 
-val project_with_focus : goal sigma -> named_context sigma
+val pf_env  : goal sigma -> Environ.env
+val pf_hyps : goal sigma -> named_context
 
 val unpackage : 'a sigma -> evar_map ref * 'a
 val repackage : evar_map ref -> 'a -> 'a sigma
@@ -65,8 +66,10 @@ val frontier_mapi :
 
 (* [tclIDTAC] is the identity tactic without message printing*)
 val tclIDTAC          : tactic
-val tclIDTAC_MESSAGE  : string -> tactic
+val tclIDTAC_MESSAGE  : Pp.std_ppcmds -> tactic
 
+(* [tclEVARS sigma] changes the current evar map *)
+val tclEVARS : evar_map -> tactic
 
 (* [tclTHEN tac1 tac2 gls] applies the tactic [tac1] to [gls] and applies
    [tac2] to every resulting subgoals *)
@@ -120,7 +123,7 @@ val tclTHENLASTn    : tactic -> tactic array -> tactic
 val tclTHENFIRSTn   : tactic -> tactic array -> tactic
 
 (* A special exception for levels for the Fail tactic *)
-exception FailError of int * string
+exception FailError of int * Pp.std_ppcmds
 
 val tclORELSE        : tactic -> tactic -> tactic
 val tclREPEAT        : tactic -> tactic
@@ -131,7 +134,7 @@ val tclTRY           : tactic -> tactic
 val tclTHENTRY       : tactic -> tactic -> tactic
 val tclCOMPLETE      : tactic -> tactic
 val tclAT_LEAST_ONCE : tactic -> tactic
-val tclFAIL          : int -> string -> tactic
+val tclFAIL          : int -> Pp.std_ppcmds -> tactic
 val tclDO            : int -> tactic -> tactic
 val tclPROGRESS      : tactic -> tactic
 val tclWEAK_PROGRESS : tactic -> tactic
@@ -199,11 +202,5 @@ val change_constraints_pftreestate
 (*i*)
 open Pp
 (*i*)
-
-val print_proof : evar_map -> named_context -> proof_tree -> std_ppcmds
-val pr_rule     : rule -> std_ppcmds
-val pr_tactic   : tactic_expr -> std_ppcmds
-val print_script :
-  bool -> evar_map -> named_context -> proof_tree -> std_ppcmds
-val print_treescript :
-  bool -> evar_map -> named_context -> proof_tree -> std_ppcmds
+val set_info_printer :
+  (evar_map -> named_context -> proof_tree -> Pp.std_ppcmds) -> unit

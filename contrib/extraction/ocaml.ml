@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ocaml.ml,v 1.100.2.6 2005/12/01 17:01:22 letouzey Exp $ i*)
+(*i $Id: ocaml.ml 7632 2005-12-01 14:35:21Z letouzey $ i*)
 
 (*s Production of Ocaml syntax. *)
 
@@ -264,7 +264,6 @@ let rec pp_expr par env args =
 	let tuple = pp_tuple (pp_expr true env []) args' in 
 	pp_par par (pp_global r ++ spc () ++ tuple)
     | MLcase (i, t, pv) ->
-	let r,_,_ = pv.(0) in 
 	let expr = if i = Coinductive then 
 	  (str "Lazy.force" ++ spc () ++ pp_expr true env [] t)
 	else 
@@ -409,7 +408,7 @@ let pp_one_ind prefix ip pl cv =
 			(fun () -> spc () ++ str "* ") (pp_type true pl) l))
   in
   pp_parameters pl ++ str prefix ++ pp_global (IndRef ip) ++ str " =" ++ 
-  if cv = [||] then str " unit (* empty inductive *)" 
+  if Array.length cv = 0 then str " unit (* empty inductive *)" 
   else fnl () ++ v 0 (prvect_with_sep fnl pp_constructor
 			(Array.mapi (fun i c -> ConstructRef (ip,i+1), c) cv))
 
@@ -480,13 +479,13 @@ let pp_mind kn i =
 let pp_decl mpl = 
   local_mpl := mpl; 
   function
-    | Dind (kn,i) as d -> pp_mind kn i
+    | Dind (kn,i) -> pp_mind kn i
     | Dtype (r, l, t) ->
 	if is_inline_custom r then failwith "empty phrase"
 	else 
-	  let pp_r = pp_global r in 
+          let pp_r = pp_global r in 
 	  let l = rename_tvars keywords l in 
-	  let ids, def = try 
+          let ids, def = try 
 	    let ids,s = find_type_custom r in 
 	    pp_string_parameters ids, str "=" ++ spc () ++ str s 
 	  with not_found -> 

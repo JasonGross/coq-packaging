@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declaremods.ml,v 1.18.2.2 2005/12/30 11:08:56 herbelin Exp $ i*)
+(*i $Id: declaremods.ml 7720 2005-12-24 00:25:55Z herbelin $ i*)
 
 open Pp
 open Util
@@ -17,6 +17,7 @@ open Libnames
 open Libobject
 open Lib
 open Nametab
+open Mod_subst
 
 (* modules and components *)
 
@@ -372,19 +373,25 @@ let (in_modtype,out_modtype) =
 
 
 
-let replace_module_object id (subst, mbids, msid, lib_stack) modobjs =
+let rec replace_module_object idl (subst, mbids, msid, lib_stack) modobjs =
   if mbids<>[] then 
     error "Unexpected functor objects"
   else
-    let rec replace_id = function 
-      | [] -> [] 
-      | (id',obj)::tail when id = id' ->
+    let rec replace_idl = function 
+      | _,[] -> [] 
+      | id::idl,(id',obj)::tail when id = id' ->
 	  if object_tag obj = "MODULE" then
-	    (id, in_module (None,modobjs,None))::tail
+           (match idl with
+               [] -> (id, in_module (None,modobjs,None))::tail
+             | _ ->
+               let (_,substobjs,_) = out_module obj in
+                let substobjs' = replace_module_object idl substobjs modobjs in
+                 (id, in_module (None,substobjs',None))::tail
+           )
 	  else error "MODULE expected!"
-      | lobj::tail -> lobj::replace_id tail
+      | idl,lobj::tail -> lobj::replace_idl (idl,tail)
     in
-      (subst, mbids, msid, replace_id lib_stack)
+      (subst, mbids, msid, replace_idl (idl,lib_stack))
 
 let abstract_substobjs mbids1 (subst, mbids2, msid, lib_stack) =
   (subst, mbids1@mbids2, msid, lib_stack)
@@ -396,10 +403,10 @@ let rec get_modtype_substobjs = function
       let (subst, mbids, msid, objs) = get_modtype_substobjs mte in
 	(subst, mbid::mbids, msid, objs)
   | MTEwith (mty, With_Definition _) -> get_modtype_substobjs mty
-  | MTEwith (mty, With_Module (id,mp)) -> 
+  | MTEwith (mty, With_Module (idl,mp)) -> 
       let substobjs = get_modtype_substobjs mty in
       let modobjs = MPmap.find mp !modtab_substobjs in
-	replace_module_object id substobjs modobjs
+	replace_module_object idl substobjs modobjs
   | MTEsig (msid,_) -> 
       todo "Anonymous module types"; (empty_subst, [], msid, [])
 
@@ -449,7 +456,7 @@ let intern_args interp_modtype (env,oldargs) (idl,arg) =
     in
     env, List.map (fun mbid -> mbid,mty) mbids :: oldargs
       
-let start_module interp_modtype id args res_o =
+let start_module interp_modtype export id args res_o =
   let fs = Summary.freeze_summaries () in
   let env = Global.env () in
   let env,arg_entries_revlist = 
@@ -481,7 +488,7 @@ let start_module interp_modtype id args res_o =
 
   let mbids = List.map fst arg_entries in
   openmod_info:=(mbids,res_entry_o,sub_body_o);
-  let prefix = Lib.start_module id mp fs in
+  let prefix = Lib.start_module export id mp fs in
   Nametab.push_dir (Nametab.Until 1) (fst prefix) (DirOpenModule prefix);
   Lib.add_frozen_state ()
 
@@ -565,7 +572,6 @@ let library_cache = Hashtbl.create 17
 
 let register_library dir cenv objs digest =
   let mp = MPfile dir in
-  let prefix = dir, (mp, empty_dirpath) in
   let substobjs, objects =
     try 
       ignore(Global.lookup_module mp);
@@ -697,21 +703,25 @@ let declare_modtype interp_modtype id args mty =
   ignore (add_leaf id (in_modtype (Some entry, substobjs)))
 			       
 
-
-let rec get_module_substobjs = function
+let rec get_module_substobjs env = function
   | MEident mp -> MPmap.find mp !modtab_substobjs 
   | MEfunctor (mbid,mty,mexpr) ->
-      let (subst, mbids, msid, objs) = 
-	get_module_substobjs mexpr 
-      in
+       let (subst, mbids, msid, objs) = get_module_substobjs env mexpr in
 	(subst, mbid::mbids, msid, objs)
   | MEstruct (msid,_) ->
       (empty_subst, [], msid, [])
   | MEapply (mexpr, MEident mp) ->
-      let (subst, mbids, msid, objs) = get_module_substobjs mexpr in
+      let feb,ftb = Mod_typing.translate_mexpr env mexpr in
+      let ftb = Modops.scrape_modtype env ftb in
+      let farg_id, farg_b, fbody_b = Modops.destr_functor ftb in
+      let (subst, mbids, msid, objs) = get_module_substobjs env mexpr in
 	(match mbids with
 	   | mbid::mbids ->
-	       (add_mbid mbid mp subst, mbids, msid, objs)
+              let resolve =
+               Modops.resolver_of_environment farg_id farg_b mp env in
+               (* application outside the kernel, only for substitutive
+                  objects (that are all non-logical objects) *)
+	       (add_mbid mbid mp (Some resolve) subst, mbids, msid, objs)
 	   | [] -> match mexpr with
 	       | MEident _ | MEstruct _ -> error "Application of a non-functor"
 	       | _ -> error "Application of a functor with too few arguments")
@@ -757,7 +767,7 @@ let declare_module interp_modtype interp_modexpr id args mty_o mexpr_o =
   let substobjs =
     match entry with
       | {mod_entry_type = Some mte} -> get_modtype_substobjs mte
-      | {mod_entry_expr = Some mexpr} -> get_module_substobjs mexpr
+      | {mod_entry_expr = Some mexpr} -> get_module_substobjs env mexpr
       | _ -> anomaly "declare_module: No type, no body ..."
   in
     Summary.unfreeze_summaries fs;
@@ -772,23 +782,7 @@ let declare_module interp_modtype interp_modexpr id args mty_o mexpr_o =
 
 (*s Iterators. *)
 
-let fold_all_segments insec f x =
-  let acc' = 
-    MPmap.fold 
-      (fun _ (prefix,objects) acc -> 
-	 let apply_obj acc (id,obj) = f acc (make_oname prefix id) obj in
-	   List.fold_left apply_obj acc objects)
-      !modtab_objects x
-  in
-  let rec apply_node acc = function
-    | sp, Leaf o -> f acc sp o
-    | _, ClosedSection (_,_,seg) -> 
-	if insec then List.fold_left apply_node acc seg else acc
-    | _ -> acc
-  in
-    List.fold_left apply_node acc' (Lib.contents_after None)
-
-let iter_all_segments insec f =
+let iter_all_segments f =
   let _ = 
     MPmap.iter 
       (fun _ (prefix,objects) -> 
@@ -798,11 +792,9 @@ let iter_all_segments insec f =
   in
   let rec apply_node = function
     | sp, Leaf o -> f sp o
-    | _, ClosedSection (_,_,seg) -> if insec then List.iter apply_node seg
     | _ -> ()
   in
     List.iter apply_node (Lib.contents_after None)
-
 
 
 let debug_print_modtab _ =
@@ -816,5 +808,3 @@ let debug_print_modtab _ =
   in
   let modules = MPmap.fold pr_modinfo !modtab_objects (mt ()) in
     hov 0 modules
-
-

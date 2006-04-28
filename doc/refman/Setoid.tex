@@ -1,0 +1,158 @@
+\achapter{\protect{The \texttt{setoid$\_$replace} tactic}}
+\aauthor{Cl\'ement Renard}
+\label{setoid_replace}
+\tacindex{setoid\_replace}
+
+This chapter presents  the \texttt{setoid\_replace} tactic.
+
+\asection{Description of \texttt{setoid$\_$replace}}
+
+Working on user-defined structures in \Coq\ is not very easy if
+Leibniz equality does not denote the intended equality. For example
+using lists to denote finite sets drive to difficulties since two
+non convertible terms can denote the same set.
+
+We present here a \Coq\ module, {\tt setoid\_replace}, which allows to
+structure and automate some parts of the work. In particular, if
+everything has been registered a simple
+tactic can do replacement just as if the two terms were equal.
+
+\asection{Adding new setoid or morphisms}
+
+Under the toplevel
+load the \texttt{setoid\_replace} files with the command:
+
+\begin{coq_example*}
+  Require Setoid.
+\end{coq_example*}
+
+A setoid is just a type \verb+A+ and an equivalence relation on \verb+A+.
+
+The specification of a setoid can be found in the file
+
+\begin{quotation}
+\begin{verbatim}
+theories/Setoids/Setoid.v
+\end{verbatim}
+\end{quotation}
+
+It looks like :
+\begin{small}
+\begin{flushleft}
+\begin{verbatim}
+Section Setoid.
+
+Variable A : Type.
+Variable Aeq : A -> A -> Prop.
+
+Record Setoid_Theory : Prop :=
+{ Seq_refl : (x:A) (Aeq x x);
+  Seq_sym : (x,y:A) (Aeq x y) -> (Aeq y x);
+  Seq_trans : (x,y,z:A) (Aeq x y) -> (Aeq y z) -> (Aeq x z)
+}.
+\end{verbatim}
+\end{flushleft}
+\end{small}
+
+To define a setoid structure on \verb+A+, you must provide a relation
+\verb|Aeq| on \verb+A+ and prove that \verb|Aeq| is an equivalence
+relation. That is, you have to define an object of type
+\verb|(Setoid_Theory A Aeq)|.
+
+Finally to register a setoid the syntax is:
+
+\comindex{Add Setoid}
+\begin{quotation}
+  \texttt{Add Setoid} \textit{ A Aeq ST}
+\end{quotation}
+
+\noindent where \textit{Aeq} is a term of type \texttt{A->A->Prop} and
+\textit{ST} is a term of type 
+\texttt{(Setoid\_Theory }\textit{A Aeq}\texttt{)}.
+
+\begin{ErrMsgs}
+\item \errindex{Not a valid setoid theory}.\\ 
+  That happens when the typing condition does not hold.
+\item \errindex{A Setoid Theory is already declared for \textit{A}}.\\
+  That happens when you try to declare a second setoid theory for the
+  same type.
+\end{ErrMsgs}
+
+Currently, only one setoid structure
+may be declared for a given type.
+This allows automatic detection of the theory used to achieve the
+replacement.
+
+The table of setoid theories is compatible with the \Coq\ 
+sectioning mechanism. If you declare a setoid inside a section, the
+declaration will be thrown away when closing the section.
+And when you load a compiled file, all the \texttt{Add Setoid}
+commands of this file that are not inside a section will be loaded.
+
+\Warning Only the setoid on \texttt{Prop} is loaded by default with the
+\texttt{setoid\_replace} module. The equivalence relation used is
+\texttt{iff} {\it i.e.} the logical equivalence.
+
+\asection{Adding new morphisms}
+
+A morphism is nothing else than a function compatible with the
+equivalence relation. 
+You can only replace a term by an equivalent in position of argument
+of a morphism. That's why each morphism has to be
+declared to the system, which will ask you to prove the accurate
+compatibility lemma.
+
+The syntax is the following :
+\comindex{Add Morphism}
+\begin{quotation}
+  \texttt{Add Morphism} \textit{ f }:\textit{ ident}
+\end{quotation}
+
+\noindent where f is the name of a term which type is a non dependent
+product (the term you want to declare as a morphism) and
+\textit{ident} is a new identifier which will denote the
+compatibility lemma.
+
+\begin{ErrMsgs}
+\item \errindex{The term \term \ is already declared as a morphism}
+\item \errindex{The term \term \ is not a product}
+\item \errindex{The term \term \ should not be a dependent product}
+\end{ErrMsgs}
+
+The compatibility lemma generated depends on the setoids already
+declared.
+
+\asection{The tactic itself}
+\tacindex{setoid\_replace}
+\tacindex{setoid\_rewrite}
+
+After having registered all the setoids and morphisms you need, you can
+use the tactic called \texttt{setoid\_replace}. The syntax is
+
+\begin{quotation}
+\texttt{setoid\_replace} $ term_1$ with $term_2$
+\end{quotation}
+
+The effect is similar to the one of \texttt{replace}.
+
+You also have a tactic called \texttt{setoid\_rewrite} which is the
+equivalent of \texttt{rewrite} for setoids. The syntax is 
+
+\begin{quotation}
+\texttt{setoid\_rewrite} \term
+\end{quotation}
+
+\begin{Variants}
+ \item \texttt{setoid\_rewrite ->} \term
+ \item \texttt{setoid\_rewrite <-} \term
+\end{Variants}
+
+The arrow tells the system in which direction the rewriting has to be
+done. Moreover, you can use \texttt{rewrite} for setoid
+rewriting. In that case the system will check if the term you give is
+an equality or a setoid equivalence and do the appropriate work.
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "Reference-Manual"
+%%% End: 

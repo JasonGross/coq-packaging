@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: RelationalChoice.v,v 1.3.2.2 2004/08/01 09:29:59 herbelin Exp $ i*)
+(*i $Id: RelationalChoice.v 6001 2004-08-01 09:27:26Z herbelin $ i*)
 
 (** This file axiomatizes the relational form of the axiom of choice *)
 

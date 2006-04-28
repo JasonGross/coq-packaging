@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: logic.mli,v 1.27.6.1 2004/07/16 19:30:49 herbelin Exp $ i*)
+(*i $Id: logic.mli 8107 2006-03-01 17:34:36Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -20,7 +20,6 @@ open Proof_type
 (* This suppresses check done in [prim_refiner] for the tactic given in
    argument; works by side-effect *)
 
-val without_check : tactic -> tactic
 val with_check    : tactic -> tactic
 
 (* [without_check] respectively means:\\
@@ -37,9 +36,13 @@ val with_check    : tactic -> tactic
 
 val prim_refiner : prim_rule -> evar_map -> goal -> goal list
 
+type proof_variable
+
 val prim_extractor :
-  (identifier list -> proof_tree -> constr)
-  -> identifier list -> proof_tree -> constr
+  (proof_variable list -> proof_tree -> constr)
+  -> proof_variable list -> proof_tree -> constr
+
+val proof_variable_index : identifier -> proof_variable list -> int
 
 (*s Refiner errors. *)
 
@@ -54,20 +57,9 @@ type refiner_error =
   | NonLinearProof of constr
 
   (*i Errors raised by the tactics i*)
-  | CannotUnify of constr * constr
-  | CannotUnifyBindingType of constr * constr
-  | CannotGeneralize of constr
   | IntroNeedsProduct
   | DoesNotOccurIn of constr * identifier
-  | NoOccurrenceFound of constr
 
 exception RefinerError of refiner_error
 
-val error_cannot_unify : constr * constr -> 'a
-
 val catchable_exception : exn -> bool
-
-
-(*s Pretty-printer. *)
-
-val pr_prim_rule   : prim_rule -> Pp.std_ppcmds

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coqlib.mli,v 1.5.2.3 2005/01/21 17:14:10 herbelin Exp $ i*)
+(*i $Id: coqlib.mli 8688 2006-04-07 15:08:12Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -19,17 +19,38 @@ open Pattern
 (*s This module collects the global references, constructions and
     patterns of the standard library used in ocaml files *)
 
-(*s Some utilities, the first argument is used for error messages.
-    Must be used lazyly. s*)
+(*s [find_reference caller_message [dir;subdir;...] s] returns a global
+   reference to the name dir.subdir.(...).s; the corresponding module
+   must have been required or in the process of being compiled so that
+   it must be used lazyly; it raises an anomaly with the given message
+   if not found *)
 
-val gen_reference : string->string list -> string -> global_reference
-val gen_constant : string->string list -> string -> constr
+type message = string
+
+val find_reference : message -> string list -> string -> global_reference
+
+(* [coq_reference caller_message [dir;subdir;...] s] returns a
+   global reference to the name Coq.dir.subdir.(...).s *)
+
+val coq_reference : message -> string list -> string -> global_reference
+
+(* idem but return a term *)
+
+val coq_constant : message -> string list -> string -> constr
+
+(* Synonyms of [coq_constant] and [coq_reference] *)
+
+val gen_constant : message -> string list -> string -> constr
+val gen_reference :  message -> string list -> string -> global_reference
 
 (* Search in several modules (not prefixed by "Coq") *)
 val gen_constant_in_modules : string->string list list-> string -> constr
 val arith_modules : string list list
 val zarith_base_modules : string list list
 val init_modules : string list list
+
+(* For tactics/commands requiring vernacular libraries *)
+val check_required_library : string list -> unit
 
 (*s Global references *)
 
@@ -38,15 +59,22 @@ val logic_module : dir_path
 val logic_type_module : dir_path
 
 (* Natural numbers *)
+val nat_path : section_path
 val glob_nat : global_reference
 val path_of_O : constructor
 val path_of_S : constructor
 val glob_O : global_reference
 val glob_S : global_reference
 
+(* Booleans *)
+val glob_bool : global_reference
+val path_of_true : constructor
+val path_of_false : constructor
+val glob_true : global_reference
+val glob_false : global_reference
+
 (* Equality *)
 val glob_eq : global_reference
-val glob_eqT : global_reference
 
 (*s Constructions and patterns related to Coq initial state are unknown
    at compile time. Therefore, we can only provide methods to build
@@ -66,6 +94,8 @@ type coq_sigma_data = {
 
 val build_sigma_set : coq_sigma_data delayed
 val build_sigma_type : coq_sigma_data delayed
+(* Non-dependent pairs in Set from Datatypes *)
+val build_prod : coq_sigma_data delayed
 
 type coq_leibniz_eq_data = {
   eq   : constr;
@@ -77,20 +107,11 @@ type coq_leibniz_eq_data = {
   sym  : constr }
 
 val build_coq_eq_data : coq_leibniz_eq_data delayed
-val build_coq_eqT_data : coq_leibniz_eq_data delayed
-val build_coq_idT_data : coq_leibniz_eq_data delayed
+val build_coq_identity_data : coq_leibniz_eq_data delayed
 
-val build_coq_eq : constr delayed (* = [(build_coq_eq_data()).eq] *)
+val build_coq_eq       : constr delayed (* = [(build_coq_eq_data()).eq] *)
+val build_coq_sym_eq   : constr delayed (* = [(build_coq_eq_data()).sym] *)
 val build_coq_f_equal2 : constr delayed
-val build_coq_eqT : constr delayed
-val build_coq_sym_eqT : constr delayed
-
-(* Empty Type *)
-val build_coq_EmptyT : constr delayed
-
-(* Unit Type and its unique inhabitant *)
-val build_coq_UnitT : constr delayed
-val build_coq_IT : constr delayed
 
 (* Specif *)
 val build_coq_sumbool : constr delayed
@@ -116,11 +137,12 @@ val build_coq_or : constr delayed
 val build_coq_ex : constr delayed
 
 val coq_eq_ref : global_reference lazy_t
-val coq_eqT_ref : global_reference lazy_t
-val coq_idT_ref : global_reference lazy_t
+val coq_identity_ref : global_reference lazy_t
 val coq_existS_ref : global_reference lazy_t
 val coq_existT_ref : global_reference lazy_t
 val coq_not_ref : global_reference lazy_t
 val coq_False_ref : global_reference lazy_t
 val coq_sumbool_ref : global_reference lazy_t
 val coq_sig_ref : global_reference lazy_t
+
+val coq_or_ref : global_reference lazy_t

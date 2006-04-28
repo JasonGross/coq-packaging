@@ -6,13 +6,24 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: inductiveops.mli,v 1.10.2.3 2005/01/21 17:19:37 herbelin Exp $ i*)
+(*i $Id: inductiveops.mli 7955 2006-01-30 22:56:15Z herbelin $ i*)
 
 open Names
 open Term
 open Declarations
 open Environ
 open Evd
+
+(* The following three functions are similar to the ones defined in
+   Inductive, but they expect an env *)
+
+val type_of_inductive    : env -> inductive -> types
+
+(* Return type as quoted by the user *)
+val type_of_constructor  : env -> constructor -> types
+
+(* Return constructor types in normal form *)
+val arities_of_constructors : env -> inductive -> types array
 
 (* An inductive type with its parameters *)
 type inductive_family
@@ -46,6 +57,11 @@ val mis_constr_nargs_env : env -> inductive -> int array
 
 val mis_constructor_nargs_env : env -> constructor -> int
 
+val constructor_nrealargs : env -> constructor -> int
+val constructor_nrealhyps : env -> constructor -> int
+
+val inductive_nargs : env -> inductive -> int
+
 type constructor_summary = {
   cs_cstr : constructor;
   cs_params : constr list;
@@ -74,9 +90,6 @@ val find_inductive   : env -> evar_map -> constr -> inductive * constr list
 val find_coinductive : env -> evar_map -> constr -> inductive * constr list
 
 (********************)
-(* Determines if a case predicate type corresponds to dependent elimination *)
-val is_dependent_elimination :
-  env -> types -> inductive_family -> bool
 
 (* Builds the case predicate arity (dependent or not) *)
 val arity_of_case_predicate :
@@ -91,3 +104,5 @@ val make_default_case_info : env -> case_style -> inductive -> case_info
 
 (********************)
 val control_only_guard : env -> types -> unit
+
+val subst_inductive : Mod_subst.substitution -> inductive -> inductive

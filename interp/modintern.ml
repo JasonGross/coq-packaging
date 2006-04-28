@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: modintern.ml,v 1.2.2.1 2004/07/16 19:30:22 herbelin Exp $ *)
+(* $Id: modintern.ml 6582 2005-01-13 14:28:56Z sacerdot $ *)
 
 open Pp
 open Util
@@ -79,10 +79,10 @@ let lookup_modtype (loc,qid) =
 	Modops.error_not_a_modtype_loc loc (string_of_qualid qid)
 
 let transl_with_decl env = function 
-  | CWith_Module ((_,id),qid) ->
-      With_Module (id,lookup_module qid)
-  | CWith_Definition ((_,id),c) ->
-      With_Definition (id,interp_constr Evd.empty env c)
+  | CWith_Module ((_,fqid),qid) ->
+      With_Module (fqid,lookup_module qid)
+  | CWith_Definition ((_,fqid),c) ->
+      With_Definition (fqid,interp_constr Evd.empty env c)
 
 let rec interp_modtype env = function 
   | CMTEident qid ->

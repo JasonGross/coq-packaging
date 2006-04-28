@@ -34,13 +34,13 @@ let get_hyp_by_name g name =
   let evd = project g in
   let env = pf_env g in
   try (let judgment = 
-         Pretyping.understand_judgment 
+         Pretyping.Default.understand_judgment 
           evd env (RVar(zz, name)) in
        ("hyp",judgment.uj_type))
 (* je sais, c'est pas beau, mais je ne sais pas trop me servir de look_up...
    Loïc *)
   with _ -> (let c = Nametab.global (Ident (zz,name)) in
-             ("cste",type_of (Global.env()) Evd.empty (constr_of_reference c)))
+             ("cste",type_of (Global.env()) Evd.empty (constr_of_global c)))
 ;;
 
 type pbp_atom =
@@ -106,7 +106,7 @@ let make_final_cmd f optname clear_names constr path =
     add_clear_names_if_necessary (f optname constr path) clear_names;;
 
 let (rem_cast:pbp_rule) = function
-    (a,c,cf,o, Cast(f,_), p, func) ->
+    (a,c,cf,o, Cast(f,_,_), p, func) ->
       Some(func a c cf o (kind_of_term f) p)
   | _ -> None;;
 
@@ -154,7 +154,7 @@ let make_pbp_pattern x =
      [make_var (id_of_string ("Value_for_" ^ (string_of_id x)))]
 
 let rec make_then = function
-  | [] -> TacId ""
+  | [] -> TacId []
   | [t] -> t
   | t1::t2::l -> make_then (TacThen (t1,t2)::l)
 
@@ -177,7 +177,7 @@ let make_pbp_atomic_tactic = function
       TacAtom
 	(zz, TacElim ((make_var hyp_name,ExplicitBindings bind),None))
   | PbpTryClear l -> 
-      TacTry (TacAtom (zz, TacClear (List.map (fun s -> AI (zz,s)) l)))
+      TacTry (TacAtom (zz, TacClear (false,List.map (fun s -> AI (zz,s)) l)))
   | PbpSplit -> TacAtom (zz, TacSplit (false,NoBindings));;
 
 let rec make_pbp_tactic = function
@@ -203,7 +203,7 @@ let (imply_elim1: pbp_rule) = function
   Some h, Prod(Anonymous, prem, body), 1::path, f ->
   let clear_names' = if clear_flag then h::clear_names else clear_names in
   let h' = next_global_ident hyp_radix avoid in
-  let str_h' = (string_of_id h') in
+  let _str_h' = (string_of_id h') in
   Some(PbpThens
 	  ([PbpLApply h],
 	   [chain_tactics [make_named_intro h'] (make_clears (h::clear_names));

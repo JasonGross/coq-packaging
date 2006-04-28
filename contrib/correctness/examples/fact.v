@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: fact.v,v 1.3 2001/04/11 07:56:19 filliatr Exp $ *)
+(* $Id: fact.v 1577 2001-04-11 07:56:19Z filliatr $ *)
 
 (* Proof of an imperative program computing the factorial (over type nat) *)
 

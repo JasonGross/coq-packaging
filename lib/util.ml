@@ -1,12 +1,12 @@
-(************************************************************************)
-(*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
-(*   \VV/  **************************************************************)
-(*    //   *      This file is distributed under the terms of the       *)
-(*         *       GNU Lesser General Public License Version 2.1        *)
-(************************************************************************)
+(***********************************************************************)
+(*  v      *   The Coq Proof Assistant  /  The Coq Development Team    *)
+(* <O___,, *        INRIA-Rocquencourt  &  LRI-CNRS-Orsay              *)
+(*   \VV/  *************************************************************)
+(*    //   *      This file is distributed under the terms of the      *)
+(*         *       GNU Lesser General Public License Version 2.1       *)
+(***********************************************************************)
 
-(* $Id: util.ml,v 1.84.2.3 2004/07/29 15:00:04 herbelin Exp $ *)
+(* $Id: util.ml 8672 2006-03-29 21:06:33Z herbelin $ *)
 
 open Pp
 
@@ -32,8 +32,9 @@ type 'a located = loc * 'a
 let anomaly_loc (loc,s,strm) = Stdpp.raise_with_loc loc (Anomaly (s,strm))
 let user_err_loc (loc,s,strm) = Stdpp.raise_with_loc loc (UserError (s,strm))
 let invalid_arg_loc (loc,s) = Stdpp.raise_with_loc loc (Invalid_argument s)
-let join_loc (deb1,_ as loc1) (_,fin2 as loc2) = 
-  if loc1 = dummy_loc or loc2 = dummy_loc then dummy_loc else (deb1,fin2)
+let join_loc loc1 loc2 =
+  if loc1 = dummy_loc or loc2 = dummy_loc then dummy_loc
+  else (fst loc1, snd loc2)
 
 (* Like Exc_located, but specifies the outermost file read, the filename
    associated to the location of the error, and the error itself. *)
@@ -98,6 +99,8 @@ let string_string_contains ~where ~what =
   with
       Not_found -> false
 
+let plural n s = if n>1 then s^"s" else s
+
 (* string parsing *)
 
 let parse_loadpath s =
@@ -117,10 +120,6 @@ let parse_loadpath s =
 module Stringset = Set.Make(struct type t = string let compare = compare end)
 
 module Stringmap = Map.Make(struct type t = string let compare = compare end)
-
-let stringmap_to_list m = Stringmap.fold (fun s y l -> (s,y)::l) m []
-
-let stringmap_dom m = Stringmap.fold (fun s _ l -> s::l) m []
 
 (* Lists *)
 
@@ -251,6 +250,13 @@ let list_for_all_i p =
 
 let list_except x l = List.filter (fun y -> not (x = y)) l
 
+let list_remove = list_except (* Alias *)
+
+let rec list_remove_first a = function
+  | b::l when a = b -> l
+  | b::l -> b::list_remove_first a l
+  | [] -> raise Not_found
+
 let list_for_all2eq f l1 l2 = try List.for_all2 f l1 l2 with Failure _ -> false
 
 let list_map_i f = 
@@ -362,12 +368,12 @@ let list_share_tails l1 l2 =
 
 let list_join_map f l = List.flatten (List.map f l)
 
-let rec list_fold_map f e = function 
+let rec list_fold_map f e = function
   |  []  -> (e,[])
-  |  h::t -> 
+  |  h::t ->
        let e',h' = f e h in
        let e'',t' = list_fold_map f e' t in
-	 e'',h'::t'
+         e'',h'::t'
 
 (* (* tail-recursive version of the above function *)
 let list_fold_map f e l = 
@@ -378,6 +384,10 @@ let list_fold_map f e l =
   let (e',lrev) = List.fold_left g (e,[]) l in
     (e',List.rev lrev)
 *)
+
+(* The same, based on fold_right, with the effect accumulated on the right *)
+let list_fold_map' f l e =
+  List.fold_right (fun x (l,e) -> let (y,e) = f x e in (y::l,e)) l ([],e)
 
 let list_map_assoc f = List.map (fun (x,a) -> (x,f a))
 
@@ -596,6 +606,20 @@ let array_map_left_pair f a g b =
     r, s
   end
 
+let pure_functional = false
+
+let array_fold_map' f v e =
+if pure_functional then
+  let (l,e) =
+    Array.fold_right 
+      (fun x (l,e) -> let (y,e) = f x e in (y::l,e))
+      v ([],e) in
+  (Array.of_list l,e)
+else
+  let e' = ref e in
+  let v' = Array.map (fun x -> let (y,e) = f x !e' in e' := e; y) v in
+  (v',!e')
+
 (* Matrices *)
 
 let matrix_transpose mat =
@@ -693,6 +717,8 @@ let pr_str = str
 let pr_coma () = str "," ++ spc ()
 let pr_semicolon () = str ";" ++ spc ()
 let pr_bar () = str "|" ++ spc ()
+let pr_arg pr x = spc () ++ pr x
+let pr_opt pr = function None -> mt () | Some x -> pr_arg pr x
 
 let pr_ord n =
   let suff = match n mod 10 with 1 -> "st" | 2 -> "nd" | _ -> "th" in

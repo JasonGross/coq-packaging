@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacred.mli,v 1.21.2.2 2005/01/21 16:42:37 herbelin Exp $ i*)
+(*i $Id: tacred.mli 8003 2006-02-07 22:11:50Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -18,14 +18,22 @@ open Closure
 open Rawterm
 (*i*)
 
+type reduction_tactic_error = 
+    InvalidAbstraction of env * constr * (env * Type_errors.type_error)
+
+exception ReductionTacticError of reduction_tactic_error
+
 (*s Reduction functions associated to tactics. \label{tacred} *)
 
 val is_evaluable : env -> evaluable_global_reference -> bool
 
 exception Redelimination
 
-(* Red (raise Redelimination if nothing reducible) *)
+(* Red (raise user error if nothing reducible) *)
 val red_product : reduction_function
+
+(* Red (raise Redelimination if nothing reducible) *)
+val try_red_product : reduction_function
 
 (* Hnf *)
 val hnf_constr :  reduction_function
@@ -69,17 +77,5 @@ val reduce_to_quantified_ref :
 val reduce_to_atomic_ref :
   env ->  evar_map -> Libnames.global_reference -> types -> types
 
-type red_expr = (constr, evaluable_global_reference) red_expr_gen
-
 val contextually : bool -> constr occurrences -> reduction_function
   -> reduction_function
-val reduction_of_redexp : red_expr -> reduction_function
-
-val declare_red_expr : string -> reduction_function -> unit
-
-(* Opaque and Transparent commands. *)
-val set_opaque_const      : constant -> unit
-val set_transparent_const : constant -> unit
-
-val set_opaque_var      : identifier -> unit
-val set_transparent_var : identifier -> unit

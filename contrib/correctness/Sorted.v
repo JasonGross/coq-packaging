@@ -8,7 +8,7 @@
 
 (*  Library about sorted (sub-)arrays / Nicolas Magaud, July 1998 *)
 
-(* $Id: Sorted.v,v 1.7.2.1 2004/07/16 19:30:00 herbelin Exp $ *)
+(* $Id: Sorted.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Require Export Arrays.
 Require Import ArrayPermut.

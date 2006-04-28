@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pretype_errors.mli,v 1.25.2.3 2004/07/16 19:30:45 herbelin Exp $ i*)
+(*i $Id: pretype_errors.mli 8688 2006-04-07 15:08:12Z msozeau $ i*)
 
 (*i*)
 open Pp
@@ -26,14 +26,20 @@ type pretype_error =
   | CantFindCaseType of constr
   (* Unification *)
   | OccurCheck of existential_key * constr
-  | NotClean of existential_key * constr * hole_kind
-  | UnsolvableImplicit of hole_kind
+  | NotClean of existential_key * constr * Evd.hole_kind
+  | UnsolvableImplicit of Evd.hole_kind
+  | CannotUnify of constr * constr
+  | CannotUnifyBindingType of constr * constr
+  | CannotGeneralize of constr
+  | NoOccurrenceFound of constr
   (* Pretyping *)
   | VarNotFound of identifier
   | UnexpectedType of constr * constr
   | NotProduct of constr
 
 exception PretypeError of env * pretype_error
+
+val precatchable_exception : exn -> bool
 
 (* Presenting terms without solved evars *)
 val nf_evar :  Evd.evar_map -> constr -> constr
@@ -73,14 +79,22 @@ val error_ill_typed_rec_body_loc :
   loc -> env ->  Evd.evar_map ->
       int -> name array -> unsafe_judgment array -> types array -> 'b
 
+val error_not_a_type_loc :
+  loc -> env -> Evd.evar_map -> unsafe_judgment -> 'b
+
+val error_cannot_coerce : env -> Evd.evar_map -> constr * constr -> 'b
+
 (*s Implicit arguments synthesis errors *)
 
 val error_occur_check : env ->  Evd.evar_map -> existential_key -> constr -> 'b
 
 val error_not_clean :
-  env ->  Evd.evar_map -> existential_key -> constr -> loc * hole_kind -> 'b
+  env -> Evd.evar_map -> existential_key -> constr -> loc * Evd.hole_kind -> 'b
 
-val error_unsolvable_implicit : loc -> env -> Evd.evar_map -> hole_kind -> 'b
+val error_unsolvable_implicit :
+  loc -> env -> Evd.evar_map -> Evd.hole_kind -> 'b
+
+val error_cannot_unify : env -> Evd.evar_map -> constr * constr -> 'b
 
 (*s Ml Case errors *)
 

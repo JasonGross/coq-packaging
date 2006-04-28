@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: constrextern.mli,v 1.11.2.3 2005/01/21 16:41:50 herbelin Exp $ i*)
+(*i $Id: constrextern.mli 7837 2006-01-11 09:47:32Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -20,13 +20,10 @@ open Nametab
 open Rawterm
 open Pattern
 open Topconstr
-open Symbols
+open Notation
 (*i*)
 
 (* v7->v8 translation *)
-val id_of_v7_string : string -> identifier
-val v7_to_v8_id : identifier -> identifier (* v7->v8 translation *)
-val shortest_qualid_of_v7_global : Idset.t -> global_reference -> qualid
 val check_same_type : constr_expr -> constr_expr -> unit
 
 (* Translation of pattern, cases pattern, rawterm and term into syntax
@@ -35,7 +32,7 @@ val check_same_type : constr_expr -> constr_expr -> unit
 val extern_cases_pattern : Idset.t -> cases_pattern -> cases_pattern_expr
 val extern_rawconstr : Idset.t -> rawconstr -> constr_expr
 val extern_rawtype : Idset.t -> rawconstr -> constr_expr
-val extern_pattern : env -> names_context -> constr_pattern -> constr_expr
+val extern_constr_pattern : names_context -> constr_pattern -> constr_expr
 
 (* If [b=true] in [extern_constr b env c] then the variables in the first 
    level of quantification clashing with the variables in [env] are renamed *)
@@ -43,6 +40,7 @@ val extern_pattern : env -> names_context -> constr_pattern -> constr_expr
 val extern_constr : bool -> env -> constr -> constr_expr
 val extern_constr_in_scope : bool -> scope_name -> env -> constr -> constr_expr
 val extern_reference : loc -> Idset.t -> global_reference -> reference
+val extern_type : bool -> env -> types -> constr_expr
 
 (* Printing options *)
 val print_implicits : bool ref
@@ -71,7 +69,3 @@ val without_symbols : ('a -> 'b) -> 'a -> 'b
 
 (* This prints metas as anonymous holes *)
 val with_meta_as_hole : ('a -> 'b) -> 'a -> 'b
-
-(* For v8 translation *)
-val set_temporary_implicits_out :
-  (identifier * Impargs.implicits_list) list -> unit

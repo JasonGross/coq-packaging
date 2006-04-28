@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalChoice.v,v 1.4.2.1 2004/07/16 19:31:06 herbelin Exp $ i*)
+(*i $Id: ClassicalChoice.v 6401 2004-12-05 16:44:57Z herbelin $ i*)
 
 (** This file provides classical logic and functional choice *)
 
@@ -23,10 +23,11 @@ Require Import ChoiceFacts.
 
 Theorem choice :
  forall (A B:Type) (R:A -> B -> Prop),
-   (forall x:A,  exists y : B, R x y) ->
+   (forall x:A, exists y : B, R x y) ->
     exists f : A -> B, (forall x:A, R x (f x)).
 Proof.
+intros A B.
 apply description_rel_choice_imp_funct_choice.
-exact description.
-exact relational_choice.
+exact (description A B).
+exact (relational_choice A B).
 Qed.

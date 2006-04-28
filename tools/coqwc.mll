@@ -9,7 +9,7 @@
 (* coqwc - counts the lines of spec, proof and comments in Coq sources
  * Copyright (C) 2003 Jean-Christophe Filliâtre *)
 
-(*i $Id: coqwc.mll,v 1.2.2.1 2004/07/16 19:31:46 herbelin Exp $ i*)
+(*i $Id: coqwc.mll 7095 2005-05-31 15:05:23Z filliatr $ i*)
 
 (*s {\bf coqwc.} Counts the lines of spec, proof and comments in a Coq source. 
     It assumes the files to be lexically well-formed. *)
@@ -99,7 +99,7 @@ let dot = '.' (' ' | '\t' | '\n' | '\r' | eof)
 let proof_start =   
   "Theorem" | "Lemma" | "Fact" | "Remark" | "Goal" | "Correctness"
 let proof_end =
-  ("Save" | "Qed" | "Defined" | "Abort") [^'.']* '.'
+  ("Save" | "Qed" | "Defined" | "Abort" | "Admitted") [^'.']* '.'
 
 (*s [spec] scans the specification. *)
 

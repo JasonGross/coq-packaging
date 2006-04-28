@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma"  i*)
 
-(* $Id: g_ground.ml4,v 1.10.2.1 2004/07/16 19:30:10 herbelin Exp $ *)
+(* $Id: g_ground.ml4 7909 2006-01-21 11:09:18Z herbelin $ *)
 
 open Formula
 open Sequent
@@ -41,7 +41,7 @@ let _=
       
 let default_solver=(Tacinterp.interp <:tactic<auto with *>>)
     
-let fail_solver=tclFAIL 0 "GTauto failed"
+let fail_solver=tclFAIL 0 (Pp.str "GTauto failed")
 		      
 type external_env=
     Ids of global_reference list
@@ -81,23 +81,16 @@ let normalize_evaluables=
 	   unfold_in_hyp (Lazy.force defined_connectives) 
 	   (Tacexpr.InHypType id)) *)
 
-TACTIC EXTEND Firstorder
-    [ "Firstorder" tactic_opt(t) "with" ne_reference_list(l) ] -> 
+TACTIC EXTEND firstorder
+    [ "firstorder" tactic_opt(t) "with" ne_reference_list(l) ] -> 
       [ gen_ground_tac true (option_app eval_tactic t) (Ids l) ]
-|   [ "Firstorder" tactic_opt(t) "using" ne_preident_list(l) ] -> 
+|   [ "firstorder" tactic_opt(t) "using" ne_preident_list(l) ] -> 
       [ gen_ground_tac true (option_app eval_tactic t) (Bases l) ]
-|   [ "Firstorder" tactic_opt(t) ] -> 
+|   [ "firstorder" tactic_opt(t) ] -> 
       [ gen_ground_tac true (option_app eval_tactic t) Void ]
 END
 
-(* Obsolete since V8.0
-TACTIC EXTEND GTauto   
-  [ "GTauto" ] ->
-     [ gen_ground_tac false (Some fail_solver) Void ]   
-END
-*)
-
-TACTIC EXTEND GIntuition
-  [ "GIntuition" tactic_opt(t) ] ->
+TACTIC EXTEND gintuition
+  [ "gintuition" tactic_opt(t) ] ->
      [ gen_ground_tac false (option_app eval_tactic t) Void ]
 END

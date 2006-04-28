@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: BoolEq.v,v 1.4.2.1 2004/07/16 19:31:02 herbelin Exp $ i*)
+(*i $Id: BoolEq.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 (* Cuihtlauac Alvarado - octobre 2000 *)
 
 (** Properties of a boolean equality   *)

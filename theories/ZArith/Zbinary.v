@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Zbinary.v,v 1.6.2.1 2004/07/16 19:31:21 herbelin Exp $ i*)
+(*i $Id: Zbinary.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (** Bit vectors interpreted as integers. 
     Contribution by Jean Duprat (ENS Lyon). *)

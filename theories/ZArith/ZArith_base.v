@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ZArith_base.v,v 1.5.2.1 2004/07/16 19:31:20 herbelin Exp $ *)
+(* $Id: ZArith_base.v 8032 2006-02-12 21:20:48Z herbelin $ *)
 
 (** Library for manipulating integers based on binary encoding.
     These are the basic modules, required by [Omega] and [Ring] for instance. 
@@ -19,6 +19,8 @@ Require Export Zcompare.
 Require Export Zorder.
 Require Export Zeven.
 Require Export Zmin.
+Require Export Zmax.
+Require Export Zminmax.
 Require Export Zabs.
 Require Export Znat.
 Require Export auxiliary.

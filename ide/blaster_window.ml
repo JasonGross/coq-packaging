@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: blaster_window.ml,v 1.5.2.1 2004/07/16 19:30:19 herbelin Exp $ *)
+(* $Id: blaster_window.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Gobject.Data
 open Ideutils

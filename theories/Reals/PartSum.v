@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: PartSum.v,v 1.11.2.2 2005/07/13 22:28:30 herbelin Exp $ i*)
+(*i $Id: PartSum.v 8670 2006-03-28 22:16:14Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -430,7 +430,7 @@ Lemma cv_cauchy_1 :
  forall An:nat -> R,
    sigT (fun l:R => Un_cv (fun N:nat => sum_f_R0 An N) l) ->
    Cauchy_crit_series An.
-intros.
+intros An X.
 elim X; intros.
 unfold Un_cv in p.
 unfold Cauchy_crit_series in |- *; unfold Cauchy_crit in |- *.

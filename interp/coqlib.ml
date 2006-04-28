@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqlib.ml,v 1.14.2.1 2004/07/16 19:30:22 herbelin Exp $ *)
+(* $Id: coqlib.ml 8688 2006-04-07 15:08:12Z msozeau $ *)
 
 open Util
 open Pp
@@ -16,19 +16,25 @@ open Libnames
 open Pattern
 open Nametab
 
+(************************************************************************)
+(* Generic functions to find Coq objects *)
+
+type message = string
+
 let make_dir l = make_dirpath (List.map id_of_string (List.rev l))
 
-let gen_reference locstr dir s =
-  let dir = make_dir ("Coq"::dir) in
-  let id = Constrextern.id_of_v7_string s in
-  let sp = Libnames.make_path dir id in
+let find_reference locstr dir s =
+  let sp = Libnames.make_path (make_dir dir) (id_of_string s) in
   try
     Nametab.absolute_reference sp
   with Not_found ->
     anomaly (locstr^": cannot find "^(string_of_path sp))
-    
-let gen_constant locstr dir s = 
-  constr_of_reference (gen_reference locstr dir s)
+
+let coq_reference locstr dir s = find_reference locstr ("Coq"::dir) s
+let coq_constant locstr dir s = constr_of_global (coq_reference locstr dir s)
+
+let gen_reference = coq_reference
+let gen_constant = coq_constant
 
 let list_try_find f = 
   let rec try_find_f = function
@@ -43,11 +49,11 @@ let has_suffix_in_dirs dirs ref =
 
 let gen_constant_in_modules locstr dirs s =
   let dirs = List.map make_dir dirs in
-  let id = Constrextern.id_of_v7_string s in
+  let id = id_of_string s in
   let all = Nametab.locate_all (make_short_qualid id) in
   let these = List.filter (has_suffix_in_dirs dirs) all in
   match these with
-    | [x] -> constr_of_reference x
+    | [x] -> constr_of_global x
     | [] ->
 	anomalylabstrm "" (str (locstr^": cannot find "^s^
 	" in module"^(if List.length dirs > 1 then "s " else " ")) ++
@@ -58,9 +64,27 @@ let gen_constant_in_modules locstr dirs s =
 	" in module"^(if List.length dirs > 1 then "s " else " ")) ++
 	prlist_with_sep pr_coma pr_dirpath dirs)
 
-let init_reference dir s=gen_reference "Coqlib" ("Init"::dir) s
 
-let init_constant dir s=gen_constant "Coqlib" ("Init"::dir) s  
+(* For tactics/commands requiring vernacular libraries *)
+
+let check_required_library d =
+  let d' = List.map id_of_string d in
+  let dir = make_dirpath (List.rev d') in
+  if not (Library.library_is_loaded dir) then
+(* Loading silently ...
+    let m, prefix = list_sep_last d' in
+    read_library 
+     (dummy_loc,make_qualid (make_dirpath (List.rev prefix)) m)
+*)
+(* or failing ...*)
+    error ("Library "^(list_last d)^" has to be required first")
+
+(************************************************************************)
+(* Specific Coq objects *)
+
+let init_reference dir s = gen_reference "Coqlib" ("Init"::dir) s
+
+let init_constant dir s = gen_constant "Coqlib" ("Init"::dir) s  
 
 let arith_dir = ["Coq";"Arith"]
 let arith_modules = [arith_dir]
@@ -91,22 +115,33 @@ let datatypes_module = make_dir ["Coq";"Init";"Datatypes"]
 let arith_module = make_dir ["Coq";"Arith";"Arith"]
 
 (* TODO: temporary hack *)
-let make_path dir id = Libnames.encode_kn dir id
+let make_kn dir id = Libnames.encode_kn dir id
 
-let nat_path = make_path datatypes_module (id_of_string "nat")
+(** Natural numbers *)
+let nat_kn = make_kn datatypes_module (id_of_string "nat")
+let nat_path = Libnames.make_path datatypes_module (id_of_string "nat")
 
-let glob_nat = IndRef (nat_path,0)
+let glob_nat = IndRef (nat_kn,0)
 
-let path_of_O = ((nat_path,0),1)
-let path_of_S = ((nat_path,0),2)
+let path_of_O = ((nat_kn,0),1)
+let path_of_S = ((nat_kn,0),2)
 let glob_O = ConstructRef path_of_O
 let glob_S = ConstructRef path_of_S
 
-let eq_path = make_path logic_module (id_of_string "eq")
-let eqT_path = make_path logic_module (id_of_string "eq")
+(** Booleans *)
+let bool_kn = make_kn datatypes_module (id_of_string "bool")
 
-let glob_eq = IndRef (eq_path,0)
-let glob_eqT = IndRef (eqT_path,0)
+let glob_bool = IndRef (bool_kn,0)
+
+let path_of_true = ((bool_kn,0),1)
+let path_of_false = ((bool_kn,0),2)
+let glob_true  = ConstructRef path_of_true
+let glob_false  = ConstructRef path_of_false
+
+(** Equality *)
+let eq_kn = make_kn logic_module (id_of_string "eq")
+
+let glob_eq = IndRef (eq_kn,0)
 
 type coq_sigma_data = {
   proj1 : constr;
@@ -130,6 +165,13 @@ let build_sigma_type () =
     elim = init_constant ["Specif"] "sigT_rec";
     intro = init_constant ["Specif"] "existT";
     typ = init_constant ["Specif"] "sigT" }
+
+let build_prod () =
+  { proj1 = init_constant ["Datatypes"] "fst";
+    proj2 = init_constant ["Datatypes"] "snd";
+    elim = init_constant ["Datatypes"] "prod_rec";
+    intro = init_constant ["Datatypes"] "pair";
+    typ = init_constant ["Datatypes"] "prod" }
 
 (* Equalities *)
 type coq_leibniz_eq_data = {
@@ -160,9 +202,10 @@ let build_coq_eq_data () = {
   rrec = Some (Lazy.force coq_eq_rec);
   rect = Some (Lazy.force coq_eq_rect);
   congr = Lazy.force coq_eq_congr;
-  sym  = Lazy.force coq_eq_sym }
+  sym = Lazy.force coq_eq_sym }
 
 let build_coq_eq () = Lazy.force coq_eq_eq
+let build_coq_sym_eq () = Lazy.force coq_eq_sym
 let build_coq_f_equal2 () = Lazy.force coq_f_equal2
 
 (* Specif *)
@@ -170,56 +213,23 @@ let coq_sumbool  = lazy_init_constant ["Specif"] "sumbool"
 
 let build_coq_sumbool () = Lazy.force coq_sumbool
 
-(* Equality on Type *)
-
-let coq_eqT_eq = lazy_init_constant ["Logic"] "eq"
-let coq_eqT_refl = lazy_init_constant ["Logic"] "refl_equal"
-let coq_eqT_ind = lazy_init_constant ["Logic"] "eq_ind"
-let coq_eqT_congr =lazy_init_constant ["Logic"] "f_equal"
-let coq_eqT_sym  = lazy_init_constant ["Logic"] "sym_eq"
-
-let build_coq_eqT_data () = {
-  eq = Lazy.force coq_eqT_eq;
-  refl = Lazy.force coq_eqT_refl;
-  ind = Lazy.force coq_eqT_ind;
-  rrec = None;
-  rect = None;
-  congr = Lazy.force coq_eqT_congr;
-  sym  = Lazy.force coq_eqT_sym }
-
-let build_coq_eqT () = Lazy.force coq_eqT_eq
-let build_coq_sym_eqT () = Lazy.force coq_eqT_sym
-
 (* Equality on Type as a Type *)
-let coq_idT_eq = lazy_init_constant ["Datatypes"] "identity"
-let coq_idT_refl = lazy_init_constant ["Datatypes"] "refl_identity"
-let coq_idT_ind = lazy_init_constant ["Datatypes"] "identity_ind"
-let coq_idT_rec = lazy_init_constant ["Datatypes"] "identity_rec"
-let coq_idT_rect = lazy_init_constant ["Datatypes"] "identity_rect"
-let coq_idT_congr = lazy_init_constant ["Logic_Type"] "congr_id"
-let coq_idT_sym = lazy_init_constant ["Logic_Type"] "sym_id"
+let coq_identity_eq = lazy_init_constant ["Datatypes"] "identity"
+let coq_identity_refl = lazy_init_constant ["Datatypes"] "refl_identity"
+let coq_identity_ind = lazy_init_constant ["Datatypes"] "identity_ind"
+let coq_identity_rec = lazy_init_constant ["Datatypes"] "identity_rec"
+let coq_identity_rect = lazy_init_constant ["Datatypes"] "identity_rect"
+let coq_identity_congr = lazy_init_constant ["Logic_Type"] "congr_id"
+let coq_identity_sym = lazy_init_constant ["Logic_Type"] "sym_id"
 
-let build_coq_idT_data () = {
-  eq = Lazy.force coq_idT_eq;
-  refl = Lazy.force coq_idT_refl;
-  ind = Lazy.force coq_idT_ind;
-  rrec = Some (Lazy.force coq_idT_rec);
-  rect = Some (Lazy.force coq_idT_rect);
-  congr = Lazy.force coq_idT_congr;
-  sym  = Lazy.force coq_idT_sym }
-
-let lazy_init_constant_v7 d id id7 =
-  if !Options.v7 then lazy_init_constant d id else 
-  lazy (anomaly
-   (id7^" does no longer exist in V8 new syntax, use "^id
-    ^" instead (probably an error in ML contributed code)"))
-
-(* Empty Type *)
-let coq_EmptyT = lazy_init_constant_v7 ["Logic"] "False" "EmptyT"
-
-(* Unit Type and its unique inhabitant *)
-let coq_UnitT  = lazy_init_constant_v7 ["Datatypes"] "unit" "UnitT"
-let coq_IT     = lazy_init_constant_v7 ["Datatypes"] "tt" "IT"
+let build_coq_identity_data () = {
+  eq = Lazy.force coq_identity_eq;
+  refl = Lazy.force coq_identity_refl;
+  ind = Lazy.force coq_identity_ind;
+  rrec = Some (Lazy.force coq_identity_rec);
+  rect = Some (Lazy.force coq_identity_rect);
+  congr = Lazy.force coq_identity_congr;
+  sym = Lazy.force coq_identity_sym }
 
 (* The False proposition *)
 let coq_False  = lazy_init_constant ["Logic"] "False"
@@ -235,10 +245,6 @@ let coq_or = lazy_init_constant ["Logic"] "or"
 let coq_ex = lazy_init_constant ["Logic"] "ex"
 
 (* Runtime part *)
-let build_coq_EmptyT () = Lazy.force coq_EmptyT
-let build_coq_UnitT () = Lazy.force coq_UnitT
-let build_coq_IT ()    = Lazy.force coq_IT
-
 let build_coq_True ()  = Lazy.force coq_True
 let build_coq_I ()     = Lazy.force coq_I
 
@@ -248,47 +254,14 @@ let build_coq_and ()   = Lazy.force coq_and
 let build_coq_or ()   = Lazy.force coq_or
 let build_coq_ex ()   = Lazy.force coq_ex
 
-(****************************************************************************)
-(*                             Patterns                                     *)
-(* This needs to have interp_constrpattern available ... 
-
-let parse_constr s =
-  try 
-    Pcoq.parse_string Pcoq.Constr.constr_eoi s 
-  with Stdpp.Exc_located (_ , (Stream.Failure | Stream.Error _)) ->
-    error "Syntax error : not a construction"
-
-let parse_pattern s =
-  Constrintern.interp_constrpattern Evd.empty (Global.env()) (parse_constr s)
-let coq_eq_pattern =
-  lazy (snd (parse_pattern "(Coq.Init.Logic.eq ?1 ?2 ?3)"))
-let coq_eqT_pattern =
-  lazy (snd (parse_pattern "(Coq.Init.Logic.eq ?1 ?2 ?3)"))
-let coq_idT_pattern =
-  lazy (snd (parse_pattern "(Coq.Init.Logic_Type.identityT ?1 ?2 ?3)"))
-let coq_existS_pattern =
-  lazy (snd (parse_pattern "(Coq.Init.Specif.existS ?1 ?2 ?3 ?4)"))
-let coq_existT_pattern = 
-  lazy (snd (parse_pattern "(Coq.Init.Specif.existT ?1 ?2 ?3 ?4)"))
-let coq_not_pattern =
-  lazy (snd (parse_pattern "(Coq.Init.Logic.not ?)"))
-let coq_imp_False_pattern =
-  lazy (snd (parse_pattern "? -> Coq.Init.Logic.False"))
-let coq_imp_False_pattern =
-  lazy (snd (parse_pattern "? -> Coq.Init.Logic.False"))
-let coq_eqdec_partial_pattern =
-  lazy (snd (parse_pattern "(sumbool (eq ?1 ?2 ?3) ?4)"))
-let coq_eqdec_pattern =
-  lazy (snd (parse_pattern "(x,y:?1){<?1>x=y}+{~(<?1>x=y)}"))
-*)
-
 (* The following is less readable but does not depend on parsing *)
 let coq_eq_ref      = lazy (init_reference ["Logic"] "eq")
-let coq_eqT_ref     = coq_eq_ref
-let coq_idT_ref     = lazy (init_reference ["Datatypes"] "identity")
+let coq_identity_ref     = lazy (init_reference ["Datatypes"] "identity")
 let coq_existS_ref  = lazy (init_reference ["Specif"] "existS")
 let coq_existT_ref  = lazy (init_reference ["Specif"] "existT")
 let coq_not_ref     = lazy (init_reference ["Logic"] "not")
 let coq_False_ref   = lazy (init_reference ["Logic"] "False")
 let coq_sumbool_ref = lazy (init_reference ["Specif"] "sumbool")
 let coq_sig_ref = lazy (init_reference ["Specif"] "sig")
+let coq_or_ref     = lazy (init_reference ["Logic"] "or")
+

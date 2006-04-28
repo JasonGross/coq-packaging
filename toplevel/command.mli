@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: command.mli,v 1.38.2.1 2004/07/16 19:31:47 herbelin Exp $ i*)
+(*i $Id: command.mli 7682 2005-12-21 15:06:11Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -22,6 +22,7 @@ open Vernacexpr
 open Rawterm
 open Topconstr
 open Decl_kinds
+open Redexpr
 (*i*)
 
 (*s Declaration functions. The following functions take ASTs,
@@ -30,7 +31,7 @@ open Decl_kinds
    defined object *)
 
 val declare_definition : identifier -> definition_kind ->
-  local_binder list -> Tacred.red_expr option -> constr_expr ->
+  local_binder list -> red_expr option -> constr_expr ->
     constr_expr option -> declaration_hook -> unit
 
 val syntax_definition : identifier -> constr_expr -> bool -> bool -> unit
@@ -43,13 +44,13 @@ val build_mutual : inductive_expr list -> bool -> unit
 val declare_mutual_with_eliminations :
   bool -> Entries.mutual_inductive_entry -> mutual_inductive
 
-val build_recursive : (fixpoint_expr * decl_notation) list -> unit
+val build_recursive : (fixpoint_expr * decl_notation) list -> bool -> unit
 
-val build_corecursive : cofixpoint_expr list -> unit
+val build_corecursive : cofixpoint_expr list -> bool -> unit
 
 val build_scheme : (identifier located * bool * reference * rawsort) list -> unit
 
-val generalize_rawconstr : constr_expr -> local_binder list -> constr_expr
+val generalize_constr_expr : constr_expr -> local_binder list -> constr_expr
 
 val start_proof : identifier -> goal_kind -> constr ->
   declaration_hook -> unit
@@ -83,3 +84,5 @@ val admit : unit -> unit
    and the current global env *)
 
 val get_current_context : unit -> Evd.evar_map * Environ.env
+
+

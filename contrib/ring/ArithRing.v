@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ArithRing.v,v 1.9.2.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: ArithRing.v 6295 2004-11-12 16:40:39Z gregoire $ *)
 
 (* Instantiation of the Ring tactic for the naturals of Arith $*)
 
@@ -16,7 +16,7 @@ Require Import Eqdep_dec.
 
 Open Local Scope nat_scope.
 
-Fixpoint nateq (n m:nat) {struct m} : bool :=
+Unboxed Fixpoint nateq (n m:nat) {struct m} : bool :=
   match n, m with
   | O, O => true
   | S n', S m' => nateq n' m'
@@ -32,12 +32,12 @@ Proof.
   trivial.
 Qed.
 
-Hint Resolve nateq_prop eq2eqT: arithring.
+Hint Resolve nateq_prop: arithring.
 
 Definition NatTheory : Semi_Ring_Theory plus mult 1 0 nateq.
   split; intros; auto with arith arithring.
-  apply eq2eqT; apply (fun n m p:nat => plus_reg_l m p n) with (n := n).
-  apply eqT2eq; trivial.
+  apply (fun n m p:nat => plus_reg_l m p n) with (n := n).
+  trivial.
 Defined.
 
 

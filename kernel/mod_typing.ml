@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mod_typing.ml,v 1.11.2.1 2004/07/16 19:30:26 herbelin Exp $ i*)
+(*i $Id: mod_typing.ml 7639 2005-12-02 10:01:15Z gregoire $ i*)
 
 open Util
 open Names
@@ -17,6 +17,7 @@ open Environ
 open Term_typing
 open Modops
 open Subtyping
+open Mod_subst
 
 exception Not_path
 
@@ -65,8 +66,9 @@ and merge_with env mtb with_decl =
     | MTBsig(msid,sig_b) -> msid,sig_b 
     | _ -> error_signature_expected mtb
   in
-  let id = match with_decl with 
-    | With_Definition (id,_) | With_Module (id,_) -> id
+  let id,idl = match with_decl with 
+    | With_Definition (id::idl,_) | With_Module (id::idl,_) -> id,idl
+    | With_Definition ([],_) | With_Module ([],_) -> assert false
   in
   let l = label_of_id id in
     try
@@ -74,7 +76,9 @@ and merge_with env mtb with_decl =
       let before = List.rev rev_before in
       let env' = Modops.add_signature (MPself msid) before env in
       let new_spec = match with_decl with
-	| With_Definition (id,c) -> 
+        | With_Definition ([],_)
+        | With_Module ([],_) -> assert false
+	| With_Definition ([id],c) -> 
 	    let cb = match spec with
 		SPBconst cb -> cb
 	      | _ -> error_not_a_constant l
@@ -88,21 +92,25 @@ and merge_with env mtb with_decl =
 		      let cst = 
 			Constraint.union 
 			  (Constraint.union cb.const_constraints cst1)
-			  cst2
-		      in
+			  cst2 in
+                      let body = Some (Declarations.from_val j.uj_val) in
 			SPBconst {cb with 
-				    const_body = 
-				      Some (Declarations.from_val j.uj_val);
-				    const_constraints = cst}
+				    const_body = body;
+			            const_body_code = Cemitcodes.from_val
+                        (compile_constant_body env' body false false);
+                                    const_constraints = cst}
 		  | Some b -> 
 		      let cst1 = Reduction.conv env' c (Declarations.force b) in
 		      let cst = Constraint.union cb.const_constraints cst1 in
+                      let body = Some (Declarations.from_val c) in
 			SPBconst {cb with 
-				    const_body = Some (Declarations.from_val c);
-				    const_constraints = cst}
+				    const_body = body;
+				    const_body_code = Cemitcodes.from_val
+                        (compile_constant_body env' body false false);
+                                    const_constraints = cst}
 	      end	
 (* and what about msid's ????? Don't they clash ? *)
-	| With_Module (id, mp) ->
+	| With_Module ([id], mp) ->
 	    let old = match spec with
 		SPBmodule msb -> msb
 	      | _ -> error_not_a_module (string_of_label l)
@@ -133,6 +141,29 @@ and merge_with env mtb with_decl =
 	       msb_constraints = Constraint.union old.msb_constraints cst }
 	    in
 	      SPBmodule msb
+	| With_Definition (_::_,_)
+        | With_Module (_::_,_) -> 
+	    let old = match spec with
+		SPBmodule msb -> msb
+	      | _ -> error_not_a_module (string_of_label l)
+	    in
+	      begin
+		match old.msb_equiv with
+                   None ->
+                    let new_with_decl = match with_decl with
+                       With_Definition (_,c) -> With_Definition (idl,c)
+                     | With_Module (_,c) -> With_Module (idl,c) in
+                    let modtype = 
+                     merge_with env' old.msb_modtype new_with_decl in
+                    let msb =
+	              {msb_modtype = modtype; 
+	               msb_equiv = None; 
+	               msb_constraints = old.msb_constraints }
+	            in
+	             SPBmodule msb
+                 | Some mp ->
+                    error_a_generative_module_expected l
+              end
       in
 	MTBsig(msid,  before@(l,new_spec)::after)
     with
@@ -143,13 +174,14 @@ and translate_entry_list env msid is_definition sig_e =
   let mp = MPself msid in
   let do_entry env (l,e) = 
     let kn = make_kn mp empty_dirpath l in
+    let con = make_con mp empty_dirpath l in
     match e with
       | SPEconst ce ->
-	  let cb = translate_constant env ce in
+	  let cb = translate_constant env con ce in
 	    begin match cb.const_hyps with
 	      |	(_::_) -> error_local_context (Some l)
 	      | [] ->
-		  add_constant kn cb env, (l, SEBconst cb), (l, SPBconst cb)
+		  add_constant con cb env, (l, SEBconst cb), (l, SPBconst cb)
 	    end
       | SPEmind mie -> 
 	  let mib = translate_mind env mie in
@@ -253,8 +285,13 @@ and translate_mexpr env mexpr = match mexpr with
 	  | Not_path -> error_application_to_not_path mexpr
 	      (* place for nondep_supertype *)
       in
+       let resolve = Modops.resolver_of_environment farg_id farg_b mp env in
 	MEBapply(feb,meb,cst),
-	subst_modtype (map_mbid farg_id mp) fbody_b
+        (* This is the place where the functor formal parameter is
+           substituted by the given argument to compute the type of the
+           functor application. *)
+	subst_modtype
+         (map_mbid farg_id mp (Some resolve)) fbody_b
   | MEstruct (msid,structure) ->
       let structure,signature = translate_entry_list env msid true structure in
 	MEBstruct (msid,structure),

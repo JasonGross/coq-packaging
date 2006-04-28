@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqdep.ml,v 1.15.2.1 2004/07/16 19:31:46 herbelin Exp $ *)
+(* $Id: coqdep.ml 8642 2006-03-17 10:09:02Z notin $ *)
 
 open Printf
 open Coqdep_lexer
@@ -523,6 +523,7 @@ let coqdep () =
   List.iter 
     (fun (s,_) -> add_coqlib_directory s)
     (all_subdirs (!coqlib/"contrib") "Coq");
+  add_coqlib_directory (!coqlib/"user-contrib");
   mliKnown := !mliKnown @ (List.map (fun (f,_,d) -> (f,d)) !mliAccu);
   mlKnown  := !mlKnown @ (List.map (fun (f,_,d) -> (f,d)) !mlAccu);
   warning_mult ".mli" !mliKnown;

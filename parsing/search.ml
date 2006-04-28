@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: search.ml,v 1.30.2.1 2004/07/16 19:30:41 herbelin Exp $ *)
+(* $Id: search.ml 7837 2006-01-11 09:47:32Z herbelin $ *)
 
 open Pp
 open Util
@@ -17,7 +17,6 @@ open Rawterm
 open Declarations
 open Libobject
 open Declare
-open Coqast
 open Environ
 open Pattern
 open Matching
@@ -34,27 +33,26 @@ open Nametab
 
 let print_constructors indsp fn env nconstr =
   for i = 1 to nconstr do
-    fn (ConstructRef (indsp,i)) env (Inductive.type_of_constructor env (indsp,i))
+    fn (ConstructRef (indsp,i)) env (Inductiveops.type_of_constructor env (indsp,i))
   done
 
 let rec head_const c = match kind_of_term c with
   | Prod (_,_,d) -> head_const d
   | LetIn (_,_,_,d) -> head_const d
   | App (f,_)   -> head_const f
-  | Cast (d,_)   -> head_const d
+  | Cast (d,_,_)   -> head_const d
   | _            -> c
 
 (* General search, restricted to head constant if [only_head] *)
 
 let gen_crible refopt (fn : global_reference -> env -> constr -> unit) =
   let env = Global.env () in
-  let imported = Library.opened_libraries() in
   let crible_rec (sp,_) lobj = match object_tag lobj with
     | "VARIABLE" ->
 	(try 
 	   let (idc,_,typ) = get_variable (basename sp) in 
            if refopt = None
-	     || head_const typ = constr_of_reference (out_some refopt)
+	     || head_const typ = constr_of_global (out_some refopt)
 	   then
 	     fn (VarRef idc) env typ
 	 with Not_found -> (* we are in a section *) ())
@@ -62,7 +60,7 @@ let gen_crible refopt (fn : global_reference -> env -> constr -> unit) =
 	let kn = locate_constant (qualid_of_sp sp) in
 	let {const_type=typ} = Global.lookup_constant kn in
         if refopt = None
-	  || head_const typ = constr_of_reference (out_some refopt)
+	  || head_const typ = constr_of_global (out_some refopt)
 	then
 	  fn (ConstRef kn) env typ
     | "INDUCTIVE" -> 
@@ -80,7 +78,7 @@ let gen_crible refopt (fn : global_reference -> env -> constr -> unit) =
     | _ -> ()
   in 
   try 
-    Declaremods.iter_all_segments false crible_rec
+    Declaremods.iter_all_segments crible_rec
   with Not_found -> 
     ()
 
@@ -104,7 +102,7 @@ let constr_to_section_path c = match kind_of_term c with
 let xor a b = (a or b) & (not (a & b))
 
 let plain_display ref a c =
-  let pc = prterm_env a c in
+  let pc = pr_lconstr_env a c in
   let pr = pr_global ref in
   msg (hov 2 (pr ++ str":" ++ spc () ++ pc) ++ fnl ())
 
@@ -210,7 +208,7 @@ type glob_search_about_item =
   | GlobSearchString of string
 
 let search_about_item (itemref,typ) = function
-  | GlobSearchRef ref -> Termops.occur_term (constr_of_reference ref) typ
+  | GlobSearchRef ref -> Termops.occur_term (constr_of_global ref) typ
   | GlobSearchString s -> string_string_contains (name_of_reference itemref) s
 
 let raw_search_about filter_modules display_function l =

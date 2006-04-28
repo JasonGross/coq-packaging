@@ -6,10 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tactic_debug.mli,v 1.12.2.1 2004/07/16 19:30:50 herbelin Exp $ i*)
+(*i $Id: tactic_debug.mli 7911 2006-01-21 11:18:36Z herbelin $ i*)
 
 open Environ
 open Pattern
+open Evd
 open Proof_type
 open Names
 open Tacexpr
@@ -18,6 +19,13 @@ open Term
 (* This module intends to be a beginning of debugger for tactic expressions.
    Currently, it is quite simple and we can hope to have, in the future, a more
    complete panel of commands dedicated to a proof assistant framework *)
+
+val set_tactic_printer : (glob_tactic_expr ->Pp.std_ppcmds) -> unit
+val set_match_pattern_printer :
+  (env -> constr_pattern match_pattern -> Pp.std_ppcmds) -> unit
+val set_match_rule_printer :
+  ((constr_pattern,glob_tactic_expr) match_rule -> Pp.std_ppcmds) ->
+    unit
 
 (* Debug information *)
 type debug_info =
@@ -53,7 +61,7 @@ val db_hyp_pattern_failure :
 val db_matching_failure : debug_info -> unit
 
 (* Prints an evaluation failure message for a rule *)
-val db_eval_failure : debug_info -> string -> unit
+val db_eval_failure : debug_info -> Pp.std_ppcmds -> unit
 
 (* An exception handler *)
 val explain_logic_error: (exn -> Pp.std_ppcmds) ref

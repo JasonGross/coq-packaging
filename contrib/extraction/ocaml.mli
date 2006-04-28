@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ocaml.mli,v 1.26.6.3 2005/12/01 17:01:22 letouzey Exp $ i*)
+(*i $Id: ocaml.mli 7632 2005-12-01 14:35:21Z letouzey $ i*)
 
 (*s Some utility functions to be reused in module [Haskell]. *)
 

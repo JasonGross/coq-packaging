@@ -3,43 +3,45 @@ tactics/eqdecide.ml: parsing/grammar.cma
 tactics/extraargs.ml: parsing/grammar.cma
 tactics/extratactics.ml: parsing/grammar.cma
 tactics/eauto.ml: parsing/grammar.cma
+toplevel/whelp.ml: parsing/grammar.cma
+tactics/hipattern.ml: parsing/grammar.cma parsing/q_constr.cmo
 contrib/omega/g_omega.ml: parsing/grammar.cma
 contrib/romega/g_romega.ml: parsing/grammar.cma
 contrib/ring/g_quote.ml: parsing/grammar.cma
 contrib/ring/g_ring.ml: parsing/grammar.cma
+contrib/dp/g_dp.ml: parsing/grammar.cma
+contrib/setoid_ring/newring.ml: parsing/grammar.cma
 contrib/field/field.ml: parsing/grammar.cma
 contrib/fourier/g_fourier.ml: parsing/grammar.cma
 contrib/extraction/g_extraction.ml: parsing/grammar.cma
 contrib/xml/xmlentries.ml: parsing/grammar.cma
 contrib/jprover/jprover.ml: parsing/grammar.cma
-contrib/cc/cctac.ml: parsing/grammar.cma
+contrib/cc/g_congruence.ml: parsing/grammar.cma
 contrib/funind/tacinv.ml: parsing/grammar.cma
 contrib/first-order/g_ground.ml: parsing/grammar.cma
+contrib/subtac/g_subtac.ml: parsing/grammar.cma
+contrib/subtac/g_eterm.ml: parsing/grammar.cma
+contrib/rtauto/g_rtauto.ml: parsing/grammar.cma
+contrib/recdef/recdef.ml: parsing/grammar.cma
+contrib/funind/indfun_main.ml: parsing/grammar.cma
 contrib/interface/debug_tac.ml: parsing/grammar.cma
 contrib/interface/centaur.ml: parsing/grammar.cma
 parsing/lexer.ml: 
+parsing/pcoq.ml: 
 parsing/q_util.ml: 
 parsing/q_coqast.ml: 
 parsing/g_prim.ml: 
-parsing/pcoq.ml: 
-parsing/g_basevernac.ml: 
 parsing/g_minicoq.ml: 
-parsing/g_vernac.ml: 
+parsing/g_vernac.ml: parsing/grammar.cma
 parsing/g_proofs.ml: 
-parsing/g_cases.ml: 
+parsing/g_xml.ml: 
 parsing/g_constr.ml: 
-parsing/g_module.ml: 
 parsing/g_tactic.ml: 
 parsing/g_ltac.ml: 
 parsing/argextend.ml: 
 parsing/tacextend.ml: 
 parsing/vernacextend.ml: 
-parsing/g_primnew.ml: 
-parsing/g_vernacnew.ml: 
-parsing/g_proofsnew.ml: 
-parsing/g_constrnew.ml: 
-parsing/g_tacticnew.ml: 
-parsing/g_ltacnew.ml: 
+parsing/q_constr.ml: 
 toplevel/mltop.ml: 
 lib/pp.ml: 
 lib/compat.ml: 

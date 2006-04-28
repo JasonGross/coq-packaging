@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extraction.ml,v 1.136.2.4 2005/12/01 11:27:15 letouzey Exp $ i*)
+(*i $Id: extraction.ml 7639 2005-12-02 10:01:15Z gregoire $ i*)
 
 (*i*)
 open Util
@@ -230,7 +230,7 @@ let rec extract_type env db j c args =
 		      (* We try to reduce. *)
 		      let newc = applist (Declarations.force lbody, args) in 
 		      extract_type env db j newc []))
-    | Ind ((kn,i) as ip) ->
+    | Ind (kn,i) ->
 	let s = (extract_ind env kn).ind_packets.(i).ip_sign in  
 	extract_type_app env db (IndRef (kn,i),s) args
     | Case _ | Fix _ | CoFix _ -> Tunknown
@@ -295,8 +295,8 @@ and extract_ind env kn = (* kn is supposed to be in long form *)
     (* Everything concerning parameters. *)
     (* We do that first, since they are common to all the [mib]. *)
     let mip0 = mib.mind_packets.(0) in 
-    let npar = mip0.mind_nparams in
-    let epar = push_rel_context mip0.mind_params_ctxt env in
+    let npar = mib.mind_nparams in
+    let epar = push_rel_context mib.mind_params_ctxt env in
     (* First pass: we store inductive signatures together with *)
     (* their type var list. *)
     let packets = 
@@ -354,22 +354,22 @@ and extract_ind env kn = (* kn is supposed to be in long form *)
 	let rec names_prod t = match kind_of_term t with 
 	  | Prod(n,_,t) -> n::(names_prod t)
 	  | LetIn(_,_,_,t) -> names_prod t
-	  | Cast(t,_) -> names_prod t
+	  | Cast(t,_,_) -> names_prod t
 	  | _ -> []
 	in 
 	let field_names = 
-	  list_skipn mip0.mind_nparams (names_prod mip0.mind_user_lc.(0)) in 
+	  list_skipn mib.mind_nparams (names_prod mip0.mind_user_lc.(0)) in 
 	assert (List.length field_names = List.length typ);
-	let projs = ref KNset.empty in 
+	let projs = ref Cset.empty in 
 	let mp,d,_ = repr_kn kn in 
 	let rec select_fields l typs = match l,typs with 
 	  | [],[] -> []
 	  | (Name id)::l, typ::typs -> 
 	      if type_eq (mlt_env env) Tdummy typ then select_fields l typs 
 	      else  
-		let knp = make_kn mp d (label_of_id id) in 
+		let knp = make_con mp d (label_of_id id) in 
 		if not (List.mem false (type_to_sign (mlt_env env) typ)) then 
-		  projs := KNset.add knp !projs; 
+		  projs := Cset.add knp !projs; 
 		(ConstRef knp) :: (select_fields l typs)
 	  | Anonymous::l, typ::typs -> 
 	      if type_eq (mlt_env env) Tdummy typ then select_fields l typs
@@ -384,8 +384,8 @@ and extract_ind env kn = (* kn is supposed to be in long form *)
 	  let n = nb_default_params env mip0.mind_nf_arity in
 	  List.iter 
 	    (option_iter 
-	       (fun kn -> if KNset.mem kn !projs then add_projection n kn))
-	    (find_structure ip).s_PROJ 
+	       (fun kn -> if Cset.mem kn !projs then add_projection n kn))
+	    (lookup_structure ip).s_PROJ 
 	with Not_found -> ()
 	end; 
 	Record field_glob
@@ -419,7 +419,7 @@ and extract_type_cons env db dbmap c i =
 and mlt_env env r = match r with 
   | ConstRef kn -> 
       (try 
-	 if not (visible_kn kn) then raise Not_found; 
+	 if not (visible_con kn) then raise Not_found; 
 	 match lookup_term kn with 
 	   | Dtype (_,vl,mlt) -> Some mlt
 	   | _ -> None
@@ -448,7 +448,7 @@ let type_expunge env = type_expunge (mlt_env env)
 
 let record_constant_type env kn opt_typ = 
   try 
-    if not (visible_kn kn) then raise Not_found; 
+    if not (visible_con kn) then raise Not_found; 
     lookup_type kn 
   with Not_found ->
     let typ = match opt_typ with 
@@ -515,7 +515,7 @@ let rec extract_term env mle mlt c args =
  	extract_app env mle mlt (extract_fix env mle i recd) args 
     | CoFix (i,recd) ->
  	extract_app env mle mlt (extract_fix env mle i recd) args
-    | Cast (c, _) -> extract_term env mle mlt c args
+    | Cast (c,_,_) -> extract_term env mle mlt c args
     | Ind _ | Prod _ | Sort _ | Meta _ | Evar _ | Var _ -> assert false 
 
 (*s [extract_maybe_term] is [extract_term] for usual terms, else [MLdummy] *) 
@@ -678,7 +678,6 @@ and extract_case env mle ((kn,i) as ip,c,br) mlt =
       end 
     else 
       let mi = extract_ind env kn in 
-      let params_nb = mi.ind_nparams in 
       let oi = mi.ind_packets.(i) in 
       let metas = Array.init (List.length oi.ip_vars) new_meta in 
       (* The extraction of the head. *)

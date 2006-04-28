@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqc.ml,v 1.25.2.3 2004/09/04 10:34:56 herbelin Exp $ *)
+(* $Id: coqc.ml 7747 2005-12-28 10:28:41Z herbelin $ *)
 
 (* Afin de rendre Coq plus portable, ce programme Caml remplace le script
    coqc. 
@@ -148,10 +148,15 @@ let parse_args () =
 	    | []        -> usage ()
 	end
     | "-R" as o :: s :: t :: rem -> parse (cfiles,t::s::o::args) rem
-    | ("-notactics"|"-debug"|"-nolib"|"-batch"|"-nois"
+
+    | ("-notactics"|"-debug"|"-nolib"
+      | "-debugVM"|"-alltransp"|"-VMno"
+      |"-batch"|"-nois"
       |"-q"|"-full"|"-profile"|"-just-parsing"|"-echo" |"-unsafe"|"-quiet"
-      |"-silent"|"-m"|"-xml"|"-v7"|"-v8"|"-translate"|"-strict-implicit"
-      |"-dont-load-proofs"|"-impredicative-set" as o) :: rem ->
+      |"-silent"|"-m"|"-xml"|"-v7"|"-v8"|"-translate" |"-strict-implicit"
+      |"-dont-load-proofs"|"-impredicative-set"|"-vm" 
+      | "-unboxed-values" | "-unboxed-definitions" | "-draw-vm-instr" 
+	  as o) :: rem ->
 	parse (cfiles,o::args) rem
     | ("-v"|"--version") :: _ ->
         Usage.version ()

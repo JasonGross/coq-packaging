@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq_commands.ml,v 1.15.2.1 2004/07/16 19:30:20 herbelin Exp $ *)
+(* $Id: coq_commands.ml 7102 2005-06-03 13:14:27Z coq $ *)
 
 let commands = [
   [(* "Abort"; *)
@@ -22,6 +22,7 @@ let commands = [
    "Add Rec ML Path";
    "Add Ring A Aplus Amult Aone Azero Ainv Aeq T [ c1 ... cn ]. ";
    "Add Semi Ring A Aplus Amult Aone Azero Aeq T [ c1 ... cn ].";
+   "Add Relation";
    "Add Setoid";
    "Axiom";];
   [(* "Back"; *) ];
@@ -63,7 +64,7 @@ let commands = [
    "Hint Unfold";
    "Hypothesis";];
   ["Identity Coercion";
-   "Implicits";
+   "Implicit Arguments";
    "Inductive";
    "Infix";
    ];
@@ -173,6 +174,8 @@ let state_preserving = [
   "Print Module Type";
   "Print Modules";
   "Print Proof";
+  "Print Rewrite HintDb";
+  "Print Setoids";
   "Print Scope";
   "Print Scopes.";
   "Print Section";
@@ -196,6 +199,7 @@ let state_preserving = [
 
   "Show";
   "Show Conjectures";
+  "Show Existentials";
   "Show Implicits";
   "Show Intro";
   "Show Intros";
@@ -207,6 +211,9 @@ let state_preserving = [
   "Test Printing Let";
   "Test Printing Synth";
   "Test Printing Wildcard";
+
+  "Whelp Hint";
+  "Whelp Locate";
 ]
 
 

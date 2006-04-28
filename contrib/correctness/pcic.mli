@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(*i $Id: pcic.mli,v 1.3.16.1 2004/07/16 19:30:00 herbelin Exp $ i*)
+(*i $Id: pcic.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 open Past
 open Rawterm

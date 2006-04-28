@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: ProgInt.v,v 1.2.2.1 2004/07/16 19:30:00 herbelin Exp $ *)
+(* $Id: ProgInt.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Require Export ZArith.
 Require Export ZArith_dec.

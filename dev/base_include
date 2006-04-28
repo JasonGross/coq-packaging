@@ -13,45 +13,51 @@
 #directory "proofs";;
 #directory "tactics";;
 #directory "translate";;
+
 #use "top_printers.ml";;
+#use "vm_printers.ml";;
 
-#install_printer  (* identifier *) prid;;
-#install_printer  (* label *) prlab;;
-#install_printer prmsid;;
-#install_printer prmbid;;
-#install_printer prdir;;
-#install_printer prmp;;
-#install_printer  (* section_path *)  prsp;;
-#install_printer  (* qualid *)  prqualid;;
-#install_printer  (* kernel_name *) prkn;;
-#install_printer  (* constr *)  print_pure_constr;;
-
-(* parsing of names *)
+#install_printer  (* identifier *) ppid;;
+#install_printer  (* identifier *) ppidset;;
+#install_printer  (* label *) pplab;;
+#install_printer  (* mod_self_id *) ppmsid;;
+#install_printer  (* mod_bound_id *) ppmbid;;
+#install_printer  (* dir_path *) ppdir;;
+#install_printer  (* module_path *) ppmp;;
+#install_printer  (* section_path *)  ppsp;;
+#install_printer  (* qualid *)  ppqualid;;
+#install_printer  (* kernel_name *) ppkn;;
+#install_printer  (* constant *) ppcon;;
+#install_printer  (* constr *)  print_pure_constr;; 
+#install_printer  (* patch *) ppripos;;
+#install_printer  (* values *) ppvalues;;
+#install_printer ppzipper;;
+#install_printer ppstack;;
+#install_printer ppatom;;
+#install_printer ppwhd;;
+#install_printer ppvblock;;
+#install_printer  (* bigint *) ppbigint;;
+#install_printer  (* loc *) pploc;;
 
 let qid = Libnames.qualid_of_string;;
 
 (* parsing of terms *)
 
-let parse_com   = Pcoq.parse_string Pcoq.Constr.constr;;
-let parse_tac = Pcoq.parse_string Pcoq.Tactic.tactic;;
+let parse_constr = Pcoq.parse_string Pcoq.Constr.constr;;
+let parse_tac    = Pcoq.parse_string Pcoq.Tactic.tactic;;
 let parse_vernac = Pcoq.parse_string Pcoq.Vernac_.vernac;;
-
-(* For compatibility reasons *)
-let parse_ast = parse_com;;
 
 (* build a term of type rawconstr without type-checking or resolution of 
    implicit syntax *)
 
-let e s = Constrintern.interp_rawconstr Evd.empty (Global.env()) (parse_ast s);;
-
-(* For compatibility *)
-let raw_constr_of_string = e;;
+let e s =
+  Constrintern.intern_constr Evd.empty (Global.env()) (parse_constr s);;
 
 (* build a term of type constr with type-checking and resolution of 
    implicit syntax *)
 
 let constr_of_string s = 
-  Constrintern.interp_constr Evd.empty (Global.env()) (parse_ast s);;
+  Constrintern.interp_constr Evd.empty (Global.env()) (parse_constr s);;
 
 (* get the body of a constant *)
 
@@ -69,7 +75,7 @@ let get_nth_goal n = nth_goal_of_pftreestate n (Pfedit.get_pftreestate ());;
 let current_goal () = get_nth_goal 1;;
 
 let pf_e gl s = 
-    Constrintern.interp_constr (project gl) (pf_env gl) (parse_ast s);;
+  Constrintern.interp_constr (project gl) (pf_env gl) (parse_constr s);;
 
 open Toplevel
 let go = loop

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: dn.ml,v 1.5.16.1 2004/07/16 19:30:52 herbelin Exp $ *)
+(* $Id: dn.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (* This file implements the basic structure of what Chet called
    ``discrimination nets''. If my understanding is right, it serves

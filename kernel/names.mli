@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: names.mli,v 1.46.6.1 2004/07/16 19:30:26 herbelin Exp $ i*)
+(*i $Id: names.mli 6736 2005-02-18 20:49:04Z herbelin $ i*)
 
 (*s Identifiers *)
 
@@ -83,45 +83,6 @@ val string_of_mp : module_path -> string
 module MPset : Set.S with type elt = module_path
 module MPmap : Map.S with type key = module_path
 
-
-(*s Substitutions *)
-
-type substitution
-
-val empty_subst : substitution
-
-val add_msid : 
-  mod_self_id -> module_path -> substitution -> substitution
-val add_mbid : 
-  mod_bound_id -> module_path -> substitution -> substitution
-
-val map_msid : mod_self_id -> module_path -> substitution
-val map_mbid : mod_bound_id -> module_path -> substitution
-
-(* sequential composition: 
-   [substitute (join sub1 sub2) t = substitute sub2 (substitute sub1 t)]
-*)
-val join : substitution -> substitution -> substitution
-
-(*i debugging *)
-val debug_string_of_subst : substitution -> string
-val debug_pr_subst : substitution -> Pp.std_ppcmds
-(*i*)
-
-(* [subst_mp sub mp] guarantees that whenever the result of the
-   substitution is structutally equal [mp], it is equal by pointers 
-   as well [==] *) 
-
-val subst_mp : 
-  substitution -> module_path -> module_path
-
-(* [occur_*id id sub] returns true iff [id] occurs in [sub] 
-   on either side *)
-
-val occur_msid : mod_self_id -> substitution -> bool
-val occur_mbid : mod_bound_id -> substitution -> bool
-     
-
 (* Name of the toplevel structure *)
 val initial_msid : mod_self_id
 val initial_path : module_path (* [= MPself initial_msid] *)
@@ -142,7 +103,6 @@ val label : kernel_name -> label
 
 val string_of_kn : kernel_name -> string
 val pr_kn : kernel_name -> Pp.std_ppcmds
-val subst_kn : substitution -> kernel_name -> kernel_name
 
 
 module KNset  : Set.S with type elt = kernel_name
@@ -153,12 +113,26 @@ module KNmap  : Map.S with type key = kernel_name
 (*s Specific paths for declarations *)
 
 type variable = identifier
-type constant = kernel_name
+type constant
 type mutual_inductive = kernel_name
 (* Beware: first inductive has index 0 *)
 type inductive = mutual_inductive * int
 (* Beware: first constructor has index 1 *)
 type constructor = inductive * int
+
+module Cmap  : Map.S with type key = constant
+module Cpred  : Predicate.S with type elt = constant
+module Cset  : Set.S with type elt = constant
+module Indmap : Map.S with type key = inductive
+module Constrmap : Map.S with type key = constructor
+
+val constant_of_kn : kernel_name -> constant
+val make_con : module_path -> dir_path -> label -> constant
+val repr_con : constant -> module_path * dir_path * label
+val string_of_con : constant -> string
+val con_label : constant -> label
+val con_modpath : constant -> module_path
+val pr_con : constant -> Pp.std_ppcmds
 
 val ith_mutual_inductive : inductive -> int -> inductive
 val ith_constructor_of_inductive : inductive -> int -> constructor
@@ -172,5 +146,22 @@ type evaluable_global_reference =
 
 (* Hash-consing *)
 val hcons_names : unit ->
+  (constant -> constant) *
   (kernel_name -> kernel_name) * (dir_path -> dir_path) *
   (name -> name) * (identifier -> identifier) * (string -> string)
+
+
+(******)
+
+type 'a tableKey =
+  | ConstKey of constant
+  | VarKey of identifier
+  | RelKey of 'a 
+
+type transparent_state = Idpred.t * Cpred.t
+
+type inv_rel_key = int (* index in the [rel_context] part of environment
+			  starting by the end, {\em inverse} 
+			  of de Bruijn indice *)
+
+type id_key = inv_rel_key tableKey

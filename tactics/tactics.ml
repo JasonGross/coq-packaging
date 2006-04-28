@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tactics.ml,v 1.162.2.7 2005/07/13 16:18:57 herbelin Exp $ *)
+(* $Id: tactics.ml 8701 2006-04-12 08:07:35Z courtieu $ *)
 
 open Pp
 open Util
@@ -31,6 +31,7 @@ open Proof_type
 open Logic
 open Evar_refiner
 open Clenv
+open Clenvtac
 open Refiner
 open Tacticals
 open Hipattern
@@ -39,6 +40,8 @@ open Nametab
 open Genarg
 open Tacexpr
 open Decl_kinds
+open Evarutil
+open Indrec
 
 exception Bound
 
@@ -47,7 +50,7 @@ let rec nb_prod x =
     match kind_of_term c with
         Prod(_,_,t) -> count (n+1) t
       | LetIn(_,a,_,t) -> count n (subst1 a t)
-      | Cast(c,_) -> count n c
+      | Cast(c,_,_) -> count n c
       | _ -> n
   in count 0 x
 
@@ -141,28 +144,24 @@ type tactic_reduction = env -> evar_map -> constr -> constr
    reduction function either to the conclusion or to a 
    certain hypothesis *)
 
-let reduct_in_concl redfun gl = 
-  convert_concl_no_check (pf_reduce redfun gl (pf_concl gl)) gl
+let reduct_in_concl (redfun,sty) gl = 
+  convert_concl_no_check (pf_reduce redfun gl (pf_concl gl)) sty gl
 
-let reduct_in_hyp redfun (id,_,(where,where')) gl =
+let reduct_in_hyp redfun (id,_,where) gl =
   let (_,c, ty) = pf_get_hyp gl id in
   let redfun' = (*under_casts*) (pf_reduce redfun gl) in
   match c with
   | None -> 
       if where = InHypValueOnly then
 	errorlabstrm "" (pr_id id ++ str "has no value");
-      if Options.do_translate () then where' := Some where;
       convert_hyp_no_check (id,None,redfun' ty) gl
   | Some b ->
-      let where =
-	if !Options.v7 & where = InHyp then InHypValueOnly else where in
       let b' = if where <> InHypTypeOnly then redfun' b else b in
       let ty' =	if where <> InHypValueOnly then redfun' ty else ty in
-      if Options.do_translate () then where' := Some where;
       convert_hyp_no_check (id,Some b',ty') gl
 
 let reduct_option redfun = function
-  | Some id -> reduct_in_hyp   redfun id 
+  | Some id -> reduct_in_hyp (fst redfun) id 
   | None    -> reduct_in_concl redfun 
 
 (* The following tactic determines whether the reduction
@@ -182,10 +181,13 @@ let change_and_check cv_pb t env sigma c =
 (* Use cumulutavity only if changing the conclusion not a subterm *)
 let change_on_subterm cv_pb t = function
   | None -> change_and_check cv_pb t
-  | Some occl -> contextually false occl (change_and_check CONV t) 
+  | Some occl -> contextually false occl (change_and_check Reduction.CONV t) 
 
-let change_in_concl occl t = reduct_in_concl (change_on_subterm CUMUL t occl) 
-let change_in_hyp occl t   = reduct_in_hyp (change_on_subterm CONV t occl)
+let change_in_concl occl t =
+  reduct_in_concl ((change_on_subterm Reduction.CUMUL t occl),DEFAULTcast)
+
+let change_in_hyp occl t   =
+  reduct_in_hyp (change_on_subterm Reduction.CONV t occl)
 
 let change_option occl t = function
     Some id -> change_in_hyp occl t id
@@ -200,22 +202,23 @@ let change occl c cls =
   onClauses (change_option occl c) cls
 
 (* Pour usage interne (le niveau User est pris en compte par reduce) *)
-let red_in_concl        = reduct_in_concl red_product
+let red_in_concl        = reduct_in_concl (red_product,DEFAULTcast)
 let red_in_hyp          = reduct_in_hyp   red_product
-let red_option          = reduct_option   red_product
-let hnf_in_concl        = reduct_in_concl hnf_constr
+let red_option          = reduct_option   (red_product,DEFAULTcast)
+let hnf_in_concl        = reduct_in_concl (hnf_constr,DEFAULTcast)
 let hnf_in_hyp          = reduct_in_hyp   hnf_constr
-let hnf_option          = reduct_option   hnf_constr
-let simpl_in_concl      = reduct_in_concl nf
+let hnf_option          = reduct_option   (hnf_constr,DEFAULTcast)
+let simpl_in_concl      = reduct_in_concl (nf,DEFAULTcast)
 let simpl_in_hyp        = reduct_in_hyp   nf
-let simpl_option        = reduct_option   nf
-let normalise_in_concl  = reduct_in_concl compute
+let simpl_option        = reduct_option   (nf,DEFAULTcast)
+let normalise_in_concl  = reduct_in_concl (compute,DEFAULTcast)
 let normalise_in_hyp    = reduct_in_hyp   compute
-let normalise_option    = reduct_option   compute
-let unfold_in_concl loccname   = reduct_in_concl (unfoldn loccname) 
-let unfold_in_hyp   loccname   = reduct_in_hyp   (unfoldn loccname) 
-let unfold_option   loccname   = reduct_option   (unfoldn loccname) 
-let pattern_option l = reduct_option (pattern_occs l)
+let normalise_option    = reduct_option   (compute,DEFAULTcast)
+let normalise_vm_in_concl = reduct_in_concl (Redexpr.cbv_vm,VMcast)
+let unfold_in_concl loccname = reduct_in_concl (unfoldn loccname,DEFAULTcast)
+let unfold_in_hyp   loccname = reduct_in_hyp   (unfoldn loccname) 
+let unfold_option   loccname = reduct_option (unfoldn loccname,DEFAULTcast) 
+let pattern_option l = reduct_option (pattern_occs l,DEFAULTcast)
 
 (* A function which reduces accordingly to a reduction expression,
    as the command Eval does. *)
@@ -228,7 +231,7 @@ let needs_check = function
 
 let reduce redexp cl goal =
   (if needs_check redexp then with_check else (fun x -> x))
-    (redin_combinator (reduction_of_redexp redexp) cl)
+    (redin_combinator (Redexpr.reduction_of_red_expr redexp) cl)
     goal
 
 (* Unfolding occurrences of a constant *)
@@ -300,6 +303,8 @@ let intro_force force_flag = intro_gen (IntroAvoid []) None force_flag
 let intro = intro_force false
 let introf = intro_force true
 
+let intro_avoiding l = intro_gen (IntroAvoid l) None false 
+
 let introf_move_name destopt = intro_gen (IntroAvoid []) destopt true
 
 (* For backwards compatibility *)
@@ -313,7 +318,7 @@ let rec intros_using = function
 
 let intros = tclREPEAT (intro_force false)
 
-let intro_erasing id = tclTHEN (thin [id]) (intro_using id)
+let intro_erasing id = tclTHEN (thin [id]) (introduction id)
 
 let intros_replacing ids gls = 
   let rec introrec = function
@@ -341,7 +346,9 @@ let pf_lookup_hypothesis_as_renamed_gen red h gl =
   let rec aux ccl =
     match pf_lookup_hypothesis_as_renamed env ccl h with
       | None when red ->
-          aux (reduction_of_redexp (Red true) env (project gl) ccl)
+          aux 
+	    ((fst (Redexpr.reduction_of_red_expr (Red true))) 
+	       env (project gl) ccl)
       | x -> x
   in
   try aux (pf_concl gl)
@@ -428,7 +435,7 @@ let rec intros_rmove = function
  *  of the type of a term. *)
 
 let apply_type hdcty argl gl =
-  refine (applist (mkCast (mkMeta (new_meta()),hdcty),argl)) gl
+  refine (applist (mkCast (Evarutil.mk_new_meta(),DEFAULTcast, hdcty),argl)) gl
     
 let apply_term hdc argl gl =
   refine (applist (hdc,argl)) gl
@@ -438,39 +445,33 @@ let bring_hyps hyps =
   else
     (fun gl ->
       let newcl = List.fold_right mkNamedProd_or_LetIn hyps (pf_concl gl) in
-      let f = mkCast (mkMeta (new_meta()),newcl) in
+      let f = mkCast (Evarutil.mk_new_meta(),DEFAULTcast, newcl) in
       refine_no_check (mkApp (f, instance_from_named_context hyps)) gl)
 
 (* Resolution with missing arguments *)
 
 let apply_with_bindings (c,lbind) gl = 
-  let apply = 
-    match kind_of_term c with 
-      | Lambda _ -> res_pf_cast 
-      | _ -> res_pf 
-  in 
-  let (wc,kONT) = startWalk gl in
   (* The actual type of the theorem. It will be matched against the
   goal. If this fails, then the head constant will be unfolded step by
   step. *)
-  let thm_ty0 = nf_betaiota (w_type_of wc c) in
+  let thm_ty0 = nf_betaiota (pf_type_of gl c) in
   let rec try_apply thm_ty =
     try
       let n = nb_prod thm_ty - nb_prod (pf_concl gl) in
       if n<0 then error "Apply: theorem has not enough premisses.";
-      let clause = make_clenv_binding_apply wc n (c,thm_ty) lbind in
-      apply kONT clause gl
-    with (RefinerError _|UserError _|Failure _) as exn ->
+      let clause = make_clenv_binding_apply gl n (c,thm_ty) lbind in
+      Clenvtac.res_pf clause gl
+    with (Pretype_errors.PretypeError _|RefinerError _|UserError _|Failure _) as exn ->
       let red_thm =
-        try red_product (w_env wc) (w_Underlying wc) thm_ty
+        try red_product (pf_env gl) (project gl) thm_ty
         with (Redelimination | UserError _) -> raise exn in
       try_apply red_thm in
   try try_apply thm_ty0
-  with (RefinerError _|UserError _|Failure _) ->
+  with (Pretype_errors.PretypeError _|RefinerError _|UserError _|Failure _) ->
     (* Last chance: if the head is a variable, apply may try
        second order unification *)
-    let clause = make_clenv_binding_apply wc (-1) (c,thm_ty0) lbind in 
-    apply kONT clause gl
+    let clause = make_clenv_binding_apply gl (-1) (c,thm_ty0) lbind in 
+    Clenvtac.res_pf clause gl
 
 let apply c = apply_with_bindings (c,NoBindings)
 
@@ -481,9 +482,8 @@ let apply_list = function
 (* Resolution with no reduction on the type *)
 
 let apply_without_reduce c gl = 
-  let (wc,kONT) = startWalk gl in
-  let clause = mk_clenv_type_of wc c in 
-  res_pf kONT clause gl
+  let clause = mk_clenv_type_of gl c in 
+  res_pf clause gl
 
 (* A useful resolution tactic which, if c:A->B, transforms |- C into
    |- B -> C and |- A
@@ -502,6 +502,10 @@ let apply_without_reduce c gl =
   end.
 *)
 
+(**************************)
+(*     Cut tactics        *)
+(**************************)
+
 let cut_and_apply c gl =
   let goal_constr = pf_concl gl in 
   match kind_of_term (pf_hnf_constr gl (pf_type_of gl c)) with
@@ -510,24 +514,6 @@ let cut_and_apply c gl =
 	  (apply_type (mkProd (Anonymous,c2,goal_constr)) [mkMeta(new_meta())])
 	  (apply_term c [mkMeta (new_meta())]) gl
     | _ -> error "Imp_elim needs a non-dependent product"
-
-(**************************)
-(*     Cut tactics        *)
-(**************************)
-
-let assert_tac first na c gl =
-  match kind_of_term (hnf_type_of gl c) with
-    | Sort s -> 
-	let id = match na with
-	  | Anonymous -> 
-              let d = match s with Prop _ -> "H" | Type _ -> "X" in
-              fresh_id [] (id_of_string d) gl
-	  | Name id -> id
-	in
-	(if first then internal_cut else internal_cut_rev) id c gl
-    | _  -> error "Not a proposition or a type"
-
-let true_cut = assert_tac true
 
 let cut c gl =
   match kind_of_term (hnf_type_of gl c) with
@@ -541,14 +527,13 @@ let cut c gl =
     | _  -> error "Not a proposition or a type"
 
 let cut_intro t = tclTHENFIRST (cut t) intro
-		    
-let cut_replacing id t = 
-  tclTHENFIRST
-    (cut t)
-    (tclORELSE
+
+let cut_replacing id t tac = 
+  tclTHENS (cut t)
+    [tclORELSE
       (intro_replacing id) 
-      (tclORELSE (intro_erasing id) 
-        (intro_using id)))
+      (tclORELSE (intro_erasing id) (intro_using id));
+     tac (refine_no_check (mkVar id)) ]
 
 let cut_in_parallel l = 
   let rec prec = function
@@ -556,6 +541,340 @@ let cut_in_parallel l =
     | h::t -> tclTHENFIRST (cut h) (prec t)
   in 
   prec (List.rev l)
+
+(********************************************************************)
+(*               Exact tactics                                      *)
+(********************************************************************)
+
+let exact_check c gl =
+  let concl = (pf_concl gl) in
+  let ct = pf_type_of gl c in
+  if pf_conv_x_leq gl ct concl then  
+    refine_no_check c gl 
+  else 
+    error "Not an exact proof"
+
+let exact_no_check = refine_no_check
+
+let exact_proof c gl =
+  (* on experimente la synthese d'ise dans exact *)
+  let c = Constrintern.interp_casted_constr (project gl) (pf_env gl) c (pf_concl gl)
+  in refine_no_check c gl 
+
+let (assumption : tactic) = fun gl ->
+  let concl =  pf_concl gl in 
+  let hyps = pf_hyps gl in
+  let rec arec only_eq = function
+    | [] -> 
+        if only_eq then arec false hyps else error "No such assumption"
+    | (id,c,t)::rest -> 
+	if (only_eq & eq_constr t concl) 
+          or (not only_eq & pf_conv_x_leq gl t concl)
+        then refine_no_check (mkVar id) gl
+	else arec only_eq rest
+  in
+  arec true hyps
+
+(*****************************************************************)
+(*          Modification of a local context                      *)
+(*****************************************************************)
+
+(* This tactic enables the user to remove hypotheses from the signature.
+ * Some care is taken to prevent him from removing variables that are 
+ * subsequently used in other hypotheses or in the conclusion of the  
+ * goal. *)                                                               
+
+let clear ids gl = (* avant seul dyn_clear n'echouait pas en [] *)
+  if ids=[] then tclIDTAC gl else with_check (thin ids) gl
+
+let clear_body = thin_body
+
+(*   Takes a list of booleans, and introduces all the variables 
+ *  quantified in the goal which are associated with a value
+ *  true  in the boolean list. *)
+
+let rec intros_clearing = function
+  | []          -> tclIDTAC
+  | (false::tl) -> tclTHEN intro (intros_clearing tl)
+  | (true::tl)  ->
+      tclTHENLIST
+        [ intro; onLastHyp (fun id -> clear [id]); intros_clearing tl]
+
+(* Adding new hypotheses  *)
+
+let new_hyp mopt (c,lbind) g =
+  let clause  = make_clenv_binding g (c,pf_type_of g c) lbind in
+  let (thd,tstack) = whd_stack (clenv_value clause) in
+  let nargs = List.length tstack in
+  let cut_pf = 
+    applist(thd, 
+            match mopt with
+	      | Some m -> if m < nargs then list_firstn m tstack else tstack
+	      | None   -> tstack)
+  in 
+  (tclTHENLAST (tclTHEN (tclEVARS (evars_of clause.env))
+               (cut (pf_type_of g cut_pf)))
+     ((tclORELSE (apply cut_pf) (exact_no_check cut_pf)))) g
+
+(* Keeping only a few hypotheses *)
+
+let keep hyps gl =
+  let env = Global.env() in
+  let ccl = pf_concl gl in
+  let cl,_ =
+    fold_named_context_reverse (fun (clear,keep) (hyp,_,_ as decl) ->
+      if List.mem hyp hyps
+	or List.exists (occur_var_in_decl env hyp) keep
+	or occur_var env hyp ccl
+      then (clear,decl::keep)
+      else (hyp::clear,keep))
+      ~init:([],[]) (pf_env gl)
+  in thin cl gl
+
+(************************)
+(* Introduction tactics *)
+(************************)
+
+let constructor_tac boundopt i lbind gl =
+  let cl = pf_concl gl in 
+  let (mind,redcl) = pf_reduce_to_quantified_ind gl cl in 
+  let nconstr =
+    Array.length (snd (Global.lookup_inductive mind)).mind_consnames in
+  if i=0 then error "The constructors are numbered starting from 1";
+  if i > nconstr then error "Not enough constructors";
+  begin match boundopt with 
+    | Some expctdnum -> 
+        if expctdnum <> nconstr then 
+	  error "Not the expected number of constructors"
+    | None -> ()
+  end;
+  let cons = mkConstruct (ith_constructor_of_inductive mind i) in
+  let apply_tac = apply_with_bindings (cons,lbind) in
+  (tclTHENLIST 
+     [convert_concl_no_check redcl DEFAULTcast; intros; apply_tac]) gl
+
+let one_constructor i = constructor_tac None i
+
+(* Try to apply the constructor of the inductive definition followed by 
+   a tactic t given as an argument.
+   Should be generalize in Constructor (Fun c : I -> tactic)
+ *)
+
+let any_constructor tacopt gl =
+  let t = match tacopt with None -> tclIDTAC | Some t -> t in
+  let mind = fst (pf_reduce_to_quantified_ind gl (pf_concl gl)) in
+  let nconstr =
+    Array.length (snd (Global.lookup_inductive mind)).mind_consnames in
+  if nconstr = 0 then error "The type has no constructors";
+  tclFIRST (List.map (fun i -> tclTHEN (one_constructor i NoBindings) t) 
+              (interval 1 nconstr)) gl
+
+let left           = constructor_tac (Some 2) 1
+let simplest_left  = left NoBindings
+
+let right          = constructor_tac (Some 2) 2
+let simplest_right = right NoBindings
+
+let split          = constructor_tac (Some 1) 1
+let simplest_split = split NoBindings
+
+(********************************************)
+(*       Elimination tactics                *)
+(********************************************)
+
+let last_arg c = match kind_of_term c with
+  | App (f,cl) ->  
+      array_last cl
+  | _ -> anomaly "last_arg"
+	
+let elimination_clause_scheme allow_K elimclause indclause gl = 
+  let indmv = 
+    (match kind_of_term (last_arg elimclause.templval.rebus) with
+       | Meta mv -> mv
+       | _  -> errorlabstrm "elimination_clause"
+             (str "The type of elimination clause is not well-formed")) 
+  in
+  let elimclause' = clenv_fchain indmv elimclause indclause in 
+  res_pf elimclause' ~allow_K:allow_K gl
+
+(* cast added otherwise tactics Case (n1,n2) generates (?f x y) and 
+ * refine fails *)
+
+let type_clenv_binding wc (c,t) lbind = 
+  clenv_type (make_clenv_binding wc (c,t) lbind)
+
+(* 
+ * Elimination tactic with bindings and using an arbitrary 
+ * elimination constant called elimc. This constant should end 
+ * with a clause (x:I)(P .. ), where P is a bound variable.
+ * The term c is of type t, which is a product ending with a type 
+ * matching I, lbindc are the expected terms for c arguments 
+ *)
+
+let general_elim_clause elimtac (c,lbindc) (elimc,lbindelimc) gl =
+  let ct = pf_type_of gl c in
+  let t = try snd (pf_reduce_to_quantified_ind gl ct) with UserError _ -> ct in
+  let indclause  = make_clenv_binding gl (c,t) lbindc  in
+  let elimt      = pf_type_of gl elimc in
+  let elimclause = make_clenv_binding gl (elimc,elimt) lbindelimc in 
+  elimtac elimclause indclause gl
+
+let general_elim c e ?(allow_K=true) =
+  general_elim_clause (elimination_clause_scheme allow_K) c e
+
+(* Elimination tactic with bindings but using the default elimination 
+ * constant associated with the type. *)
+
+let find_eliminator c gl =
+  let (ind,t) = pf_reduce_to_quantified_ind gl (pf_type_of gl c) in
+  lookup_eliminator ind (elimination_sort_of_goal gl)
+
+let default_elim (c,_ as cx) gl = 
+  general_elim cx (find_eliminator c gl,NoBindings) gl
+
+let elim_in_context c = function
+  | Some elim -> general_elim c elim ~allow_K:true
+  | None -> default_elim c
+
+let elim (c,lbindc as cx) elim =
+  match kind_of_term c with
+    | Var id when lbindc = NoBindings ->
+	tclTHEN (tclTRY (intros_until_id id)) (elim_in_context cx elim)
+    | _ -> elim_in_context cx elim
+
+(* The simplest elimination tactic, with no substitutions at all. *)
+
+let simplest_elim c = default_elim (c,NoBindings)
+
+(* Elimination in hypothesis *)
+
+let elimination_in_clause_scheme id elimclause indclause gl =
+  let (hypmv,indmv) = 
+    match clenv_independent elimclause with
+        [k1;k2] -> (k1,k2)
+      | _  -> errorlabstrm "elimination_clause"
+          (str "The type of elimination clause is not well-formed") in
+  let elimclause'  = clenv_fchain indmv elimclause indclause in 
+  let hyp = mkVar id in
+  let hyp_typ = pf_type_of gl hyp in
+  let hypclause =
+    mk_clenv_from_n gl (Some 0) (hyp, hyp_typ) in
+  let elimclause'' = clenv_fchain hypmv elimclause' hypclause in  
+  let new_hyp_prf  = clenv_value elimclause'' in
+  let new_hyp_typ  = clenv_type elimclause'' in
+  if eq_constr hyp_typ new_hyp_typ then
+    errorlabstrm "general_rewrite_in" 
+      (str "Nothing to rewrite in " ++ pr_id id);
+  tclTHEN
+    (tclEVARS (evars_of elimclause''.env))
+    (cut_replacing id new_hyp_typ
+      (fun x gls -> refine_no_check new_hyp_prf gls)) gl
+
+let general_elim_in id =
+  general_elim_clause (elimination_in_clause_scheme id)
+
+(* Case analysis tactics *)
+
+let general_case_analysis_in_context (c,lbindc) gl =
+  let (mind,_) = pf_reduce_to_quantified_ind gl (pf_type_of gl c) in
+  let sort     = elimination_sort_of_goal gl in
+  let case = 
+    if occur_term c (pf_concl gl) then make_case_dep else make_case_gen in
+  let elim     = pf_apply case gl mind sort in 
+  general_elim (c,lbindc) (elim,NoBindings) gl
+
+let general_case_analysis (c,lbindc as cx) =
+  match kind_of_term c with
+    | Var id when lbindc = NoBindings ->
+	tclTHEN (tclTRY (intros_until_id id))
+	(general_case_analysis_in_context cx)
+    | _ ->
+	general_case_analysis_in_context cx
+
+let simplest_case c = general_case_analysis (c,NoBindings)
+
+(*****************************)
+(* Decomposing introductions *)
+(*****************************)
+
+let clear_last = tclLAST_HYP (fun c -> (clear [destVar c]))
+let case_last  = tclLAST_HYP simplest_case
+
+let rec explicit_intro_names = function
+| (IntroWildcard | IntroAnonymous) :: l -> explicit_intro_names l
+| IntroIdentifier id :: l -> id :: explicit_intro_names l
+| IntroOrAndPattern ll :: l' -> 
+    List.flatten (List.map (fun l -> explicit_intro_names (l@l')) ll)
+| [] -> []
+
+  (* We delay thinning until the completion of the whole intros tactic
+     to ensure that dependent hypotheses are cleared in the right
+     dependency order (see bug #1000); we use fresh names, not used in
+     the tactic, for the hyps to clear *)
+let rec intros_patterns avoid thin destopt = function
+  | IntroWildcard :: l ->
+      tclTHEN 
+        (intro_gen (IntroAvoid (avoid@explicit_intro_names l)) None true)
+        (onLastHyp (fun id ->
+	  tclORELSE
+	    (tclTHEN (clear [id]) (intros_patterns avoid thin destopt l))
+	    (intros_patterns avoid (id::thin) destopt l)))
+  | IntroIdentifier id :: l ->
+      tclTHEN
+        (intro_gen (IntroMustBe id) destopt true)
+        (intros_patterns avoid thin destopt l)
+  | IntroAnonymous :: l ->
+      tclTHEN
+        (intro_gen (IntroAvoid (avoid@explicit_intro_names l)) destopt true)
+        (intros_patterns avoid thin destopt l)
+  | IntroOrAndPattern ll :: l' ->
+      tclTHEN
+        introf
+        (tclTHENS
+	  (tclTHEN case_last clear_last)
+	  (List.map (fun l -> intros_patterns avoid thin destopt (l@l')) ll))
+  | [] -> clear thin
+
+let intros_pattern = intros_patterns [] []
+
+let intro_pattern destopt pat = intros_patterns [] [] destopt [pat]
+
+let intro_patterns = function 
+  | [] -> tclREPEAT intro
+  | l  -> intros_pattern None l
+
+(**************************)
+(*   Other cut tactics    *)
+(**************************)
+
+let hid = id_of_string "H"
+let xid = id_of_string "X"
+
+let make_id s = fresh_id [] (match s with Prop _ -> hid | Type _ -> xid)
+
+let prepare_intros s ipat gl = match ipat with
+  | IntroAnonymous -> make_id s gl, tclIDTAC
+  | IntroWildcard -> let id = make_id s gl in id, thin [id]
+  | IntroIdentifier id -> id, tclIDTAC
+  | IntroOrAndPattern ll -> make_id s gl, 
+    (tclTHENS 
+      (tclTHEN case_last clear_last)
+      (List.map (intros_pattern None) ll))
+
+let ipat_of_name = function
+  | Anonymous -> IntroAnonymous
+  | Name id -> IntroIdentifier id
+
+let assert_as first ipat c gl =
+  match kind_of_term (hnf_type_of gl c) with
+  | Sort s ->
+      let id,tac = prepare_intros s ipat gl in
+      tclTHENS ((if first then internal_cut else internal_cut_rev) id c)
+	(if first then [tclIDTAC; tac] else [tac; tclIDTAC]) gl
+  | _  -> error "Not a proposition or a type"
+
+let assert_tac first na = assert_as first (ipat_of_name na)
+let true_cut = assert_tac true 
 
 (**************************)
 (*   Generalize tactics   *)
@@ -662,7 +981,7 @@ let occurrences_of_hyp id cls =
 let occurrences_of_goal cls =
   if cls.onconcl then Some cls.concl_occs else None
 
-let in_every_hyp cls = (cls.onhyps = None)
+let in_every_hyp cls = (cls.onhyps=None)
 
 (*
 (* Implementation with generalisation then re-intro: introduces noise *)
@@ -677,8 +996,8 @@ let letin_abstract id c occs gl =
 	  | None -> raise Not_found
 	  | Some occ ->
               let newdecl = subst_term_occ_decl occ c d in
-              if d = newdecl then
-		if not (everywhere occs)
+              if occ = [] & d = newdecl then
+		if not (in_every_hyp occs)
 		then raise (RefinerError (DoesNotOccurIn (c,hyp)))
 		else raise Not_found
               else 
@@ -749,324 +1068,26 @@ let letin_tac with_eq name c occs gl =
       if not (mem_named_context x (pf_hyps gl)) then x else
 	error ("The variable "^(string_of_id x)^" is already declared") in
   let (depdecls,lastlhyp,ccl)= letin_abstract id c occs gl in 
-  let t = Evarutil.refresh_universes (pf_type_of gl c) in
+  let t = refresh_universes (pf_type_of gl c) in
   let newcl = mkNamedLetIn id c t ccl in
   tclTHENLIST
-    [ convert_concl_no_check newcl;
+    [ convert_concl_no_check newcl DEFAULTcast;
       intro_gen (IntroMustBe id) lastlhyp true;
       if with_eq then tclIDTAC else thin_body [id];
       tclMAP convert_hyp_no_check depdecls ] gl
   
-let check_hypotheses_occurrences_list env (_,occl) =
-  let rec check acc = function
-    | (hyp,_) :: rest -> 
-	if List.mem hyp acc then
-	  error ("Hypothesis "^(string_of_id hyp)^" occurs twice");
-	if not (mem_named_context hyp (named_context env)) then
-	  error ("No such hypothesis: " ^ (string_of_id hyp));
-	check (hyp::acc) rest
-    | [] -> ()
-  in check [] occl
-
-let nowhere = {onhyps=Some[]; onconcl=false; concl_occs=[]}
-
-(* Tactic Assert (b=false) and Pose (b=true):
-   the behaviour of Pose is corrected by the translator.
-   not that of Assert *)
-let forward b na c =
-  let wh =  if !Options.v7 && b then onConcl else nowhere in
-  letin_tac b na c wh
-
-(********************************************************************)
-(*               Exact tactics                                      *)
-(********************************************************************)
-
-let exact_check c gl =
-  let concl = (pf_concl gl) in
-  let ct = pf_type_of gl c in
-  if pf_conv_x_leq gl ct concl then  
-    refine_no_check c gl 
-  else 
-    error "Not an exact proof"
-
-let exact_no_check = refine_no_check
-
-let exact_proof c gl =
-  (* on experimente la synthese d'ise dans exact *)
-  let c = Constrintern.interp_casted_constr (project gl) (pf_env gl) c (pf_concl gl)
-  in refine_no_check c gl 
-
-let (assumption : tactic) = fun gl ->
-  let concl =  pf_concl gl in 
-  let hyps = pf_hyps gl in
-  let rec arec only_eq = function
-    | [] -> 
-        if only_eq then arec false hyps else error "No such assumption"
-    | (id,c,t)::rest -> 
-	if (only_eq & eq_constr t concl) 
-          or (not only_eq & pf_conv_x_leq gl t concl)
-        then refine_no_check (mkVar id) gl
-	else arec only_eq rest
-  in
-  arec true hyps
-
-(*****************************************************************)
-(*          Modification of a local context                      *)
-(*****************************************************************)
-
-(* This tactic enables the user to remove hypotheses from the signature.
- * Some care is taken to prevent him from removing variables that are 
- * subsequently used in other hypotheses or in the conclusion of the  
- * goal. *)                                                               
-
-let clear ids gl = (* avant seul dyn_clear n'echouait pas en [] *)
-  if ids=[] then tclIDTAC gl else with_check (thin ids) gl
-
-let clear_body = thin_body
-
-(*   Takes a list of booleans, and introduces all the variables 
- *  quantified in the goal which are associated with a value
- *  true  in the boolean list. *)
-
-let rec intros_clearing = function
-  | []          -> tclIDTAC
-  | (false::tl) -> tclTHEN intro (intros_clearing tl)
-  | (true::tl)  ->
-      tclTHENLIST
-        [ intro; onLastHyp (fun id -> clear [id]); intros_clearing tl]
-
-(* Adding new hypotheses  *)
-
-let new_hyp mopt (c,lbind) g =
-  let (wc,kONT) = startWalk g in
-  let clause  = make_clenv_binding wc (c,w_type_of wc c) lbind in
-  let (thd,tstack) = whd_stack (clenv_instance_template clause) in
-  let nargs = List.length tstack in
-  let cut_pf = 
-    applist(thd, 
-            match mopt with
-	      | Some m -> if m < nargs then list_firstn m tstack else tstack
-	      | None   -> tstack)
-  in 
-  (tclTHENLAST (tclTHEN (kONT clause.hook)
-               (cut (pf_type_of g cut_pf)))
-     ((tclORELSE (apply cut_pf) (exact_no_check cut_pf)))) g
-
-(************************)
-(* Introduction tactics *)
-(************************)
-
-let constructor_tac boundopt i lbind gl =
-  let cl = pf_concl gl in 
-  let (mind,redcl) = pf_reduce_to_quantified_ind gl cl in 
-  let nconstr =
-    Array.length (snd (Global.lookup_inductive mind)).mind_consnames
-  and sigma   = project gl in
-  if i=0 then error "The constructors are numbered starting from 1";
-  if i > nconstr then error "Not enough constructors";
-  begin match boundopt with 
-    | Some expctdnum -> 
-        if expctdnum <> nconstr then 
-	  error "Not the expected number of constructors"
-    | None -> ()
-  end;
-  let cons = mkConstruct (ith_constructor_of_inductive mind i) in
-  let apply_tac = apply_with_bindings (cons,lbind) in
-  (tclTHENLIST [convert_concl_no_check redcl; intros; apply_tac]) gl
-
-let one_constructor i = constructor_tac None i
-
-(* Try to apply the constructor of the inductive definition followed by 
-   a tactic t given as an argument.
-   Should be generalize in Constructor (Fun c : I -> tactic)
- *)
-
-let any_constructor tacopt gl =
-  let t = match tacopt with None -> tclIDTAC | Some t -> t in
-  let mind = fst (pf_reduce_to_quantified_ind gl (pf_concl gl)) in
-  let nconstr =
-    Array.length (snd (Global.lookup_inductive mind)).mind_consnames in
-  if nconstr = 0 then error "The type has no constructors";
-  tclFIRST (List.map (fun i -> tclTHEN (one_constructor i NoBindings) t) 
-              (interval 1 nconstr)) gl
-
-let left           = constructor_tac (Some 2) 1
-let simplest_left  = left NoBindings
-
-let right          = constructor_tac (Some 2) 2
-let simplest_right = right NoBindings
-
-let split          = constructor_tac (Some 1) 1
-let simplest_split = split NoBindings
-
-(********************************************)
-(*       Elimination tactics                *)
-(********************************************)
-
-
-(* kONT : ??
- * wc : ??
- * elimclause : ??
- * inclause : ??
- * gl : the current goal
-*)
-
-let last_arg c = match kind_of_term c with
-  | App (f,cl) ->  array_last cl
-  | _ -> anomaly "last_arg"
-	
-let elimination_clause_scheme kONT elimclause indclause allow_K gl = 
-  let indmv = 
-    (match kind_of_term (last_arg (clenv_template elimclause).rebus) with
-       | Meta mv -> mv
-       | _  -> errorlabstrm "elimination_clause"
-             (str "The type of elimination clause is not well-formed")) 
-  in
-  let elimclause' = clenv_fchain indmv elimclause indclause in 
-  elim_res_pf kONT elimclause' allow_K gl
-
-(* cast added otherwise tactics Case (n1,n2) generates (?f x y) and 
- * refine fails *)
-
-let type_clenv_binding wc (c,t) lbind = 
-  clenv_instance_template_type (make_clenv_binding wc (c,t) lbind)
-
-(* 
- * Elimination tactic with bindings and using an arbitrary 
- * elimination constant called elimc. This constant should end 
- * with a clause (x:I)(P .. ), where P is a bound variable.
- * The term c is of type t, which is a product ending with a type 
- * matching I, lbindc are the expected terms for c arguments 
- *)
-
-let general_elim (c,lbindc) (elimc,lbindelimc) ?(allow_K=true) gl = 
-  let (wc,kONT)  = startWalk gl in
-  let ct = pf_type_of gl c in
-  let t = try snd (pf_reduce_to_quantified_ind gl ct) with UserError _ -> ct in
-  let indclause  = make_clenv_binding wc (c,t) lbindc  in
-  let elimt      = w_type_of wc elimc in
-  let elimclause = make_clenv_binding wc (elimc,elimt) lbindelimc in 
-  elimination_clause_scheme kONT elimclause indclause allow_K gl
-
-(* Elimination tactic with bindings but using the default elimination 
- * constant associated with the type. *)
-
-let find_eliminator c gl =
-  let env = pf_env gl in
-  let (ind,t) = reduce_to_quantified_ind env (project gl) (pf_type_of gl c) in
-  let s = elimination_sort_of_goal gl in
-    Indrec.lookup_eliminator ind s 
-(*  with Not_found -> 
-    let dir, base = repr_path (path_of_inductive env ind) in
-    let id = Indrec.make_elimination_ident base s in
-    errorlabstrm "default_elim"
-      (str "Cannot find the elimination combinator :" ++
-         pr_id id ++ spc () ++
-	 str "The elimination of the inductive definition :" ++
-         pr_id base ++ spc () ++ str "on sort " ++
-         spc () ++ print_sort (new_sort_in_family s) ++
-	 str " is probably not allowed")
-(* lookup_eliminator prints the message *) *)
-let default_elim (c,lbindc) gl = 
-  general_elim (c,lbindc) (find_eliminator c gl,NoBindings) gl
-
-let elim_in_context (c,_ as cx) elim gl =
-  match elim with
-  | Some (elimc,lbindelimc) -> general_elim cx (elimc,lbindelimc) gl
-  | None -> general_elim cx (find_eliminator c gl,NoBindings) gl 
-
-let elim (c,lbindc as cx) elim =
-  match kind_of_term c with
-    | Var id when lbindc = NoBindings ->
-	tclTHEN (tclTRY (intros_until_id id)) (elim_in_context cx elim)
-    | _ -> elim_in_context cx elim
-
-(* The simplest elimination tactic, with no substitutions at all. *)
-
-let simplest_elim c = default_elim (c,NoBindings)
-
-(* Elimination in hypothesis *)
-
-let elimination_in_clause_scheme kONT id elimclause indclause =
-  let (hypmv,indmv) = 
-    match clenv_independent elimclause with
-        [k1;k2] -> (k1,k2)
-      | _  -> errorlabstrm "elimination_clause"
-          (str "The type of elimination clause is not well-formed") in
-  let elimclause'  = clenv_fchain indmv elimclause indclause in 
-  let hyp = mkVar id in
-  let hyp_typ = clenv_type_of elimclause' hyp in
-  let hypclause =
-    mk_clenv_from_n elimclause'.hook (Some 0) (hyp, hyp_typ) in
-  let elimclause'' = clenv_fchain hypmv elimclause' hypclause in  
-  let new_hyp_prf  = clenv_instance_template elimclause'' in
-  let new_hyp_typ  = clenv_instance_template_type elimclause'' in
-  if eq_constr hyp_typ new_hyp_typ then
-    errorlabstrm "general_rewrite_in" 
-      (str "Nothing to rewrite in " ++ pr_id id);
-  tclTHEN
-    (kONT elimclause''.hook)
-    (tclTHENS
-      (cut new_hyp_typ)
-      [ (* Try to insert the new hyp at the same place *)
-        tclORELSE (intro_replacing id)
-          (tclTHEN (clear [id]) (introduction id));
-        refine_no_check new_hyp_prf])
-
-let general_elim_in id (c,lbindc) (elimc,lbindelimc) gl = 
-  let (wc,kONT)  = startWalk gl in
-  let ct = pf_type_of gl c in
-  let t = try snd (pf_reduce_to_quantified_ind gl ct) with UserError _ -> ct in
-  let indclause  = make_clenv_binding wc (c,t) lbindc  in
-  let elimt      = w_type_of wc elimc in
-  let elimclause = make_clenv_binding wc (elimc,elimt) lbindelimc in 
-  elimination_in_clause_scheme kONT id elimclause indclause gl
-
-(* Case analysis tactics *)
-
-let general_case_analysis_in_context (c,lbindc) gl =
-  let env = pf_env gl in
-  let (mind,_) = pf_reduce_to_quantified_ind gl (pf_type_of gl c) in
-  let sigma    = project gl in 
-  let sort     = elimination_sort_of_goal gl in
-  let case = if occur_term c (pf_concl gl) then Indrec.make_case_dep
-  else Indrec.make_case_gen in
-  let elim     = case env sigma mind sort in 
-  general_elim (c,lbindc) (elim,NoBindings) gl
-
-let general_case_analysis (c,lbindc as cx) =
-  match kind_of_term c with
-    | Var id when lbindc = NoBindings ->
-	tclTHEN (tclTRY (intros_until_id id))
-	(general_case_analysis_in_context cx)
-    | _ ->
-	general_case_analysis_in_context cx
-
-let simplest_case c = general_case_analysis (c,NoBindings)
+(* Tactics "pose proof" (usetac=None) and "assert" (otherwise) *)
+let forward usetac ipat c gl =
+  match usetac with
+  | None -> 
+      let t = refresh_universes (pf_type_of gl c) in
+      tclTHENS (assert_as true ipat t) [exact_no_check c; tclIDTAC] gl
+  | Some tac -> 
+      tclTHENS (assert_as true ipat c) [tac; tclIDTAC] gl
 
 (*****************************)
-(* Decomposing introductions *)
+(* High-level induction      *)
 (*****************************)
-
-let clear_last = tclLAST_HYP (fun c -> (clear [destVar c]))
-let case_last  = tclLAST_HYP simplest_case
-
-let rec intro_pattern destopt = function
-  | IntroWildcard ->
-      tclTHEN intro clear_last
-  | IntroIdentifier id ->
-      intro_gen (IntroMustBe id) destopt true
-  | IntroOrAndPattern l ->
-      tclTHEN introf
-        (tclTHENS
-	  (tclTHEN case_last clear_last)
-	  (List.map (intros_pattern destopt) l))
-
-and intros_pattern destopt l = tclMAP (intro_pattern destopt) l
-
-let intro_patterns = function 
-  | [] -> tclREPEAT intro
-  | l  -> intros_pattern None l
 
 (*
  * A "natural" induction tactic
@@ -1100,20 +1121,12 @@ let intro_patterns = function
 
  *)
 
-let rec str_intro_pattern = function
-  | IntroOrAndPattern pll ->
-      "["^(String.concat "|" 
-	(List.map 
-	  (fun pl -> String.concat " " (List.map str_intro_pattern pl)) pll))
-      ^"]"
-  | IntroWildcard -> "_"
-  | IntroIdentifier id -> string_of_id id
-
 let check_unused_names names =
   if names <> [] & Options.is_verbose () then
     let s = if List.tl names = [] then " " else "s " in
-    let names = String.concat " " (List.map str_intro_pattern names) in
-    warning ("Unused introduction pattern"^s^": "^names)
+    msg_warning 
+      (str"Unused introduction pattern" ++ str s ++ 
+       str": " ++ prlist_with_sep spc pr_intro_pattern names)
 
 let rec first_name_buggy = function
   | IntroOrAndPattern [] -> None
@@ -1121,100 +1134,48 @@ let rec first_name_buggy = function
   | IntroOrAndPattern ((p::_)::_) -> first_name_buggy p
   | IntroWildcard -> None
   | IntroIdentifier id -> Some id
+  | IntroAnonymous -> assert false
+
+let consume_pattern avoid id gl = function
+  | [] -> (IntroIdentifier (fresh_id avoid id gl), [])
+  | IntroAnonymous::names ->
+      let avoid = avoid@explicit_intro_names names in
+      (IntroIdentifier (fresh_id avoid id gl), names)
+  | pat::names -> (pat,names)
 
 type elim_arg_kind = RecArg | IndArg | OtherArg
 
-let induct_discharge statuslists destopt avoid' ((avoid7,avoid8),ra) (names,force,rnames) gl =
-  let avoid7 = avoid7 @ avoid' in
-  let avoid8 = avoid8 @ avoid' in
+let induct_discharge statuslists destopt avoid' (avoid,ra) names gl =
+  let avoid = avoid @ avoid' in
   let (lstatus,rstatus) = statuslists in
   let tophyp = ref None in
   let rec peel_tac ra names gl = match ra with
-    | (RecArg,(recvarname7,recvarname8)) ::
-        (IndArg,(hyprecname7,hyprecname8)) :: ra' ->
-        let recpat,hyprec,names = match names with
-          | [] ->
-              let idrec7 = (fresh_id avoid7 recvarname7 gl) in
-              let idrec8 = (fresh_id avoid8 recvarname8 gl) in
-              let idhyp7 = (fresh_id avoid7 hyprecname7 gl) in
-              let idhyp8 = (fresh_id avoid8 hyprecname8 gl) in
- 	      if Options.do_translate() &
-                (idrec7 <> idrec8 or idhyp7 <> idhyp8)
-	      then force := true;
-              let idrec = if !Options.v7 then idrec7 else idrec8 in
-              let idhyp = if !Options.v7 then idhyp7 else idhyp8 in
-              (IntroIdentifier idrec, IntroIdentifier idhyp, [])
+    | (RecArg,recvarname) ::
+        (IndArg,hyprecname) :: ra' ->
+        let recpat,names = match names with
           | [IntroIdentifier id as pat] ->
-              let id7 = next_ident_away (add_prefix "IH" id) avoid7 in
-              let id8 = next_ident_away (add_prefix "IH" id) avoid8 in
- 	      if Options.do_translate() & id7 <> id8 then force := true;
-              let id = if !Options.v7 then id7 else id8 in
-	      (pat, IntroIdentifier id, [])
-	  | [pat] ->
-              let idhyp7 = (fresh_id avoid7 hyprecname7 gl) in
-              let idhyp8 = (fresh_id avoid8 hyprecname8 gl) in
- 	      if Options.do_translate() & idhyp7 <> idhyp8 then force := true;
-              let idhyp = if !Options.v7 then idhyp7 else idhyp8 in
-	      (pat, IntroIdentifier idhyp, [])
-          | pat1::pat2::names -> (pat1,pat2,names) in
+              let id = next_ident_away (add_prefix "IH" id) avoid in
+	      (pat, [IntroIdentifier id])
+          | _ -> consume_pattern avoid recvarname gl names in
+        let hyprec,names = consume_pattern avoid hyprecname gl names in
 	(* This is buggy for intro-or-patterns with different first hypnames *)
 	if !tophyp=None then tophyp := first_name_buggy hyprec;
-	rnames := !rnames @ [recpat; hyprec];
         tclTHENLIST
-	  [ intros_pattern destopt [recpat];
-	    intros_pattern None [hyprec];
+	  [ intros_patterns avoid [] destopt [recpat];
+	    intros_patterns avoid [] None [hyprec];
 	    peel_tac ra' names ] gl
-    | (IndArg,(hyprecname7,hyprecname8)) :: ra' ->
+    | (IndArg,hyprecname) :: ra' ->
 	(* Rem: does not happen in Coq schemes, only in user-defined schemes *)
-        let pat,names = match names with
-          | [] -> IntroIdentifier (fresh_id avoid8 hyprecname8 gl), []
-	  | pat::names -> pat,names in
-	rnames := !rnames @ [pat];
-	tclTHEN (intros_pattern destopt [pat]) (peel_tac ra' names) gl
-    | (RecArg,(recvarname7,recvarname8)) :: ra' ->
-        let introtac,names = match names with
-          | [] -> 
-              let id8 = fresh_id avoid8 recvarname8 gl in
-	      let i =
-                if !Options.v7 then IntroAvoid avoid7 else IntroMustBe id8
-	      in
-	      (* For translator *)
-	      let id7 = fresh_id avoid7 (default_id gl
-		(match kind_of_term (pf_concl gl) with
-		  | Prod (name,t,_) -> (name,None,t)
-		  | LetIn (name,b,t,_) -> (name,Some b,t) 
-		  | _ -> raise (RefinerError IntroNeedsProduct))) gl in
-	      if Options.do_translate() & id7 <> id8 then force := true;
-              let id = if !Options.v7 then id7 else id8 in
-	      rnames := !rnames @ [IntroIdentifier id];
-	      intro_gen i destopt false, []
-          | pat::names ->
-	      rnames := !rnames @ [pat];
-	      intros_pattern destopt [pat],names in
-	tclTHEN introtac (peel_tac ra' names) gl
+        let pat,names = consume_pattern avoid hyprecname gl names in
+	tclTHEN (intros_patterns avoid [] destopt [pat]) (peel_tac ra' names) gl
+    | (RecArg,recvarname) :: ra' ->
+        let pat,names = consume_pattern avoid recvarname gl names in
+	tclTHEN (intros_patterns avoid [] destopt [pat]) (peel_tac ra' names) gl
     | (OtherArg,_) :: ra' ->
-        let introtac,names = match names with
-          | [] -> 
-	      (* For translator *)
-	      let id7 = fresh_id avoid7 (default_id gl
-		(match kind_of_term (pf_concl gl) with
-		  | Prod (name,t,_) -> (name,None,t)
-		  | LetIn (name,b,t,_) -> (name,Some b,t) 
-		  | _ -> raise (RefinerError IntroNeedsProduct))) gl in
-	      let id8 = fresh_id avoid8 (default_id gl
-		(match kind_of_term (pf_concl gl) with
-		  | Prod (name,t,_) -> (name,None,t)
-		  | LetIn (name,b,t,_) -> (name,Some b,t) 
-		  | _ -> raise (RefinerError IntroNeedsProduct))) gl in
-	      if Options.do_translate() & id7 <> id8 then force := true;
-              let id = if !Options.v7 then id7 else id8 in
-              let avoid = if !Options.v7 then avoid7 else avoid8 in
-	      rnames := !rnames @ [IntroIdentifier id];
-	      intro_gen (IntroAvoid avoid) destopt false, []
-          | pat::names ->
-	      rnames := !rnames @ [pat];
-	      intros_pattern destopt [pat],names in
-	tclTHEN introtac (peel_tac ra' names) gl
+        let pat,names = match names with
+          | [] -> IntroAnonymous, []
+          | pat::names -> pat,names in
+	tclTHEN (intros_patterns avoid [] destopt [pat]) (peel_tac ra' names) gl
     | [] ->
         check_unused_names names;
         tclIDTAC gl
@@ -1335,11 +1296,25 @@ let find_atomic_param_of_ind nparams indtyp =
    would have posed no problem. But for uniformity, we decided to use
    the right hyp for all hyps on the right of H4.
 
-   Others solutions are welcome *)
+   Others solutions are welcome 
+
+   PC 9 fev 06: Adapted to accept multi argument principle with no
+   main arg hyp. hyp0 is now optional, meaning that it is possible
+   that there is no main induction hypotheses. In this case, we
+   consider the last "parameter" (in [indvars]) as the limit between
+   "left" and "right", BUT it must be included in indhyps.
+
+   Other solutions are still welcome
+
+*)
 
 exception Shunt of identifier option
 
-let cook_sign hyp0 indvars env =
+let cook_sign hyp0_opt indvars_init env =
+  let hyp0,indvars = 
+    match hyp0_opt with
+      | None -> List.hd (List.rev indvars_init) , indvars_init
+      | Some h -> h,indvars_init in
   (* First phase from L to R: get [indhyps], [decldep] and [statuslist]
      for the hypotheses before (= more ancient than) hyp0 (see above) *)
   let allindhyps = hyp0::indvars in
@@ -1352,6 +1327,9 @@ let cook_sign hyp0 indvars env =
   let seek_deps env (hyp,_,_ as decl) rhyp =
     if hyp = hyp0 then begin
       before:=false; 
+      (* If there was no main induction hypotheses, then hyp is one of
+         indvars too, so add it to indhyps. *)
+      (if hyp0_opt=None then indhyps := hyp::!indhyps); 
       None (* fake value *)
     end else if List.mem hyp indvars then begin
       (* warning: hyp can still occur after induction *)
@@ -1374,7 +1352,7 @@ let cook_sign hyp0 indvars env =
   in
   let _ = fold_named_context seek_deps env ~init:None in
   (* 2nd phase from R to L: get left hyp of [hyp0] and [lhyps] *)
-  let compute_lstatus lhyp (hyp,_,_ as d) =
+  let compute_lstatus lhyp (hyp,_,_) =
     if hyp = hyp0 then raise (Shunt lhyp);
     if List.mem hyp !ldeps then begin
       lstatus := (hyp,lhyp)::!lstatus;
@@ -1384,49 +1362,89 @@ let cook_sign hyp0 indvars env =
   in
   try 
     let _ = fold_named_context_reverse compute_lstatus ~init:None env in
-    anomaly "hyp0 not found"
+(*     anomaly "hyp0 not found" *)
+    raise (Shunt (None)) (* ?? FIXME *)
   with Shunt lhyp0 ->
     let statuslists = (!lstatus,List.rev !rstatus) in
-    (statuslists, lhyp0, !indhyps, !decldeps)
+    (statuslists, (if hyp0_opt=None then None else lhyp0) , !indhyps, !decldeps)
 
-let induction_tac varname typ ((elimc,lbindelimc),elimt) gl =
+
+(*
+   The general form of an induction principle is the following:
+   
+   forall prm1 prm2 ... prmp,                          (induction parameters)
+   forall Q1...,(Qi:Ti_1 -> Ti_2 ->...-> Ti_ni),...Qq, (predicates)
+   branch1, branch2, ... , branchr,                    (branches of the principle)
+   forall (x1:Ti_1) (x2:Ti_2) ... (xni:Ti_ni),         (induction arguments)
+   (HI: I prm1..prmp x1...xni)                         (optional main induction arg)
+   -> (Qi x1...xni HI        (f prm1...prmp x1...xni)).(conclusion)
+                   ^^        ^^^^^^^^^^^^^^^^^^^^^^^^
+               optional        optional argument added if
+               even if HI    principle generated by functional 
+             present above   induction, only if HI does not exist
+             [indarg]                  [farg]
+
+  HI is not present when the induction principle does not come directly from an
+  inductive type (like when it is generated by functional induction for
+  example). HI is present otherwise BUT may not appear in the conclusion
+  (dependent principle). HI and (f...) cannot be both present.
+
+  Principles taken from functional induction have the final (f...).*)
+
+(* [rel_contexts] and [rel_declaration] actually contain triples, and
+   lists are actually in reverse order to fit [compose_prod]. *)
+type elim_scheme = { 
+  elimc: (Term.constr * constr Rawterm.bindings) option;
+  elimt: types;
+  indref: global_reference option;
+  params: rel_context;     (* (prm1,tprm1);(prm2,tprm2)...(prmp,tprmp) *)
+  nparams: int;            (* number of parameters *)
+  predicates: rel_context; (* (Qq, (Tq_1 -> Tq_2 ->...-> Tq_nq)), (Q1,...) *)
+  npredicates: int;        (* Number of predicates *)
+  branches: rel_context;   (* branchr,...,branch1 *)
+  nbranches: int;          (* Number of branches *) 
+  args: rel_context;       (* (xni, Ti_ni) ... (x1, Ti_1) *)
+  nargs: int;              (* number of arguments *)
+  indarg: rel_declaration option; (* Some (H,I prm1..prmp x1...xni) 
+				     if HI is in premisses, None otherwise *)
+  concl: types;            (* Qi x1...xni HI (f...), HI and (f...) 
+			      are optional and mutually exclusive *)
+  indarg_in_concl: bool;   (* true if HI appears at the end of conclusion *)
+  farg_in_concl: bool;     (* true if (f...) appears at the end of conclusion *)
+}
+
+let empty_scheme = 
+  { 
+    elimc = None;
+    elimt = mkProp;
+    indref = None;
+    params = [];
+    nparams = 0;
+    predicates = [];
+    npredicates = 0;
+    branches = [];
+    nbranches = 0;
+    args = [];
+    nargs = 0;
+    indarg = None;
+    concl = mkProp;
+    indarg_in_concl = false;
+    farg_in_concl = false;
+  }
+
+
+(* Unification between ((elimc:elimt) ?i ?j ?k ?l ... ?m) and the
+   hypothesis on which the induction is made *)
+let induction_tac varname typ scheme (*(elimc,lbindelimc),elimt*) gl =
+  let elimc,lbindelimc = 
+    match scheme.elimc with | Some x -> x | None -> error "No definition of the principle" in
+  let elimt = scheme.elimt in
   let c = mkVar varname in
-  let (wc,kONT)  = startWalk gl                    in
-  let indclause  = make_clenv_binding wc (c,typ) NoBindings  in
+  let indclause  = make_clenv_binding gl (c,typ) NoBindings  in
   let elimclause =
-    make_clenv_binding wc (mkCast (elimc,elimt),elimt) lbindelimc in
-  elimination_clause_scheme kONT elimclause indclause true gl
-
-let make_up_names7 n ind (old_style,cname) = 
-  if old_style (* = V6.3 version of Induction on hypotheses *)
-  then
-    let recvarname =
-      if n=1 then 
-        cname
-      else (* To force renumbering if there is only one *)
-        make_ident (string_of_id cname ) (Some 1) in
-    recvarname, add_prefix "Hrec" recvarname, []
-  else
-    let is_hyp = atompart_of_id cname = "H" in
-    let hyprecname =
-      add_prefix "IH" (if is_hyp then Nametab.id_of_global ind else cname) in
-    let avoid =
-      if n=1 (* Only one recursive argument *)
-        or 
-        (* Rem: no recursive argument (especially if Destruct) *)
-        n=0 (* & atompart_of_id cname <> "H" (* for 7.1 compatibility *)*)
-      then []
-      else
-        (* Forbid to use cname, cname0, hyprecname and hyprecname0 *)
-        (* in order to get names such as f1, f2, ... *)
-        let avoid =
-          (make_ident (string_of_id cname) (Some 0)) ::(*here for 7.1 cmpat*)
-          (make_ident (string_of_id hyprecname) None) ::
-          (make_ident (string_of_id hyprecname) (Some 0)) :: [] in
-        if atompart_of_id cname <> "H" then
-          (make_ident (string_of_id cname) None) :: avoid
-        else avoid in
-    cname, hyprecname, avoid
+    make_clenv_binding gl 
+      (mkCast (elimc,DEFAULTcast, elimt),elimt) lbindelimc in
+  elimination_clause_scheme true elimclause indclause gl
 
 let make_base n id =
   if n=0 or n=1 then id
@@ -1435,12 +1453,19 @@ let make_base n id =
     (* digits *)
     id_of_string (atompart_of_id (make_ident (string_of_id id) (Some 0)))
 
-let make_up_names8 n ind (_,cname) = 
+(* Builds tw different names from an optional inductive type and a
+   number, also deals with a list of names to avoid. If the inductive
+   type is None, then hyprecname is HIi where i is a number. *)
+let make_up_names n ind_opt cname = 
   let is_hyp = atompart_of_id cname = "H" in
   let base = string_of_id (make_base n cname) in
-  let hyprecname =
-    add_prefix "IH"
-      (make_base n (if is_hyp then Nametab.id_of_global ind else cname)) in
+  let base_ind = 
+    if is_hyp then 
+      match ind_opt with
+	| None -> id_of_string ""
+	| Some ind_id -> Nametab.id_of_global ind_id 
+    else cname in
+  let hyprecname = add_prefix "IH" (make_base n base_ind) in
   let avoid =
     if n=1 (* Only one recursive argument *) or n=0 then []
     else
@@ -1475,109 +1500,432 @@ let error_ind_scheme s =
   let s = if s <> "" then s^" " else s in
   error ("Cannot recognise "^s^"an induction schema")
 
-(* Check that the elimination scheme has a form similar to the 
-   elimination schemes built by Coq *)
-let compute_elim_signature elimt names_info =
-  let nparams = ref 0 in
-  let hyps,ccl = decompose_prod_assum elimt in
-  let n = List.length hyps in
-  if n = 0 then error_ind_scheme "";
-  let f,l = decompose_app ccl in
-  let _,indbody,ind = List.hd hyps in
-  if indbody <> None then error "Cannot recognise an induction scheme";
-  let nargs = List.length l in
-  let dep = (nargs >= 1 && list_last l = mkRel 1) in
-  let nrealargs = if dep then nargs-1 else nargs in
-  let args = if dep then list_firstn nrealargs l else l in
-  let realargs,hyps1 = chop_context nrealargs (List.tl hyps) in
-  if args <> extended_rel_list 1 realargs then
-    error_ind_scheme "the conclusion of";
-  let indhd,indargs = decompose_app ind in
-  let indt = 
-    try reference_of_constr indhd
-    with _ -> error "Cannot find the inductive type of the inductive schema" in
-  let nparams = List.length indargs - nrealargs in
-  let revparams, revhyps2 = chop_context nparams (List.rev hyps1) in
-  let rec check_elim npred = function
-  | (na,None,t)::l when isSort (snd (decompose_prod_assum t)) ->
-      check_elim (npred+1) l
-  | l ->
-    let is_pred n c = 
-      let hd = fst (decompose_app c) in match kind_of_term hd with
-    | Rel q when n < q & q <= n+npred -> IndArg
-    | _ when hd = indhd -> RecArg
-    | _ -> OtherArg in
-    let rec check_branch p c = match kind_of_term c with
-    | Prod (_,t,c) -> is_pred p t :: check_branch (p+1) c
-    | LetIn (_,_,_,c) -> OtherArg :: check_branch (p+1) c
-(*    | App (f,_) when is_pred p f = IndArg -> []*)
-    | _ when is_pred p c = IndArg -> []
-    | _ -> raise Exit in 
-    let rec find_branches p = function
-    | (_,None,t)::brs ->
-	(match try Some (check_branch p t) with Exit -> None with
-	 | Some l ->
-	     let n7 = List.fold_left
-	       (fun n b -> if b=IndArg then n+1 else n) 0 l in
-	     let n8 = List.fold_left
-	       (fun n b -> if b=RecArg then n+1 else n) 0 l in
-             let recvarname7, hyprecname7, avoid7 = make_up_names7 n7 indt names_info in
-             let recvarname8, hyprecname8, avoid8 = make_up_names8 n8 indt names_info in
-	     let namesign = List.map
-	       (fun b -> (b,if b=IndArg then (hyprecname7,hyprecname8)
-                else (recvarname7,recvarname8))) l in
-	     ((avoid7,avoid8),namesign) :: find_branches (p+1) brs
-	 | None -> error_ind_scheme "the branches of")
-    | (_,Some _,_)::_ -> error_ind_scheme "the branches of"
-    | [] ->
-	(* Check again conclusion *)
-	let ccl_arg_ok = is_pred (p + List.length realargs + 1) f = IndArg in
-	let ind_is_ok = 
-	  list_lastn nrealargs indargs = extended_rel_list 0 realargs in
-	if not (ccl_arg_ok & ind_is_ok) then
-	  error "Cannot recognize the conclusion of an induction schema";
-	[] in
-    find_branches 0 l in
-  nparams, indt, (Array.of_list (check_elim 0 revhyps2))
 
-let find_elim_signature isrec style elim hyp0 gl =
+
+
+let occur_rel n c = 
+  let res = not (noccurn n c) in
+  res
+
+let list_filter_firsts f l =
+  let rec list_filter_firsts_aux f acc l =
+    match l with
+      | e::l' when f e -> list_filter_firsts_aux f (acc@[e]) l'
+      | _ -> acc,l
+  in
+  list_filter_firsts_aux f [] l
+
+let count_rels_from n c =
+  let rels = free_rels c in
+  let cpt,rg = ref 0, ref n in
+  while Intset.mem !rg rels do
+    cpt:= !cpt+1; rg:= !rg+1;
+  done;
+  !cpt
+
+let count_nonfree_rels_from n c =
+  let rels = free_rels c in
+  if Intset.exists (fun x -> x >= n) rels then
+    let cpt,rg = ref 0, ref n in
+    while not (Intset.mem !rg rels) do
+      cpt:= !cpt+1; rg:= !rg+1;
+    done;
+    !cpt
+  else raise Not_found
+
+
+(* cuts a list in two parts, first of size n. Size must be greater than n *)
+let cut_list n l =
+  let rec cut_list_aux acc n l =
+    if n<=0 then acc,l
+    else match l with
+      | [] -> assert false
+      | e::l' -> cut_list_aux (acc@[e]) (n-1) l' in
+  let res = cut_list_aux [] n l in
+  res
+
+
+(* This functions splits the products of the induction scheme [elimt] in three
+   parts: 
+    - branches, easily detectable (they are not referred by rels in the subterm)
+    - what was found before branches (acc1) that is: parameters and predicates
+    - what was found after branches (acc3) that is: args and indarg if any
+   if there is no branch, we try to fill in acc3 with args/indargs.
+   We also return the conclusion.
+*)
+let decompose_paramspred_branch_args elimt = 
+  let rec cut_noccur elimt acc2 : rel_context * rel_context * types =
+    match kind_of_term elimt with
+      | Prod(nme,tpe,elimt') -> 
+	  let hd_tpe,_ = decompose_app (snd (decompose_prod_assum tpe)) in
+	  if not (occur_rel 1 elimt') && isRel hd_tpe	    
+	  then cut_noccur elimt' ((nme,None,tpe)::acc2)
+	  else let acc3,ccl = decompose_prod_assum elimt in acc2 , acc3 , ccl
+      | App(_, _) | Rel _ -> acc2 , [] , elimt
+      | _ -> error "cannot recognise an induction schema" in
+  let rec cut_occur elimt acc1 : rel_context * rel_context * rel_context * types =
+    match kind_of_term elimt with
+      | Prod(nme,tpe,c) when occur_rel 1 c -> cut_occur c ((nme,None,tpe)::acc1)
+      | Prod(nme,tpe,c) -> let acc2,acc3,ccl = cut_noccur elimt [] in acc1,acc2,acc3,ccl
+      | App(_, _) | Rel _ -> acc1,[],[],elimt
+      | _ -> error "cannot recognise an induction schema" in
+  let acc1, acc2 , acc3, ccl = cut_occur elimt [] in
+  (* Particular treatment when dealing with a dependent empty type elim scheme:
+     if there is no branch, then acc1 contains all hyps which is wrong (acc1
+     should contain parameters and predicate only). This happens for an empty
+     type (See for example Empty_set_ind, as False would actually be ok). Then
+     we must find the predicate of the conclusion to separate params_pred from
+     args. We suppose there is only one predicate here. *)
+  if List.length acc2 <> 0 then acc1, acc2 , acc3, ccl
+  else 
+    let hyps,ccl = decompose_prod_assum elimt in
+    let hd_ccl_pred,_ = decompose_app ccl in
+    match kind_of_term hd_ccl_pred with
+      | Rel i  -> let acc3,acc1 = cut_list (i-1) hyps in acc1 , [] , acc3 , ccl
+      | _ -> error "cannot recognize an induction schema"
+
+
+
+let exchange_hd_app subst_hd t =
+  let hd,args= decompose_app t in mkApp (subst_hd,Array.of_list args)
+
+
+exception NoLastArg
+exception NoLastArgCcl
+
+(* Builds an elim_scheme frome its type and calling form (const+binding) We
+   first separate branches.  We obtain branches, hyps before (params + preds),
+   hyps after (args <+ indarg if present>) and conclusion.  Then we proceed as
+   follows:
+   
+   - separate parameters and predicates in params_preds. For that we build: 
+ forall (x1:Ti_1)(xni:Ti_ni) (HI:I prm1..prmp x1...xni), DUMMY x1...xni HI/farg
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^                  ^^^^^^^
+                                       optional                           opt
+     Free rels appearing in this term are parameters (branches should not
+     appear, and the only predicate would have been Qi but we replaced it by
+     DUMMY). We guess this heuristic catches all params.  TODO: generalize to
+     the case where args are merged with branches (?) and/or where several
+     predicates are cited in the conclusion.
+
+   - finish to fill in the elim_scheme: indarg/farg/args and finally indref. *)
+let compute_elim_sig ?elimc elimt =
+  let params_preds,branches,args_indargs,conclusion = 
+    decompose_paramspred_branch_args elimt in
+  
+  let ccl = exchange_hd_app (mkVar (id_of_string "__QI_DUMMY__")) conclusion in
+  let concl_with_args = it_mkProd_or_LetIn ccl args_indargs in  
+  let nparams = Intset.cardinal (free_rels concl_with_args) in
+  let preds,params = cut_list (List.length params_preds - nparams) params_preds in
+  
+  (* A first approximation, further anlysis will tweak it *)
+  let res = ref { empty_scheme with
+    (* This fields are ok: *)
+    elimc = elimc; elimt = elimt; concl = conclusion;
+    predicates = preds; npredicates = List.length preds; 
+    branches = branches; nbranches = List.length branches; 
+    farg_in_concl = (try isApp (last_arg ccl) with _ -> false);
+    params = params; nparams = nparams; 
+    (* all other fields are unsure at this point. Including these:*)
+    args = args_indargs; nargs = List.length args_indargs; } in
+  try 
+    (* Order of tests below is important. Each of them exits if successful. *)
+    (* 1- First see if (f x...) is in the conclusion. *)
+    if !res.farg_in_concl 
+    then begin
+      res := { !res with
+	indarg = None;
+	indarg_in_concl = false; farg_in_concl = true };
+      raise Exit
+    end;
+    (* 2- If no args_indargs (=!res.nargs at this point) then no indarg *)
+    if !res.nargs=0 then raise Exit; 
+    (* 3- Look at last arg: is it the indarg? *)
+    ignore (
+      match List.hd args_indargs with
+	| hiname,Some _,hi -> error "cannot recognize an induction schema"
+	| hiname,None,hi -> 
+	    let hi_ind, hi_args = decompose_app hi in
+	    let hi_is_ind = (* hi est d'un type inductif *)
+	      match kind_of_term hi_ind with | Ind (mind,_)  -> true | _ -> false in
+	    let hi_args_enough = (* hi a le bon nbre d'arguments *)
+	      List.length hi_args = List.length params + !res.nargs -1 in
+	    (* FIXME: Ces deux tests ne sont pas suffisants. *)
+	    if not (hi_is_ind & hi_args_enough) then raise Exit (* No indarg *)
+	    else (* Last arg is the indarg *)
+	      res := {!res with
+		indarg = Some (List.hd !res.args);
+		indarg_in_concl = occur_rel 1 ccl;
+		args = List.tl !res.args; nargs = !res.nargs - 1;
+	      };
+	    raise Exit);
+    raise Exit(* exit anyway *)
+  with Exit -> (* Ending by computing indrev: *)
+    match !res.indarg with
+      | None -> !res (* No indref *)
+      | Some ( _,Some _,_) -> error "Cannot recognise an induction scheme"
+      | Some ( _,None,ind) -> 
+	  let indhd,indargs = decompose_app ind in
+	  try {!res with indref = Some (global_of_constr indhd) }
+	  with _ -> error "Cannot find the inductive type of the inductive schema";;
+
+(* Check that the elimination scheme has a form similar to the 
+   elimination schemes built by Coq. Schemes may have the standard
+   form computed from an inductive type OR (feb. 2006) a non standard
+   form. That is: with no main induction argument and with an optional
+   extra final argument of the form (f x y ...) in the conclusion. In
+   the non standard case, naming of generated hypos is slightly
+   different. *)
+let compute_elim_signature elimc elimt names_info =
+  let scheme = compute_elim_sig ~elimc:elimc elimt in
+  let f,l = decompose_app scheme.concl in
+  (* Vérifier que les arguments de Qi sont bien les xi. *)
+  match scheme.indarg with
+    | Some (_,Some _,_) -> error "strange letin, cannot recognize an induction schema"
+    | None -> (* Non standard scheme *)
+	let npred = List.length scheme.predicates in 
+	let is_pred n c = 
+	  let hd = fst (decompose_app c) in match kind_of_term hd with
+	    | Rel q when n < q & q <= n+npred -> IndArg
+	    | _ -> OtherArg in 
+	let rec check_branch p c = 
+	  match kind_of_term c with
+	    | Prod (_,t,c) -> is_pred p t :: check_branch (p+1) c
+	    | LetIn (_,_,_,c) -> OtherArg :: check_branch (p+1) c
+	    | _ when is_pred p c = IndArg -> []
+	    | _ -> raise Exit in 
+	let rec find_branches p lbrch = 
+	  match lbrch with
+	    | (_,None,t)::brs ->
+		(try
+		  let lchck_brch = check_branch p t in
+		  let n = List.fold_left 
+		    (fun n b -> if b=RecArg then n+1 else n) 0 lchck_brch in
+		  let recvarname, hyprecname, avoid = 
+		    make_up_names n scheme.indref names_info in
+		  let namesign = 
+		    List.map (fun b -> (b,if b=IndArg then hyprecname else recvarname))
+		      lchck_brch in
+		  (avoid,namesign) :: find_branches (p+1) brs
+		with Exit-> error_ind_scheme "the branches of")
+	    | (_,Some _,_)::_ -> error_ind_scheme "the branches of"
+	    | [] -> [] in
+	let indsign = Array.of_list (find_branches 0 (List.rev scheme.branches)) in
+	indsign,scheme	
+	
+    | Some ( _,None,ind) -> (* Standard scheme from an inductive type *)
+	let indhd,indargs = decompose_app ind in
+	let npred = List.length scheme.predicates in
+	let is_pred n c = 
+	  let hd = fst (decompose_app c) in match kind_of_term hd with
+	    | Rel q when n < q & q <= n+npred -> IndArg
+	    | _ when hd = indhd -> RecArg
+	    | _ -> OtherArg in
+	let rec check_branch p c = match kind_of_term c with
+	  | Prod (_,t,c) -> is_pred p t :: check_branch (p+1) c
+	  | LetIn (_,_,_,c) -> OtherArg :: check_branch (p+1) c
+	  | _ when is_pred p c = IndArg -> []
+	  | _ -> raise Exit in 
+	let rec find_branches p lbrch =
+	  match lbrch with
+	    | (_,None,t)::brs ->
+		(try
+		  let lchck_brch = check_branch p t in
+		  let n = List.fold_left 
+		    (fun n b -> if b=RecArg then n+1 else n) 0 lchck_brch in
+		  let recvarname, hyprecname, avoid = 
+		    make_up_names n scheme.indref names_info in
+		  let namesign = 
+		    List.map (fun b -> (b,if b=IndArg then hyprecname else recvarname))
+		      lchck_brch in
+		  (avoid,namesign) :: find_branches (p+1) brs
+		with Exit -> error_ind_scheme "the branches of")
+	    | (_,Some _,_)::_ -> error_ind_scheme "the branches of"
+	    | [] ->
+		(* Check again conclusion *)
+
+		let ccl_arg_ok = is_pred (p + scheme.nargs + 1) f = IndArg in
+		let ind_is_ok = 
+		  list_lastn scheme.nargs indargs 
+		  = extended_rel_list 0 scheme.args in
+		if not (ccl_arg_ok & ind_is_ok) then
+		  error "Cannot recognize the conclusion of an induction schema";
+		[] 
+	in
+	let indsign = Array.of_list (find_branches 0 (List.rev scheme.branches)) in
+	indsign,scheme
+
+
+let find_elim_signature isrec elim hyp0 gl =
   let tmptyp0 =	pf_get_hyp_typ gl hyp0 in
   let (elimc,elimt) = match elim with
     | None ->
 	let mind,_ = pf_reduce_to_quantified_ind gl tmptyp0 in
 	let s = elimination_sort_of_goal gl in
 	let elimc =
-	  if isrec then Indrec.lookup_eliminator mind s
-	  else pf_apply Indrec.make_case_gen gl mind s in
+	  if isrec then lookup_eliminator mind s
+	  else pf_apply make_case_gen gl mind s in
 	let elimt = pf_type_of gl elimc in
 	((elimc, NoBindings), elimt)
     | Some (elimc,lbind as e) -> 
 	(e, pf_type_of gl elimc) in
-  let name_info = (style,hyp0) in
-  let nparams,indref,indsign = compute_elim_signature elimt name_info in
-  (elimc,elimt,nparams,indref,indsign)
+  let indsign,elim_scheme = compute_elim_signature elimc elimt hyp0 in
+  (indsign,elim_scheme)
 
-let induction_from_context isrec elim_info hyp0 (names,b_rnames) gl =
+
+let mapi f l =
+  let rec mapi_aux f i l =   
+    match l with
+      | [] -> []
+      | e::l' -> f e i :: mapi_aux f (i+1) l' in
+  mapi_aux f 0 l
+
+
+(* Instanciate all meta variables of elimclause using lid, some elts
+   of lid are parameters (first ones), the other are
+   arguments. Returns the clause obtained.  *)
+let recolle_clenv scheme lid elimclause gl = 
+  let _,arr = destApp elimclause.templval.rebus in
+  let lindmv = 
+    Array.map
+      (fun x -> 
+	match kind_of_term x with
+	  | Meta mv -> mv
+	  | _  -> errorlabstrm "elimination_clause"
+              (str "The type of elimination clause is not well-formed"))
+      arr in
+  let nmv = Array.length lindmv in
+  let lidparams,lidargs = cut_list (scheme.nparams) lid in
+  let nidargs = List.length lidargs in
+  (* parameters correspond to first elts of lid. *)
+  let clauses_params = 
+    mapi (fun id i -> mkVar id , pf_get_hyp_typ gl id , lindmv.(i)) lidparams in
+  (* arguments correspond to last elts of lid. *)
+  let clauses_args = 
+    mapi 
+      (fun id i -> mkVar id , pf_get_hyp_typ gl id , lindmv.(nmv-nidargs+i))
+      lidargs in
+  let clause_indarg = 
+    match scheme.indarg with
+      | None -> []
+      | Some (x,_,typx) -> []
+  in
+  let clauses = clauses_params@clauses_args@clause_indarg in
+  (* iteration of clenv_fchain with all infos we have. *)
+  List.fold_right
+    (fun e acc ->
+      let x,y,i = e in
+      (* from_n (Some 0) means that x should be taken "as is" without
+         trying to unify (which would lead to trying to apply it to
+         evars if y is a product). *)
+      let indclause  = mk_clenv_from_n gl (Some 0) (x,y) in
+      let elimclause' = clenv_fchain i acc indclause in
+      elimclause')
+    (List.rev clauses)
+    elimclause
+
+
+(* Unification of the goal and the principle applied to meta variables:
+   (elimc ?i ?j ?k...?l). This solves partly meta variables (and may
+    produce new ones). Then refine with the resulting term with holes.
+*)
+let induction_tac_felim indvars (* (elimc,lbindelimc) elimt *) scheme gl = 
+  let elimt = scheme.elimt in
+  let elimc,lbindelimc = 
+    match scheme.elimc with | Some x -> x | None -> error "No definition of the principle" in
+  (* elimclause contains this: (elimc ?i ?j ?k...?l) *)
+  let elimclause =
+    make_clenv_binding gl (mkCast (elimc,DEFAULTcast, elimt),elimt) lbindelimc in
+  (* elimclause' is built from elimclause by instanciating all args and params. *)
+  let elimclause' = recolle_clenv scheme indvars elimclause gl in
+  (* one last resolution (useless?) *)
+  let resolved = clenv_unique_resolver true elimclause' gl in
+  clenv_refine resolved gl
+
+(* Induction with several induction arguments, main differences with
+   induction_from_context is that there is no main induction argument,
+   so we chose one to be the positioning reference. On the other hand,
+   all args and params must be given, so we help a bit the unifier by
+   making the "pattern" by hand before calling induction_tac_felim
+   FIXME: REUNIF AVEC induction_tac_felim? *)
+let induction_from_context_l isrec elim_info lid names gl =
+  let indsign,scheme = elim_info in
+  (* number of all args, counting farg and indarg if present. *)
+  let nargs_indarg_farg = scheme.nargs
+    + (if scheme.farg_in_concl then 1 else 0) 
+    + (if scheme.indarg <> None then 1 else 0) in
+  (* Number of given induction args must be exact. *)
+  if List.length lid <> nargs_indarg_farg + scheme.nparams then 
+    error "not the right number of arguments given to induction scheme";  
+  let env = pf_env gl in
+  (* hyp0 is used for re-introducing hyps at the right place afterward.
+     We chose the first element of the list of variables on which to
+     induct. It is probably the first of them appearing in the
+     context. *)
+  let hyp0,indvars,lid_params = 
+    match lid with
+      | []  -> anomaly "induction_from_context_l"
+      | e::l -> 
+	  let nargs_without_first = nargs_indarg_farg - 1 in
+	  let ivs,lp = cut_list nargs_without_first l in
+	  e, ivs, lp in
+  let statlists,lhyp0,indhyps,deps = cook_sign None (hyp0::indvars) env in
+  let tmpcl = it_mkNamedProd_or_LetIn (pf_concl gl) deps in
+  let names = compute_induction_names (Array.length indsign) names in
+  let dephyps = List.map (fun (id,_,_) -> id) deps in
+  let deps_cstr =
+    List.fold_left (fun a (id,b,_) -> if b = None then (mkVar id)::a else a) [] deps in
+  (* terms to patternify we must patternify indarg or farg if present in concl *)
+  let lid_in_pattern = 
+    if scheme.indarg <> None & not scheme.indarg_in_concl then List.rev indvars
+    else List.rev (hyp0::indvars) in
+  let lidcstr = List.map (fun x -> mkVar x) lid_in_pattern in
+  let realindvars = (* hyp0 is a real induction arg if it is not the
+		       farg in the conclusion of the induction scheme *)
+    List.rev ((if scheme.farg_in_concl then indvars else hyp0::indvars) @ lid_params) in
+  (* Magistral effet de bord: comme dans induction_from_context. *)
+  tclTHENLIST
+    [ 
+      (* Generalize dependent hyps (but not args) *)
+      if deps = [] then tclIDTAC else apply_type tmpcl deps_cstr;
+      thin dephyps; (* clear dependent hyps *)
+      (* pattern to make the predicate appear. *)
+      reduce (Pattern (List.map (fun e -> ([],e)) lidcstr)) onConcl;
+      (* FIXME: Tester ca avec un principe dependant et non-dependant *)
+      (if isrec then tclTHENFIRSTn else tclTHENLASTn)
+       	(tclTHENLIST [ 
+	  (* Induction by "refine (indscheme ?i ?j ?k...)" + resolution of all
+	     possible holes using arguments given by the user (but the
+	     functional one). *)
+	  induction_tac_felim realindvars scheme;
+          tclTRY (thin (List.rev (indhyps)));
+	])
+	(array_map2 
+	  (induct_discharge statlists lhyp0 (List.rev dephyps)) indsign names)
+    ]
+    gl
+
+
+
+let induction_from_context isrec elim_info hyp0 names gl =
   (*test suivant sans doute inutile car refait par le letin_tac*)
   if List.mem hyp0 (ids_of_named_context (Global.named_context())) then
     errorlabstrm "induction" 
       (str "Cannot generalize a global variable");
-  let elimc,elimt,nparams,indref,indsign = elim_info in
+  let indsign,scheme = elim_info in
+
+  let indref = match scheme.indref with | None -> assert false | Some x -> x in
   let tmptyp0 =	pf_get_hyp_typ gl hyp0 in
   let typ0 = pf_apply reduce_to_quantified_ref gl indref tmptyp0 in
+
   let env = pf_env gl in
-  let indvars = find_atomic_param_of_ind nparams (snd (decompose_prod typ0)) in
-  let (statlists,lhyp0,indhyps,deps) = cook_sign hyp0 indvars env in
+  let indvars = find_atomic_param_of_ind scheme.nparams (snd (decompose_prod typ0)) in
+  (* induction_from_context_l isrec elim_info (hyp0::List.rev indvars) names gl  *)
+  let statlists,lhyp0,indhyps,deps = cook_sign (Some hyp0) indvars env in
   let tmpcl = it_mkNamedProd_or_LetIn (pf_concl gl) deps in
   let names = compute_induction_names (Array.length indsign) names in
-  (* For translator *)
-  let names' = Array.map ref (Array.make (Array.length indsign) []) in
-  let b = ref false in
-  b_rnames := (b,Array.to_list names')::!b_rnames;
-  let names = array_map2 (fun n n' -> (n,b,n')) names names' in
-  (* End translator *)
   let dephyps = List.map (fun (id,_,_) -> id) deps in
-  let args =
+  let deps_cstr =
     List.fold_left
       (fun a (id,b,_) -> if b = None then (mkVar id)::a else a) [] deps in
 
@@ -1590,11 +1938,11 @@ let induction_from_context isrec elim_info hyp0 (names,b_rnames) gl =
      "ind_rec ... (hyp0 ?)", les buts correspondant à des arguments de
      hyp0 sont maintenant à la fin et c'est tclTHENFIRSTn qui marche !!! *)
   tclTHENLIST
-    [ if deps = [] then tclIDTAC else apply_type tmpcl args;
+    [ if deps = [] then tclIDTAC else apply_type tmpcl deps_cstr;
       thin dephyps;
       (if isrec then tclTHENFIRSTn else tclTHENLASTn)
        	(tclTHENLIST
-	  [ induction_tac hyp0 typ0 (elimc,elimt);
+	  [ induction_tac hyp0 typ0 scheme (*scheme.elimc,scheme.elimt*);
 	    thin [hyp0];
             tclTRY (thin indhyps) ])
        	(array_map2
@@ -1602,15 +1950,38 @@ let induction_from_context isrec elim_info hyp0 (names,b_rnames) gl =
     ]
     gl
 
-let induction_with_atomization_of_ind_arg isrec elim names hyp0 gl =
-  let (elimc,elimt,nparams,indref,indsign as elim_info) =
-    find_elim_signature isrec false elim hyp0 gl in
-  tclTHEN
-    (atomize_param_of_ind (indref,nparams) hyp0)
-    (induction_from_context isrec elim_info hyp0 names) gl
 
-(* This is Induction since V7 ("natural" induction both in quantified
-   premisses and introduced ones) *)
+
+exception TryNewInduct of exn
+
+let induction_with_atomization_of_ind_arg isrec elim names hyp0 gl =
+  let (indsign,scheme as elim_info) = find_elim_signature isrec elim hyp0 gl in
+  if scheme.indarg = None then (* This is not a standard induction scheme (the
+				  argument is probably a parameter) So try the
+				  more general induction mechanism. *)
+    induction_from_context_l isrec elim_info [hyp0] names gl
+  else
+    let indref = match scheme.indref with | None -> assert false | Some x -> x in
+    tclTHEN
+      (atomize_param_of_ind (indref,scheme.nparams) hyp0)
+      (induction_from_context isrec elim_info hyp0 names) gl
+
+(* Induction on a list of induction arguments. Analyse the elim
+   scheme (which is mandatory for multiple ind args), check that all
+   parameters and arguments are given (mandatory too). *)
+let induction_without_atomization isrec elim names lid gl =
+  let (indsign,scheme as elim_info) =
+    find_elim_signature isrec elim (List.hd lid) gl in
+  let awaited_nargs = 
+    scheme.nparams + scheme.nargs 
+    + (if scheme.farg_in_concl then 1 else 0)
+    + (if scheme.indarg <> None then 1 else 0)
+  in
+  let nlid = List.length lid in
+  if nlid <> awaited_nargs
+  then error "Not the right number of induction arguments"
+  else induction_from_context_l isrec elim_info lid names gl
+
 let new_induct_gen isrec elim names c gl =
   match kind_of_term c with
     | Var id when not (mem_named_context id (Global.named_context())) ->
@@ -1623,18 +1994,119 @@ let new_induct_gen isrec elim names c gl =
 	  (letin_tac true (Name id) c allClauses)
 	  (induction_with_atomization_of_ind_arg isrec elim names id) gl
 
-let new_induct_destruct isrec c elim names = match c with
-  | ElimOnConstr c -> new_induct_gen isrec elim names c
-  | ElimOnAnonHyp n ->
-      tclTHEN (intros_until_n n)
-        (tclLAST_HYP (new_induct_gen isrec elim names))
-  (* Identifier apart because id can be quantified in goal and not typable *)
-  | ElimOnIdent (_,id) ->
-      tclTHEN (tclTRY (intros_until_id id))
-        (new_induct_gen isrec elim names (mkVar id))
+(* The two following functions should already exist, but found nowhere *)
+(* Unfolds x by its definition everywhere *)
+let unfold_body x gl =
+  let hyps = pf_hyps gl in
+  let xval =
+    match Sign.lookup_named x hyps with
+        (_,Some xval,_) -> xval
+      | _ -> errorlabstrm "unfold_body"
+          (pr_id x ++ str" is not a defined hypothesis") in
+  let aft = afterHyp x gl in
+  let hl = List.fold_right (fun (y,yval,_) cl -> (y,[],InHyp) :: cl) aft [] in
+  let xvar = mkVar x in
+  let rfun _ _ c = replace_term xvar xval c in
+  tclTHENLIST
+    [tclMAP (fun h -> reduct_in_hyp rfun h) hl;
+     reduct_in_concl (rfun,DEFAULTcast)] gl
 
-let new_induct = new_induct_destruct true
-let new_destruct = new_induct_destruct false
+(* Unfolds x by its definition everywhere and clear x. This may raise
+   an error if x is not defined. *)
+let unfold_all x gl =
+  let (_,xval,_) = pf_get_hyp gl x in
+  (* If x has a body, simply replace x with body and clear x *)
+  if xval <> None then tclTHEN (unfold_body x) (clear [x]) gl
+  else tclIDTAC gl
+
+
+(* Induction on a list of arguments. First make induction arguments
+   atomic (using letins), then do induction. The specificity here is
+   that all arguments and parameters of the scheme are given
+   (mandatory for the moment), so we don't need to deal with
+    parameters of the inductive type as in new_induct_gen. *)
+let new_induct_gen_l isrec elim names lc gl =
+  let newlc = ref [] in
+  let letids = ref [] in
+  let rec atomize_list l gl =
+    match l with
+      | [] -> tclIDTAC gl
+      | c::l' ->
+	  match kind_of_term c with
+	    | Var id when not (mem_named_context id (Global.named_context())) -> 
+		let _ = newlc:= id::!newlc in
+		atomize_list l' gl
+
+	    | _ ->
+		let x = 
+		  id_of_name_using_hdchar (Global.env()) (pf_type_of gl c) Anonymous in
+		
+		let id = fresh_id [] x gl in
+		let newl' = List.map (replace_term c (mkVar id)) l' in
+		let _ = newlc:=id::!newlc in
+		let _ = letids:=id::!letids in
+		tclTHEN 
+		  (letin_tac true (Name id) c allClauses)
+		  (atomize_list newl') gl in
+  tclTHENLIST 
+    [
+      (atomize_list lc);
+      (fun gl' -> (* recompute each time to have the new value of newlc *)
+	induction_without_atomization isrec elim names !newlc gl') ;
+      (* after induction, try to unfold all letins created by atomize_list
+         FIXME: unfold_all does not exist anywhere else? *)
+      (fun gl' -> (* recompute each time to have the new value of letids *)
+	tclMAP (fun x -> tclTRY (unfold_all x)) !letids gl')
+    ]
+    gl
+
+
+let induct_destruct_l isrec lc elim names = 
+  (* Several induction hyps: induction scheme is mandatory *)
+  let _ = 
+    if elim = None 
+    then 
+      error ("Induction scheme must be given when several induction hypothesis.\n"
+      ^ "Example: induction x1 x2 x3 using my_scheme.") in
+  let newlc = 
+    List.map
+      (fun x -> 
+	match x with (* FIXME: should we deal with ElimOnIdent? *)
+	  | ElimOnConstr x -> x
+	  | _ -> error "don't know where to find some argument")
+      lc in
+  new_induct_gen_l isrec elim names newlc
+
+
+(* Induction either over a term, over a quantified premisse, or over
+   several quantified premisses (like with functional induction
+   principles). 
+   TODO: really unify induction with one and induction with several
+   args *)
+let induct_destruct isrec lc elim names = 
+  assert (List.length lc > 0); (* ensured by syntax, but if called inside caml? *)
+  if List.length lc = 1 then (* induction on one arg: use old mechanism *)
+    try 
+      let c = List.hd lc in
+      match c with
+	| ElimOnConstr c -> new_induct_gen isrec elim names c
+	| ElimOnAnonHyp n ->
+	    tclTHEN (intros_until_n n)
+	      (tclLAST_HYP (new_induct_gen isrec elim names))
+	      (* Identifier apart because id can be quantified in goal and not typable *)
+	| ElimOnIdent (_,id) ->
+	    tclTHEN (tclTRY (intros_until_id id))
+	      (new_induct_gen isrec elim names (mkVar id))
+    with (* If this fails, try with new mechanism but if it fails too,
+	    then the exception is the first one. *)
+      | x -> (try induct_destruct_l isrec lc elim names with _  -> raise x)
+  else induct_destruct_l isrec lc elim names
+
+
+      
+
+let new_induct = induct_destruct true
+let new_destruct = induct_destruct false
 
 (* The registered tactic, which calls the default elimination
  * if no elimination constant is provided. *)
@@ -1645,23 +2117,12 @@ let new_destruct = new_induct_destruct false
 let raw_induct s = tclTHEN (intros_until_id s) (tclLAST_HYP simplest_elim)
 let raw_induct_nodep n = tclTHEN (intros_until_n n) (tclLAST_HYP simplest_elim)
 
-(* This was Induction in 6.3 (hybrid form) *)
-let induction_from_context_old_style hyp b_ids gl =
-  let elim_info = find_elim_signature true true None hyp gl in
-  let x = induction_from_context true elim_info hyp (None,b_ids) gl in
-  (* For translator *) fst (List.hd !b_ids) := true;
-  x
-
-let simple_induct_id hyp b_ids =
-  if !Options.v7 then
-    tclORELSE (raw_induct hyp) (induction_from_context_old_style hyp b_ids)
-  else
-    raw_induct hyp
+let simple_induct_id hyp = raw_induct hyp
 let simple_induct_nodep = raw_induct_nodep
 
 let simple_induct = function
-  | NamedHyp id,b_ids -> simple_induct_id id b_ids
-  | AnonHyp n,_ -> simple_induct_nodep n
+  | NamedHyp id -> simple_induct_id id
+  | AnonHyp n -> simple_induct_nodep n
 
 (* Destruction tactics *)
 
@@ -1682,25 +2143,25 @@ let simple_destruct = function
  *)
 
 let elim_scheme_type elim t gl =
-  let (wc,kONT) = startWalk gl in
-  let clause = mk_clenv_type_of wc elim in 
-  match kind_of_term (last_arg (clenv_template clause).rebus) with
+  let clause = mk_clenv_type_of gl elim in
+  match kind_of_term (last_arg clause.templval.rebus) with
     | Meta mv ->
         let clause' =
 	  (* t is inductive, then CUMUL or CONV is irrelevant *)
-	  clenv_unify true CUMUL t (clenv_instance_type clause mv) clause in
-	elim_res_pf kONT clause' true gl
+	  clenv_unify true Reduction.CUMUL t
+            (clenv_meta_type clause mv) clause in
+	res_pf clause' ~allow_K:true gl
     | _ -> anomaly "elim_scheme_type"
 
 let elim_type t gl =
   let (ind,t) = pf_reduce_to_atomic_ind gl t in
-  let elimc = Indrec.lookup_eliminator ind (elimination_sort_of_goal gl) in
+  let elimc = lookup_eliminator ind (elimination_sort_of_goal gl) in
   elim_scheme_type elimc t gl
 
 let case_type t gl =
   let (ind,t) = pf_reduce_to_atomic_ind gl t in
   let env = pf_env gl in
-  let elimc = Indrec.make_case_gen env (project gl) ind (elimination_sort_of_goal gl) in 
+  let elimc = make_case_gen env (project gl) ind (elimination_sort_of_goal gl) in 
   elim_scheme_type elimc t gl
 
 
@@ -1773,9 +2234,12 @@ let dImp cls =
 
 (* Reflexivity tactics *)
 
+let setoid_reflexivity = ref (fun _ -> assert false)
+let register_setoid_reflexivity f = setoid_reflexivity := f
+
 let reflexivity gl =
   match match_with_equation (pf_concl gl) with
-    | None -> error "The conclusion is not a substitutive equation" 
+    | None -> !setoid_reflexivity gl
     | Some (hdcncl,args) ->  one_constructor 1 NoBindings gl
 
 let intros_reflexivity  = (tclTHEN intros reflexivity)
@@ -1787,9 +2251,12 @@ let intros_reflexivity  = (tclTHEN intros reflexivity)
    defined and the conclusion is a=b, it solves the goal doing (Cut
    b=a;Intro H;Case H;Constructor 1) *)
 
+let setoid_symmetry = ref (fun _ -> assert false)
+let register_setoid_symmetry f = setoid_symmetry := f
+
 let symmetry gl =
   match match_with_equation (pf_concl gl) with
-    | None -> error "The conclusion is not a substitutive equation" 
+    | None -> !setoid_symmetry gl
     | Some (hdcncl,args) ->
         let hdcncls = string_of_inductive hdcncl in
         begin 
@@ -1810,12 +2277,14 @@ let symmetry gl =
 	      gl
 	end
 
+let setoid_symmetry_in = ref (fun _ _ -> assert false)
+let register_setoid_symmetry_in f = setoid_symmetry_in := f
+
 let symmetry_in id gl = 
   let ctype = pf_type_of gl (mkVar id) in 
   let sign,t = decompose_prod_assum ctype in
   match match_with_equation t with
-    | None -> (* Do not deal with setoids yet *) 
-        error "The term provided does not end with an equation" 
+    | None -> !setoid_symmetry_in id gl
     | Some (hdcncl,args) -> 
         let symccl = match args with 
 	  | [t1; c1; t2; c2] -> mkApp (hdcncl, [| t2; c2; t1; c1 |])
@@ -1845,9 +2314,12 @@ let intros_symmetry =
    --Eduardo (19/8/97)
 *)
 
+let setoid_transitivity = ref (fun _ _ -> assert false)
+let register_setoid_transitivity f = setoid_transitivity := f
+
 let transitivity t gl =
   match match_with_equation (pf_concl gl) with
-    | None -> error "The conclusion is not a substitutive equation" 
+    | None -> !setoid_transitivity t gl
     | Some (hdcncl,args) -> 
         let hdcncls = string_of_inductive hdcncl in
         begin
@@ -1886,7 +2358,6 @@ let interpretable_as_section_decl d1 d2 = match d1,d2 with
   | (_,None,t1), (_,_,t2) -> eq_constr t1 t2
 
 let abstract_subproof name tac gls = 
-  let env = Global.env() in
   let current_sign = Global.named_context()
   and global_sign = pf_hyps gls in
   let sign,secsign = 
@@ -1894,16 +2365,15 @@ let abstract_subproof name tac gls =
       (fun (id,_,_ as d) (s1,s2) -> 
 	 if mem_named_context id current_sign &
            interpretable_as_section_decl (Sign.lookup_named id current_sign) d
-         then (s1,add_named_decl d s2)
+         then (s1,push_named_context_val d s2)
 	 else (add_named_decl d s1,s2)) 
-      global_sign (empty_named_context,empty_named_context) in
+      global_sign (empty_named_context,empty_named_context_val) in
   let na = next_global_ident_away false name (pf_ids_of_hyps gls) in
   let concl = it_mkNamedProd_or_LetIn (pf_concl gls) sign in
   if occur_existential concl then
-    if !Options.v7 then error "Abstract cannot handle existentials"
-    else error "\"abstract\" cannot handle existentials";
+    error "\"abstract\" cannot handle existentials";
   let lemme =
-    start_proof na (IsGlobal (Proof Lemma)) secsign concl (fun _ _ -> ());
+    start_proof na (Global, Proof Lemma) secsign concl (fun _ _ -> ());
     let _,(const,kind,_) =
       try
 	by (tclCOMPLETE (tclTHEN (tclDO (List.length sign) intro) tac)); 
@@ -1913,9 +2383,8 @@ let abstract_subproof name tac gls =
 	(delete_current_proof(); raise e)
     in   (* Faudrait un peu fonctionnaliser cela *)
     let cd = Entries.DefinitionEntry const in
-    let sp = Declare.declare_internal_constant na (cd,IsProof Lemma) in
-    let newenv = Global.env() in
-    constr_of_reference (ConstRef (snd sp))
+    let con = Declare.declare_internal_constant na (cd,IsProof Lemma) in
+    constr_of_global (ConstRef con)
   in
   exact_no_check 
     (applist (lemme, 
@@ -1928,3 +2397,29 @@ let tclABSTRACT name_op tac gls =
     | None   -> add_suffix (get_current_proof_name ()) "_subproof" 
   in  
   abstract_subproof s tac gls
+
+
+let admit_as_an_axiom gls =
+  let current_sign = Global.named_context()
+  and global_sign = pf_hyps gls in
+  let sign,secsign = 
+    List.fold_right
+      (fun (id,_,_ as d) (s1,s2) -> 
+	 if mem_named_context id current_sign &
+           interpretable_as_section_decl (Sign.lookup_named id current_sign) d
+         then (s1,add_named_decl d s2)
+	 else (add_named_decl d s1,s2)) 
+      global_sign (empty_named_context,empty_named_context) in
+  let name = add_suffix (get_current_proof_name ()) "_admitted" in
+  let na = next_global_ident_away false name (pf_ids_of_hyps gls) in
+  let concl = it_mkNamedProd_or_LetIn (pf_concl gls) sign in
+  if occur_existential concl then error "\"admit\" cannot handle existentials";
+  let axiom =
+    let cd = Entries.ParameterEntry concl in
+    let con = Declare.declare_internal_constant na (cd,IsAssumption Logical) in
+    constr_of_global (ConstRef con)
+  in
+  exact_no_check 
+    (applist (axiom, 
+              List.rev (Array.to_list (instance_from_named_context sign))))
+    gls

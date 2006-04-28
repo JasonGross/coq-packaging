@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqmktop.ml,v 1.28.2.2 2005/11/04 08:20:57 herbelin Exp $ *)
+(* $Id: coqmktop.ml 7538 2005-11-08 17:14:52Z herbelin $ *)
 
 (* coqmktop is a script to link Coq, analogous to ocamlmktop.
    The command line contains options specific to coqmktop, options for the
@@ -19,49 +19,26 @@ open Unix
 (* 1. Core objects *)
 let ocamlobjs = ["unix.cma"]
 let dynobjs = ["dynlink.cma"]
-let camlp4objs = [(*"odyl.cma"; "camlp4.cma";*) "gramlib.cma"]
-let configobjs = ["coq_config.cmo"]
-let libobjs = ocamlobjs @ camlp4objs @ configobjs
+let camlp4objs = ["gramlib.cma"]
+let libobjs = ocamlobjs @ camlp4objs
 
 let spaces = Str.regexp "[ \t\n]+"
-let split_cmo l = Str.split spaces l
+let split_list l = Str.split spaces l
 
-let lib = split_cmo Tolink.lib 
-let kernel = split_cmo Tolink.kernel
-let library = split_cmo Tolink.library 
-let pretyping = split_cmo Tolink.pretyping 
-let interp = split_cmo Tolink.interp
-let parsing = split_cmo Tolink.parsing 
-let proofs = split_cmo Tolink.proofs 
-let tactics = split_cmo Tolink.tactics 
-let toplevel = split_cmo Tolink.toplevel 
-let highparsing = split_cmo Tolink.highparsing 
-let highparsingnew = split_cmo Tolink.highparsingnew
-let ide = split_cmo Tolink.ide 
+let copts     = split_list Tolink.copts
+let core_objs = split_list Tolink.core_objs
+let core_libs = split_list Tolink.core_libs
+let ide       = split_list Tolink.ide 
 
-let core_objs = 
-  libobjs @ lib @ kernel @ library @ pretyping @ interp @ parsing @ 
-  proofs @ tactics
-
-let core_libs = 
-  libobjs @ [ "lib/lib.cma" ; "kernel/kernel.cma" ; "library/library.cma" ;
-  "pretyping/pretyping.cma" ; "interp/interp.cma" ; "parsing/parsing.cma" ;
-  "proofs/proofs.cma" ; "tactics/tactics.cma" ]
-
-(* 3. Files only in coqsearchisos (if option -searchisos is used) *)
-let coqsearch = ["version_searchisos.cmo"; "cmd_searchisos_line.cmo"]
-
-(* 4. Toplevel objects *)
-let camlp4objs =
-  ["camlp4_top.cma"; "pa_o.cmo"; "pa_op.cmo"; "pa_extend.cmo"; "q_util.cmo"; "q_coqast.cmo" ]
-let topobjs = camlp4objs
+(* 3. Toplevel objects *)
+let camlp4topobjs =
+  ["camlp4_top.cma"; "pa_o.cmo"; "pa_op.cmo"; "pa_extend.cmo"]
+let topobjs = camlp4topobjs
 
 let gramobjs = []
 let notopobjs = gramobjs
 
-(* 5. High-level tactics objects *)
-let hightactics = 
- (split_cmo Tolink.hightactics) @ (split_cmo Tolink.contrib) 
+(* 4. High-level tactics objects *)
 
 (* environment *)
 let src_coqtop = ref Coq_config.coqtop
@@ -73,7 +50,7 @@ let coqide     = ref false
 let echo       = ref false
 
 let src_dirs () = 
-  [ []; [ "config" ]; [ "toplevel" ] ] @
+  [ []; ["kernel";"byterun"]; [ "config" ]; [ "toplevel" ] ] @
   if !coqide then [[ "ide" ]] else []
 
 let includes () = 
@@ -89,8 +66,10 @@ let native_suffix f =
     (Filename.chop_suffix f ".cmo") ^ ".cmx"
   else if Filename.check_suffix f ".cma" then 
     (Filename.chop_suffix f ".cma") ^ ".cmxa"
-  else 
-    failwith ("File "^f^" has not extension .cmo or .cma")
+  else  
+    if Filename.check_suffix f ".a" then f 
+    else
+      failwith ("File "^f^" has not extension .cmo, .cma or .a")
 
 (* Transforms a file name in the corresponding Caml module name. *)
 let rem_ext_regexpr = Str.regexp "\\(.*\\)\\.\\(cm..?\\|ml\\)"
@@ -102,7 +81,6 @@ let module_of_file name =
 (* Build the list of files to link and the list of modules names *)
 let files_to_link userfiles =
   let dyn_objs = if not !opt then dynobjs else [] in
-  let command_objs = if !searchisos then coqsearch else [] in
   let toplevel_objs =
     if !top then topobjs else if !opt then notopobjs else [] in
   let ide_objs = if !coqide then 
@@ -114,17 +92,8 @@ let files_to_link userfiles =
      "ide/ide.cma" ]
   else [] 
   in
-  let objs = 
-    core_objs @ dyn_objs @ toplevel @ highparsing @ highparsingnew @ 
-    command_objs @ hightactics @ toplevel_objs @ ide_objs
-  and libs =
-    core_libs @ dyn_objs @ 
-    [ "toplevel/toplevel.cma" ; "parsing/highparsing.cma" ;
-      "parsing/highparsingnew.cma" ] @ 
-    command_objs @ [ "tactics/hightactics.cma" ; "contrib/contrib.cma" ] @
-    toplevel_objs @ 
-    ide_libs      
-  in
+  let objs = dyn_objs @ libobjs @ core_objs @ toplevel_objs @ ide_objs
+  and libs = dyn_objs @ libobjs @ core_libs @ toplevel_objs @ ide_libs in
   let objstolink,libstolink =
     if !opt then 
       ((List.map native_suffix objs) @ userfiles,
@@ -183,8 +152,6 @@ let parse_args () =
     | "-opt" :: rem -> opt := true ; parse (op,fl) rem
     | "-full" :: rem -> full := true ; parse (op,fl) rem
     | "-top" :: rem -> top := true ; parse (op,fl) rem
-    | "-searchisos" :: rem ->
-        searchisos := true; parse (op,fl) rem
     | "-ide" :: rem ->
         coqide := true; parse (op,fl) rem
     | "-v8" :: rem -> parse (op,fl) rem
@@ -199,7 +166,8 @@ let parse_args () =
         parse ((List.rev(List.flatten (List.map (fun d -> ["-I";d])
 					 (all_subdirs a))))@op,fl) rem
     | "-R" :: [] -> usage ()
-    | ("-compact"|"-g"|"-p"|"-thread" as o) :: rem -> parse (o::op,fl) rem
+    | ("-noassert"|"-compact"|"-g"|"-p"|"-thread" as o) :: rem ->
+        parse (o::op,fl) rem
     | ("-h"|"--help") :: _ -> usage ()
     | f :: rem ->
 	if Filename.check_suffix f ".ml" 
@@ -230,7 +198,6 @@ let clean file =
 let all_modules_in_dir dir =
   try
     let lst = ref []
-    and stg = ref ""
     and dh = Unix.opendir dir in
     try
       while true do
@@ -331,11 +298,12 @@ let main () =
   (* the list of the loaded modules *)
   let main_file = create_tmp_main_file modules in
   try
-    let args = options @ (includes ()) @ tolink @ dynlink @ [ main_file ] in
+    let args =
+      options @ (includes ()) @ copts @ tolink @ dynlink @ [ main_file ] in
     (* add topstart.cmo explicitly because we shunted ocamlmktop wrapper *)
     let args = if !top then args @ [ "topstart.cmo" ] else args in
     (* Now, with the .cma, we MUST use the -linkall option *)
-    let command = String.concat " " ((prog^" -linkall")::args) in
+    let command = String.concat " " (prog::args) in
     if !echo then 
       begin 
 	print_endline command; 

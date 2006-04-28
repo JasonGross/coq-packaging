@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: fhimsg.ml,v 1.19.2.1 2004/07/16 19:31:48 herbelin Exp $ *)
+(* $Id: fhimsg.ml 7837 2006-01-11 09:47:32Z herbelin $ *)
 
 open Pp
 open Util
@@ -231,7 +231,7 @@ let explain_ill_formed_rec_body k ctx err names i vdefs =
   | RecCallInCasePred c ->
       (str "Not allowed recursive call in the type of cases in")
   | NotGuardedForm c ->
-      str "Sub-expression " ++ prterm_env ctx c ++ spc() ++
+      str "Sub-expression " ++ pr_lconstr_env ctx c ++ spc() ++
       str "not in guarded form (should be a constructor, Cases or CoFix)"
 in
   let pvd = P.pr_term k ctx vdefs.(i) in
@@ -278,14 +278,7 @@ let explain_ml_case k ctx mes c ct br brt =
   hov 0 (str "In ML case expression on " ++ pc ++ ws 1 ++ cut () ++
            str "of type" ++  ws 1 ++ pct ++ ws 1 ++ cut () ++ 
            str "which is an inductive predicate." ++ fnl () ++ expln)
-(*
-let explain_cant_find_case_type loc k ctx c =
-  let pe = P.pr_term k ctx c in
-  Ast.user_err_loc
-    (loc,"pretype",
-     hov 3 (str "Cannot infer type of whole Case expression on" ++ 
-	     ws 1 ++ pe))
-*)
+
 let explain_type_error k ctx = function
   | UnboundRel n -> 
       explain_unbound_rel k ctx n

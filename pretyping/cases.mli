@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cases.mli,v 1.22.2.2 2004/07/16 19:30:43 herbelin Exp $ i*)
+(*i $Id: cases.mli 8654 2006-03-22 15:36:58Z msozeau $ i*)
 
 (*i*)
 open Util
@@ -23,6 +23,7 @@ type pattern_matching_error =
   | BadPattern of constructor * constr
   | BadConstructor of constructor * inductive
   | WrongNumargConstructor of constructor * int
+  | WrongNumargInductive of inductive * int
   | WrongPredicateArity of constr * constr * constr
   | NeedsInversion of constr * constr
   | UnusedClause of cases_pattern list
@@ -31,26 +32,23 @@ type pattern_matching_error =
 
 exception PatternMatchingError of env * pattern_matching_error
 
-(*s Used for old cases in pretyping *)
+val error_wrong_numarg_constructor_loc : loc -> env -> constructor -> int -> 'a
 
-val branch_scheme : 
-  env -> evar_defs -> bool -> inductive_family -> constr array
-
-type ml_case_error =
-  | MlCaseAbsurd
-  | MlCaseDependent
-
-exception NotInferable of ml_case_error
-
-val pred_case_ml : (* raises [NotInferable] if not inferable *)
-  env -> evar_map -> bool -> inductive_type -> int * types -> constr 
+val error_wrong_numarg_inductive_loc : loc -> env -> inductive -> int -> 'a
 
 (*s Compilation of pattern-matching. *)
 
-val compile_cases :
-  loc -> (type_constraint -> env -> rawconstr -> unsafe_judgment)
-  * evar_defs -> type_constraint -> env ->
-      (rawconstr option * rawconstr option ref) *
-      (rawconstr * (name * (loc * inductive * name list) option) ref) list *
-    (loc * identifier list * cases_pattern list * rawconstr) list ->
+module type S = sig
+  val compile_cases :
+    loc ->
+    (type_constraint -> env -> rawconstr -> unsafe_judgment) *    
+      evar_defs ref ->
+    type_constraint -> 
+    env ->
+    rawconstr option *
+      (rawconstr * (name * (loc * inductive * name list) option)) list *
+      (loc * identifier list * cases_pattern list * rawconstr) list ->
     unsafe_judgment
+end
+
+module Cases_F(C : Coercion.S) : S

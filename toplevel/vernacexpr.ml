@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacexpr.ml,v 1.55.2.2 2005/01/21 17:14:10 herbelin Exp $ i*)
+(*i $Id: vernacexpr.ml 7936 2006-01-28 18:36:54Z herbelin $ i*)
 
 open Util
 open Names
@@ -34,7 +34,6 @@ type class_rawexpr = FunClass | SortClass | RefClass of reference
   
 type printable =
   | PrintTables
-  | PrintLocalContext
   | PrintFullContext
   | PrintSectionContext of reference
   | PrintInspect of int
@@ -49,13 +48,17 @@ type printable =
   | PrintOpaqueName of reference
   | PrintGraph
   | PrintClasses
+  | PrintLtac of reference
   | PrintCoercions
   | PrintCoercionPaths of class_rawexpr * class_rawexpr
+  | PrintCanonicalConversions
   | PrintUniverses of string option
   | PrintHint of reference
   | PrintHintGoal
   | PrintHintDbName of string
+  | PrintRewriteHintDbName of string
   | PrintHintDb
+  | PrintSetoids
   | PrintScopes
   | PrintScope of string
   | PrintVisibility of string option
@@ -75,6 +78,7 @@ type searchable =
 type locatable =
   | LocateTerm of reference
   | LocateLibrary of reference
+  | LocateModule of reference
   | LocateFile of string
   | LocateNotation of notation
 
@@ -94,6 +98,7 @@ type showable =
   | ShowTree
   | ShowProofNames
   | ShowIntros of bool
+  | ShowMatch of lident
   | ExplainProof of int list
   | ExplainTree of int list
 
@@ -103,11 +108,11 @@ type comment =
   | CommentInt of int
 
 type hints =
-  | HintsResolve of (identifier option * constr_expr) list
-  | HintsImmediate of (identifier option * constr_expr) list
-  | HintsUnfold of (identifier option * reference) list
-  | HintsConstructors of identifier option * reference list
-  | HintsExtern of identifier option * int * constr_expr * raw_tactic_expr
+  | HintsResolve of constr_expr list
+  | HintsImmediate of constr_expr list
+  | HintsUnfold of reference list
+  | HintsConstructors of reference list
+  | HintsExtern of int * constr_expr * raw_tactic_expr
   | HintsDestruct of identifier *
       int * (bool,unit) location * constr_expr * raw_tactic_expr
 
@@ -152,7 +157,11 @@ type local_decl_expr =
   | AssumExpr of lname * constr_expr
   | DefExpr of lname * constr_expr * constr_expr option
 
-type module_binder = lident list * module_type_ast
+type module_binder = bool option * lident list * module_type_ast
+
+type grammar_production =
+  | VTerm of string
+  | VNonTerm of loc * string * Names.identifier option
 
 type proof_end =
   | Admitted
@@ -166,25 +175,17 @@ type vernac_expr =
   | VernacVar of lident
 
   (* Syntax *) 
-  | VernacGrammar of lstring * raw_grammar_entry list
-  | VernacTacticGrammar of
-      (lstring * (lstring * grammar_production list) * raw_tactic_expr) list
-  | VernacSyntax of lstring * raw_syntax_entry list
-  | VernacSyntaxExtension of locality_flag *
-      (lstring * syntax_modifier list) option 
-      * (lstring * syntax_modifier list) option
-  | VernacDistfix of locality_flag *
-      grammar_associativity * precedence * lstring * lreference *
-      scope_name option
+  | VernacTacticNotation of int * grammar_production list * raw_tactic_expr
+  | VernacSyntaxExtension of locality_flag * (lstring * syntax_modifier list)
   | VernacOpenCloseScope of (locality_flag * bool * scope_name)
   | VernacDelimiters of scope_name * lstring
   | VernacBindScope of scope_name * class_rawexpr list
   | VernacArgumentsScope of lreference * scope_name option list
   | VernacInfix of locality_flag * (lstring * syntax_modifier list) *
-      lreference * (lstring * syntax_modifier list) option * scope_name option
+      lreference * scope_name option
   | VernacNotation of
-      locality_flag * constr_expr * (lstring * syntax_modifier list) option *
-      (lstring * syntax_modifier list) option * scope_name option
+      locality_flag * constr_expr * (lstring * syntax_modifier list) *
+      scope_name option
 
   (* Gallina *)
   | VernacDefinition of definition_kind * lident * definition_expr * 
@@ -195,8 +196,8 @@ type vernac_expr =
   | VernacExactProof of constr_expr
   | VernacAssumption of assumption_kind * simple_binder with_coercion list
   | VernacInductive of inductive_flag * inductive_expr list
-  | VernacFixpoint of (fixpoint_expr * decl_notation) list
-  | VernacCoFixpoint of cofixpoint_expr list
+  | VernacFixpoint of (fixpoint_expr * decl_notation) list * bool
+  | VernacCoFixpoint of cofixpoint_expr list * bool
   | VernacScheme of (lident * bool * lreference * sort_expr) list
 
   (* Gallina extensions *)
@@ -214,9 +215,9 @@ type vernac_expr =
       class_rawexpr * class_rawexpr
 
   (* Modules and Module Types *)
-  | VernacDeclareModule of lident * 
-      module_binder list * (module_type_ast * bool) option * module_ast option
-  | VernacDefineModule of lident * 
+  | VernacDeclareModule of bool option * lident * 
+      module_binder list * (module_type_ast * bool)
+  | VernacDefineModule of bool option * lident * 
       module_binder list * (module_type_ast * bool) option * module_ast option
   | VernacDeclareModuleType of lident * 
       module_binder list * module_type_ast option
@@ -241,6 +242,7 @@ type vernac_expr =
   | VernacResetName of lident
   | VernacResetInitial
   | VernacBack of int
+  | VernacBackTo of int
 
   (* Commands *)
   | VernacDeclareTacticDefinition of
@@ -273,6 +275,7 @@ type vernac_expr =
   | VernacSuspend
   | VernacResume of lident option
   | VernacUndo of int
+  | VernacBacktrack of int*int*int
   | VernacFocus of int option
   | VernacUnfocus
   | VernacGo of goable
@@ -282,10 +285,6 @@ type vernac_expr =
   | VernacProof of raw_tactic_expr
   (* Toplevel control *)
   | VernacToplevelControl of exn
-
-  (* For translation from V7 to V8 syntax *)
-  | VernacV8only of vernac_expr
-  | VernacV7only of vernac_expr
 
   (* For extension *)
   | VernacExtend of string * raw_generic_argument list

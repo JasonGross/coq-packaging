@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: R_sqr.v,v 1.19.2.1 2004/07/16 19:31:12 herbelin Exp $ i*)
+(*i $Id: R_sqr.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rbasic_fun. Open Local Scope R_scope.

@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: BinPos.v,v 1.7.2.1 2004/07/16 19:31:07 herbelin Exp $ i*)
+(*i $Id: BinPos.v 6699 2005-02-07 14:30:08Z coq $ i*)
+
+Unset Boxed Definitions.
 
 (**********************************************************************)
 (** Binary positive numbers *)
@@ -39,6 +41,8 @@ Fixpoint Psucc (x:positive) : positive :=
 
 (** Addition *)
 
+Set Boxed Definitions.
+
 Fixpoint Pplus (x y:positive) {struct x} : positive :=
   match x, y with
   | xI x', xI y' => xO (Pplus_carry x' y')
@@ -64,6 +68,8 @@ Fixpoint Pplus (x y:positive) {struct x} : positive :=
   | xH, xO y' => xO (Psucc y')
   | xH, xH => xI xH
   end.
+
+Unset Boxed Definitions.
 
 Infix "+" := Pplus : positive_scope.
 

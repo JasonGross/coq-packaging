@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Prelude.v,v 1.11.2.1 2004/07/16 19:31:03 herbelin Exp $ i*)
+(*i $Id: Prelude.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Require Export Notations.
 Require Export Logic.
@@ -14,3 +14,4 @@ Require Export Datatypes.
 Require Export Specif.
 Require Export Peano.
 Require Export Wf.
+Require Export Tactics.

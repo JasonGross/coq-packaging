@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Relations.v,v 1.6.2.1 2004/07/16 19:31:16 herbelin Exp $ i*)
+(*i $Id: Relations.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Require Export Relation_Definitions.
 Require Export Relation_Operators.

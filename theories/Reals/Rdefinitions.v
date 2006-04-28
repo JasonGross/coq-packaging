@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i $Id: Rdefinitions.v,v 1.14.2.1 2004/07/16 19:31:12 herbelin Exp $ i*)
+(*i $Id: Rdefinitions.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 
 (*********************************************************)

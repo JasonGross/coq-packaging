@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Wf_Z.v,v 1.20.2.1 2004/07/16 19:31:20 herbelin Exp $ i*)
+(*i $Id: Wf_Z.v 6984 2005-05-02 10:50:15Z herbelin $ i*)
 
 Require Import BinInt.
 Require Import Zcompare.
@@ -176,11 +176,11 @@ apply X; auto; unfold R in |- *; intuition; apply Zlt_pred.
 intros; elim H; simpl in |- *; trivial.
 Qed.
 
-(** A more general induction principal using [Zlt]. *)
+(** A more general induction principle on non-negative numbers using [Zlt]. *)
 
-Lemma Z_lt_rec :
+Lemma Zlt_0_rec :
  forall P:Z -> Type,
-   (forall x:Z, (forall y:Z, 0 <= y < x -> P y) -> P x) ->
+   (forall x:Z, (forall y:Z, 0 <= y < x -> P y) -> 0 <= x -> P x) ->
    forall x:Z, 0 <= x -> P x.
 Proof.
 intros P Hrec z; pattern z in |- *; apply (well_founded_induction_type R_wf).
@@ -189,9 +189,28 @@ apply Hrec; intros.
 assert (H2 : 0 < 0).
   apply Zle_lt_trans with y; intuition.
 inversion H2.
+assumption.
 firstorder.
 unfold Zle, Zcompare in H; elim H; auto.
 Defined.
+
+Lemma Zlt_0_ind :
+ forall P:Z -> Prop,
+   (forall x:Z, (forall y:Z, 0 <= y < x -> P y) -> 0 <= x -> P x) ->
+   forall x:Z, 0 <= x -> P x.
+Proof.
+exact Zlt_0_rec.
+Qed.
+
+(** Obsolete version of [Zlt] induction principle on non-negative numbers *)
+
+Lemma Z_lt_rec :
+ forall P:Z -> Type,
+   (forall x:Z, (forall y:Z, 0 <= y < x -> P y) -> P x) ->
+   forall x:Z, 0 <= x -> P x.
+Proof.
+intros P Hrec; apply Zlt_0_rec; auto.
+Qed.
 
 Lemma Z_lt_induction :
  forall P:Z -> Prop,
@@ -199,6 +218,39 @@ Lemma Z_lt_induction :
    forall x:Z, 0 <= x -> P x.
 Proof.
 exact Z_lt_rec.
+Qed.
+
+(** An even more general induction principle using [Zlt]. *)
+
+Lemma Zlt_lower_bound_rec :
+ forall P:Z -> Type, forall z:Z,
+   (forall x:Z, (forall y:Z, z <= y < x -> P y) -> z <= x -> P x) ->
+   forall x:Z, z <= x -> P x.
+Proof.
+intros P z Hrec x.
+assert (Hexpand : forall x, x = x - z + z).
+  intro; unfold Zminus; rewrite <- Zplus_assoc; rewrite Zplus_opp_l;
+  rewrite Zplus_0_r; trivial.
+intro Hz.
+rewrite (Hexpand x); pattern (x - z) in |- *; apply Zlt_0_rec.
+2: apply Zplus_le_reg_r with z; rewrite <- Hexpand; assumption.
+intros x0 Hlt_x0 H.
+apply Hrec.
+  2: change z with (0+z); apply Zplus_le_compat_r; assumption.
+  intro y; rewrite (Hexpand y); intros.
+destruct H0.
+apply Hlt_x0.
+split.
+  apply Zplus_le_reg_r with z; assumption.
+  apply Zplus_lt_reg_r with z; assumption.
+Qed.
+
+Lemma Zlt_lower_bound_ind :
+ forall P:Z -> Prop, forall z:Z,
+   (forall x:Z, (forall y:Z, z <= y < x -> P y) -> z <= x -> P x) ->
+   forall x:Z, z <= x -> P x.
+Proof.
+exact Zlt_lower_bound_rec.
 Qed.
 
 End Efficient_Rec.

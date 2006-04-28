@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: profile.ml,v 1.13.16.1 2004/07/16 19:30:31 herbelin Exp $ *)
+(* $Id: profile.ml 7538 2005-11-08 17:14:52Z herbelin $ *)
 
 open Gc
 
@@ -259,9 +259,9 @@ let time_overhead_B_C () =
   for i=1 to loops do
     try
       dummy_last_alloc := get_alloc ();
-      let r = dummy_f dummy_x in
-      let dw = dummy_spent_alloc () in
-      let dt = get_time () in
+      let _r = dummy_f dummy_x in
+      let _dw = dummy_spent_alloc () in
+      let _dt = get_time () in
       ()
     with _ -> assert false
   done;
@@ -328,7 +328,7 @@ let close_profile print =
 	outside.owntime <- outside.owntime + t;
 	ajoute_ownalloc outside dw;
 	ajoute_totalloc outside dw;
-	if List.length !prof_table <> 0 then begin
+	if !prof_table <> [] then begin
 	  let ov_bc = time_overhead_B_C () (* B+C overhead *) in
 	  let ov_ad = time_overhead_A_D () (* A+D overhead *) in
 	  let adjust (n,e) = (n, adjust_time ov_bc ov_ad e) in

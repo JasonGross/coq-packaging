@@ -407,6 +407,9 @@ and fCOMMAND = function
    fNODE "print_about" 1
 | CT_print_all -> fNODE "print_all" 0
 | CT_print_classes -> fNODE "print_classes" 0
+| CT_print_ltac id ->
+   fID id;
+   fNODE "print_ltac" 1
 | CT_print_coercions -> fNODE "print_coercions" 0
 | CT_print_grammar(x1) ->
    fGRAMMAR x1;
@@ -418,6 +421,9 @@ and fCOMMAND = function
 | CT_print_hintdb(x1) ->
    fID_OR_STAR x1;
    fNODE "print_hintdb" 1
+| CT_print_rewrite_hintdb(x1) ->
+   fID x1;
+   fNODE "print_rewrite_hintdb" 1
 | CT_print_id(x1) ->
    fID x1;
    fNODE "print_id" 1
@@ -451,6 +457,7 @@ and fCOMMAND = function
 | CT_print_scope(x1) ->
    fID x1;
    fNODE "print_scope" 1
+| CT_print_setoids -> fNODE "print_setoids" 0
 | CT_print_scopes -> fNODE "print_scopes" 0
 | CT_print_section(x1) ->
    fID x1;
@@ -1153,12 +1160,12 @@ and fMODULE_TYPE = function
 | CT_coerce_ID_to_MODULE_TYPE x -> fID x
 | CT_module_type_with_def(x1, x2, x3) ->
    fMODULE_TYPE x1;
-   fID x2;
+   fID_LIST x2;
    fFORMULA x3;
    fNODE "module_type_with_def" 3
 | CT_module_type_with_mod(x1, x2, x3) ->
    fMODULE_TYPE x1;
-   fID x2;
+   fID_LIST x2;
    fID x3;
    fNODE "module_type_with_mod" 3
 and fMODULE_TYPE_CHECK = function
@@ -1281,6 +1288,7 @@ and fRED_COM = function
    fPATTERN_NE_LIST x1;
    fNODE "pattern" 1
 | CT_red -> fNODE "red" 0
+| CT_cbvvm -> fNODE "vm_compute" 0
 | CT_simpl(x1) ->
    fPATTERN_OPT x1;
    fNODE "simpl" 1
@@ -1545,6 +1553,9 @@ and fTACTIC_COM = function
 | CT_exact(x1) ->
    fFORMULA x1;
    fNODE "exact" 1
+| CT_exact_no_check(x1) ->
+   fFORMULA x1;
+   fNODE "exact_no_check" 1
 | CT_exists(x1) ->
    fSPEC_LIST x1;
    fNODE "exists" 1
@@ -1649,12 +1660,12 @@ and fTACTIC_COM = function
    fID x2;
    fNODE "move_after" 2
 | CT_new_destruct(x1, x2, x3) ->
-   fFORMULA_OR_INT x1;
+   (List.iter fFORMULA_OR_INT x1); (* Julien F. Est-ce correct? *)
    fUSING x2;
    fINTRO_PATT_OPT x3;
    fNODE "new_destruct" 3
 | CT_new_induction(x1, x2, x3) ->
-   fFORMULA_OR_INT x1;
+   (List.iter fFORMULA_OR_INT x1); (* Pierre C. Est-ce correct? *)
    fUSING x2;
    fINTRO_PATT_OPT x3;
    fNODE "new_induction" 3
@@ -1697,10 +1708,12 @@ and fTACTIC_COM = function
 | CT_repeat(x1) ->
    fTACTIC_COM x1;
    fNODE "repeat" 1
-| CT_replace_with(x1, x2) ->
+| CT_replace_with(x1, x2,x3,x4) ->
    fFORMULA x1;
    fFORMULA x2;
-   fNODE "replace_with" 2
+   fID_OPT x3;
+   fTACTIC_OPT x4;
+   fNODE "replace_with" 4
 | CT_rewrite_lr(x1, x2, x3) ->
    fFORMULA x1;
    fSPEC_LIST x2;

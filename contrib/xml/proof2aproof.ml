@@ -32,7 +32,7 @@ let nf_evar sigma ~preserve =
     match T.kind_of_term t with
      | T.Rel _ | T.Meta _ | T.Var _ | T.Sort _ | T.Const _ | T.Ind _
      | T.Construct _ -> t
-     | T.Cast (c1,c2) -> T.mkCast (aux c1, aux c2)
+     | T.Cast (c1,k,c2) -> T.mkCast (aux c1, k, aux c2)
      | T.Prod (na,c1,c2) -> T.mkProd (na, aux c1, aux c2)
      | T.Lambda (na,t,c) -> T.mkLambda (na, aux t, aux c)
      | T.LetIn (na,b,t,c) -> T.mkLetIn (na, aux b, aux t, aux c)
@@ -41,14 +41,14 @@ let nf_evar sigma ~preserve =
         let l' = Array.map aux l in
          (match T.kind_of_term c' with
              T.App (c'',l'') -> T.mkApp (c'', Array.append l'' l')
-           | T.Cast (he,_) ->
+           | T.Cast (he,_,_) ->
               (match T.kind_of_term he with
                   T.App (c'',l'') -> T.mkApp (c'', Array.append l'' l')
                 | _ -> T.mkApp (c', l')
               )
            | _ -> T.mkApp (c', l'))
      | T.Evar (e,l) when Evd.in_dom sigma e & Evd.is_defined sigma e ->
-	aux (Instantiate.existential_value sigma (e,l))
+	aux (Evd.existential_value sigma (e,l))
      | T.Evar (e,l) -> T.mkEvar (e, Array.map aux l)
      | T.Case (ci,p,c,bl) -> T.mkCase (ci, aux p, aux c, Array.map aux bl)
      | T.Fix (ln,(lna,tl,bl)) ->
@@ -93,7 +93,7 @@ module ProofTreeHash =
 let extract_open_proof sigma pf =
  let module PT = Proof_type in
  let module L = Logic in
-  let sigma = ref sigma in
+  let evd = ref (Evd.create_evar_defs sigma) in
   let proof_tree_to_constr = ProofTreeHash.create 503 in
   let proof_tree_to_flattened_proof_tree = ProofTreeHash.create 503 in
   let unshared_constrs = ref S.empty in
@@ -117,34 +117,39 @@ let extract_open_proof sigma pf =
              (fun id ->
                 (* Section variables are in the [id] list but are not *)
                 (* lambda abstracted in the term [vl]                 *)
-                try let n = Util.list_index id vl in (n,id)
+                try let n = Logic.proof_variable_index id vl in (n,id)
 	        with Not_found -> failwith "caught")
 (*CSC: the above function must be modified such that when it is found  *)
 (*CSC: it becomes a Rel; otherwise a Var. Then it can be already used  *)
 (*CSC: as the evar_instance. Ordering the instance becomes useless (it *)
 (*CSC: will already be ordered.                                        *)
-             (Termops.ids_of_named_context goal.Evd.evar_hyps) in
+             (Termops.ids_of_named_context 
+		(Environ.named_context_of_val goal.Evd.evar_hyps)) in
 	 let sorted_rels =
 	   Sort.list (fun (n1,_) (n2,_) -> n1 < n2 ) visible_rels in
 	 let context =
-          List.map
-            (fun (_,id) -> Sign.lookup_named id goal.Evd.evar_hyps)
-            sorted_rels
+	   let l = 
+             List.map
+               (fun (_,id) -> Sign.lookup_named id 
+		   (Environ.named_context_of_val goal.Evd.evar_hyps))
+               sorted_rels in
+	   Environ.val_of_named_context l
          in
 (*CSC: the section variables in the right order must be added too *)
          let evar_instance = List.map (fun (n,_) -> Term.mkRel n) sorted_rels in
-         let env = Global.env_of_context context in
-         let sigma',evar =
-          Evarutil.new_isevar_sign env !sigma goal.Evd.evar_concl evar_instance
-         in
-         sigma := sigma' ;
+    (*     let env = Global.env_of_context context in *)
+	 let evd',evar =
+           Evarutil.new_evar_instance context !evd goal.Evd.evar_concl
+             evar_instance in
+         evd := evd' ;
          evar
 	  
      | _ -> Util.anomaly "Bug : a case has been forgotten in proof_extractor"
    in
     let unsharedconstr =
      let evar_nf_constr =
-      nf_evar !sigma ~preserve:(function e -> S.mem e !unshared_constrs) constr
+      nf_evar (Evd.evars_of !evd)
+        ~preserve:(function e -> S.mem e !unshared_constrs) constr
      in
       Unshare.unshare
        ~already_unshared:(function e -> S.mem e !unshared_constrs)
@@ -152,14 +157,15 @@ let extract_open_proof sigma pf =
     in
 (*CSC: debugging stuff to be removed *)
 if ProofTreeHash.mem proof_tree_to_constr node then
- Pp.ppnl (Pp.(++) (Pp.str "#DUPLICATE INSERTION: ") (Refiner.print_proof !sigma [] node)) ;
+ Pp.ppnl (Pp.(++) (Pp.str "#DUPLICATE INSERTION: ")
+ (Tactic_printer.print_proof (Evd.evars_of !evd) [] node)) ;
      ProofTreeHash.add proof_tree_to_constr node unsharedconstr ;
      unshared_constrs := S.add unsharedconstr !unshared_constrs ;
      unsharedconstr
   in
   let unshared_pf = unshare_proof_tree pf in
   let pfterm = proof_extractor [] unshared_pf in
-   (pfterm, !sigma, proof_tree_to_constr, proof_tree_to_flattened_proof_tree,
+   (pfterm, Evd.evars_of !evd, proof_tree_to_constr, proof_tree_to_flattened_proof_tree,
     unshared_pf)
 ;;
 

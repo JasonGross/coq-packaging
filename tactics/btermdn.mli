@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: btermdn.mli,v 1.8.16.1 2004/07/16 19:30:52 herbelin Exp $ i*)
+(*i $Id: btermdn.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (*i*)
 open Term

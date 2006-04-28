@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: unify.mli,v 1.7.2.1 2004/07/16 19:30:10 herbelin Exp $ *)
+(* $Id: unify.mli 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Term
 

@@ -6,13 +6,36 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extraargs.mli,v 1.3.2.2 2005/01/21 17:14:10 herbelin Exp $ i*)
+(*i $Id: extraargs.mli 6621 2005-01-21 17:24:37Z herbelin $ i*)
 
 open Tacexpr
 open Term
+open Names
 open Proof_type
 open Topconstr
+open Rawterm
 
 val rawwit_orient : bool raw_abstract_argument_type
 val wit_orient : bool closed_abstract_argument_type
 val orient : bool Pcoq.Gram.Entry.e
+
+val rawwit_morphism_signature :
+ Setoid_replace.morphism_signature raw_abstract_argument_type
+val wit_morphism_signature :
+ Setoid_replace.morphism_signature closed_abstract_argument_type
+val morphism_signature :
+ Setoid_replace.morphism_signature Pcoq.Gram.Entry.e
+
+val rawwit_raw : constr_expr raw_abstract_argument_type
+val wit_raw : rawconstr closed_abstract_argument_type
+val raw : constr_expr Pcoq.Gram.Entry.e
+
+type 'id gen_place= ('id * hyp_location_flag,unit) location
+
+type loc_place = identifier Util.located gen_place
+type place = identifier gen_place
+
+val rawwit_hloc : loc_place raw_abstract_argument_type
+val wit_hloc : place closed_abstract_argument_type
+val hloc : loc_place Pcoq.Gram.Entry.e
+

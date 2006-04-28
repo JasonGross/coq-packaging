@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mlutil.mli,v 1.47.2.1 2004/07/16 19:30:08 herbelin Exp $ i*)
+(*i $Id: mlutil.mli 6303 2004-11-16 12:37:40Z sacerdot $ i*)
 
 open Util
 open Names
@@ -101,7 +101,7 @@ val ast_lift : int -> ml_ast -> ml_ast
 val ast_pop : ml_ast -> ml_ast
 val ast_subst : ml_ast -> ml_ast -> ml_ast
 
-val ast_glob_subst : ml_ast KNmap.t -> ml_ast -> ml_ast
+val ast_glob_subst : ml_ast Refmap.t -> ml_ast -> ml_ast
 
 val normalize : ml_ast -> ml_ast 
 val optimize_fix : ml_ast -> ml_ast

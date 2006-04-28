@@ -6,10 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: rtree.mli,v 1.2.8.2 2005/01/21 16:41:52 herbelin Exp $ i*)
+(*i $Id: rtree.mli 7493 2005-11-02 22:12:16Z mohring $ i*)
 
 (* Type of regular tree with nodes labelled by values of type 'a *)
-type 'a t
+
+type 'a t 
 
 (* Building trees *)
 (* build a recursive call *) 

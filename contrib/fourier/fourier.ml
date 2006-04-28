@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: fourier.ml,v 1.2.16.1 2004/07/16 19:30:11 herbelin Exp $ *)
+(* $Id: fourier.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (* Méthode d'élimination de Fourier *)
 (* Référence:

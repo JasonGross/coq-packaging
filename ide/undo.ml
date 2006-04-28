@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: undo.ml,v 1.8.2.2 2005/11/16 17:22:39 barras Exp $ *)
+(* $Id: undo.ml 7603 2005-11-23 17:21:53Z barras $ *)
 
 open GText
 open Ideutils
@@ -71,7 +71,6 @@ object(self)
 	      (self#buffer#insert_interactive ~iter s) or
 	      (Stack.push act history; false)
       in if r then begin
-	process_pending ();
 	let act = Stack.pop history in
 	Queue.push act redo;
 	Stack.push act nredo
@@ -107,8 +106,8 @@ object(self)
 		   Queue.iter (fun e -> Stack.push e history) redo;
 		   Queue.clear redo;
 		 end;
-		 let pos = it#offset in
-(*		 if Stack.is_empty history or 
+(*		 let pos = it#offset in
+		 if Stack.is_empty history or 
 		   s=" " or s="\t" or s="\n" or
 					(match Stack.top history with 
 					   | Insert(old,opos,olen) -> 

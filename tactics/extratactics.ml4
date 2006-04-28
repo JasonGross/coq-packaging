@@ -8,122 +8,194 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extratactics.ml4,v 1.21.2.2 2004/11/15 11:06:49 herbelin Exp $ *)
+(* $Id: extratactics.ml4 8651 2006-03-21 21:54:43Z jforest $ *)
 
 open Pp
 open Pcoq
 open Genarg
 open Extraargs
+open Mod_subst
+open Names
 
 (* Equality *)
 open Equality
 
-TACTIC EXTEND Rewrite
-  [ "Rewrite" orient(b) constr_with_bindings(c) ] -> [general_rewrite_bindings b c]
+TACTIC EXTEND rewrite
+| [ "rewrite" orient(b) constr_with_bindings(c) ] ->
+    [general_rewrite_bindings b c]
 END
 
-TACTIC EXTEND RewriteIn
- [ "Rewrite" orient(b) constr_with_bindings(c) "in" hyp(h) ] ->
- [general_rewrite_in b h c]
+TACTIC EXTEND rewrite_in
+| [ "rewrite" orient(b) constr_with_bindings(c) "in" hyp(h) ] ->
+    [general_rewrite_bindings_in b h c]
 END
 
 let h_rewriteLR x = h_rewrite true (x,Rawterm.NoBindings)
 
-TACTIC EXTEND Replace
-  [ "Replace" constr(c1) "with" constr(c2) ] -> [ replace c1 c2 ]
+(* Julien: Mise en commun des differentes version de replace with in by 
+   TODO: améliorer l'affichage et deplacer dans extraargs
+
+*)
+
+
+let pr_by_arg_tac prc _ _ opt_c = 
+  match opt_c with 
+    | None -> mt ()
+    | Some c -> spc () ++ hov 2 (str "by" ++ spc ()  )
+
+(* Julien Forest: on voudrait pouvoir passer la loc mais je 
+n'ai pas reussi 
+*)
+
+let pr_in_arg_hyp  = 
+fun prc _ _ opt_c->
+  match opt_c with 
+    | None -> mt ()
+    | Some c -> 
+	spc () ++ hov 2 (str "by" ++ spc () ++ 
+			   Pptactic.pr_or_var (fun _ -> mt ()) 
+			   (ArgVar(Util.dummy_loc,c))
+			)
+
+
+
+
+ARGUMENT EXTEND by_arg_tac
+  TYPED AS tactic_opt
+  PRINTED BY pr_by_arg_tac
+| [ "by" tactic(c) ] -> [ Some c ]
+| [ ] -> [ None ]
+END
+ 
+ARGUMENT EXTEND in_arg_hyp
+  TYPED AS ident_opt
+  PRINTED BY pr_in_arg_hyp
+| [ "in" int_or_var(c) ] -> 
+    [ match c with
+	| ArgVar(_,c) ->  Some (c)
+	| _ -> Util.error "in must be used with an identifier" 
+    ]
+| [ ] -> [ None ]
 END
 
-TACTIC EXTEND ReplaceIn
-  [ "Replace" constr(c1) "with" constr(c2) "in" hyp(h) ] ->
+TACTIC EXTEND replace 
+| ["replace" constr(c1) "with" constr(c2) in_arg_hyp(in_hyp)  by_arg_tac(tac)  ] ->
+    [ new_replace c1 c2 in_hyp (Util.option_app Tacinterp.eval_tactic tac)  ]
+END
+
+(* Julien:
+  old version  
+
+TACTIC EXTEND replace
+| [ "replace" constr(c1) "with" constr(c2) ] ->
+    [ replace c1 c2 ]
+END
+
+TACTIC EXTEND replace_by
+|  [ "replace" constr(c1) "with" constr(c2) "by" tactic(tac) ] ->
+    [ replace_by c1 c2 (snd tac)  ]
+ 
+END
+
+TACTIC EXTEND replace_in
+| [ "replace" constr(c1) "with" constr(c2) "in" hyp(h) ] ->
     [ replace_in h c1 c2 ]
 END
 
-TACTIC EXTEND Replacetermleft
-  [ "Replace" "->" constr(c)  ] -> [ replace_term_left c ]
+TACTIC EXTEND replace_in_by
+| [ "replace" constr(c1) "with" constr(c2) "in" hyp(h) "by" tactic(tac) ] ->
+    [ replace_in_by h c1 c2 (snd tac) ]
 END
 
-TACTIC EXTEND Replacetermright
-  [ "Replace" "<-" constr(c)  ] -> [ replace_term_right c ]
+*)
+
+TACTIC EXTEND replace_term_left
+  [ "replace" "->" constr(c)  ] -> [ replace_term_left c ]
 END
 
-TACTIC EXTEND Replaceterm
-  [ "Replace" constr(c)  ] -> [ replace_term c ]
+TACTIC EXTEND replace_term_right
+  [ "replace" "<-" constr(c)  ] -> [ replace_term_right c ]
 END
 
-TACTIC EXTEND ReplacetermInleft
-  [ "Replace"  "->" constr(c) "in" hyp(h) ]
+TACTIC EXTEND replace_term
+  [ "replace" constr(c)  ] -> [ replace_term c ]
+END
+
+TACTIC EXTEND replace_term_in_left
+  [ "replace"  "->" constr(c) "in" hyp(h) ]
   -> [ replace_term_in_left c h ]
 END
 
-TACTIC EXTEND ReplacetermInright
-  [ "Replace"  "<-" constr(c) "in" hyp(h) ]
+TACTIC EXTEND replace_term_in_right
+  [ "replace"  "<-" constr(c) "in" hyp(h) ]
   -> [ replace_term_in_right c h ]
 END
 
-TACTIC EXTEND ReplacetermIn
-  [ "Replace" constr(c) "in" hyp(h) ]
+TACTIC EXTEND replace_term_in
+  [ "replace" constr(c) "in" hyp(h) ]
   -> [ replace_term_in c h ]
 END
 
-TACTIC EXTEND DEq
-  [ "Simplify_eq" quantified_hypothesis_opt(h) ] -> [ dEq h ]
+TACTIC EXTEND simplify_eq
+  [ "simplify_eq" quantified_hypothesis_opt(h) ] -> [ dEq h ]
 END
 
-TACTIC EXTEND Discriminate
-  [ "Discriminate" quantified_hypothesis_opt(h) ] -> [ discr_tac h ]
+TACTIC EXTEND discriminate
+  [ "discriminate" quantified_hypothesis_opt(h) ] -> [ discr_tac h ]
 END
 
 let h_discrHyp id = h_discriminate (Some id)
 
-TACTIC EXTEND Injection
-  [ "Injection" quantified_hypothesis_opt(h) ] -> [ injClause h ]
+TACTIC EXTEND injection
+  [ "injection" quantified_hypothesis_opt(h) ] -> [ injClause h ]
 END
 
 let h_injHyp id = h_injection (Some id)
 
-TACTIC EXTEND ConditionalRewrite
-  [ "Conditional" tactic(tac) "Rewrite" orient(b) constr_with_bindings(c) ]
+TACTIC EXTEND conditional_rewrite
+| [ "conditional" tactic(tac) "rewrite" orient(b) constr_with_bindings(c) ]
     -> [ conditional_rewrite b (snd tac) c ]
-END
-
-TACTIC EXTEND ConditionalRewriteIn
-  [ "Conditional" tactic(tac) "Rewrite" orient(b) constr_with_bindings(c)
+| [ "conditional" tactic(tac) "rewrite" orient(b) constr_with_bindings(c)
     "in" hyp(h) ]
     -> [ conditional_rewrite_in b h (snd tac) c ]
 END
 
-TACTIC EXTEND DependentRewrite
-| [ "Dependent" "Rewrite" orient(b) hyp(id) ] -> [ substHypInConcl b id ]
-| [ "CutRewrite" orient(b) constr(eqn) ] -> [ substConcl b eqn ]
-| [ "CutRewrite" orient(b) constr(eqn) "in" hyp(id) ]
-      -> [ substHyp b eqn id ]
+TACTIC EXTEND dependent_rewrite
+| [ "dependent" "rewrite" orient(b) constr(c) ] -> [ rewriteInConcl b c ]
+| [ "dependent" "rewrite" orient(b) constr(c) "in" hyp(id) ]
+    -> [ rewriteInHyp b c id ]
+END
+
+TACTIC EXTEND cut_rewrite
+| [ "cutrewrite" orient(b) constr(eqn) ] -> [ cutRewriteInConcl b eqn ]
+| [ "cutrewrite" orient(b) constr(eqn) "in" hyp(id) ]
+    -> [ cutRewriteInHyp b eqn id ]
 END
 
 (* Contradiction *)
 open Contradiction
 
-TACTIC EXTEND Absurd
- [ "Absurd" constr(c) ] -> [ absurd c ]
+TACTIC EXTEND absurd
+ [ "absurd" constr(c) ] -> [ absurd c ]
 END
 
-TACTIC EXTEND Contradiction
- [ "Contradiction" constr_with_bindings_opt(c) ] -> [ contradiction c ]
+TACTIC EXTEND contradiction
+ [ "contradiction" constr_with_bindings_opt(c) ] -> [ contradiction c ]
 END
 
 (* AutoRewrite *)
 
 open Autorewrite
-TACTIC EXTEND AutorewriteV7
-  [ "AutoRewrite" "[" ne_preident_list(l) "]" ] ->
+
+TACTIC EXTEND autorewrite
+  [ "autorewrite" "with" ne_preident_list(l) ] ->
     [ autorewrite Refiner.tclIDTAC l ]
-| [ "AutoRewrite" "[" ne_preident_list(l) "]" "using" tactic(t) ] ->
+| [ "autorewrite" "with" ne_preident_list(l) "using" tactic(t) ] ->
     [ autorewrite (snd t) l ]
-END
-TACTIC EXTEND AutorewriteV8
-  [ "AutoRewrite" "with" ne_preident_list(l) ] ->
-    [ autorewrite Refiner.tclIDTAC l ]
-| [ "AutoRewrite" "with" ne_preident_list(l) "using" tactic(t) ] ->
-    [ autorewrite (snd t) l ]
+| [ "autorewrite" "with" ne_preident_list(l) "in" ident(id) ] ->
+    [ autorewrite_in id Refiner.tclIDTAC l ]
+| [ "autorewrite" "with" ne_preident_list(l) "in" ident(id) "using" tactic(t) ] ->
+    [ autorewrite_in id (snd t) l ]
 END
 
 let add_rewrite_hint name ort t lcsr =
@@ -131,19 +203,9 @@ let add_rewrite_hint name ort t lcsr =
   let f c = Constrintern.interp_constr sigma env c, ort, t in
   add_rew_rules name (List.map f lcsr)
 
-(* V7 *)
-VERNAC COMMAND EXTEND HintRewriteV7
-  [ "Hint" "Rewrite" orient(o) "[" ne_constr_list(l) "]" "in" preident(b) ] ->
-  [ add_rewrite_hint b o (Tacexpr.TacId "") l ]
-| [ "Hint" "Rewrite" orient(o) "[" ne_constr_list(l) "]" "in" preident(b)
-    "using" tactic(t) ] ->
-  [ add_rewrite_hint b o t l ]
-END
-
-(* V8 *)
-VERNAC COMMAND EXTEND HintRewriteV8
+VERNAC COMMAND EXTEND HintRewrite
   [ "Hint" "Rewrite" orient(o) ne_constr_list(l) ":" preident(b) ] ->
-  [ add_rewrite_hint b o (Tacexpr.TacId "") l ]
+  [ add_rewrite_hint b o (Tacexpr.TacId []) l ]
 | [ "Hint" "Rewrite" orient(o) ne_constr_list(l) "using" tactic(t)
     ":" preident(b) ] ->
   [ add_rewrite_hint b o t l ]
@@ -154,8 +216,8 @@ END
 
 open Refine
 
-TACTIC EXTEND Refine
-  [ "Refine" castedopenconstr(c) ] -> [ refine c ]
+TACTIC EXTEND refine
+  [ "refine" casted_open_constr(c) ] -> [ refine c ]
 END
 
 let refine_tac = h_refine
@@ -164,18 +226,81 @@ let refine_tac = h_refine
 
 open Setoid_replace
 
-TACTIC EXTEND SetoidReplace
-  [ "Setoid_replace" constr(c1) "with" constr(c2) ]
-  -> [ setoid_replace c1 c2 None]
+TACTIC EXTEND setoid_replace
+   [ "setoid_replace" constr(c1) "with" constr(c2) ] ->
+     [ setoid_replace None c1 c2 ~new_goals:[] ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "using" "relation" constr(rel)] ->
+     [ setoid_replace (Some rel) c1 c2 ~new_goals:[] ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "generate" "side" "conditions" constr_list(l) ] ->
+     [ setoid_replace None c1 c2 ~new_goals:l ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "using" "relation" constr(rel) "generate" "side" "conditions" constr_list(l) ] ->
+     [ setoid_replace (Some rel) c1 c2 ~new_goals:l ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) ] ->
+     [ setoid_replace_in h None c1 c2 ~new_goals:[] ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) "using" "relation" constr(rel)] ->
+     [ setoid_replace_in h (Some rel) c1 c2 ~new_goals:[] ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) "generate" "side" "conditions" constr_list(l) ] ->
+     [ setoid_replace_in h None c1 c2 ~new_goals:l ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) "using" "relation" constr(rel) "generate" "side" "conditions" constr_list(l) ] ->
+     [ setoid_replace_in h (Some rel) c1 c2 ~new_goals:l ]
 END
 
-TACTIC EXTEND SetoidRewrite
-  [ "Setoid_rewrite" orient(b) constr(c) ] -> [ general_s_rewrite b c ]
+TACTIC EXTEND setoid_rewrite
+   [ "setoid_rewrite" orient(b) constr(c) ]
+   -> [ general_s_rewrite b c ~new_goals:[] ]
+ | [ "setoid_rewrite" orient(b) constr(c) "generate" "side" "conditions" constr_list(l) ]
+   -> [ general_s_rewrite b c ~new_goals:l ]
+ | [ "setoid_rewrite" orient(b) constr(c) "in" hyp(h) ] ->
+      [ general_s_rewrite_in h b c ~new_goals:[] ]
+ | [ "setoid_rewrite" orient(b) constr(c) "in" hyp(h) "generate" "side" "conditions" constr_list(l) ] ->
+      [ general_s_rewrite_in h b c ~new_goals:l ]
 END
 
-VERNAC COMMAND EXTEND AddSetoid
-| [ "Add" "Setoid" constr(a) constr(aeq) constr(t) ] -> [ add_setoid a aeq t ]
-| [ "Add" "Morphism" constr(m) ":" ident(s) ] -> [ new_named_morphism s m ]
+VERNAC COMMAND EXTEND AddSetoid1
+  [ "Add" "Setoid" constr(a) constr(aeq) constr(t) "as" ident(n) ] ->
+   [ add_setoid n a aeq t ]
+| [ "Add" "Morphism" constr(m) ":" ident(n) ] ->
+   [ new_named_morphism n m None ]
+| [ "Add" "Morphism" constr(m) "with" "signature" morphism_signature(s) "as" ident(n) ] ->
+   [ new_named_morphism n m (Some s)]
+END
+
+VERNAC COMMAND EXTEND AddRelation1
+  [ "Add" "Relation" constr(a) constr(aeq) "reflexivity" "proved" "by" constr(t) "symmetry" "proved" "by" constr(t') "as" ident(n) ] ->
+   [ add_relation n a aeq (Some t) (Some t') None ]
+| [ "Add" "Relation" constr(a) constr(aeq) "reflexivity" "proved" "by" constr(t)  "as" ident(n) ] ->
+   [ add_relation n a aeq (Some t) None None ]
+| [ "Add" "Relation" constr(a) constr(aeq)  "as" ident(n) ] ->
+   [ add_relation n a aeq None None None ]
+END
+
+VERNAC COMMAND EXTEND AddRelation2
+  [ "Add" "Relation" constr(a) constr(aeq) "symmetry" "proved" "by" constr(t') "as" ident(n) ] ->
+   [ add_relation n a aeq None (Some t') None ]
+| [ "Add" "Relation" constr(a) constr(aeq) "symmetry" "proved" "by" constr(t') "transitivity" "proved" "by" constr(t'')  "as" ident(n) ] ->
+   [ add_relation n a aeq None (Some t') (Some t'') ]
+END
+
+VERNAC COMMAND EXTEND AddRelation3
+  [ "Add" "Relation" constr(a) constr(aeq) "reflexivity" "proved" "by" constr(t) "transitivity" "proved" "by" constr(t') "as" ident(n) ] ->
+   [ add_relation n a aeq (Some t) None (Some t') ]
+| [ "Add" "Relation" constr(a) constr(aeq) "reflexivity" "proved" "by" constr(t) "symmetry" "proved" "by" constr(t') "transitivity" "proved" "by" constr(t'') "as" ident(n) ] ->
+   [ add_relation n a aeq (Some t) (Some t') (Some t'') ]
+| [ "Add" "Relation" constr(a) constr(aeq) "transitivity" "proved" "by" constr(t) "as" ident(n) ] ->
+   [ add_relation n a aeq None None (Some t) ]
+END
+
+TACTIC EXTEND setoid_symmetry
+   [ "setoid_symmetry" ] -> [ setoid_symmetry ]
+ | [ "setoid_symmetry" "in" ident(n) ] -> [ setoid_symmetry_in n ]
+END
+
+TACTIC EXTEND setoid_reflexivity
+   [ "setoid_reflexivity" ] -> [ setoid_reflexivity ]
+END
+
+TACTIC EXTEND setoid_transitivity
+   [ "setoid_transitivity" constr(t) ] -> [ setoid_transitivity t ]
 END
 
 (* Inversion lemmas (Leminv) *)
@@ -226,10 +351,27 @@ END
 
 (* Subst *)
 
-TACTIC EXTEND Subst
-| [ "Subst" ne_var_list(l) ] -> [ subst l ]
-| [ "Subst" ] -> [ subst_all ]
+TACTIC EXTEND subst
+| [ "subst" ne_var_list(l) ] -> [ subst l ]
+| [ "subst" ] -> [ subst_all ]
 END
+
+open Evar_tactics
+
+(* evar creation *)
+
+TACTIC EXTEND evar
+  [ "evar" "(" ident(id) ":" constr(typ) ")" ] -> [ let_evar (Name id) typ ]
+| [ "evar" constr(typ) ] -> [ let_evar Anonymous typ ]
+END
+
+open Tacexpr
+
+TACTIC EXTEND instantiate
+  [ "instantiate" "(" integer(i) ":=" raw(c) ")" hloc(hl) ] ->
+    [instantiate i c hl  ]
+END
+
 
 (** Nijmegen "step" tactic for setoid rewriting *)
 
@@ -257,7 +399,7 @@ let step left x tac =
   let l =
     List.map (fun lem ->
       tclTHENLAST
-      (apply_with_bindings (constr_of_reference lem, ImplicitBindings [x]))
+      (apply_with_bindings (lem, ImplicitBindings [x]))
         tac)
       !(if left then transitivity_left_table else transitivity_right_table)
   in
@@ -271,7 +413,7 @@ let cache_transitivity_lemma (_,(left,lem)) =
   else
     transitivity_right_table := lem :: !transitivity_right_table
   
-let subst_transitivity_lemma (_,subst,(b,ref)) = (b,subst_global subst ref)
+let subst_transitivity_lemma (_,subst,(b,ref)) = (b,subst_mps subst ref)
 
 let (inTransitivity,_) =
   declare_object {(default_object "TRANSITIVITY-STEPS") with
@@ -303,27 +445,33 @@ let _ =
 
 (* Main entry points *)
 
-let add_transitivity_lemma left ref =
-  add_anonymous_leaf (inTransitivity (left,Nametab.global ref))
+let add_transitivity_lemma left lem =
+ let lem' = Constrintern.interp_constr Evd.empty (Global.env ()) lem in
+  add_anonymous_leaf (inTransitivity (left,lem'))
 
 (* Vernacular syntax *)
 
-TACTIC EXTEND Stepl
-| ["Stepl" constr(c) "by" tactic(tac) ] -> [ step true c (snd tac) ]
-| ["Stepl" constr(c) ] -> [ step true c tclIDTAC ]
+TACTIC EXTEND stepl
+| ["stepl" constr(c) "by" tactic(tac) ] -> [ step true c (snd tac) ]
+| ["stepl" constr(c) ] -> [ step true c tclIDTAC ]
 END
 
-TACTIC EXTEND Stepr
-| ["Stepr" constr(c) "by" tactic(tac) ] -> [ step false c (snd tac) ]
-| ["Stepr" constr(c) ] -> [ step false c tclIDTAC ]
+TACTIC EXTEND stepr
+| ["stepr" constr(c) "by" tactic(tac) ] -> [ step false c (snd tac) ]
+| ["stepr" constr(c) ] -> [ step false c tclIDTAC ]
 END
 
 VERNAC COMMAND EXTEND AddStepl
-| [ "Declare" "Left" "Step" global(id) ] ->
-    [ add_transitivity_lemma true id ]
+| [ "Declare" "Left" "Step" constr(t) ] ->
+    [ add_transitivity_lemma true t ]
 END
 
 VERNAC COMMAND EXTEND AddStepr
-| [ "Declare" "Right" "Step" global(id) ] ->
-    [ add_transitivity_lemma false id ]
+| [ "Declare" "Right" "Step" constr(t) ] ->
+    [ add_transitivity_lemma false t ]
+END
+
+VERNAC COMMAND EXTEND ImplicitTactic
+| [ "Declare" "Implicit" "Tactic" tactic(tac) ] ->
+    [ Tacinterp.declare_implicit_tactic (Tacinterp.interp tac) ]
 END

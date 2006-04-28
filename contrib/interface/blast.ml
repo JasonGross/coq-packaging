@@ -1,13 +1,11 @@
 (* Une tactique qui tente de démontrer toute seule le but courant,
    interruptible par pcoq (si dans le fichier C:\WINDOWS\free il y a un A)
 *)
-open Ctast;;
 open Termops;;
 open Nameops;;
 open Auto;;
 open Clenv;;
 open Command;;
-open Ctast;;
 open Declarations;;
 open Declare;;
 open Eauto;;
@@ -38,7 +36,6 @@ open Typing;;
 open Util;;
 open Vernacentries;;
 open Vernacinterp;;
-open Evar_refiner;;
 
 
 let parse_com   = Pcoq.parse_string Pcoq.Constr.constr;;
@@ -94,7 +91,7 @@ let rec def_const_in_term_rec vl x =
           def_const_in_term_rec vl (mkInd (inductive_of_constructor c))
    | Case(_,x,t,a) 
         -> def_const_in_term_rec vl x
-   | Cast(x,t)-> def_const_in_term_rec vl t
+   | Cast(x,_,t)-> def_const_in_term_rec vl t
    | Const(c)  -> def_const_in_term_rec vl (lookup_constant c vl).const_type
    | _ -> def_const_in_term_rec vl (type_of vl Evd.empty x)
 ;;
@@ -113,7 +110,7 @@ let rec print_info_script sigma osign pf =
   match pf.ref with
     | None -> (mt ())
     | Some(r,spfl) ->
-        pr_rule r ++
+        Tactic_printer.pr_rule r ++
            match spfl with
              | [] ->
 		   (str " " ++ fnl())
@@ -152,8 +149,7 @@ let pp_string x =
 (***************************************************************************)
 
 let unify_e_resolve  (c,clenv) gls = 
-  let (wc,kONT) = startWalk gls in
-  let clenv' = connect_clenv wc clenv in
+  let clenv' = connect_clenv gls clenv in
   let _ = clenv_unique_resolver false clenv' gls in
   vernac_e_resolve_constr c gls
 
@@ -179,7 +175,7 @@ and e_my_find_search db_list local_db hdc concl =
       list_map_append (Hint_db.map_auto (hdc,concl)) (local_db::db_list)
   in 
   let tac_of_hint = 
-    fun ({pri=b; pat = p; code=t} as patac) -> 
+    fun ({pri=b; pat = p; code=t} as _patac) -> 
       (b, 
        let tac =
 	 match t with
@@ -189,7 +185,7 @@ and e_my_find_search db_list local_db hdc concl =
 	   | Res_pf_THEN_trivial_fail (term,cl) ->
                tclTHEN (unify_e_resolve (term,cl)) 
 		 (e_trivial_fail_db db_list local_db)
-	   | Unfold_nth c -> unfold_constr c
+	   | Unfold_nth c -> unfold_in_concl [[],c]
 	   | Extern tacast -> Auto.conclPattern concl 
 	       (out_some p) tacast
        in 
@@ -341,7 +337,7 @@ let e_breadth_search debug n db_list local_db gl =
   with Not_found -> error "EAuto: breadth first search failed"
 
 let e_search_auto debug (n,p) db_list gl = 
-  let local_db = make_local_hint_db gl in 
+  let local_db = make_local_hint_db [] gl in 
   if n = 0 then 
     e_depth_search debug p db_list local_db gl
   else 
@@ -351,17 +347,17 @@ let eauto debug np dbnames =
   let db_list =
     List.map
       (fun x -> 
-	 try Stringmap.find x !searchtable
+	 try searchtable_map x
 	 with Not_found -> error ("EAuto: "^x^": No such Hint database"))
       ("core"::dbnames) 
   in
   tclTRY (e_search_auto debug np db_list)
 
 let full_eauto debug n gl = 
-  let dbnames = stringmap_dom !searchtable in
+  let dbnames = current_db_names () in
   let dbnames =  list_subtract dbnames ["v62"] in
-  let db_list = List.map (fun x -> Stringmap.find x !searchtable) dbnames in
-  let local_db = make_local_hint_db gl in
+  let db_list = List.map searchtable_map dbnames in
+  let _local_db = make_local_hint_db [] gl in
   tclTRY (e_search_auto debug n db_list) gl
 
 let my_full_eauto n gl = full_eauto false (n,0) gl
@@ -369,8 +365,6 @@ let my_full_eauto n gl = full_eauto false (n,0) gl
 (**********************************************************************
    copié de tactics/auto.ml on a juste modifié search_gen
 *)
-let searchtable_map name = 
-  Stringmap.find name !searchtable
 
 (* local_db is a Hint database containing the hypotheses of current goal *)
 (* Papageno : cette fonction a été pas mal simplifiée depuis que la base
@@ -397,7 +391,7 @@ and my_find_search db_list local_db hdc concl =
       	(local_db::db_list)
   in
   List.map 
-    (fun ({pri=b; pat=p; code=t} as patac) -> 
+    (fun ({pri=b; pat=p; code=t} as _patac) -> 
        (b,
 	match t with
 	  | Res_pf (term,cl)  -> unify_resolve (term,cl)
@@ -407,7 +401,7 @@ and my_find_search db_list local_db hdc concl =
 	      tclTHEN 
 		(unify_resolve (term,cl)) 
 		(trivial_fail_db db_list local_db)
-	  | Unfold_nth c -> unfold_constr c
+	  | Unfold_nth c -> unfold_in_concl [[],c]
 	  | Extern tacast -> 
 	      conclPattern concl (out_some p) tacast))
     tacl
@@ -476,7 +470,7 @@ let rec search_gen decomp n db_list local_db extra_sign goal =
 	   try 
 	     [make_apply_entry (pf_env g') (project g')
 		(true,false) 
-		hid (mkVar hid,body_of_type htyp)]
+		(mkVar hid,body_of_type htyp)]
 	   with Failure _ -> [] 
 	 in
          (free_try
@@ -499,11 +493,11 @@ let search = search_gen 0
 let default_search_depth = ref 5
 			     
 let full_auto n gl = 
-  let dbnames = stringmap_dom !searchtable in
+  let dbnames = current_db_names () in
   let dbnames = list_subtract dbnames ["v62"] in
-  let db_list = List.map (fun x -> searchtable_map x) dbnames in
+  let db_list = List.map searchtable_map dbnames in
   let hyps = pf_hyps gl in
-  tclTRY (search n db_list (make_local_hint_db gl) hyps) gl
+  tclTRY (search n db_list (make_local_hint_db [] gl) hyps) gl
   
 let default_full_auto gl = full_auto !default_search_depth gl
 (************************************************************************)
@@ -568,7 +562,7 @@ let blast gls =
       open_subgoals = 1;
       goal = g;
       ref = None } in
-     try (let (sgl,v) as res = !blast_tactic gls in
+     try (let (sgl,v) as _res = !blast_tactic gls in
 	  let {it=lg} = sgl in
           if lg = [] 
           then (let pf = v (List.map leaf (sig_it sgl)) in
@@ -590,7 +584,7 @@ let blast gls =
 ;;
 
 let blast_tac display_function = function 
-          | (n::_) as l -> 
+          | (n::_) as _l -> 
                  (function g ->
                     let exp_ast = (blast g) in
                      (display_function exp_ast;
@@ -599,7 +593,7 @@ let blast_tac display_function = function
 
 let blast_tac_txt = 
   blast_tac
-    (function x -> msgnl(Pptactic.pr_glob_tactic (Tacinterp.glob_tactic x)));;
+    (function x -> msgnl(Pptactic.pr_glob_tactic (Global.env()) (Tacinterp.glob_tactic x)));;
 
 (* Obsolète ?
 overwriting_add_tactic "Blast1" blast_tac_txt;;

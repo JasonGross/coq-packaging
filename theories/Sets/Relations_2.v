@@ -24,7 +24,7 @@
 (* in Summer 1995. Several developments by E. Ledinot were an inspiration.  *)
 (****************************************************************************)
 
-(*i $Id: Relations_2.v,v 1.4.2.1 2004/07/16 19:31:18 herbelin Exp $ i*)
+(*i $Id: Relations_2.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Require Export Relations_1.
 
@@ -32,18 +32,18 @@ Section Relations_2.
 Variable U : Type.
 Variable R : Relation U.
 
-Inductive Rstar : Relation U :=
-  | Rstar_0 : forall x:U, Rstar x x
-  | Rstar_n : forall x y z:U, R x y -> Rstar y z -> Rstar x z.
+Inductive Rstar (x:U) : U -> Prop :=
+  | Rstar_0 : Rstar x x
+  | Rstar_n : forall y z:U, R x y -> Rstar y z -> Rstar x z.
 
-Inductive Rstar1 : Relation U :=
-  | Rstar1_0 : forall x:U, Rstar1 x x
-  | Rstar1_1 : forall x y:U, R x y -> Rstar1 x y
-  | Rstar1_n : forall x y z:U, Rstar1 x y -> Rstar1 y z -> Rstar1 x z.
+Inductive Rstar1 (x:U) : U -> Prop :=
+  | Rstar1_0 : Rstar1 x x
+  | Rstar1_1 : forall y:U, R x y -> Rstar1 x y
+  | Rstar1_n : forall y z:U, Rstar1 x y -> Rstar1 y z -> Rstar1 x z.
 
-Inductive Rplus : Relation U :=
-  | Rplus_0 : forall x y:U, R x y -> Rplus x y
-  | Rplus_n : forall x y z:U, R x y -> Rplus y z -> Rplus x z.
+Inductive Rplus (x:U) : U -> Prop :=
+  | Rplus_0 : forall y:U, R x y -> Rplus x y
+  | Rplus_n : forall y z:U, R x y -> Rplus y z -> Rplus x z.
 
 Definition Strongly_confluent : Prop :=
   forall x a b:U, R x a -> R x b -> ex (fun z:U => R a z /\ R b z).

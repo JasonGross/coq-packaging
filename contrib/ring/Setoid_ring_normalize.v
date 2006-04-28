@@ -6,13 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Setoid_ring_normalize.v,v 1.11.2.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: Setoid_ring_normalize.v 6662 2005-02-02 21:33:14Z sacerdot $ *)
 
 Require Import Setoid_ring_theory.
 Require Import Quote.
 
 Set Implicit Arguments.
-
+Unset Boxed Definitions.
+ 
 Lemma index_eq_prop : forall n m:index, Is_true (index_eq n m) -> n = m.
 Proof.
   simple induction n; simple induction m; simpl in |- *;
@@ -34,24 +35,24 @@ Variable Aeq : A -> A -> bool.
 
 Variable S : Setoid_Theory A Aequiv.
 
-Add Setoid A Aequiv S.
+Add Setoid A Aequiv S as Asetoid.
 
-Variable
-  plus_morph :
-    forall a a0 a1 a2:A,
-      Aequiv a a0 -> Aequiv a1 a2 -> Aequiv (Aplus a a1) (Aplus a0 a2).
-Variable
-  mult_morph :
-    forall a a0 a1 a2:A,
-      Aequiv a a0 -> Aequiv a1 a2 -> Aequiv (Amult a a1) (Amult a0 a2).
+Variable plus_morph :
+ forall a a0:A, Aequiv a a0 ->
+   forall a1 a2:A, Aequiv a1 a2 ->
+     Aequiv (Aplus a a1)  (Aplus a0 a2).
+Variable mult_morph :
+ forall a a0:A, Aequiv a a0 ->
+   forall a1 a2:A, Aequiv a1 a2 ->
+     Aequiv (Amult a a1) (Amult a0 a2).
 Variable opp_morph : forall a a0:A, Aequiv a a0 -> Aequiv (Aopp a) (Aopp a0).
 
 Add Morphism Aplus : Aplus_ext.
-exact plus_morph.
+intros; apply plus_morph; assumption.
 Qed.
 
 Add Morphism Amult : Amult_ext.
-exact mult_morph.
+intros; apply mult_morph; assumption.
 Qed.
 
 Add Morphism Aopp : Aopp_ext.
@@ -488,19 +489,22 @@ rewrite (interp_m_ok (Aplus a a0) v0).
 rewrite (interp_m_ok a v0).
 rewrite (interp_m_ok a0 v0).
 setoid_replace (Amult (Aplus a a0) (interp_vl v0)) with
- (Aplus (Amult a (interp_vl v0)) (Amult a0 (interp_vl v0))).
+ (Aplus (Amult a (interp_vl v0)) (Amult a0 (interp_vl v0)));
+ [ idtac | trivial ].
 setoid_replace
  (Aplus (Aplus (Amult a (interp_vl v0)) (Amult a0 (interp_vl v0)))
     (Aplus (interp_setcs c) (interp_setcs c0))) with
  (Aplus (Amult a (interp_vl v0))
     (Aplus (Amult a0 (interp_vl v0))
-       (Aplus (interp_setcs c) (interp_setcs c0)))).
+       (Aplus (interp_setcs c) (interp_setcs c0))));
+ [ idtac | trivial ].
 setoid_replace
  (Aplus (Aplus (Amult a (interp_vl v0)) (interp_setcs c))
     (Aplus (Amult a0 (interp_vl v0)) (interp_setcs c0))) with
  (Aplus (Amult a (interp_vl v0))
     (Aplus (interp_setcs c)
-       (Aplus (Amult a0 (interp_vl v0)) (interp_setcs c0)))).
+       (Aplus (Amult a0 (interp_vl v0)) (interp_setcs c0))));
+ [ idtac | trivial ].
 auto.
 
 elim (varlist_lt v v0); simpl in |- *.
@@ -550,19 +554,23 @@ rewrite (H c0).
 rewrite (interp_m_ok (Aplus a Aone) v0).
 rewrite (interp_m_ok a v0).
 setoid_replace (Amult (Aplus a Aone) (interp_vl v0)) with
- (Aplus (Amult a (interp_vl v0)) (Amult Aone (interp_vl v0))).
+ (Aplus (Amult a (interp_vl v0)) (Amult Aone (interp_vl v0)));
+ [ idtac | trivial ].
 setoid_replace
  (Aplus (Aplus (Amult a (interp_vl v0)) (Amult Aone (interp_vl v0)))
     (Aplus (interp_setcs c) (interp_setcs c0))) with
  (Aplus (Amult a (interp_vl v0))
     (Aplus (Amult Aone (interp_vl v0))
-       (Aplus (interp_setcs c) (interp_setcs c0)))).
+       (Aplus (interp_setcs c) (interp_setcs c0))));
+ [ idtac | trivial ].
 setoid_replace
  (Aplus (Aplus (Amult a (interp_vl v0)) (interp_setcs c))
     (Aplus (interp_vl v0) (interp_setcs c0))) with
  (Aplus (Amult a (interp_vl v0))
-    (Aplus (interp_setcs c) (Aplus (interp_vl v0) (interp_setcs c0)))).
-setoid_replace (Amult Aone (interp_vl v0)) with (interp_vl v0).
+    (Aplus (interp_setcs c) (Aplus (interp_vl v0) (interp_setcs c0))));
+ [ idtac | trivial ].
+setoid_replace (Amult Aone (interp_vl v0)) with (interp_vl v0);
+ [ idtac | trivial ].
 auto.
 
 elim (varlist_lt v v0); simpl in |- *.
@@ -613,18 +621,21 @@ rewrite (ics_aux_ok (interp_m (Aplus Aone a) v0) (canonical_sum_merge c c0));
 rewrite (interp_m_ok (Aplus Aone a) v0); rewrite (interp_m_ok a v0).
 setoid_replace (Amult (Aplus Aone a) (interp_vl v0)) with
  (Aplus (Amult Aone (interp_vl v0)) (Amult a (interp_vl v0)));
- setoid_replace
-  (Aplus (Aplus (Amult Aone (interp_vl v0)) (Amult a (interp_vl v0)))
-     (Aplus (interp_setcs c) (interp_setcs c0))) with
-  (Aplus (Amult Aone (interp_vl v0))
-     (Aplus (Amult a (interp_vl v0))
-        (Aplus (interp_setcs c) (interp_setcs c0))));
- setoid_replace
-  (Aplus (Aplus (interp_vl v0) (interp_setcs c))
-     (Aplus (Amult a (interp_vl v0)) (interp_setcs c0))) with
-  (Aplus (interp_vl v0)
-     (Aplus (interp_setcs c)
-        (Aplus (Amult a (interp_vl v0)) (interp_setcs c0)))).
+ [ idtac | trivial ].
+setoid_replace
+ (Aplus (Aplus (Amult Aone (interp_vl v0)) (Amult a (interp_vl v0)))
+    (Aplus (interp_setcs c) (interp_setcs c0))) with
+ (Aplus (Amult Aone (interp_vl v0))
+    (Aplus (Amult a (interp_vl v0))
+       (Aplus (interp_setcs c) (interp_setcs c0))));
+ [ idtac | trivial ].
+setoid_replace
+ (Aplus (Aplus (interp_vl v0) (interp_setcs c))
+    (Aplus (Amult a (interp_vl v0)) (interp_setcs c0))) with
+ (Aplus (interp_vl v0)
+    (Aplus (interp_setcs c)
+       (Aplus (Amult a (interp_vl v0)) (interp_setcs c0))));
+ [ idtac | trivial ].
 auto.
 
 elim (varlist_lt v v0); simpl in |- *; intros.
@@ -668,17 +679,20 @@ rewrite
 rewrite (interp_m_ok (Aplus Aone Aone) v0).
 setoid_replace (Amult (Aplus Aone Aone) (interp_vl v0)) with
  (Aplus (Amult Aone (interp_vl v0)) (Amult Aone (interp_vl v0)));
- setoid_replace
-  (Aplus (Aplus (Amult Aone (interp_vl v0)) (Amult Aone (interp_vl v0)))
-     (Aplus (interp_setcs c) (interp_setcs c0))) with
-  (Aplus (Amult Aone (interp_vl v0))
-     (Aplus (Amult Aone (interp_vl v0))
-        (Aplus (interp_setcs c) (interp_setcs c0))));
- setoid_replace
-  (Aplus (Aplus (interp_vl v0) (interp_setcs c))
-     (Aplus (interp_vl v0) (interp_setcs c0))) with
-  (Aplus (interp_vl v0)
-     (Aplus (interp_setcs c) (Aplus (interp_vl v0) (interp_setcs c0)))).
+ [ idtac | trivial ].
+setoid_replace
+ (Aplus (Aplus (Amult Aone (interp_vl v0)) (Amult Aone (interp_vl v0)))
+    (Aplus (interp_setcs c) (interp_setcs c0))) with
+ (Aplus (Amult Aone (interp_vl v0))
+    (Aplus (Amult Aone (interp_vl v0))
+       (Aplus (interp_setcs c) (interp_setcs c0))));
+ [ idtac | trivial ].
+setoid_replace
+ (Aplus (Aplus (interp_vl v0) (interp_setcs c))
+    (Aplus (interp_vl v0) (interp_setcs c0))) with
+ (Aplus (interp_vl v0)
+    (Aplus (interp_setcs c) (Aplus (interp_vl v0) (interp_setcs c0))));
+[ idtac | trivial ].
 setoid_replace (Amult Aone (interp_vl v0)) with (interp_vl v0); auto.
 
 elim (varlist_lt v v0); simpl in |- *.
@@ -727,7 +741,8 @@ rewrite (ics_aux_ok (interp_m (Aplus a a0) v) c);
  rewrite (ics_aux_ok (interp_m a0 v) c).
 rewrite (interp_m_ok (Aplus a a0) v); rewrite (interp_m_ok a0 v).
 setoid_replace (Amult (Aplus a a0) (interp_vl v)) with
- (Aplus (Amult a (interp_vl v)) (Amult a0 (interp_vl v))).
+ (Aplus (Amult a (interp_vl v)) (Amult a0 (interp_vl v)));
+ [ idtac | trivial ].
 auto.
 
 elim (varlist_lt l v); simpl in |- *; intros.
@@ -746,8 +761,10 @@ rewrite (ics_aux_ok (interp_m (Aplus a Aone) v) c);
  rewrite (ics_aux_ok (interp_vl v) c).
 rewrite (interp_m_ok (Aplus a Aone) v).
 setoid_replace (Amult (Aplus a Aone) (interp_vl v)) with
- (Aplus (Amult a (interp_vl v)) (Amult Aone (interp_vl v))).
-setoid_replace (Amult Aone (interp_vl v)) with (interp_vl v).
+ (Aplus (Amult a (interp_vl v)) (Amult Aone (interp_vl v)));
+ [ idtac | trivial ].
+setoid_replace (Amult Aone (interp_vl v)) with (interp_vl v);
+ [ idtac | trivial ].
 auto.
 
 elim (varlist_lt l v); simpl in |- *; intros; auto.
@@ -769,7 +786,8 @@ rewrite (ics_aux_ok (interp_m (Aplus Aone a) v) c);
  rewrite (ics_aux_ok (interp_m a v) c).
 rewrite (interp_m_ok (Aplus Aone a) v); rewrite (interp_m_ok a v).
 setoid_replace (Amult (Aplus Aone a) (interp_vl v)) with
- (Aplus (Amult Aone (interp_vl v)) (Amult a (interp_vl v))).
+ (Aplus (Amult Aone (interp_vl v)) (Amult a (interp_vl v)));
+ [ idtac | trivial ].
 setoid_replace (Amult Aone (interp_vl v)) with (interp_vl v); auto.
 
 elim (varlist_lt l v); simpl in |- *; intros; auto.
@@ -784,7 +802,8 @@ rewrite (ics_aux_ok (interp_m (Aplus Aone Aone) v) c);
  rewrite (ics_aux_ok (interp_vl v) c).
 rewrite (interp_m_ok (Aplus Aone Aone) v).
 setoid_replace (Amult (Aplus Aone Aone) (interp_vl v)) with
- (Aplus (Amult Aone (interp_vl v)) (Amult Aone (interp_vl v))).
+ (Aplus (Amult Aone (interp_vl v)) (Amult Aone (interp_vl v)));
+ [ idtac | trivial ].
 setoid_replace (Amult Aone (interp_vl v)) with (interp_vl v); auto.
 
 elim (varlist_lt l v); simpl in |- *; intros; auto.
@@ -806,7 +825,8 @@ rewrite (ics_aux_ok (interp_m (Amult a a0) v) (canonical_sum_scalar a c));
 rewrite (interp_m_ok (Amult a a0) v); rewrite (interp_m_ok a0 v).
 rewrite H.
 setoid_replace (Amult a (Aplus (Amult a0 (interp_vl v)) (interp_setcs c)))
- with (Aplus (Amult a (Amult a0 (interp_vl v))) (Amult a (interp_setcs c))).
+ with (Aplus (Amult a (Amult a0 (interp_vl v))) (Amult a (interp_setcs c)));
+ [ idtac | trivial ].
 auto.
 
 rewrite (ics_aux_ok (interp_m a v) (canonical_sum_scalar a c));
@@ -829,7 +849,8 @@ rewrite (varlist_merge_ok l v).
 setoid_replace
  (Amult (interp_vl l) (Aplus (Amult a (interp_vl v)) (interp_setcs c))) with
  (Aplus (Amult (interp_vl l) (Amult a (interp_vl v)))
-    (Amult (interp_vl l) (interp_setcs c))).
+    (Amult (interp_vl l) (interp_setcs c)));
+ [ idtac | trivial ].
 auto.
 
 rewrite (varlist_insert_ok (varlist_merge l v) (canonical_sum_scalar2 l c)).
@@ -858,15 +879,18 @@ rewrite (varlist_merge_ok l v).
 setoid_replace
  (Amult (interp_vl l) (Aplus (Amult a (interp_vl v)) (interp_setcs c0))) with
  (Aplus (Amult (interp_vl l) (Amult a (interp_vl v)))
-    (Amult (interp_vl l) (interp_setcs c0))).
+    (Amult (interp_vl l) (interp_setcs c0)));
+ [ idtac | trivial ].
 setoid_replace
  (Amult c
     (Aplus (Amult (interp_vl l) (Amult a (interp_vl v)))
        (Amult (interp_vl l) (interp_setcs c0)))) with
  (Aplus (Amult c (Amult (interp_vl l) (Amult a (interp_vl v))))
-    (Amult c (Amult (interp_vl l) (interp_setcs c0)))).
+    (Amult c (Amult (interp_vl l) (interp_setcs c0))));
+ [ idtac | trivial ].
 setoid_replace (Amult (Amult c a) (Amult (interp_vl l) (interp_vl v))) with
- (Amult c (Amult a (Amult (interp_vl l) (interp_vl v)))).
+ (Amult c (Amult a (Amult (interp_vl l) (interp_vl v))));
+ [ idtac | trivial ].
 auto.
 
 rewrite
@@ -880,7 +904,8 @@ setoid_replace
     (Amult c (Amult (interp_vl l) (interp_setcs c0)))) with
  (Amult c
     (Aplus (Amult (interp_vl l) (interp_vl v))
-       (Amult (interp_vl l) (interp_setcs c0)))).
+       (Amult (interp_vl l) (interp_setcs c0))));
+ [ idtac | trivial ].
 auto.
 Qed.
 
@@ -900,12 +925,14 @@ rewrite (ics_aux_ok (interp_m a v) c).
 rewrite (interp_m_ok a v).
 rewrite (H y).
 setoid_replace (Amult a (Amult (interp_vl v) (interp_setcs y))) with
- (Amult (Amult a (interp_vl v)) (interp_setcs y)).
+ (Amult (Amult a (interp_vl v)) (interp_setcs y));
+ [ idtac | trivial ].
 setoid_replace
  (Amult (Aplus (Amult a (interp_vl v)) (interp_setcs c)) (interp_setcs y))
  with
  (Aplus (Amult (Amult a (interp_vl v)) (interp_setcs y))
-    (Amult (interp_setcs c) (interp_setcs y))).
+    (Amult (interp_setcs c) (interp_setcs y)));
+ [ idtac | trivial ].
 trivial.
 
 rewrite
@@ -947,7 +974,8 @@ intros.
 rewrite (ics_aux_ok (interp_m a v) c).
 rewrite (interp_m_ok a v).
 rewrite (H0 I).
-setoid_replace (Amult Azero (interp_vl v)) with Azero.
+setoid_replace (Amult Azero (interp_vl v)) with Azero;
+ [ idtac | trivial ].
 rewrite H.
 trivial.
 

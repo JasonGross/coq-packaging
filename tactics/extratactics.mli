@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extratactics.mli,v 1.3.10.2 2005/01/21 17:14:10 herbelin Exp $ i*)
+(*i $Id: extratactics.mli 8651 2006-03-21 21:54:43Z jforest $ i*)
 
 open Names
 open Term
@@ -18,3 +18,23 @@ val h_injHyp : quantified_hypothesis -> tactic
 val h_rewriteLR : constr -> tactic
 
 val refine_tac : Genarg.open_constr -> tactic
+
+
+
+(* Julien: Mise en commun des differentes version de replace with in by 
+   TODO:  deplacer dans extraargs
+
+*)
+
+
+val rawwit_in_arg_hyp:  identifier option Tacexpr.raw_abstract_argument_type
+val in_arg_hyp: identifier option Pcoq.Gram.Entry.e
+
+
+
+val rawwit_by_arg_tac :
+  (Tacexpr.raw_tactic_expr option, Topconstr.constr_expr,
+   Tacexpr.raw_tactic_expr)
+  Genarg.abstract_argument_type
+  
+val by_arg_tac : Tacexpr.raw_tactic_expr option Pcoq.Gram.Entry.e

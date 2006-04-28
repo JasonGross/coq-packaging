@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Reals.v,v 1.24.2.1 2004/07/16 19:31:12 herbelin Exp $ i*)
+(*i $Id: Reals.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (* The library REALS is divided in 6 parts :
    - Rbase: basic lemmas on R

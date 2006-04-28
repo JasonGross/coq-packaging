@@ -6,12 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Ring_normalize.v,v 1.16.2.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: Ring_normalize.v 6295 2004-11-12 16:40:39Z gregoire $ *)
 
 Require Import Ring_theory.
 Require Import Quote.
 
 Set Implicit Arguments.
+Unset Boxed Definitions.
 
 Lemma index_eq_prop : forall n m:index, Is_true (index_eq n m) -> n = m.
 Proof.

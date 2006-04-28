@@ -6,16 +6,16 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: conv_oracle.mli,v 1.3.8.3 2005/01/21 17:14:10 herbelin Exp $ i*)
+(*i $Id: conv_oracle.mli 6621 2005-01-21 17:24:37Z herbelin $ i*)
 
 open Names
-open Closure
+
 
 (* Order on section paths for unfolding.
    If [oracle_order kn1 kn2] is true, then unfold kn1 first.
    Note: the oracle does not introduce incompleteness, it only
    tries to postpone unfolding of "opaque" constants. *)
-val oracle_order : table_key -> table_key -> bool
+val oracle_order : 'a tableKey -> 'a tableKey -> bool
 
 (* Changing the oracle *)
 val set_opaque_const      : constant -> unit
