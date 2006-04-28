@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: term_typing.mli,v 1.2.8.1 2004/07/16 19:30:27 herbelin Exp $ i*)
+(*i $Id: term_typing.mli 6245 2004-10-20 13:50:08Z barras $ i*)
 
 (*i*)
 open Names
@@ -24,11 +24,11 @@ val translate_local_def : env -> constr * types option ->
 
 val translate_local_assum : env -> types ->
   types * Univ.constraints
-
-val translate_constant : env -> constant_entry -> constant_body
+ 
+val translate_constant : env -> constant -> constant_entry -> constant_body
 
 val translate_mind : 
   env -> mutual_inductive_entry -> mutual_inductive_body
 
 val translate_recipe : 
-  env -> Cooking.recipe -> constant_body
+  env -> constant -> Cooking.recipe -> constant_body

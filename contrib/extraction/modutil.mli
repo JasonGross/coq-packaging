@@ -6,13 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modutil.mli,v 1.2.2.2 2005/12/01 17:01:22 letouzey Exp $ i*)
+(*i $Id: modutil.mli 7632 2005-12-01 14:35:21Z letouzey $ i*)
 
 open Names
 open Declarations
 open Environ
 open Libnames
 open Miniml
+open Mod_subst
 
 (*s Functions upon modules missing in [Modops]. *) 
 

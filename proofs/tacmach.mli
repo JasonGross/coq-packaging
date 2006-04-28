@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacmach.mli,v 1.50.2.2 2005/01/21 16:41:52 herbelin Exp $ i*)
+(*i $Id: tacmach.mli 7639 2005-12-02 10:01:15Z gregoire $ i*)
 
 (*i*)
 open Names
@@ -18,14 +18,14 @@ open Reduction
 open Proof_trees
 open Proof_type
 open Refiner
-open Tacred
+open Redexpr
 open Tacexpr
 open Rawterm
 (*i*)
 
 (* Operations for handling terms under a local typing context. *)
 
-type 'a sigma   = 'a Proof_type.sigma;;
+type 'a sigma   = 'a Evd.sigma;;
 type validation = Proof_type.validation;;
 type tactic     = Proof_type.tactic;;
 
@@ -51,7 +51,6 @@ val pf_global             : goal sigma -> identifier -> constr
 val pf_parse_const        : goal sigma -> string -> constr
 val pf_type_of            : goal sigma -> constr -> types
 val pf_check_type         : goal sigma -> constr -> types -> unit
-val pf_execute            : goal sigma -> constr -> unsafe_judgment
 val hnf_type_of           : goal sigma -> constr -> types
 
 val pf_interp_constr      : goal sigma -> Topconstr.constr_expr -> constr
@@ -63,7 +62,7 @@ val pf_get_hyp_typ        : goal sigma -> identifier -> types
 val pf_get_new_id  : identifier      -> goal sigma -> identifier
 val pf_get_new_ids : identifier list -> goal sigma -> identifier list
 
-val pf_reduction_of_redexp : goal sigma -> red_expr -> constr -> constr
+val pf_reduction_of_red_expr : goal sigma -> red_expr -> constr -> constr
 
 
 val pf_apply : (env -> evar_map -> 'a) -> goal sigma -> 'a
@@ -120,9 +119,6 @@ val top_of_tree             : pftreestate -> pftreestate
 val change_constraints_pftreestate :
   evar_map -> pftreestate -> pftreestate
 
-(*i
-val vernac_tactic : string * tactic_arg list -> tactic
-i*)
 (*s The most primitive tactics. *)
 
 val refiner                   : rule -> tactic
@@ -131,7 +127,7 @@ val intro_replacing_no_check  : identifier -> tactic
 val internal_cut_no_check     : identifier -> types -> tactic
 val internal_cut_rev_no_check : identifier -> types -> tactic
 val refine_no_check           : constr -> tactic
-val convert_concl_no_check    : types -> tactic
+val convert_concl_no_check    : types -> cast_kind -> tactic
 val convert_hyp_no_check      : named_declaration -> tactic
 val thin_no_check             : identifier list -> tactic
 val thin_body_no_check        : identifier list -> tactic
@@ -149,10 +145,7 @@ val intro_replacing  : identifier -> tactic
 val internal_cut     : identifier -> types -> tactic
 val internal_cut_rev : identifier -> types -> tactic
 val refine           : constr -> tactic
-val convert_concl    : constr -> tactic
-val convert_hyp      : named_declaration -> tactic
-val thin             : identifier list -> tactic
-val convert_concl    : types -> tactic
+val convert_concl    : types -> cast_kind -> tactic
 val convert_hyp      : named_declaration -> tactic
 val thin             : identifier list -> tactic
 val thin_body        : identifier list -> tactic
@@ -173,11 +166,6 @@ val tactic_list_tactic : tactic_list -> tactic
 val tclFIRSTLIST       : tactic_list list -> tactic_list
 val tclIDTAC_list      : tactic_list
 
-(*s Pretty-printing functions. *)
-
-(*i*)
-open Pp
-(*i*)
-
-val pr_gls    : goal sigma -> std_ppcmds
-val pr_glls   : goal list sigma -> std_ppcmds
+(*s Pretty-printing functions (debug only). *)
+val pr_gls    : goal sigma -> Pp.std_ppcmds
+val pr_glls   : goal list sigma -> Pp.std_ppcmds

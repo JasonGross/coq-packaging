@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: syntax_def.ml,v 1.6.2.2 2006/01/03 20:33:31 herbelin Exp $ *)
+(* $Id: syntax_def.ml 7779 2006-01-03 20:33:47Z herbelin $ *)
 
 open Util
 open Pp
@@ -39,21 +39,21 @@ let load_syntax_constant i ((sp,kn),(local,c,onlyparse)) =
   add_syntax_constant kn c;
   Nametab.push_syntactic_definition (Nametab.Until i) sp kn;
   if not onlyparse then
-    (* Declare it to be used as (long) name *)
-    Symbols.declare_uninterpretation (Symbols.SynDefRule kn) ([],c)
+    (* Declare it to be used as long name *)
+    Notation.declare_uninterpretation (Notation.SynDefRule kn) ([],c)
 
 let open_syntax_constant i ((sp,kn),(_,c,onlyparse)) =
   Nametab.push_syntactic_definition (Nametab.Exactly i) sp kn;
   if not onlyparse then
     (* Redeclare it to be used as (short) name in case an other (distfix)
        notation was declared inbetween *)
-    Symbols.declare_uninterpretation (Symbols.SynDefRule kn) ([],c)
+    Notation.declare_uninterpretation (Notation.SynDefRule kn) ([],c)
 
 let cache_syntax_constant d =
   load_syntax_constant 1 d
 
 let subst_syntax_constant ((sp,kn),subst,(local,c,onlyparse)) =
-  (local,subst_aconstr subst c,onlyparse)
+  (local,subst_aconstr subst [] c,onlyparse)
 
 let classify_syntax_constant (_,(local,_,_ as o)) =
   if local then Dispose else Substitute o
@@ -78,3 +78,15 @@ let rec set_loc loc _ a =
 
 let search_syntactic_definition loc kn =
   set_loc loc () (KNmap.find kn !syntax_table)
+
+exception BoundToASyntacticDefThatIsNotARef
+
+let locate_global qid =
+  match Nametab.extended_locate qid with
+  | TrueGlobal ref -> ref
+  | SyntacticDef kn -> 
+  match search_syntactic_definition dummy_loc kn with
+  | Rawterm.RRef (_,ref) -> ref
+  | _ -> 
+      errorlabstrm "" (pr_qualid qid ++ 
+        str " is bound to a notation that does not denote a reference")

@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: pextract.ml,v 1.5.6.1 2004/07/16 19:30:01 herbelin Exp $ *)
+(* $Id: pextract.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Pp_control
 open Pp

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: type_errors.mli,v 1.36.2.1 2004/07/16 19:30:27 herbelin Exp $ i*)
+(*i $Id: type_errors.mli 6019 2004-08-06 18:15:24Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -21,7 +21,7 @@ open Environ
 type guard_error =
   (* Fixpoints *)
   | NotEnoughAbstractionInFixBody
-  | RecursionNotOnInductiveType
+  | RecursionNotOnInductiveType of constr
   | RecursionOnIllegalTerm of int * constr * int list * int list
   | NotEnoughArgumentsForFixCall of int
   (* CoFixpoints *)

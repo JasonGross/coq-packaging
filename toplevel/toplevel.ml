@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: toplevel.ml,v 1.22.2.2 2004/07/16 20:48:17 herbelin Exp $ *)
+(* $Id: toplevel.ml 6947 2005-04-20 16:18:41Z coq $ *)
 
 open Pp
 open Util
@@ -182,11 +182,44 @@ let make_prompt () =
   with _ -> 
     "Coq < "
 
+(*let build_pending_list l = 
+  let pl = ref ">" in
+  let l' = ref l in
+  let res = 
+    while List.length !l' > 1 do 
+      pl := !pl ^ "|" Names.string_of_id x;
+      l':=List.tl !l'
+    done in
+  let last = try List.hd !l' with _ ->   in
+  "<"^l'
+*)    
+
+(* the coq prompt added to the default one when in emacs mode
+   The prompt contains the current state label [n] (for global
+   backtracking) and the current proof state [p] (for proof
+   backtracking) plus the list of open (nested) proofs (for proof
+   aborting when backtracking). It looks like:
+   
+   "n |lem1|lem2|lem3| p < "
+*)
+let make_emacs_prompt() =
+  let statnum = string_of_int (Lib.current_command_label ()) in
+  let endchar = String.make 1 (Char.chr 249) in
+  let dpth = Pfedit.current_proof_depth() in
+  let pending = Pfedit.get_all_proof_names() in
+  let pendingprompt = 
+    List.fold_left 
+      (fun acc x -> acc ^ (if acc <> "" then "|" else "") ^ Names.string_of_id x)
+      "" pending in
+  let proof_info = if dpth >= 0 then string_of_int dpth else "0" in
+  statnum ^ " |" ^ pendingprompt ^ "| " ^ proof_info ^ " < " ^ endchar
+
 (* A buffer to store the current command read on stdin. It is
  * initialized when a vernac command is immediately followed by "\n",
  * or after a Drop. *)
 let top_buffer =
-  let pr() = (make_prompt())^(emacs_str (String.make 1 (Char.chr 249)))
+  let pr() = 
+    make_prompt() ^ Printer.emacs_str (make_emacs_prompt())
   in
   { prompt = pr;
     str = "";
@@ -197,7 +230,7 @@ let top_buffer =
 
 let set_prompt prompt =
   top_buffer.prompt
-  <- (fun () -> (prompt ()) ^ (emacs_str (String.make 1 (Char.chr 249))))
+  <- (fun () -> (prompt ())^(Printer.emacs_str (String.make 1 (Char.chr 249))))
 
 (* Removes and prints the location of the error. The following exceptions
    need not be located. *)

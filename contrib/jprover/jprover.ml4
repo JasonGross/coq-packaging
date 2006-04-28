@@ -51,7 +51,7 @@ let mbreak s = Format.print_flush (); print_string ("-break at: "^s);
 let jp_error re = raise (JT.RefineError ("jprover", JT.StringError re))
 
 (* print Coq constructor *)
-let print_constr ct = Pp.ppnl (PR.prterm ct); Format.print_flush ()
+let print_constr ct = Pp.ppnl (PR.pr_lconstr ct); Format.print_flush ()
 
 let rec print_constr_list = function
   |  [] -> ()
@@ -361,7 +361,7 @@ let dyn_impl id gl =
          (TCL.tclTHENLAST
             (TCL.tclTHENS (T.cut b) [T.intro_using id2;TCL.tclIDTAC])
          (T.apply_term (TR.mkVar (short_addr id))
-                       [TR.mkMeta (Clenv.new_meta())])) gl
+                       [TR.mkMeta (Evarutil.new_meta())])) gl
 
 let dyn_allr c =       (* [c] must be an eigenvariable which replaces [v] *)
   HT.h_intro (N.id_of_string c)
@@ -390,7 +390,7 @@ let dyn_truer =
 (* Do the proof by the guidance of JProver. *)
 
 let do_one_step inf =
-  let (rule, (s1, t1), ((s2, t2) as k)) = inf in
+  let (rule, (s1, t1), (s2, t2)) = inf in
    begin
 (*i   if not (Jterm.is_xnil_term t2) then
    begin
@@ -542,20 +542,9 @@ let jpn n gls =
   TCL.tclTHEN (TCL.tclTRY T.red_in_concl)
               (TCL.tclTHEN (unfail_gen (List.map TR.mkVar ls))
                          (jp n)) gls
-(*
-let dyn_jpn l gls =
-  match l with
-   | [PT.Integer n] -> jpn n
-   | _ -> jp_error "Impossible!!!"
 
-
-let h_jp = TM.hide_tactic "Jp" dyn_jp
-
-let h_jpn = TM.hide_tactic "Jpn" dyn_jpn
-*)
-
-TACTIC EXTEND Jprover
-  [ "Jp" natural_opt(n) ] -> [ jpn n ]
+TACTIC EXTEND jprover
+  [ "jp" natural_opt(n) ] -> [ jpn n ]
 END
 
 (*

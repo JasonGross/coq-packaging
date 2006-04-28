@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: Exp_prop.v,v 1.16.2.1 2004/07/16 19:31:10 herbelin Exp $ i*)
+(*i $Id: Exp_prop.v 8670 2006-03-28 22:16:14Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -895,7 +895,7 @@ cut
        Un_cv
          (fun n:nat =>
             sum_f_R0 (fun k:nat => Rabs (r ^ k / INR (fact (S k)))) n) l)).
-intro.
+intro X.
 elim X; intros.
 exists x; intros.
 split.

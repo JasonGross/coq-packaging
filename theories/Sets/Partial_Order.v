@@ -24,7 +24,7 @@
 (* in Summer 1995. Several developments by E. Ledinot were an inspiration.  *)
 (****************************************************************************)
 
-(*i $Id: Partial_Order.v,v 1.6.2.1 2004/07/16 19:31:18 herbelin Exp $ i*)
+(*i $Id: Partial_Order.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Require Export Ensembles.
 Require Export Relations_1.

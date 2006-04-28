@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cerrors.mli,v 1.2.6.1 2004/07/16 19:31:47 herbelin Exp $ i*)
+(*i $Id: cerrors.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (*i*)
 open Pp

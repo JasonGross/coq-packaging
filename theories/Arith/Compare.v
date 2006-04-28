@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Compare.v,v 1.12.2.1 2004/07/16 19:31:00 herbelin Exp $ i*)
+(*i $Id: Compare.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 (** Equality is decidable on [nat] *)
 Open Local Scope nat_scope.

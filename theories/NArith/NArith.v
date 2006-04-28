@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: NArith.v,v 1.2.2.1 2004/07/16 19:31:07 herbelin Exp $ *)
+(* $Id: NArith.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (** Library for binary natural numbers *)
 

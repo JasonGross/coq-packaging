@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rtrigo_fun.v,v 1.7.2.1 2004/07/16 19:31:15 herbelin Exp $ i*)
+(*i $Id: Rtrigo_fun.v 8691 2006-04-10 09:23:37Z msozeau $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -61,10 +61,10 @@ intro; elim (IZN (up (/ eps - 1)) H0); intros; split with x; intros;
  rewrite (Rabs_Rabsolu (/ INR (S n))); cut (/ INR (S n) > 0).
 intro; rewrite (Rabs_pos_eq (/ INR (S n))).
 cut (/ eps - 1 < INR x).
-intro;
+intro ;
  generalize
   (Rlt_le_trans (/ eps - 1) (INR x) (INR n) H4
-     (le_INR x n ((fun (n m:nat) (H:(m >= n)%nat) => H) x n H2))); 
+     (le_INR x n H2)); 
  clear H4; intro; unfold Rminus in H4;
  generalize (Rplus_lt_compat_l 1 (/ eps + -1) (INR n) H4);
  replace (1 + (/ eps + -1)) with (/ eps); [ clear H4; intro | ring ].

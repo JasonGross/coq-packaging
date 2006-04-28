@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: stamps.ml,v 1.2.16.1 2004/07/16 19:30:31 herbelin Exp $ *)
+(* $Id: stamps.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 let new_stamp = 
   let stamp_ctr = ref 0 in

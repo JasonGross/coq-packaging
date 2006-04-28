@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Div.v,v 1.8.2.1 2004/07/16 19:31:00 herbelin Exp $ i*)
+(*i $Id: Div.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 (** Euclidean division *)
 

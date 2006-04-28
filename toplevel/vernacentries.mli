@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacentries.mli,v 1.16.2.2 2005/01/21 16:41:52 herbelin Exp $ i*)
+(*i $Id: vernacentries.mli 6616 2005-01-21 17:18:23Z herbelin $ i*)
 
 (*i*)
 open Names

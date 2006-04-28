@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extract_env.mli,v 1.13.2.1 2004/07/16 19:30:07 herbelin Exp $ i*)
+(*i $Id: extract_env.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (*s This module declares the extraction commands. *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Diaconescu.v,v 1.5.2.3 2004/08/01 09:36:44 herbelin Exp $ i*)
+(*i $Id: Diaconescu.v 6401 2004-12-05 16:44:57Z herbelin $ i*)
 
 (** R. Diaconescu [Diaconescu] showed that the Axiom of Choice in Set Theory
    entails Excluded-Middle; S. Lacas and B. Werner [LacasWerner]
@@ -59,18 +59,18 @@ Qed.
 
 Require Import ChoiceFacts.
 
-Variable rel_choice : RelationalChoice.
+Variable rel_choice : forall A B:Type, RelationalChoice A B.
 
 Lemma guarded_rel_choice :
  forall (A B:Type) (P:A -> Prop) (R:A -> B -> Prop),
    (forall x:A, P x ->  exists y : B, R x y) ->
-    exists R' : A -> B -> Prop,
+     exists R' : A -> B -> Prop,
      (forall x:A,
         P x ->
          exists y : B, R x y /\ R' x y /\ (forall y':B, R' x y' -> y = y')).
 Proof.
-  exact
-   (rel_choice_and_proof_irrel_imp_guarded_rel_choice rel_choice proof_irrel).
+ apply
+  (rel_choice_and_proof_irrel_imp_guarded_rel_choice rel_choice proof_irrel).
 Qed.
 
 (** The form of choice we need: there is a functional relation which chooses

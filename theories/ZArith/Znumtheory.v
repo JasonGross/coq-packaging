@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Znumtheory.v,v 1.5.2.1 2004/07/16 19:31:22 herbelin Exp $ i*)
+(*i $Id: Znumtheory.v 6984 2005-05-02 10:50:15Z herbelin $ i*)
 
 Require Import ZArith_base.
 Require Import ZArithRing.
@@ -278,12 +278,12 @@ Lemma euclid_rec :
      (forall d:Z, Zis_gcd u3 v3 d -> Zis_gcd a b d) -> Euclid.
 Proof.
 intros v3 Hv3; generalize Hv3; pattern v3 in |- *.
-apply Z_lt_rec.
+apply Zlt_0_rec.
 clear v3 Hv3; intros.
 elim (Z_zerop x); intro.
 apply Euclid_intro with (u := u1) (v := u2) (d := u3).
 assumption.
-apply H2.
+apply H3.
 rewrite a0; auto with zarith.
 set (q := u3 / x) in *.
 assert (Hq : 0 <= u3 - q * x < x).
@@ -297,9 +297,9 @@ apply (H (u3 - q * x) Hq (proj1 Hq) v1 v2 x (u1 - q * v1) (u2 - q * v2)).
 tauto.
 replace ((u1 - q * v1) * a + (u2 - q * v2) * b) with
  (u1 * a + u2 * b - q * (v1 * a + v2 * b)).
-rewrite H0; rewrite H1; trivial.
+rewrite H1; rewrite H2; trivial.
 ring.
-intros; apply H2.
+intros; apply H3.
 apply Zis_gcd_for_euclid with q; assumption.
 assumption.
 Qed.
@@ -377,11 +377,11 @@ Definition Zgcd_pos :
 Proof.
 intros a Ha.
 apply
- (Z_lt_rec
+ (Zlt_0_rec
     (fun a:Z => forall b:Z, {g : Z | 0 <= a -> Zis_gcd a b g /\ g >= 0}));
  try assumption.
 intro x; case x.
-intros _ b; exists (Zabs b).
+intros _ _ b; exists (Zabs b).
   elim (Z_le_lt_eq_dec _ _ (Zabs_pos b)).
     intros H0; split.
     apply Zabs_ind.
@@ -393,7 +393,7 @@ intros _ b; exists (Zabs b).
     rewrite <- (Zabs_Zsgn b); rewrite <- H0; simpl in |- *.
     split; [ apply Zis_gcd_0 | idtac ]; auto with zarith.
   
-intros p Hrec b.
+intros p Hrec _ b.
 generalize (Z_div_mod b (Zpos p)).
 case (Zdiv_eucl b (Zpos p)); intros q r Hqr.
 elim Hqr; clear Hqr; intros; auto with zarith.
@@ -405,8 +405,7 @@ split; auto.
 rewrite H.
 apply Zis_gcd_for_euclid2; auto.
 
-intros p Hrec b.
-exists 0; intros.
+intros p _ H b.
 elim H; auto.
 Defined.
 

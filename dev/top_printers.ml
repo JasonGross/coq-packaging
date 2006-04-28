@@ -9,8 +9,8 @@
 (* Printers for the ocaml toplevel. *)
 
 open System
+open Util
 open Pp
-open Ast
 open Names
 open Libnames
 open Nameops
@@ -19,96 +19,102 @@ open Univ
 open Proof_trees
 open Environ
 open Printer
+open Tactic_printer
 open Refiner
-open Tacmach
 open Term
 open Termops
 open Clenv
 open Cerrors
-open Constrextern
-open Constrintern
+open Evd
+open Goptions
 
 let _ = Constrextern.print_evar_arguments := true
+let _ = set_bool_option_value (SecondaryTable ("Printing","Matching")) false
+
+(* name printers *)
+let ppid id = pp (pr_id id)
+let pplab l = pp (pr_lab l)
+let ppmsid msid = pp (str (debug_string_of_msid msid))
+let ppmbid mbid = pp (str (debug_string_of_mbid mbid))
+let ppdir dir = pp (pr_dirpath dir)
+let ppmp mp = pp(str (string_of_mp mp))
+let ppcon con = pp(pr_con con)
+let ppkn kn = pp(pr_kn kn)
+let ppsp sp = pp(pr_sp sp)
+let ppqualid qid = pp(pr_qualid qid)
+
+(* term printers *)
+let ppconstr x = pp(Termops.print_constr x)
+let ppterm = ppconstr
+let ppsconstr x = ppconstr (Declarations.force x)
+let ppconstr_univ x = Constrextern.with_universes ppconstr x
+let pprawconstr = (fun x -> pp(pr_lrawconstr x))
+let pppattern = (fun x -> pp(pr_constr_pattern x))
+let pptype = (fun x -> pp(pr_ltype x))
+let ppfconstr c = ppconstr (Closure.term_of_fconstr c)
+
+let ppbigint n = pp (Bigint.pr_bigint n);;
+
+let ppidset l = pp (prlist_with_sep spc pr_id (Idset.elements l))
 
 let pP s = pp (hov 0 s)
 
-let prast c = pp(print_ast c)
-
-let prastpat c = pp(print_astpat c)
-let prastpatl c = pp(print_astlpat c)
-let ppterm x = pp(prterm x)
-let ppsterm x = ppterm (Declarations.force x)
-let ppterm_univ x = Constrextern.with_universes ppterm x
-let pprawterm = (fun x -> pp(pr_rawterm x))
-let pppattern = (fun x -> pp(pr_pattern x))
-let pptype = (fun x -> pp(prtype x))
-
-let safe_prglobal = function 
-  | ConstRef kn -> pp (str "CONSTREF(" ++ pr_kn kn ++ str ")")
+let safe_pr_global = function 
+  | ConstRef kn -> pp (str "CONSTREF(" ++ pr_con kn ++ str ")")
   | IndRef (kn,i) -> pp (str "INDREF(" ++ pr_kn kn ++ str "," ++ 
 			  int i ++ str ")")
   | ConstructRef ((kn,i),j) -> pp (str "INDREF(" ++ pr_kn kn ++ str "," ++ 
 				      int i ++ str "," ++ int j ++ str ")")
   | VarRef id -> pp (str "VARREF(" ++ pr_id id ++ str ")")
 
-let prglobal x = try pp(pr_global x) with _ -> safe_prglobal x
+let ppglobal x = try pp(pr_global x) with _ -> safe_pr_global x
 
-let prid id = pp (pr_id id)
-let prlab l = pp (pr_lab l)
+let ppconst (sp,j) =
+    pp (str"#" ++ pr_kn sp ++ str"=" ++ pr_lconstr j.uj_val)
 
-let prmsid msid = pp (str (debug_string_of_msid msid))
-let prmbid mbid = pp (str (debug_string_of_mbid mbid))
+let ppvar ((id,a)) =
+    pp (str"#" ++ pr_id id ++ str":" ++ pr_lconstr a)
 
-let prdir dir = pp (pr_dirpath dir)
+let genppj f j = let (c,t) = f j in (c ++ str " : " ++ t)
 
-let prmp mp = pp(str (string_of_mp mp))
-let prkn kn = pp(pr_kn kn)
+let ppj j = pp (genppj pr_ljudge j)
 
-let prsp sp = pp(pr_sp sp)
+(* proof printers *)
+let ppevm evd = pp(pr_evar_map evd)
+let ppevd evd = pp(pr_evar_defs evd)
+let ppclenv clenv = pp(pr_clenv clenv)
+let ppgoal g = pp(db_pr_goal g)
 
-let prqualid qid = pp(pr_qualid qid)
+let pr_gls gls =
+  hov 0 (pr_evar_map (sig_sig gls) ++ fnl () ++ db_pr_goal (sig_it gls))
 
-let prconst (sp,j) =
-    pp (str"#" ++ pr_kn sp ++ str"=" ++ prterm j.uj_val)
+let pr_glls glls =
+  hov 0 (pr_evar_map (sig_sig glls) ++ fnl () ++
+         prlist_with_sep pr_fnl db_pr_goal (sig_it glls))
 
-let prvar ((id,a)) =
-    pp (str"#" ++ pr_id id ++ str":" ++ prterm a)
-
-let genprj f j = let (c,t) = f j in (c ++ str " : " ++ t)
-
-let prj j = pp (genprj prjudge j)
-
-let prgoal g = pp(prgl g)
-
-let prsigmagoal g = pp(prgl (sig_it g))
-
+let ppsigmagoal g = pp(pr_goal (sig_it g))
 let prgls gls = pp(pr_gls gls)
-
 let prglls glls = pp(pr_glls glls)
-
 let pproof p = pp(print_proof Evd.empty empty_named_context p)
 
-let prevd evd = pp(pr_decls evd)
+let ppuni u = pp(pr_uni u)
 
-let prevc evc = pp(pr_evc evc)
-
-let prwc wc = pp(pr_evc wc)
-
-let prclenv clenv = pp(pr_clenv clenv)
-
-let print_uni u = (pp (pr_uni u))
-
-let pp_universes u = pp (str"[" ++ pr_universes u ++ str"]")
+let ppuniverses u = pp (str"[" ++ pr_universes u ++ str"]")
 
 let ppenv e = pp
   (str "[" ++ pr_named_context_of e ++ str "]" ++ spc() ++
    str "[" ++ pr_rel_context e (rel_context e) ++ str "]")
 
-let pptac = (fun x -> pp(Pptactic.pr_glob_tactic x))
+let pptac = (fun x -> pp(Pptactic.pr_glob_tactic (Global.env()) x))
 
-let pr_obj obj = Format.print_string (Libobject.object_tag obj)
+let ppobj obj = Format.print_string (Libobject.object_tag obj)
 
 let cnt = ref 0
+
+let cast_kind_display k = 
+  match k with
+  | VMcast -> "VMcast"
+  | DEFAULTcast -> "DEFAULTcast"
 
 let constr_display csr =
   let rec term_display c = match kind_of_term c with
@@ -116,7 +122,8 @@ let constr_display csr =
   | Meta n -> "Meta("^(string_of_int n)^")"
   | Var id -> "Var("^(string_of_id id)^")"
   | Sort s -> "Sort("^(sort_display s)^")"
-  | Cast (c,t) -> "Cast("^(term_display c)^","^(term_display t)^")"
+  | Cast (c,k, t) -> 
+      "Cast("^(term_display c)^","^(cast_kind_display k)^","^(term_display t)^")"
   | Prod (na,t,c) ->
       "Prod("^(name_display na)^","^(term_display t)^","^(term_display c)^")\n"
   | Lambda (na,t,c) ->
@@ -126,7 +133,7 @@ let constr_display csr =
       ^(term_display t)^","^(term_display c)^")"
   | App (c,l) -> "App("^(term_display c)^","^(array_display l)^")\n"
   | Evar (e,l) -> "Evar("^(string_of_int e)^","^(array_display l)^")"
-  | Const c -> "Const("^(string_of_kn c)^")"
+  | Const c -> "Const("^(string_of_con c)^")"
   | Ind (sp,i) ->
       "MutInd("^(string_of_kn sp)^","^(string_of_int i)^")"
   | Construct ((sp,i),j) ->
@@ -177,7 +184,7 @@ let print_pure_constr csr =
   | Meta n -> print_string "Meta("; print_int n; print_string ")"
   | Var id -> print_string (string_of_id id)
   | Sort s -> sort_display s
-  | Cast (c,t) -> open_hovbox 1;
+  | Cast (c,_, t) -> open_hovbox 1;
       print_string "("; (term_display c); print_cut();
       print_string "::"; (term_display t); print_string ")"; close_box()
   | Prod (Name(id),t,c) ->
@@ -207,7 +214,7 @@ let print_pure_constr csr =
       Array.iter (fun x -> print_space (); box_display x) l;
       print_string"}"
   | Const c -> print_string "Cons(";
-      sp_display c;
+      sp_con_display c;
       print_string ")"
   | Ind (sp,i) ->
       print_string "Ind(";
@@ -231,11 +238,12 @@ let print_pure_constr csr =
       print_string "end"; 
       close_box()
   | Fix ((t,i),(lna,tl,bl)) ->
-      print_string "Fix("; print_int i; print_string ")"; 
+      print_string "Fix"
+(* "("; print_int i; print_string ")"; 
       print_cut();
       open_vbox 0;
       let rec print_fix () =
-        for k = 0 to Array.length tl - 1 do
+        for k = 0 to (Array.length tl) - 1 do
 	  open_vbox 0;
 	  name_display lna.(k); print_string "/"; 
 	  print_int t.(k); print_cut(); print_string ":";
@@ -243,13 +251,13 @@ let print_pure_constr csr =
 	  box_display bl.(k); close_box ();
 	  print_cut()
         done
-      in print_string"{"; print_fix(); print_string"}"
+      in print_string"{"; print_fix(); print_string"}" *)
   | CoFix(i,(lna,tl,bl)) ->
       print_string "CoFix("; print_int i; print_string ")"; 
       print_cut();
       open_vbox 0;
       let rec print_fix () =
-        for k = 0 to Array.length tl - 1 do
+        for k = 0 to (Array.length tl) - 1 do
           open_vbox 1;
 	  name_display lna.(k);  print_cut(); print_string ":";
 	  box_display tl.(k) ; print_cut(); print_string ":=";
@@ -279,27 +287,85 @@ let print_pure_constr csr =
 	| l             -> l
     in  List.iter (fun x -> print_string x; print_string ".") ls;*)
       print_string (string_of_kn sp)
+  and sp_con_display sp = 
+(*    let dir,l = decode_kn sp in
+    let ls = 
+      match List.rev (List.map string_of_id (repr_dirpath dir)) with 
+          ("Top"::l)-> l
+	| ("Coq"::_::l) -> l 
+	| l             -> l
+    in  List.iter (fun x -> print_string x; print_string ".") ls;*)
+      print_string (string_of_con sp)
 
   in
+    try 
      box_display csr; print_flush()
-(*
-let _ =
-  Vernacentries.add "PrintConstr"
-    (function
-       | [VARG_CONSTR c] -> 
-	   (fun () ->
-              let (evmap,sign) = Command.get_current_context () in
-  	      constr_display (Constrintern.interp_constr evmap sign c))
-       | _ -> bad_vernac_args "PrintConstr")
+    with e ->
+	print_string (Printexc.to_string e);print_flush ();
+	raise e
 
-let _ =
-  Vernacentries.add "PrintPureConstr"
-    (function
-       | [VARG_CONSTR c] -> 
-	   (fun () ->
-              let (evmap,sign) = Command.get_current_context () in
-  	      print_pure_constr (Constrintern.interp_constr evmap sign c))
-       | _ -> bad_vernac_args "PrintPureConstr")
+let ppfconstr c = ppconstr (Closure.term_of_fconstr c)
+
+let pploc x = let (l,r) = unloc x in
+  print_string"(";print_int l;print_string",";print_int r;print_string")"
+
+(**********************************************************************)
+(* Vernac-level debugging commands                                    *)
+
+let in_current_context f c =
+  let (evmap,sign) = 
+    try Pfedit.get_current_goal_context ()
+    with e when Logic.catchable_exception e -> (Evd.empty, Global.env()) in
+  f (Constrintern.interp_constr evmap sign c)
+
+(* We expand the result of preprocessing to be independent of camlp4
+
+VERNAC COMMAND EXTEND PrintPureConstr
+| [ "PrintPureConstr" constr(c) ] -> [ in_current_context print_pure_constr c ]
+END
+VERNAC COMMAND EXTEND PrintConstr
+  [ "PrintConstr" constr(c) ] -> [ in_current_context constr_display c ]
+END
 *)
 
-let ppfconstr c = ppterm (Closure.term_of_fconstr c)
+open Pcoq
+open Genarg
+open Egrammar
+
+let _ =
+  try
+    Vernacinterp.vinterp_add "PrintConstr"
+      (function
+         [c] when genarg_tag c = ConstrArgType && true ->
+           let c = out_gen rawwit_constr c in
+           (fun () -> in_current_context constr_display c)
+       | _ -> failwith "Vernac extension: cannot occur")
+  with
+    e -> Pp.pp (Cerrors.explain_exn e)
+let _ =
+  extend_vernac_command_grammar "PrintConstr"
+    [[TacTerm "PrintConstr";
+      TacNonTerm
+        (dummy_loc,
+         (Gramext.Snterm (Pcoq.Gram.Entry.obj Constr.constr),
+          ConstrArgType),
+         Some "c")]]
+
+let _ =
+  try
+    Vernacinterp.vinterp_add "PrintPureConstr"
+      (function
+         [c] when genarg_tag c = ConstrArgType && true ->
+           let c = out_gen rawwit_constr c in
+           (fun () -> in_current_context print_pure_constr c)
+       | _ -> failwith "Vernac extension: cannot occur")
+  with
+    e -> Pp.pp (Cerrors.explain_exn e)
+let _ =
+  extend_vernac_command_grammar "PrintPureConstr"
+    [[TacTerm "PrintPureConstr";
+      TacNonTerm
+        (dummy_loc,
+         (Gramext.Snterm (Pcoq.Gram.Entry.obj Constr.constr),
+          ConstrArgType),
+         Some "c")]]

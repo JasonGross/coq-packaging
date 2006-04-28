@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Field_Compl.v,v 1.8.2.1 2004/07/16 19:30:09 herbelin Exp $ *)
+(* $Id: Field_Compl.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Inductive listT (A:Type) : Type :=
   | nilT : listT A

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mlutil.ml,v 1.104.2.3 2005/12/01 16:28:04 letouzey Exp $ i*)
+(*i $Id: mlutil.ml 7574 2005-11-17 15:48:45Z letouzey $ i*)
 
 (*i*)
 open Pp
@@ -209,8 +209,8 @@ end
 (*s Does a section path occur in a ML type ? *)
 
 let rec type_mem_kn kn = function 
-  | Tmeta _ -> assert false
-  | Tglob (r,l) -> (kn_of_r r) = kn || List.exists (type_mem_kn kn) l
+  | Tmeta {contents = Some t} -> type_mem_kn kn t
+  | Tglob (r,l) -> occur_kn_in_ref kn r || List.exists (type_mem_kn kn) l
   | Tarr (a,b) -> (type_mem_kn kn a) || (type_mem_kn kn b)
   | _ -> false
 
@@ -218,7 +218,7 @@ let rec type_mem_kn kn = function
 
 let type_maxvar t = 
   let rec parse n = function 
-    | Tmeta _ -> assert false
+    | Tmeta {contents = Some t} -> parse n t
     | Tvar i -> max i n 
     | Tarr (a,b) -> parse (parse n a) b
     | Tglob (_,l) -> List.fold_left parse n l 
@@ -228,7 +228,7 @@ let type_maxvar t =
 (*s From [a -> b -> c] to [[a;b],c]. *) 
 
 let rec type_decomp = function 
-  | Tmeta _ -> assert false
+  | Tmeta {contents = Some t} -> type_decomp t 
   | Tarr (a,b) -> let l,h = type_decomp b in a::l, h 
   | a -> [],a
 
@@ -241,7 +241,7 @@ let rec type_recomp (l,t) = match l with
 (*s Translating [Tvar] to [Tvar'] to avoid clash. *)
 
 let rec var2var' = function 
-  | Tmeta _ -> assert false
+  | Tmeta {contents = Some t} -> var2var' t
   | Tvar i -> Tvar' i
   | Tarr (a,b) -> Tarr (var2var' a, var2var' b)
   | Tglob (r,l) -> Tglob (r, List.map var2var' l)
@@ -252,16 +252,17 @@ type abbrev_map = global_reference -> ml_type option
 (*s Delta-reduction of type constants everywhere in a ML type [t].
    [env] is a function of type [ml_type_env]. *)
 
+
 let type_expand env t = 
   let rec expand = function
-    | Tmeta _ -> assert false
-    | Tglob (r,l) as t ->    
+    | Tmeta {contents = Some t} -> expand t
+    | Tglob (r,l) ->    
 	(match env r with 
 	   | Some mlt -> expand (type_subst_list l mlt) 
 	   | None -> Tglob (r, List.map expand l))
     | Tarr (a,b) -> Tarr (expand a, expand b)
     | a -> a
-  in expand t
+  in if Table.type_expand () then expand t else t
 
 (*s Idem, but only at the top level of implications. *)
 
@@ -269,7 +270,7 @@ let is_arrow = function Tarr _ -> true | _ -> false
 
 let type_weak_expand env t = 
   let rec expand = function
-    | Tmeta _ -> assert false
+    | Tmeta {contents = Some t} -> expand t
     | Tglob (r,l) as t ->    
 	(match env r with 
 	   | Some mlt -> 
@@ -290,7 +291,7 @@ let type_neq env t t' = (type_expand env t <> type_expand env t')
 
 let type_to_sign env t = 
   let rec f = function 
-    | Tmeta _ -> assert false
+    | Tmeta {contents = Some t} -> f t 
     | Tarr (a,b) -> (Tdummy <> a) :: (f b)
     | _ -> [] 
   in f (type_expand env t)
@@ -304,7 +305,7 @@ let type_expunge env t =
     let rec f t s = 
       if List.mem false s then 
 	match t with 
-	  | Tmeta _ -> assert false
+	  | Tmeta {contents = Some t} -> f t s
 	  | Tarr (a,b) -> 
 	      let t = f b (List.tl s) in 
 	      if List.hd s then Tarr (a, t) else t  
@@ -377,7 +378,7 @@ let ast_iter f = function
   | MLapp (a,l) -> f a; List.iter f l
   | MLcons (_,c,l) -> List.iter f l
   | MLmagic a -> f a
-  | MLrel _ | MLglob _ | MLexn _ | MLdummy | MLaxiom as a -> ()
+  | MLrel _ | MLglob _ | MLexn _ | MLdummy | MLaxiom  -> ()
 
 (*S Operations concerning De Bruijn indices. *)
 
@@ -594,11 +595,12 @@ let rec linear_beta_red a t = match a,t with
   linear beta reductions at modified positions. *)  
 
 let rec ast_glob_subst s t = match t with 
-  | MLapp ((MLglob (ConstRef kn)) as f, a) -> 
+  | MLapp ((MLglob ((ConstRef kn) as refe)) as f, a) -> 
       let a = List.map (ast_glob_subst s) a in 
-      (try linear_beta_red a (KNmap.find kn s) 
+      (try linear_beta_red a (Refmap.find refe s) 
        with Not_found -> MLapp (f, a))
-  | MLglob (ConstRef kn) -> (try KNmap.find kn s with Not_found -> t)
+  | MLglob ((ConstRef kn) as refe) ->
+      (try Refmap.find refe s with Not_found -> t)
   | _ -> ast_map (ast_glob_subst s) t
 
 
@@ -653,7 +655,7 @@ let check_generalizable_case unsafe br =
 (*s Do all branches correspond to the same thing? *)
 
 let check_constant_case br = 
-  if br = [||] then raise Impossible; 
+  if Array.length br = 0 then raise Impossible; 
   let (r,l,t) = br.(0) in
   let n = List.length l in 
   if ast_occurs_itvl 1 n t then raise Impossible; 
@@ -1117,7 +1119,7 @@ let inline_test t =
 
 let manual_inline_list = 
   let mp = MPfile (dirpath_of_string "Coq.Init.Wf") in 
-  List.map (fun s -> (make_kn mp empty_dirpath (mk_label s)))
+  List.map (fun s -> (make_con mp empty_dirpath (mk_label s)))
     [ "well_founded_induction_type"; "well_founded_induction"; 
       "Acc_rect"; "Acc_rec" ; "Acc_iter" ]
 

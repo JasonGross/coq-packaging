@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: mltop.ml4,v 1.29.2.3 2004/07/17 13:00:15 herbelin Exp $ *)
+(* $Id: mltop.ml4 6692 2005-02-06 13:03:51Z herbelin $ *)
 
 open Util
 open Pp
@@ -109,7 +109,7 @@ let dir_ml_load s =
 	    [Filename.dirname gname]
 	with | Dynlink.Error a ->
           errorlabstrm "Mltop.load_object" [< str (Dynlink.error_message a) >]
-      else () 
+      else ()
     | Native ->
 	errorlabstrm "Mltop.no_load_object"
           [< str"Loading of ML object file forbidden in a native Coq" >]
@@ -137,7 +137,7 @@ let add_path ~unix_path:dir ~coq_root:coq_dirpath =
   if exists_dir dir then
     begin
       add_ml_dir dir;
-      Library.add_load_path_entry (dir,coq_dirpath)
+      Library.add_load_path (dir,coq_dirpath)
     end
   else
     msg_warning [< str ("Cannot open " ^ dir) >]
@@ -160,7 +160,7 @@ let add_rec_path ~unix_path:dir ~coq_root:coq_dirpath =
     let dirs = map_succeed convert_dirs dirs in
     begin
       List.iter (fun lpe -> add_ml_dir (fst lpe)) dirs;
-      List.iter Library.add_load_path_entry dirs
+      List.iter Library.add_load_path dirs
     end
   else
     msg_warning [< str ("Cannot open " ^ dir) >]

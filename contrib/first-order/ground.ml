@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ground.ml,v 1.5.2.1 2004/07/16 19:30:10 herbelin Exp $ *)
+(* $Id: ground.ml 7909 2006-01-21 11:09:18Z herbelin $ *)
 
 open Formula
 open Sequent
@@ -45,23 +45,23 @@ let update_flags ()=
 *)
 
 let update_flags ()=
-  let predref=ref Names.KNpred.empty in
+  let predref=ref Names.Cpred.empty in
   let f coe=
     try
       let kn=destConst (Classops.get_coercion_value coe) in
-	predref:=Names.KNpred.add kn !predref
+	predref:=Names.Cpred.add kn !predref
     with Invalid_argument "destConst"-> () in
     List.iter f (Classops.coercions ());
     red_flags:=
     Closure.RedFlags.red_add_transparent 
       Closure.betaiotazeta 
-      (Names.Idpred.full,Names.KNpred.complement !predref)
+      (Names.Idpred.full,Names.Cpred.complement !predref)
 
 let ground_tac solver startseq gl=
   update_flags ();
   let rec toptac skipped seq gl=
     if Tacinterp.get_debug()=Tactic_debug.DebugOn 0
-    then Pp.msgnl (Proof_trees.pr_goal (sig_it gl));
+    then Pp.msgnl (Printer.pr_goal (sig_it gl));
     tclORELSE (axiom_tac seq.gl seq)
       begin
 	try      
@@ -78,7 +78,7 @@ let ground_tac solver startseq gl=
 		      | Rforall->
 			  let backtrack1=
 			    if !qflag then 
-			      tclFAIL 0 "reversible in 1st order mode"
+			      tclFAIL 0 (Pp.str "reversible in 1st order mode")
 			    else
 			      backtrack in
 			    forall_tac backtrack continue (re_add seq1)
@@ -117,7 +117,8 @@ let ground_tac solver startseq gl=
 			      backtrack2 (* need special backtracking *)
   		      | Lexists ind ->
 			  if !qflag then 
-			    left_exists_tac ind hd.id continue (re_add seq1)
+			    left_exists_tac ind backtrack hd.id
+			      continue (re_add seq1)
 			  else backtrack
 		      | LA (typ,lap)->
 			  let la_tac=

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Le.v,v 1.14.2.1 2004/07/16 19:31:00 herbelin Exp $ i*)
+(*i $Id: Le.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 (** Order on natural numbers *)
 Open Local Scope nat_scope.
@@ -62,15 +62,14 @@ Hint Immediate le_Sn_le: arith v62.
 Theorem le_S_n : forall n m, S n <= S m -> n <= m.
 Proof.
 intros n m H; change (pred (S n) <= pred (S m)) in |- *.
-elim H; simpl in |- *; auto with arith.
+destruct H; simpl; auto with arith.
 Qed.
 Hint Immediate le_S_n: arith v62.
 
 Theorem le_pred : forall n m, n <= m -> pred n <= pred m.
 Proof.
-induction n as [| n IHn]. simpl in |- *. auto with arith.
-destruct m as [| m]. simpl in |- *. intro H. inversion H.
-simpl in |- *. auto with arith.
+destruct n; simpl; auto with arith.
+destruct m; simpl; auto with arith.
 Qed.
 
 (** Comparison to 0 *)

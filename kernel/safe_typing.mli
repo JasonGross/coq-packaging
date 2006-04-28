@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: safe_typing.mli,v 1.33.2.2 2005/11/23 14:46:08 barras Exp $ i*)
+(*i $Id: safe_typing.mli 7639 2005-12-02 10:01:15Z gregoire $ i*)
 
 (*i*)
 open Names
@@ -28,7 +28,6 @@ type safe_environment
 val env_of_safe_env : safe_environment -> Environ.env
 
 val empty_environment : safe_environment
-
 val is_empty : safe_environment -> bool
 
 (* Adding and removing local declarations (Local or Variables) *)
@@ -46,7 +45,7 @@ type global_declaration =
 
 val add_constant : 
   dir_path -> label -> global_declaration -> safe_environment -> 
-      kernel_name * safe_environment
+      constant * safe_environment
 
 (* Adding an inductive type *)
 val add_mind : 
@@ -68,7 +67,7 @@ val add_constraints :
   Univ.constraints -> safe_environment -> safe_environment
 
 (* Settin the strongly constructive or classical logical engagement *)
-val set_engagement : Environ.engagement -> safe_environment -> safe_environment
+val set_engagement : engagement -> safe_environment -> safe_environment
 
 
 (*s Interactive module functions *)

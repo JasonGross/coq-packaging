@@ -8,13 +8,13 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: g_ring.ml4,v 1.4.2.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: g_ring.ml4 7734 2005-12-26 14:06:51Z herbelin $ *)
 
 open Quote
 open Ring
 
-TACTIC EXTEND Ring
-  [ "Ring" constr_list(l) ] -> [ polynom l ]
+TACTIC EXTEND ring
+  [ "ring" constr_list(l) ] -> [ polynom l ]
 END
 
 (* The vernac commands "Add Ring" and co *)

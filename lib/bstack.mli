@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: bstack.mli,v 1.4.2.1 2004/07/16 19:30:29 herbelin Exp $ i*)
+(*i $Id: bstack.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (* Bounded stacks. If the depth is [None], then there is no depth limit. *)
 

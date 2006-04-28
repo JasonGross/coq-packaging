@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ZArith.v,v 1.5.2.2 2004/08/03 17:56:30 herbelin Exp $ i*)
+(*i $Id: ZArith.v 6013 2004-08-03 17:56:19Z herbelin $ i*)
 
 (** Library for manipulating integers based on binary encoding *)
 

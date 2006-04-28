@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: Rtrigo_alt.v,v 1.16.2.1 2004/07/16 19:31:14 herbelin Exp $ i*)
+(*i $Id: Rtrigo_alt.v 6245 2004-10-20 13:50:08Z barras $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.

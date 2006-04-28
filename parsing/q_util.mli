@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: q_util.mli,v 1.2.2.1 2004/07/16 19:30:41 herbelin Exp $ i*)
+(*i $Id: q_util.mli 7732 2005-12-26 13:51:24Z herbelin $ i*)
 
 val patt_of_expr : MLast.expr -> MLast.patt
 
@@ -28,3 +28,4 @@ val mlexpr_of_string : string -> MLast.expr
 
 val mlexpr_of_option : ('a -> MLast.expr) -> 'a option -> MLast.expr
 
+val interp_entry_name : Util.loc -> string -> Pcoq.entry_type * MLast.expr

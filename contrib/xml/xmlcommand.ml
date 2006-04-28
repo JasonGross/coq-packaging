@@ -38,6 +38,8 @@ let print_if_verbose s = if !verbose then print_string s;;
 (* Next exception is used only inside print_coq_object and tag_of_string_tag *)
 exception Uninteresting;;
 
+(* NOT USED anymore, we back to the V6 point of view with global parameters 
+
 (* Internally, for Coq V7, params of inductive types are associated     *)
 (* not to the whole block of mutual inductive (as it was in V6) but to  *)
 (* each member of the block; but externally, all params are required    *)
@@ -59,6 +61,8 @@ let extract_nparams pack =
     if params0 <> paramsi then U.error "Cannot convert a block of inductive definitions with parameters specific to each inductive to a block of mutual inductive definitions with parameters global to the whole block"
   done;
   nparams0
+
+*)
 
 (* could_have_namesakes sp = true iff o is an object that could be cooked and *)
 (* than that could exists in cooked form with the same name in a super        *)
@@ -177,12 +181,12 @@ let rec join_dirs cwd =
       join_dirs newcwd tail
 ;;
 
-let filename_of_path xml_library_root kn tag =
+let filename_of_path xml_library_root tag =
  let module N = Names in
   match xml_library_root with
      None -> None  (* stdout *)
    | Some xml_library_root' ->
-      let tokens = Cic2acic.token_list_of_kernel_name kn tag in
+      let tokens = Cic2acic.token_list_of_kernel_name tag in
        Some (join_dirs xml_library_root' tokens)
 ;;
 
@@ -210,7 +214,6 @@ let theory_filename xml_library_root =
     None -> None  (* stdout *)
   | Some xml_library_root' ->
      let toks = List.map N.string_of_id (N.repr_dirpath (Lib.library_dp ())) in
-     let hd = List.hd toks in
      (* theory from A/B/C/F.v goes into A/B/C/F.theory *)
      let alltoks = List.rev toks in
        Some (join_dirs xml_library_root' alltoks ^ ".theory")
@@ -286,7 +289,7 @@ let find_hyps t =
     | T.Meta _
     | T.Evar _
     | T.Sort _ -> l
-    | T.Cast (te,ty) -> aux (aux l te) ty
+    | T.Cast (te,_, ty) -> aux (aux l te) ty
     | T.Prod (_,s,t) -> aux (aux l s) t
     | T.Lambda (_,s,t) -> aux (aux l s) t
     | T.LetIn (_,s,_,t) -> aux (aux l s) t
@@ -355,11 +358,11 @@ let mk_current_proof_obj is_a_variable id bo ty evar_map env =
                (* t will not be exported to XML. Thus no unsharing performed *)
                final_var_ids,(n, Acic.Def  (Unshare.unshare b',t))::tl'
         in
-         aux [] (List.rev evar_hyps)
+         aux [] (List.rev (Environ.named_context_of_val evar_hyps))
        in
         (* We map the named context to a rel context and every Var to a Rel *)
         (n,context,Unshare.unshare (Term.subst_vars final_var_ids evar_concl))
-   ) (Evd.non_instantiated evar_map)
+   ) (Evarutil.non_instantiated evar_map)
  in
   let id' = Names.string_of_id id in
    if metasenv = [] then
@@ -392,11 +395,11 @@ let mk_constant_obj id bo ty variables hyps =
          ty,params)
 ;;
 
-let mk_inductive_obj sp packs variables hyps finite =
+let mk_inductive_obj sp packs variables nparams hyps finite =
  let module D = Declarations in
   let hyps = string_list_of_named_context_list hyps in
   let params = filter_params variables hyps in
-  let nparams = extract_nparams packs in
+(*  let nparams = extract_nparams packs in *)
    let tys =
     let tyno = ref (Array.length packs) in
     Array.fold_right
@@ -406,7 +409,7 @@ let mk_inductive_obj sp packs variables hyps finite =
             D.mind_typename=typename ;
             D.mind_nf_arity=arity} = p
        in
-        let lc = Inductive.arities_of_constructors (Global.env ()) (sp,!tyno) in
+        let lc = Inductiveops.arities_of_constructors (Global.env ()) (sp,!tyno) in
         let cons =
          (Array.fold_right (fun (name,lc) i -> (name,lc)::i)
           (Array.mapi
@@ -430,16 +433,10 @@ let theory_output_string ?(do_not_quote = false) s =
    Buffer.add_string theory_buffer s
 ;;
 
-let kind_of_theorem = function
-  | Decl_kinds.Theorem -> "Theorem"
-  | Decl_kinds.Lemma -> "Lemma"
-  | Decl_kinds.Fact -> "Fact"
-  | Decl_kinds.Remark -> "Remark"
-
 let kind_of_global_goal = function
-  | Decl_kinds.IsGlobal Decl_kinds.DefinitionBody -> "DEFINITION","InteractiveDefinition"
-  | Decl_kinds.IsGlobal (Decl_kinds.Proof k) -> "THEOREM",kind_of_theorem k
-  | Decl_kinds.IsLocal -> assert false
+  | Decl_kinds.Global, Decl_kinds.DefinitionBody _ -> "DEFINITION","InteractiveDefinition"
+  | Decl_kinds.Global, (Decl_kinds.Proof k) -> "THEOREM",Decl_kinds.string_of_theorem_kind k
+  | Decl_kinds.Local, _ -> assert false
 
 let kind_of_inductive isrecord kn =
  "DEFINITION",
@@ -454,9 +451,9 @@ let kind_of_variable id =
     | DK.IsAssumption DK.Definitional -> "VARIABLE","Assumption"
     | DK.IsAssumption DK.Logical -> "VARIABLE","Hypothesis"
     | DK.IsAssumption DK.Conjectural -> "VARIABLE","Conjecture"
-    | DK.IsDefinition -> "VARIABLE","LocalDefinition"
-    | DK.IsConjecture -> "VARIABLE","Conjecture"
-    | DK.IsProof DK.LocalStatement -> "VARIABLE","LocalFact"
+    | DK.IsDefinition DK.Definition -> "VARIABLE","LocalDefinition"
+    | DK.IsProof _ -> "VARIABLE","LocalFact"
+    | _ -> Util.anomaly "Unsupported variable kind"
 ;;
 
 let kind_of_constant kn = 
@@ -465,9 +462,10 @@ let kind_of_constant kn =
     | DK.IsAssumption DK.Definitional -> "AXIOM","Declaration"
     | DK.IsAssumption DK.Logical -> "AXIOM","Axiom"
     | DK.IsAssumption DK.Conjectural -> "AXIOM","Conjecture"
-    | DK.IsDefinition -> "DEFINITION","Definition"
-    | DK.IsConjecture -> "THEOREM","Conjecture"
-    | DK.IsProof thm -> "THEOREM",kind_of_theorem thm
+    | DK.IsDefinition DK.Definition -> "DEFINITION","Definition"
+    | DK.IsDefinition DK.Example -> "DEFINITION","Example"
+    | DK.IsDefinition _ -> Util.anomaly "Unsupported constant kind"
+    | DK.IsProof thm -> "THEOREM",DK.string_of_theorem_kind thm
 ;;
 
 let kind_of_global r =
@@ -476,7 +474,7 @@ let kind_of_global r =
   match r with
   | Ln.IndRef kn | Ln.ConstructRef (kn,_) -> 
       let isrecord =
-	try let _ = Recordops.find_structure kn in true
+	try let _ = Recordops.lookup_structure kn in true
         with Not_found -> false in
       kind_of_inductive isrecord (fst kn)
   | Ln.VarRef id -> kind_of_variable id
@@ -509,7 +507,7 @@ let print internal glob_ref kind xml_library_root =
  let module Ln = Libnames in
   (* Variables are the identifiers of the variables in scope *)
   let variables = search_variables () in
-  let kn,tag,obj =
+  let tag,obj =
    match glob_ref with
       Ln.VarRef id ->
        let sp = Declare.find_section_variable id in
@@ -519,23 +517,23 @@ let print internal glob_ref kind xml_library_root =
         N.make_kn mod_path dir_path (N.label_of_id (Ln.basename sp))
        in
        let (_,body,typ) = G.lookup_named id in
-        kn,Cic2acic.Variable,mk_variable_obj id body typ
+        Cic2acic.Variable kn,mk_variable_obj id body typ
     | Ln.ConstRef kn ->
-       let id = N.id_of_label (N.label kn) in
+       let id = N.id_of_label (N.con_label kn) in
        let {D.const_body=val0 ; D.const_type = typ ; D.const_hyps = hyps} =
         G.lookup_constant kn in
-        kn,Cic2acic.Constant,mk_constant_obj id val0 typ variables hyps
+        Cic2acic.Constant kn,mk_constant_obj id val0 typ variables hyps
     | Ln.IndRef (kn,_) ->
-       let {D.mind_packets=packs ;
+       let {D.mind_nparams=nparams;
+	    D.mind_packets=packs ;
             D.mind_hyps=hyps;
             D.mind_finite=finite} = G.lookup_mind kn in
-          kn,Cic2acic.Inductive,
-           mk_inductive_obj kn packs variables hyps finite
+          Cic2acic.Inductive kn,mk_inductive_obj kn packs variables nparams hyps finite
     | Ln.ConstructRef _ ->
        Util.anomaly ("print: this should not happen")
   in
-  let fn = filename_of_path xml_library_root kn tag in
-  let uri = Cic2acic.uri_of_kernel_name kn tag in
+  let fn = filename_of_path xml_library_root tag in
+  let uri = Cic2acic.uri_of_kernel_name tag in
    if not internal then print_object_kind uri kind;
    print_object uri obj Evd.empty None fn
 ;;
@@ -558,18 +556,19 @@ let show_pftreestate internal fn (kind,pftst) id =
  let kn = Lib.make_kn id in
  let env = Global.env () in
  let obj =
-  mk_current_proof_obj (kind = Decl_kinds.IsLocal) id val0 typ evar_map env in
+  mk_current_proof_obj (fst kind = Decl_kinds.Local) id val0 typ evar_map env in
  let uri =
   match kind with
-     Decl_kinds.IsLocal ->
+     Decl_kinds.Local, _ ->
       let uri =
        "cic:/" ^ String.concat "/"
-        (Cic2acic.token_list_of_path (Lib.cwd ()) id Cic2acic.Variable) in
+        (Cic2acic.token_list_of_path (Lib.cwd ()) id Cic2acic.TVariable)
+      in
       let kind_of_var = "VARIABLE","LocalFact" in
        if not internal then print_object_kind uri kind_of_var;
       uri
-   | Decl_kinds.IsGlobal _ ->
-      let uri = Cic2acic.uri_of_declaration id Cic2acic.Constant in
+   | Decl_kinds.Global, _ ->
+      let uri = Cic2acic.uri_of_declaration id Cic2acic.TConstant in
        if not internal then print_object_kind uri (kind_of_global_goal kind);
        uri
  in
@@ -610,7 +609,7 @@ let _ =
 
 let _ =
   Declare.set_xml_declare_constant
-   (function (internal,(sp,kn)) ->
+   (function (internal,kn) ->
      match !proof_to_export with
         None ->
           print internal (Libnames.ConstRef kn) (kind_of_constant kn) 
@@ -618,9 +617,9 @@ let _ =
       | Some pftreestate ->
          (* It is a proof. Let's export it starting from the proof-tree *)
          (* I saved in the Pfedit.set_xml_cook_proof callback.          *)
-        let fn = filename_of_path xml_library_root kn Cic2acic.Constant in
+        let fn = filename_of_path xml_library_root (Cic2acic.Constant kn) in
          show_pftreestate internal fn pftreestate 
-	  (Names.id_of_label (Names.label kn)) ;
+	  (Names.id_of_label (Names.con_label kn)) ;
          proof_to_export := None)
 ;;
 
@@ -675,7 +674,7 @@ let _ =
            let dot = if fn.[0]='/' then "." else "" in
            command ("mv "^dir^"/"^dot^"*.html "^fn^".xml ");
            command ("rm "^fn^".v");
-           print_string("\nWriting on file \"" ^ fn ^ ".xml\" was succesful\n"))
+           print_string("\nWriting on file \"" ^ fn ^ ".xml\" was successful\n"))
        ofn)
 ;;
 

@@ -24,7 +24,7 @@
 (* in Summer 1995. Several developments by E. Ledinot were an inspiration.  *)
 (****************************************************************************)
 
-(*i $Id: Finite_sets_facts.v,v 1.7.2.1 2004/07/16 19:31:17 herbelin Exp $ i*)
+(*i $Id: Finite_sets_facts.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Require Export Finite_sets.
 Require Export Constructive_sets.

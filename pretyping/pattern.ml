@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pattern.ml,v 1.24.2.2 2004/11/26 17:51:52 herbelin Exp $ *)
+(* $Id: pattern.ml 7732 2005-12-26 13:51:24Z herbelin $ *)
 
 open Util
 open Names
@@ -17,17 +17,12 @@ open Rawterm
 open Environ
 open Nametab
 open Pp
+open Mod_subst
 
 (* Metavariables *)
 
 type patvar_map = (patvar * constr) list
-let patvar_of_int n =
-  let p = if !Options.v7 & not (Options.do_translate ()) then "?" else "X"
-  in
-  Names.id_of_string (p ^ string_of_int n)
 let pr_patvar = pr_id
-
-let patvar_of_int_v7 n = Names.id_of_string ("?" ^ string_of_int n)
 
 (* Patterns *)
 
@@ -62,11 +57,80 @@ let rec occur_meta_pattern = function
   | PMeta _ | PSoApp _ -> true
   | PEvar _ | PVar _ | PRef _ | PRel _ | PSort _ | PFix _ | PCoFix _ -> false
 
+type constr_label =
+  | ConstNode of constant
+  | IndNode of inductive
+  | CstrNode of constructor
+  | VarNode of identifier
+
+exception BoundPattern;;
+
+let rec head_pattern_bound t =
+  match t with
+    | PProd (_,_,b)  -> head_pattern_bound b 
+    | PLetIn (_,_,b) -> head_pattern_bound b 
+    | PApp (c,args)  -> head_pattern_bound c
+    | PCase (_,p,c,br) -> head_pattern_bound c
+    | PRef r         -> r
+    | PVar id        -> VarRef id
+    | PEvar _ | PRel _ | PMeta _ | PSoApp _  | PSort _ | PFix _
+	-> raise BoundPattern
+    (* Perhaps they were arguments, but we don't beta-reduce *)
+    | PLambda _ -> raise BoundPattern
+    | PCoFix _ -> anomaly "head_pattern_bound: not a type"
+
+let head_of_constr_reference c = match kind_of_term c with
+  | Const sp -> ConstRef sp
+  | Construct sp -> ConstructRef sp
+  | Ind sp -> IndRef sp
+  | Var id -> VarRef id
+  | _ -> anomaly "Not a rigid reference"
+
+let rec pattern_of_constr t =
+  match kind_of_term t with
+    | Rel n  -> PRel n
+    | Meta n -> PMeta (Some (id_of_string (string_of_int n)))
+    | Var id -> PVar id
+    | Sort (Prop c) -> PSort (RProp c)
+    | Sort (Type _) -> PSort (RType None)
+    | Cast (c,_,_)      -> pattern_of_constr c
+    | LetIn (na,c,_,b) -> PLetIn (na,pattern_of_constr c,pattern_of_constr b)
+    | Prod (na,c,b)   -> PProd (na,pattern_of_constr c,pattern_of_constr b)
+    | Lambda (na,c,b) -> PLambda (na,pattern_of_constr c,pattern_of_constr b)
+    | App (f,a) -> PApp (pattern_of_constr f,Array.map pattern_of_constr a)
+    | Const sp         -> PRef (ConstRef sp)
+    | Ind sp        -> PRef (IndRef sp)
+    | Construct sp -> PRef (ConstructRef sp)
+    | Evar (n,ctxt) -> PEvar (n,Array.map pattern_of_constr ctxt)
+    | Case (ci,p,a,br) ->
+	PCase ((Some ci.ci_ind,ci.ci_pp_info.style),
+	       Some (pattern_of_constr p),pattern_of_constr a,
+	       Array.map pattern_of_constr br)
+    | Fix f -> PFix f
+    | CoFix f -> PCoFix f
+
+(* To process patterns, we need a translation without typing at all. *)
+
+let rec inst lvar = function
+  | PVar id as x -> (try List.assoc id lvar with Not_found -> x)
+  | PApp (p,pl) -> PApp (inst lvar p, Array.map (inst lvar) pl)
+  | PSoApp (n,pl) -> PSoApp (n, List.map (inst lvar) pl)
+  | PLambda (n,a,b) -> PLambda (n,inst lvar a,inst lvar b)
+  | PProd (n,a,b) -> PProd (n,inst lvar a,inst lvar b)
+  | PLetIn (n,a,b) -> PLetIn (n,inst lvar a,inst lvar b)
+  | PCase (ci,po,p,pl) ->
+      PCase (ci,option_app (inst lvar) po,inst lvar p,Array.map (inst lvar) pl)
+  (* Non recursive *)
+  | (PEvar _ | PRel _ | PRef _  | PSort _  | PMeta _ as x) -> x 
+  (* Bound to terms *)
+  | (PFix _ | PCoFix _) ->
+      error ("Not instantiable pattern")
+
 let rec subst_pattern subst pat = match pat with
   | PRef ref ->
-      let ref' = subst_global subst ref in
-	if ref' == ref then pat else 
-	  PRef ref'
+      let ref',t = subst_global subst ref in
+	if ref' == ref then pat else
+	 pattern_of_constr t
   | PVar _ 
   | PEvar _
   | PRel _ -> pat
@@ -113,93 +177,6 @@ let rec subst_pattern subst pat = match pat with
 	if cofixpoint' == cofixpoint then pat else
 	  PCoFix cofixpoint'
 
-type constr_label =
-  | ConstNode of constant
-  | IndNode of inductive
-  | CstrNode of constructor
-  | VarNode of identifier
-
-exception BoundPattern;;
-
-let label_of_ref = function
-  | ConstRef sp     -> ConstNode sp
-  | IndRef sp       -> IndNode sp
-  | ConstructRef sp -> CstrNode sp
-  | VarRef id       -> VarNode id
-
-let ref_of_label = function
-  | ConstNode sp     -> ConstRef sp
-  | IndNode sp       -> IndRef sp
-  | CstrNode sp      -> ConstructRef sp
-  | VarNode id       -> VarRef id
-
-let subst_label subst cstl = 
-  let ref = ref_of_label cstl in
-  let ref' = subst_global subst ref in
-    if ref' == ref then cstl else
-      label_of_ref ref'
-      
-  
-let rec head_pattern_bound t =
-  match t with
-    | PProd (_,_,b)  -> head_pattern_bound b 
-    | PLetIn (_,_,b) -> head_pattern_bound b 
-    | PApp (c,args)  -> head_pattern_bound c
-    | PCase (_,p,c,br) -> head_pattern_bound c
-    | PRef r         -> label_of_ref r
-    | PVar id        -> VarNode id
-    | PEvar _ | PRel _ | PMeta _ | PSoApp _  | PSort _ | PFix _
-	-> raise BoundPattern
-    (* Perhaps they were arguments, but we don't beta-reduce *)
-    | PLambda _ -> raise BoundPattern
-    | PCoFix _ -> anomaly "head_pattern_bound: not a type"
-
-let head_of_constr_reference c = match kind_of_term c with
-  | Const sp -> ConstNode sp
-  | Construct sp -> CstrNode sp
-  | Ind sp -> IndNode sp
-  | Var id -> VarNode id
-  | _ -> anomaly "Not a rigid reference"
-
-let rec pattern_of_constr t =
-  match kind_of_term t with
-    | Rel n  -> PRel n
-    | Meta n -> PMeta (Some (id_of_string (string_of_int n)))
-    | Var id -> PVar id
-    | Sort (Prop c) -> PSort (RProp c)
-    | Sort (Type _) -> PSort (RType None)
-    | Cast (c,_)      -> pattern_of_constr c
-    | LetIn (na,c,_,b) -> PLetIn (na,pattern_of_constr c,pattern_of_constr b)
-    | Prod (na,c,b)   -> PProd (na,pattern_of_constr c,pattern_of_constr b)
-    | Lambda (na,c,b) -> PLambda (na,pattern_of_constr c,pattern_of_constr b)
-    | App (f,a) -> PApp (pattern_of_constr f,Array.map pattern_of_constr a)
-    | Const sp         -> PRef (ConstRef sp)
-    | Ind sp        -> PRef (IndRef sp)
-    | Construct sp -> PRef (ConstructRef sp)
-    | Evar (n,ctxt) -> PEvar (n,Array.map pattern_of_constr ctxt)
-    | Case (ci,p,a,br) ->
-	PCase ((Some ci.ci_ind,ci.ci_pp_info.style),
-	       Some (pattern_of_constr p),pattern_of_constr a,
-	       Array.map pattern_of_constr br)
-    | Fix f -> PFix f
-    | CoFix f -> PCoFix f
-
-(* To process patterns, we need a translation without typing at all. *)
-
-let rec inst lvar = function
-  | PVar id as x -> (try List.assoc id lvar with Not_found -> x)
-  | PApp (p,pl) -> PApp (inst lvar p, Array.map (inst lvar) pl)
-  | PSoApp (n,pl) -> PSoApp (n, List.map (inst lvar) pl)
-  | PLambda (n,a,b) -> PLambda (n,inst lvar a,inst lvar b)
-  | PProd (n,a,b) -> PProd (n,inst lvar a,inst lvar b)
-  | PLetIn (n,a,b) -> PLetIn (n,inst lvar a,inst lvar b)
-  | PCase (ci,po,p,pl) ->
-      PCase (ci,option_app (inst lvar) po,inst lvar p,Array.map (inst lvar) pl)
-  (* Non recursive *)
-  | (PEvar _ | PRel _ | PRef _  | PSort _  | PMeta _ as x) -> x 
-  (* Bound to terms *)
-  | (PFix _ | PCoFix _ as r) ->
-      error ("Not instantiable pattern")
 
 let instantiate_pattern = inst
 
@@ -230,30 +207,25 @@ let rec pat_of_raw metas vars = function
       PSort s
   | RHole _ ->
       PMeta None
-  | RCast (_,c,t) ->
+  | RCast (_,c,_,t) ->
       Options.if_verbose
         Pp.warning "Cast not taken into account in constr pattern";
       pat_of_raw metas vars c
-  | ROrderedCase (_,st,po,c,br,_) ->
-      PCase ((None,st),option_app (pat_of_raw metas vars) po,
-             pat_of_raw metas vars c,
-             Array.map (pat_of_raw metas vars) br)
   | RIf (_,c,(_,None),b1,b2) ->
       PCase ((None,IfStyle),None, pat_of_raw metas vars c,
              [|pat_of_raw metas vars b1; pat_of_raw metas vars b2|])
-  | RCases (loc,(po,_),[c,_],brs) ->
+  | RCases (loc,None,[c,_],brs) ->
       let sp =
 	match brs with
 	  | (_,_,[PatCstr(_,(ind,_),_,_)],_)::_ -> Some ind
 	  | _ -> None in
-      (* When po disappears: switch to rtn type *)
-      PCase ((sp,Term.RegularStyle),option_app (pat_of_raw metas vars) po,
+      PCase ((sp,Term.RegularStyle),None,
              pat_of_raw metas vars c,
              Array.init (List.length brs)
 	       (pat_of_raw_branch loc metas vars sp brs))
   | r ->
       let loc = loc_of_rawconstr r in
-      user_err_loc (loc,"pattern_of_rawconstr", Pp.str "Not supported pattern")
+      user_err_loc (loc,"pattern_of_rawconstr", Pp.str "Pattern not supported")
 
 and pat_of_raw_branch loc metas vars ind brs i =
   let bri = List.filter

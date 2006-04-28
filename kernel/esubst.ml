@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: esubst.ml,v 1.4.2.1 2004/07/16 19:30:25 herbelin Exp $ *)
+(* $Id: esubst.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Util
 

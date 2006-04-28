@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: genarg.mli,v 1.9.2.4 2005/01/21 17:14:10 herbelin Exp $ i*)
+(*i $Id: genarg.mli 7879 2006-01-16 13:58:09Z herbelin $ i*)
 
 open Util
 open Names
@@ -32,6 +32,7 @@ type intro_pattern_expr =
   | IntroOrAndPattern of case_intro_pattern_expr
   | IntroWildcard
   | IntroIdentifier of identifier
+  | IntroAnonymous
 and case_intro_pattern_expr = intro_pattern_expr list list
 
 val pr_intro_pattern : intro_pattern_expr -> Pp.std_ppcmds
@@ -114,7 +115,7 @@ val wit_ident : (identifier,'co,'ta) abstract_argument_type
 
 val rawwit_var : (identifier located,'co,'ta) abstract_argument_type
 val globwit_var : (identifier located,'co,'ta) abstract_argument_type
-val wit_var : ('co,'co,'ta) abstract_argument_type
+val wit_var : (identifier,'co,'ta) abstract_argument_type
 
 val rawwit_ref : (reference,constr_expr,'ta) abstract_argument_type
 val globwit_ref : (global_reference located or_var,rawconstr_and_expr,'ta) abstract_argument_type
@@ -135,6 +136,10 @@ val wit_constr : (constr,constr,'ta) abstract_argument_type
 val rawwit_constr_may_eval : ((constr_expr,reference) may_eval,constr_expr,'ta) abstract_argument_type
 val globwit_constr_may_eval : ((rawconstr_and_expr,evaluable_global_reference and_short_name or_var) may_eval,rawconstr_and_expr,'ta) abstract_argument_type
 val wit_constr_may_eval : (constr,constr,'ta) abstract_argument_type
+
+val rawwit_open_constr_gen : bool -> (open_constr_expr,constr_expr,'ta) abstract_argument_type
+val globwit_open_constr_gen : bool -> (open_rawconstr,rawconstr_and_expr,'ta) abstract_argument_type
+val wit_open_constr_gen : bool -> (open_constr,constr,'ta) abstract_argument_type
 
 val rawwit_open_constr : (open_constr_expr,constr_expr,'ta) abstract_argument_type
 val globwit_open_constr : (open_rawconstr,rawconstr_and_expr,'ta) abstract_argument_type
@@ -157,9 +162,9 @@ val globwit_red_expr : ((rawconstr_and_expr,evaluable_global_reference and_short
 val wit_red_expr : ((constr,evaluable_global_reference) red_expr_gen,constr,'ta) abstract_argument_type
 
 (* TODO: transformer tactic en extra arg *)
-val rawwit_tactic : ('ta,constr_expr,'ta) abstract_argument_type
-val globwit_tactic : ('ta,rawconstr_and_expr,'ta) abstract_argument_type
-val wit_tactic : ('ta,constr,'ta) abstract_argument_type
+val rawwit_tactic : int -> ('ta,constr_expr,'ta) abstract_argument_type
+val globwit_tactic : int -> ('ta,rawconstr_and_expr,'ta) abstract_argument_type
+val wit_tactic : int -> ('ta,constr,'ta) abstract_argument_type
 
 val wit_list0 :
   ('a,'co,'ta) abstract_argument_type -> ('a list,'co,'ta) abstract_argument_type
@@ -227,16 +232,15 @@ type argument_type =
   | PreIdentArgType
   | IntroPatternArgType
   | IdentArgType
-  | HypArgType
+  | VarArgType
   | RefArgType
   (* Specific types *)
   | SortArgType
   | ConstrArgType
   | ConstrMayEvalArgType
   | QuantHypArgType
-  | TacticArgType
-  | OpenConstrArgType
-  | CastedOpenConstrArgType
+  | TacticArgType of int
+  | OpenConstrArgType of bool
   | ConstrWithBindingsArgType
   | BindingsArgType
   | RedExprArgType
@@ -268,4 +272,3 @@ val in_gen :
   ('a,'co,'ta) abstract_argument_type -> 'a -> ('co,'ta) generic_argument
 val out_gen :
   ('a,'co,'ta) abstract_argument_type -> ('co,'ta) generic_argument -> 'a 
-

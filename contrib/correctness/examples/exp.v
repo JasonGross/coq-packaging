@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(*i $Id: exp.v,v 1.3 2001/04/11 07:56:19 filliatr Exp $ i*)
+(*i $Id: exp.v 1577 2001-04-11 07:56:19Z filliatr $ i*)
 
 (* Efficient computation of X^n using
  * 

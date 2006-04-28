@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ZArithRing.v,v 1.5.2.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: ZArithRing.v 6295 2004-11-12 16:40:39Z gregoire $ *)
 
 (* Instantiation of the Ring tactic for the binary integers of ZArith *)
 
@@ -14,7 +14,7 @@ Require Export ArithRing.
 Require Export ZArith_base.
 Require Import Eqdep_dec.
 
-Definition Zeq (x y:Z) :=
+Unboxed Definition Zeq (x y:Z) :=
   match (x ?= y)%Z with
   | Datatypes.Eq => true
   | _ => false
@@ -27,8 +27,8 @@ Lemma Zeq_prop : forall x y:Z, Is_true (Zeq x y) -> x = y.
 Qed.
 
 Definition ZTheory : Ring_Theory Zplus Zmult 1%Z 0%Z Zopp Zeq.
-  split; intros; apply eq2eqT; eauto with zarith.
-  apply eqT2eq; apply Zeq_prop; assumption.
+  split; intros; eauto with zarith.
+  apply Zeq_prop; assumption.
 Qed.
 
 (* NatConstants and NatTheory are defined in Ring_theory.v *)

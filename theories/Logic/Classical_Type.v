@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Classical_Type.v,v 1.5.2.1 2004/07/16 19:31:06 herbelin Exp $ i*)
+(*i $Id: Classical_Type.v 8642 2006-03-17 10:09:02Z notin $ i*)
+
+(** This file is obsolete, use Classical.v instead *)
 
 (** Classical Logic for Type *)
 

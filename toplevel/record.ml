@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: record.ml,v 1.52.2.2 2005/11/29 21:40:53 letouzey Exp $ *)
+(* $Id: record.ml 7941 2006-01-28 23:07:59Z herbelin $ *)
 
 open Pp
 open Util
@@ -20,7 +20,6 @@ open Declarations
 open Entries
 open Declare
 open Nametab
-open Coqast
 open Constrintern
 open Command
 open Inductive
@@ -37,31 +36,14 @@ let interp_decl sigma env = function
   | Vernacexpr.DefExpr((_,id),c,t) ->
       let c = match t with
 	| None -> c
-	| Some t -> mkCastC (c,t)
+	| Some t -> mkCastC (c,DEFAULTcast,t)
       in
-      let j = judgment_of_rawconstr Evd.empty env c in
+      let j = interp_constr_judgment Evd.empty env c in
       (id,Some j.uj_val, j.uj_type)
 
 let typecheck_params_and_fields ps fs =
   let env0 = Global.env () in
-  let env1,newps =
-    List.fold_left
-      (fun (env,newps) d -> match d with
-	| LocalRawAssum ([_,na],(CHole _ as t)) ->
-	    let t = interp_binder Evd.empty env na t in
-	    let d = (na,None,t) in
-	    (push_rel d env, d::newps)
-	| LocalRawAssum (nal,t) ->
-	    let t = interp_type Evd.empty env t in
-	    let ctx = list_map_i (fun i (_,na) -> (na,None,lift i t)) 0 nal in
-	    let ctx = List.rev ctx in
-	    (push_rel_context ctx env, ctx@newps)
-	| LocalRawDef ((_,na),c) ->
-	    let c = judgment_of_rawconstr Evd.empty env c in
-	    let d = (na, Some c.uj_val, c.uj_type) in
-	    (push_rel d env, d::newps))
-      (env0,[]) ps
-  in
+  let env1,newps = interp_context Evd.empty env0 ps in
   let env2,newfs =
     List.fold_left
       (fun (env,newfs) d ->
@@ -146,19 +128,20 @@ let subst_projection fid l c =
 let declare_projections indsp coers fields =
   let env = Global.env() in
   let (mib,mip) = Global.lookup_inductive indsp in
-  let paramdecls = mip.mind_params_ctxt in
+  let paramdecls = mib.mind_params_ctxt in
   let r = mkInd indsp in
   let rp = applist (r, extended_rel_list 0 paramdecls) in
   let paramargs = extended_rel_list 1 paramdecls in (*def in [[params;x:rp]]*)
   let x = Termops.named_hd (Global.env()) r Anonymous in
   let lifted_fields = lift_rel_context 1 fields in
-  let (_,sp_projs,_) =
+  let (_,kinds,sp_projs,_) =
     List.fold_left2
-      (fun (nfi,sp_projs,subst) coe (fi,optci,ti) ->
-	match fi with
-	| Anonymous ->
-	    (nfi-1, None::sp_projs,NoProjection fi::subst)
-	| Name fid ->
+      (fun (nfi,kinds,sp_projs,subst) coe (fi,optci,ti) ->
+	let (sp_projs,subst) =
+	  match fi with
+	  | Anonymous ->
+	      (None::sp_projs,NoProjection fi::subst)
+	  | Name fid ->
             try
               let ccl = subst_projection fid subst ti in
 	      let body = match optci with
@@ -176,32 +159,34 @@ let declare_projections indsp coers fields =
 	        it_mkLambda_or_LetIn (mkLambda (x,rp,body)) paramdecls in
               let projtyp =
                 it_mkProd_or_LetIn (mkProd (x,rp,ccl)) paramdecls in
-	      let (sp,kn) =
+	      let kn =
 	        try
 		  let cie = {
 		    const_entry_body = proj;
                     const_entry_type = Some projtyp;
-                    const_entry_opaque = false } in
-		  let k = (DefinitionEntry cie,IsDefinition) in
-		  let sp = declare_internal_constant fid k in
+                    const_entry_opaque = false;
+		    const_entry_boxed = Options.boxed_definitions() } in
+		  let k = (DefinitionEntry cie,IsDefinition StructureComponent) in
+		  let kn = declare_internal_constant fid k in
 		  Options.if_verbose message (string_of_id fid ^" is defined");
-		  sp
+		  kn
                 with Type_errors.TypeError (ctx,te) ->
                   raise (NotDefinable (BadTypedProj (fid,ctx,te))) in
 	      let refi = ConstRef kn in
 	      let constr_fi = mkConst kn in
 	      if coe then begin
-	        let cl = Class.class_of_ref (IndRef indsp) in
+	        let cl = Class.class_of_global (IndRef indsp) in
 	        Class.try_add_new_coercion_with_source refi Global cl
 	      end;
 	      let proj_args = (*Rel 1 refers to "x"*) paramargs@[mkRel 1] in
 	      let constr_fip = applist (constr_fi,proj_args) in
-	      (nfi-1, (Some kn)::sp_projs, Projection constr_fip::subst)
+	      (Some kn::sp_projs, Projection constr_fip::subst)
             with NotDefinable why ->
 	      warning_or_error coe indsp why;
-	      (nfi-1, None::sp_projs,NoProjection fi::subst))
-      (List.length fields,[],[]) coers (List.rev fields)
-  in sp_projs
+	      (None::sp_projs,NoProjection fi::subst) in
+      (nfi-1,(optci=None)::kinds,sp_projs,subst))
+      (List.length fields,[],[],[]) coers (List.rev fields)
+  in (kinds,sp_projs)
 
 (* [fs] corresponds to fields and [ps] to parameters; [coers] is a boolean 
    list telling if the corresponding fields must me declared as coercion *)
@@ -220,18 +205,18 @@ let definition_structure ((is_coe,(_,idstruc)),ps,cfs,idbuild,s) =
   let ind = applist (mkRel (1+List.length params+List.length fields), args) in
   let type_constructor = it_mkProd_or_LetIn ind fields in
   let mie_ind =
-    { mind_entry_params = List.map degenerate_decl params;
-      mind_entry_typename = idstruc;
+    { mind_entry_typename = idstruc;
       mind_entry_arity = mkSort s;
       mind_entry_consnames = [idbuild];
       mind_entry_lc = [type_constructor] } in
   let mie =
-    { mind_entry_record = true;
+    { mind_entry_params = List.map degenerate_decl params;
+      mind_entry_record = true;
       mind_entry_finite = true;
       mind_entry_inds = [mie_ind] } in
   let sp = declare_mutual_with_eliminations true mie in
   let rsp = (sp,0) in (* This is ind path of idstruc *)
-  let sp_projs = declare_projections rsp coers fields in
+  let kinds,sp_projs = declare_projections rsp coers fields in
   let build = ConstructRef (rsp,1) in (* This is construct path of idbuild *)
   if is_coe then Class.try_add_new_coercion build Global;
-  Recordops.add_new_struc (rsp,idbuild,nparams,List.rev sp_projs)
+  Recordops.declare_structure(rsp,idbuild,nparams,List.rev kinds,List.rev sp_projs)

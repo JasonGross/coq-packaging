@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernacinterp.ml,v 1.17.8.1 2004/07/16 19:31:50 herbelin Exp $ *)
+(* $Id: vernacinterp.ml 7732 2005-12-26 13:51:24Z herbelin $ *)
 
 open Pp
 open Util
@@ -15,10 +15,7 @@ open Libnames
 open Himsg
 open Proof_type
 open Tacinterp
-open Coqast
 open Vernacexpr
-open Ast
-open Extend
 
 let disable_drop e =
   if e <> Drop then e

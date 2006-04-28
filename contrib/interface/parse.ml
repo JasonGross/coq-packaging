@@ -48,55 +48,8 @@ let ctf_FileErrorMessage reqid pps =
   int reqid ++ fnl () ++ pps ++ fnl () ++ str "E-n-d---M-e-s-s-a-g-e" ++
   fnl ();;
 
-(*
-(*In the code for CoqV6.2, the require_module call is encapsulated in
-  a function "without_mes_ambig".  Here I have supposed that this
-  function has no effect on parsing *)
-let try_require_module import specif names =
- try Library.require_module 
-   (if specif = "UNSPECIFIED" then None
-    else Some (specif = "SPECIFICATION"))
-   (List.map 
-     (fun name ->
-       (dummy_loc,Libnames.make_short_qualid (Names.id_of_string name)))
-      names)
-   (import = "IMPORT")
- with
-   | e -> msgnl (str "Reinterning of " ++ prlist str names ++ str " failed");;
-*)
-(*
-let try_require_module_from_file import specif name fname =
- try Library.require_module_from_file (if specif = "UNSPECIFIED" then None
-  else Some (specif = "SPECIFICATION")) (Some (Names.id_of_string name)) fname (import = "IMPORT")
- with
- | e -> msgnl (str "Reinterning of " ++ str name ++ str " failed");;
-*)
-(*
-let execute_when_necessary ast =
- (match ast with
-  | Node (_, "GRAMMAR", ((Nvar (_, s)) :: ((Node (_, "ASTLIST", al)) :: []))) ->
-   Metasyntax.add_grammar_obj s (List.map Ctast.ct_to_ast al)
-(* Obsolete
-  | Node (_, "TOKEN", ((Str (_, s)) :: [])) -> Metasyntax.add_token_obj s
-*)
-  | Node (_, "Require",
-            ((Str (_, import)) ::
-              ((Str (_, specif)) :: l))) ->
-   let mnames = List.map (function
-     | (Nvar (_, m)) -> m
-     | _ -> error "parse_string_action : bad require expression") l in
-   try_require_module import specif mnames
-  | Node (_, "RequireFrom",
-            ((Str (_, import)) ::
-              ((Str (_, specif)) ::
-                ((Nvar (_, mname)) :: ((Str (_, file_name)) :: []))))) ->
-   try_require_module_from_file import specif mname file_name
-  | _ -> ()); ast;;
-*)
-
 let execute_when_necessary v =
  (match v with
-  | VernacGrammar _ -> Vernacentries.interp v
   | VernacOpenCloseScope sc -> Vernacentries.interp v
   | VernacRequire (_,_,l) ->
       (try 
@@ -202,12 +155,6 @@ let parse_command_list reqid stream string_list =
                 discard_to_dot stream;
                 msgnl (str "debug" ++ fnl () ++ int this_pos ++ fnl () ++
 		       int (Stream.count stream));
-(*
-                Some( Node(l, "PARSING_ERROR",
-                        List.map Ctast.str
-                        (get_substring_list string_list this_pos
-                            (Stream.count stream))))
-*)
 		ParseError ("PARSING_ERROR",
                   get_substring_list string_list this_pos
 		    (Stream.count stream))
@@ -216,27 +163,14 @@ let parse_command_list reqid stream string_list =
         | e-> 
           begin
             discard_to_dot stream;
-(*
-            Some(Node((0,0), "PARSING_ERROR2",
-                   List.map Ctast.str
-		   (get_substring_list string_list this_pos
-                     (Stream.count stream))))
-*)
 	    ParseError ("PARSING_ERROR2",
 	      get_substring_list string_list this_pos (Stream.count stream))
           end in
     match first_ast with
     | ParseOK (Some (loc,ast)) ->
-        let ast0 = (execute_when_necessary ast) in
+        let _ast0 = (execute_when_necessary ast) in
           (try xlate_vernac ast
 	  with e ->
-(*
-	    xlate_vernac 
-              (Node((0,0), "PARSING_ERROR2",
-               List.map Ctast.str
-		 (get_substring_list string_list this_pos
-		    (Stream.count stream)))))::parse_whole_stream()
-*)
 	    make_parse_error_item "PARSING_ERROR2" 
 		     (get_substring_list string_list this_pos
 		       (Stream.count stream)))::parse_whole_stream()
@@ -311,7 +245,7 @@ let parse_file_action reqid file_name =
         get the text when a syntax error occurs *)
      let file_chan_err = open_in file_name in 
      let stream = Stream.of_channel file_chan in
-     let stream_err = Stream.of_channel file_chan_err in
+     let _stream_err = Stream.of_channel file_chan_err in
      let rec discard_to_dot () =
        try Gram.Entry.parse parse_to_dot (Gram.parsable stream)
        with Stdpp.Exc_located(_,Token.Error _) -> discard_to_dot() in
@@ -345,7 +279,7 @@ let parse_file_action reqid file_name =
 		   
              with
                | ParseOK (Some (_,ast)) ->
-		   let ast0=(execute_when_necessary ast) in 
+		   let _ast0=(execute_when_necessary ast) in 
 		   let term =
                      (try xlate_vernac ast
 		      with e ->
@@ -395,13 +329,13 @@ let add_path_action reqid string_arg =
 
 let print_version_action () =
   msgnl (mt ());
-  msgnl (str "$Id: parse.ml,v 1.22 2004/04/21 08:36:58 barras Exp $");;
+  msgnl (str "$Id: parse.ml 7844 2006-01-11 16:36:14Z bertot $");;
 
 let load_syntax_action reqid module_name =
  msg (str "loading " ++ str module_name ++ str "... ");
  try
       (let qid = Libnames.make_short_qualid (Names.id_of_string module_name) in
-      read_library (dummy_loc,qid);
+      require_library [dummy_loc,qid] None;
       msg (str "opening... ");
       Declaremods.import_module false (Nametab.locate_module qid); 
       msgnl (str "done" ++ fnl ());
@@ -456,7 +390,6 @@ Libobject.relax true;
 	   coqdir [ "contrib"; "interface"; "vernacrc"] in
    try
      (Gramext.warning_verbose := false;
-      Esyntax.warning_verbose := false;
       coqparser_loop (open_in vernacrc))
    with
      | End_of_file -> ()
@@ -470,7 +403,7 @@ Libobject.relax true;
 (try let user_vernacrc =
    try Some(Sys.getenv "USERVERNACRC")
    with
-     | Not_found as e ->
+     | Not_found ->
 	 msgnl (str "no .vernacrc file"); None in
    (match user_vernacrc with
       	Some f -> coqparser_loop (open_in f)

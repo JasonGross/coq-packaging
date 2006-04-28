@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modops.ml,v 1.12.2.1 2004/07/16 19:30:26 herbelin Exp $ i*)
+(*i $Id: modops.ml 7639 2005-12-02 10:01:15Z gregoire $ i*)
 
 (*i*)
 open Util
@@ -17,6 +17,7 @@ open Term
 open Declarations
 open Environ
 open Entries
+open Mod_subst
 (*i*)
 
 let error_existing_label l = 
@@ -65,6 +66,11 @@ let error_not_a_constant l =
 
 let error_with_incorrect l =
   error ("Incorrect constraint for label \""^(string_of_label l)^"\"")
+
+let error_a_generative_module_expected l =
+  error ("The module " ^ string_of_label l ^ " is not generative. Only " ^
+         "component of generative modules can be changed using the \"with\" " ^
+         "construct.")
 
 let error_local_context lo = 
   match lo with
@@ -123,6 +129,9 @@ let rec check_modpath_equiv env mp1 mp2 =
 
 
 let rec subst_modtype sub = function
+    (* This is the case in which I am substituting a whole module.
+       For instance "Module M(X). Module N := X. End M". When I apply
+       M to M' I must substitute M' for X in "Module N := X". *)
   | MTBident ln -> MTBident (subst_kn sub ln)
   | MTBfunsig (arg_id, arg_b, body_b) ->
       if occur_mbid arg_id sub then failwith "capture";
@@ -148,23 +157,77 @@ and subst_signature sub sign =
 
 and subst_module sub mb =
   let mtb' = subst_modtype sub mb.msb_modtype in
+  (* This is similar to the previous case. In this case we have
+     a module M in a signature that is knows to be equivalent to a module M'
+     (because the signature is "K with Module M := M'") and we are substituting
+     M' with some M''. *)
   let mpo' = option_smartmap (subst_mp sub) mb.msb_equiv in
     if mtb'==mb.msb_modtype && mpo'==mb.msb_equiv then mb else
       { msb_modtype=mtb'; 
 	msb_equiv=mpo'; 
 	msb_constraints=mb.msb_constraints}
 
-
 let subst_signature_msid msid mp = 
   subst_signature (map_msid msid mp)
+
+let rec constants_of_specification env mp sign =
+ let aux res (l,elem) =
+  match elem with
+   | SPBconst cb -> ((make_con mp empty_dirpath l),cb)::res
+   | SPBmind _ -> res
+   | SPBmodule mb ->
+      (constants_of_modtype env (MPdot (mp,l))
+        (module_body_of_spec mb).mod_type) @ res
+   | SPBmodtype mtb -> res (* ???? *)
+ in
+  List.fold_left aux [] sign
+
+and constants_of_modtype env mp modtype =
+ match scrape_modtype env modtype with
+    MTBident _ -> anomaly "scrape_modtype does not work!"
+  | MTBsig (msid,sign) ->
+     constants_of_specification env mp
+      (subst_signature_msid msid mp sign)
+  | MTBfunsig _ -> []
+
+(* returns a resolver for kn that maps mbid to mp and then delta-expands
+   the obtained constants according to env *)
+let resolver_of_environment mbid modtype mp env =
+ let constants = constants_of_modtype env (MPbound mbid) modtype in
+ let resolve =
+  List.map
+   (fun (con,expecteddef) ->
+     let con' = replace_mp_in_con (MPbound mbid) mp con in
+     let constr =
+      try
+       if expecteddef.Declarations.const_body <> None then
+        (* Do not expand constants that already have a body in the
+           expected type (i.e. only parameters/axioms in the module type
+           are expanded). In the few examples we have this seems to
+           be the more reasonable behaviour for the user. *)
+        None
+       else
+        let constant = lookup_constant con' env in
+         if constant.Declarations.const_opaque then
+          None
+         else
+          option_app Declarations.force
+           constant.Declarations.const_body
+      with Not_found -> error_no_such_label (con_label con')
+     in
+      con,constr
+   ) constants
+ in
+  Mod_subst.make_resolver resolve
 
 (* we assume that the substitution of "mp" into "msid" is already done
 (or unnecessary) *)
 let rec add_signature mp sign env = 
   let add_one env (l,elem) =
     let kn = make_kn mp empty_dirpath l in
+    let con = make_con mp empty_dirpath l in
       match elem with
-	| SPBconst cb -> Environ.add_constant kn cb env
+	| SPBconst cb -> Environ.add_constant con cb env
 	| SPBmind mib -> Environ.add_mind kn mib env
 	| SPBmodule mb -> 
 	    add_module (MPdot (mp,l)) (module_body_of_spec mb) env 
@@ -180,7 +243,6 @@ and add_module mp mb env =
       | MTBident _ -> anomaly "scrape_modtype does not work!"
       | MTBsig (msid,sign) -> 
 	  add_signature mp (subst_signature_msid msid mp sign) env
-
       | MTBfunsig _ -> env
 
 
@@ -189,11 +251,13 @@ let strengthen_const env mp l cb =
   | false, Some _ -> cb
   | true, Some _ 
   | _, None -> 
-      let const = mkConst (make_kn mp empty_dirpath l) in 
+      let const = mkConst (make_con mp empty_dirpath l) in 
       let const_subs = Some (Declarations.from_val const) in
 	{cb with 
       	   const_body = const_subs;
-	   const_opaque = false
+	   const_opaque = false;
+           const_body_code = Cemitcodes.from_val
+             (compile_constant_body env const_subs false false)
 	}
 
 let strengthen_mind env mp l mib = match mib.mind_equiv with
@@ -243,3 +307,4 @@ and strengthen_sig env msid sign mp = match sign with
 	item::rest'
 
 let strengthen env mtb mp = strengthen_mtb env mp mtb
+

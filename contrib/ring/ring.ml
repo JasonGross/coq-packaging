@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ring.ml,v 1.49.2.1 2004/07/16 19:30:14 herbelin Exp $ *)
+(* $Id: ring.ml 7837 2006-01-11 09:47:32Z herbelin $ *)
 
 (* ML part of the Ring tactic *)
 
@@ -34,6 +34,7 @@ open Pattern
 open Hiddentac
 open Nametab
 open Quote
+open Mod_subst
 
 let mt_evd = Evd.empty
 let constr_of c = Constrintern.interp_constr mt_evd (Global.env()) c
@@ -286,7 +287,7 @@ let guess_theory a =
   with Not_found -> 
     errorlabstrm "Ring" 
       (str "No Declared Ring Theory for " ++
-	 prterm a ++ fnl () ++
+	 pr_lconstr a ++ fnl () ++
 	 str "Use Add [Semi] Ring to declare it")
 
 (* Looks up an option *)
@@ -306,23 +307,42 @@ let safe_pf_conv_x gl c1 c2 = try pf_conv_x gl c1 c2 with _ -> false
 let implement_theory env t th args =
   is_conv env Evd.empty (Typing.type_of env Evd.empty t) (mkLApp (th, args))
 
+(* The following test checks whether the provided morphism is the default
+   one for the given operation. In principle the test is too strict, since
+   it should possible to provide another proof for the same fact (proof
+   irrelevance). In particular, the error message is be not very explicative. *)
+let states_compatibility_for env plus mult opp morphs =
+ let check op compat =
+  is_conv env Evd.empty (Setoid_replace.default_morphism op).Setoid_replace.lem
+   compat in
+ check plus morphs.plusm &&
+ check mult morphs.multm &&
+ (match (opp,morphs.oppm) with
+     None, None -> true
+   | Some opp, Some compat -> check opp compat
+   | _,_ -> assert false)
+
 let add_theory want_ring want_abstract want_setoid a aequiv asetth amorph aplus amult aone azero aopp aeq t cset = 
   if theories_map_mem a then errorlabstrm "Add Semi Ring" 
     (str "A (Semi-)(Setoid-)Ring Structure is already declared for " ++
-       prterm a);
+       pr_lconstr a);
   let env = Global.env () in
-    if (want_ring & want_setoid &
+    if (want_ring & want_setoid & (
 	not (implement_theory env t coq_Setoid_Ring_Theory
 	  [| a; (unbox aequiv); aplus; amult; aone; azero; (unbox aopp); aeq|])
-        &
+        ||
 	not (implement_theory env (unbox asetth) coq_Setoid_Theory
-	  [| a; (unbox aequiv) |])) then 
+	  [| a; (unbox aequiv) |]) ||
+        not (states_compatibility_for env aplus amult aopp (unbox amorph))
+        )) then 
       errorlabstrm "addring" (str "Not a valid Setoid-Ring theory");
-    if (not want_ring & want_setoid &
+    if (not want_ring & want_setoid & (
         not (implement_theory env t coq_Semi_Setoid_Ring_Theory 
-	  [| a; (unbox aequiv); aplus; amult; aone; azero; aeq|]) &
+	  [| a; (unbox aequiv); aplus; amult; aone; azero; aeq|]) ||
 	not (implement_theory env (unbox asetth) coq_Setoid_Theory
-	  [| a; (unbox aequiv) |])) then 
+	  [| a; (unbox aequiv) |]) ||
+        not (states_compatibility_for env aplus amult aopp (unbox amorph))))
+    then
       errorlabstrm "addring" (str "Not a valid Semi-Setoid-Ring theory");
     if (want_ring & not want_setoid &
 	not (implement_theory env t coq_Ring_Theory
@@ -705,10 +725,10 @@ let build_setspolynom gl th lc =
 			       th.th_eq; p |])) |]),
 	mkLApp(coq_setspolynomial_simplify_ok,
 	       [| th.th_a; (unbox th.th_equiv); th.th_plus;
-                  th.th_mult; th.th_one; th.th_zero; th.th_eq; v;
-                  th.th_t; (unbox th.th_setoid_th);
+                  th.th_mult; th.th_one; th.th_zero; th.th_eq;
+                  (unbox th.th_setoid_th);
 		  (unbox th.th_morph).plusm;
-                  (unbox th.th_morph).multm; p |])))
+                  (unbox th.th_morph).multm; v; th.th_t; p |])))
     lp
 
 module SectionPathSet =
@@ -724,7 +744,7 @@ let constants_to_unfold =
   let transform s = 
     let sp = path_of_string s in
     let dir, id = repr_path sp in
-      Libnames.encode_kn dir id 
+      Libnames.encode_con dir id 
   in
   List.map transform
     [ "Coq.ring.Ring_normalize.interp_cs";
@@ -753,7 +773,7 @@ open RedFlags
 let polynom_unfold_tac =
   let flags =
     (mkflags(fBETA::fIOTA::(List.map fCONST constants_to_unfold))) in
-  reduct_in_concl (cbv_norm_flags flags)
+  reduct_in_concl (cbv_norm_flags flags,DEFAULTcast)
       
 let polynom_unfold_tac_in_term gl =
   let flags = 
@@ -804,20 +824,22 @@ let raw_polynom th op lc gl =
 				  [| th.th_a; (unbox th.th_equiv);
                                      (unbox th.th_setoid_th);
 				     c'''i; ci; c'i_eq_c''i |]))))
-	      (tclTHEN 
-		 (Setoid_replace.setoid_replace ci c'''i None)
-		 (tclTHEN 
-		    (tclTRY (h_exact c'i_eq_c''i))
-		    tac)))
+	      (tclTHENS
+		 (tclORELSE
+                   (Setoid_replace.general_s_rewrite true c'i_eq_c''i
+                     ~new_goals:[])
+                   (Setoid_replace.general_s_rewrite false c'i_eq_c''i
+                     ~new_goals:[]))
+                 [tac]))
 	 else
            (tclORELSE
               (tclORELSE
 		 (h_exact c'i_eq_c''i)
-		 (h_exact (mkApp(build_coq_sym_eqT (),
+		 (h_exact (mkApp(build_coq_sym_eq (),
 				 [|th.th_a; c'''i; ci; c'i_eq_c''i |]))))
 	      (tclTHENS 
 		 (elim_type 
-		    (mkApp(build_coq_eqT (), [|th.th_a; c'''i; ci |])))
+		    (mkApp(build_coq_eq (), [|th.th_a; c'''i; ci |])))
 		 [ tac;
                    h_exact c'i_eq_c''i ]))
 )
@@ -863,7 +885,7 @@ let match_with_equiv c = match (kind_of_term c) with
   | _ -> None
 
 let polynom lc gl =
-  Library.check_required_library ["Coq";"ring";"Ring"];
+  Coqlib.check_required_library ["Coq";"ring";"Ring"];
   match lc with 
    (* If no argument is given, try to recognize either an equality or
       a declared relation with arguments c1 ... cn, 

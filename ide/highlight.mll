@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: highlight.mll,v 1.14.2.2 2004/11/27 14:41:43 herbelin Exp $ *)
+(* $Id: highlight.mll 6362 2004-11-27 14:39:35Z herbelin $ *)
 
 {
 
@@ -18,6 +18,33 @@
 
   let comment_start = ref 0
 
+  let is_keyword =
+    let h = Hashtbl.create 97 in
+    List.iter (fun s -> Hashtbl.add h s ())
+      [  "Add" ; "Defined" ; 
+	 "End" ; "Export" ; "Extraction" ; "Hint" ; "Hints" ;
+	 "Implicits" ; "Import" ; 
+	 "Infix" ; "Load" ; "match" ; "Module" ;
+	 "Proof" ; "Qed" ;
+	 "Require" ; "Save" ; "Scheme" ;
+	 "Section" ; "Unset" ;
+	 "Set" ; "Notation"
+      ];
+    Hashtbl.mem h
+
+  let is_declaration =
+    let h = Hashtbl.create 97 in
+    List.iter (fun s -> Hashtbl.add h s ())
+      [ "Lemma" ; "Axiom" ; "CoFixpoint" ; "Definition"  ;
+	"Fixpoint" ; "Hypothesis" ; 
+	"Hypotheses" ; "Axioms" ; "Parameters" ; "Subclass" ;
+	"Remark" ; "Fact" ; "Conjecture" ; "Let" ;
+	"CoInductive" ; "Record" ; "Structure" ;
+	"Inductive" ; "Parameter" ; "Theorem" ; 
+	"Variable" ; "Variables" 
+      ];
+    Hashtbl.mem h
+
 }
 
 let space = 
@@ -28,28 +55,22 @@ let identchar =
   ['$' 'A'-'Z' 'a'-'z' '_' '\192'-'\214' '\216'-'\246' '\248'-'\255' '\'' '0'-'9']
 let ident = firstchar identchar*
 
-let keyword = 
-  "Add" | "Defined" | 
-  "End" | "Export" | "Extraction" | "Hint" |
-  "Implicits" | "Import" | 
-  "Infix" | "Load" | "match" | "Module" | "Module Type" |
-  "Proof" | "Qed" |
-  "Require" | "Save" | "Scheme" |
-  "Section" | "Unset" |
-  "Set"  
-
 let declaration = 
   "Lemma" | "Axiom" | "CoFixpoint" | "Definition"  |
   "Fixpoint" | "Hypothesis" | 
-  "Hypotheses" | "Axioms" | "Parameters" | "Subclass" |
-  "Remark" | "Fact" | "Conjecture" | "Let" |
-  "CoInductive" | "Record" | "Structure" |
   "Inductive" | "Parameter" | "Theorem" | 
-  "Variable" | "Variables" 
+  "Variable" | "Variables" | "Declare" space+ "Module"
 
 rule next_order = parse
-  | "(*" { comment_start := lexeme_start lexbuf; comment lexbuf }
-  | keyword { lexeme_start lexbuf,lexeme_end lexbuf, "kwd" }
+  | "(*" 
+      { comment_start := lexeme_start lexbuf; comment lexbuf }
+  | "Module Type"
+      { lexeme_start lexbuf,lexeme_end lexbuf, "kwd" }
+  | ident as id 
+      { if is_keyword id then 
+	  lexeme_start lexbuf,lexeme_end lexbuf, "kwd" 
+	else
+	  next_order lexbuf }
   | declaration space+ ident (space* ',' space* ident)* 
             { lexeme_start lexbuf, lexeme_end lexbuf, "decl" } 
   | _    { next_order lexbuf}

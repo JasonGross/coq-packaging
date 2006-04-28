@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: penv.ml,v 1.10.2.1 2004/07/16 19:30:01 herbelin Exp $ *)
+(* $Id: penv.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Pmisc
 open Past

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: RiemannInt.v,v 1.18.2.2 2005/07/13 23:18:52 herbelin Exp $ i*)
+(*i $Id: RiemannInt.v 7223 2005-07-13 23:43:54Z herbelin $ i*)
 
 Require Import Rfunctions.
 Require Import SeqSeries.

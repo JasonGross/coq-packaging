@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: nametab.mli,v 1.43.2.3 2005/11/21 09:16:27 herbelin Exp $ i*)
+(*i $Id: nametab.mli 7596 2005-11-21 09:17:07Z herbelin $ i*)
 
 (*i*)
 open Util

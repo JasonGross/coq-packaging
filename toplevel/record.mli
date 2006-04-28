@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: record.mli,v 1.16.2.1 2004/07/16 19:31:49 herbelin Exp $ i*)
+(*i $Id: record.mli 6743 2005-02-18 22:14:08Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -21,7 +21,7 @@ open Topconstr
    [coers]; it returns the absolute names of projections *)
 
 val declare_projections :
-  inductive -> bool list -> rel_context -> constant option list
+  inductive -> bool list -> rel_context -> bool list * constant option list
 
 val definition_structure :
   lident with_coercion * local_binder list *

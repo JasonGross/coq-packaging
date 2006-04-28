@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: reduction.ml,v 1.91.2.1 2004/07/16 19:30:26 herbelin Exp $ *)
+(* $Id: reduction.ml 7639 2005-12-02 10:01:15Z gregoire $ *)
 
 open Util
 open Names
@@ -317,16 +317,15 @@ and convert_vect infos lft1 lft2 v1 v2 cuniv =
     fold 0 cuniv
   else raise NotConvertible
 
-
+let clos_fconv cv_pb env t1 t2 =
+  let infos = create_clos_infos betaiotazeta env in
+  ccnv cv_pb infos ELID ELID (inject t1) (inject t2) Constraint.empty
 
 let fconv cv_pb env t1 t2 =
-  if eq_constr t1 t2 then 
-    Constraint.empty
-  else
-    let infos = create_clos_infos betaiotazeta env in
-    ccnv cv_pb infos ELID ELID (inject t1) (inject t2)
-      Constraint.empty
+  if eq_constr t1 t2 then Constraint.empty
+  else clos_fconv cv_pb env t1 t2
 
+let conv_cmp = fconv
 let conv = fconv CONV
 let conv_leq = fconv CUMUL
 
@@ -341,6 +340,30 @@ let conv_leq_vecti env v1 v2 =
     v1
     v2
 
+(* option for conversion *)
+
+let vm_conv = ref fconv
+let set_vm_conv f = vm_conv := f
+let vm_conv cv_pb env t1 t2 = 
+  try 
+    !vm_conv cv_pb env t1 t2
+  with Not_found | Invalid_argument _ ->
+      (* If compilation fails, fall-back to closure conversion *)
+      clos_fconv cv_pb env t1 t2
+  
+
+let default_conv = ref fconv 
+
+let set_default_conv f = default_conv := f
+
+let default_conv cv_pb env t1 t2 = 
+  try 
+    !default_conv cv_pb env t1 t2
+  with Not_found | Invalid_argument _ ->
+      (* If compilation fails, fall-back to closure conversion *)
+      clos_fconv cv_pb env t1 t2
+  
+let default_conv_leq = default_conv CUMUL
 (*
 let convleqkey = Profile.declare_profile "Kernel_reduction.conv_leq";;
 let conv_leq env t1 t2 =
@@ -393,7 +416,7 @@ let dest_prod_assum env =
     | LetIn (x,b,t,c) ->
         let d = (x,Some b,t) in
 	prodec_rec (push_rel d env) (Sign.add_rel_decl d l) c
-    | Cast (c,_)    -> prodec_rec env l c
+    | Cast (c,_,_)    -> prodec_rec env l c
     | _               -> l,rty
   in
   prodec_rec env Sign.empty_rel_context

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Lt.v,v 1.11.2.1 2004/07/16 19:31:00 herbelin Exp $ i*)
+(*i $Id: Lt.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Require Import Le.
 Open Local Scope nat_scope.

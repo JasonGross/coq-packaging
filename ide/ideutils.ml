@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ideutils.ml,v 1.30.2.4 2006/01/06 15:40:37 barras Exp $ *)
+(* $Id: ideutils.ml 7609 2005-11-25 17:14:39Z barras $ *)
 
 
 open Preferences
@@ -34,9 +34,9 @@ let prerr_string s =
 
 let lib_ide_file f =
   let coqlib =
-    if !Options.boot then Coq_config.coqtop
-    else
-      System.getenv_else "COQLIB" Coq_config.coqlib in
+    System.getenv_else "COQLIB"
+      (if Coq_config.local || !Options.boot then Coq_config.coqtop
+       else Coq_config.coqlib) in
   Filename.concat (Filename.concat coqlib "ide") f
   
 let get_insert input_buffer = input_buffer#get_iter_at_mark `INSERT
@@ -60,17 +60,6 @@ let byte_offset_to_char_offset s byte_offset =
     done;
     byte_offset - !count_delta
   end
-
-let process_pending () =
-  prerr_endline "Pending process";()
-(*  try 
-    while Glib.Main.pending () do 
-      ignore (Glib.Main.iteration false)
-    done
-  with e -> 
-    prerr_endline "Pending problems : expect a crash very soon";
-    raise e
-*)
 
 let print_id id =
   prerr_endline ("GOT sig id :"^(string_of_int (Obj.magic id)))
@@ -225,6 +214,25 @@ let async =
 let sync = 
   if Sys.os_type = "Win32" then GtkThread.sync else (fun x -> x)
 
+let mutex text f =
+  let m = Mutex.create() in
+  fun x ->
+    if Mutex.try_lock m
+    then 
+      (try
+        prerr_endline ("Got lock on "^text);
+        f x;
+        Mutex.unlock m;
+        prerr_endline ("Released lock on "^text)
+      with e ->
+        Mutex.unlock m;
+        prerr_endline ("Released lock on "^text^" (on error)");
+        raise e)
+    else
+      prerr_endline
+        ("Discarded call for "^text^": computations ongoing")
+
+
 let stock_to_widget ?(size=`DIALOG) s = 
   let img = GMisc.image () 
   in img#set_stock s;
@@ -235,7 +243,8 @@ let rec print_list print fmt = function
   | [x] -> print fmt x
   | x :: r -> print fmt x; print_list print fmt r
 
-
+(* TODO: allow to report output as soon as it comes (user-fiendlier
+   for long commands like make...) *)
 let run_command f c =
   let result = Buffer.create 127 in
   let cin,cout,cerr = Unix.open_process_full c (Unix.environment ()) in

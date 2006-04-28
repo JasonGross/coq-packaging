@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: nametab.ml,v 1.48.2.2 2005/11/21 09:16:27 herbelin Exp $ *)
+(* $Id: nametab.ml 8642 2006-03-17 10:09:02Z notin $ *)
 
 open Util
 open Pp
@@ -96,7 +96,7 @@ struct
      [push_exactly] to [Exactly vis] and [push_tree] chooses the right one*)
 
   let rec push_until uname o level (current,dirmap) = function
-    | modid :: path as dir ->
+    | modid :: path ->
 	let mc = 
 	  try ModIdmap.find modid dirmap
 	  with Not_found -> (Nothing, ModIdmap.empty)
@@ -135,7 +135,7 @@ struct
 
 
 let rec push_exactly uname o level (current,dirmap) = function
-  | modid :: path as dir ->
+  | modid :: path ->
       let mc = 
 	try ModIdmap.find modid dirmap
 	with Not_found -> (Nothing, ModIdmap.empty)

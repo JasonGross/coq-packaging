@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: subtyping.ml,v 1.11.2.2 2005/11/29 21:40:52 letouzey Exp $ i*)
+(*i $Id: subtyping.ml 7639 2005-12-02 10:01:15Z gregoire $ i*)
 
 (*i*)
 open Util
@@ -18,6 +18,8 @@ open Environ
 open Reduction
 open Inductive
 open Modops
+open Mod_subst
+open Entries
 (*i*)
 
 (* This local type is used to subtype a constant with a constructor or
@@ -26,7 +28,6 @@ open Modops
 
 type namedobject = 
   | Constant of constant_body
-  | Mind of mutual_inductive_body
   | IndType of inductive * mutual_inductive_body
   | IndConstr of constructor * mutual_inductive_body
   | Module of module_specification_body
@@ -40,31 +41,27 @@ let add_nameobjects_of_mib ln mib map =
     let ip = (ln,j) in
     let map = 
       array_fold_right_i 
-	(fun i id map -> Idmap.add id (IndConstr ((ip,i), mib)) map)
-	oib.mind_consnames
-	map
+      (fun i id map ->
+        Labmap.add (label_of_id id) (IndConstr((ip,i+1), mib)) map)
+      oib.mind_consnames
+      map
     in
-      Idmap.add oib.mind_typename (IndType (ip, mib)) map
+      Labmap.add (label_of_id oib.mind_typename) (IndType (ip, mib)) map
   in
     array_fold_right_i add_nameobjects_of_one mib.mind_packets map
 
+
 (* creates namedobject map for the whole signature *)
 
-let make_label_map msid list = 
+let make_label_map mp list = 
   let add_one (l,e) map = 
-    let obj = 
-      match e with
-	| SPBconst cb -> Constant cb
-	| SPBmind mib -> Mind mib
-	| SPBmodule mb -> Module mb
-	| SPBmodtype mtb -> Modtype mtb
-    in
-(*    let map = match obj with
-      | Mind mib -> 
-	  add_nameobjects_of_mib (make_ln (MPself msid) l) mib map
-      | _ -> map
-    in *)
-      Labmap.add l obj map
+   let add_map obj = Labmap.add l obj map in
+   match e with
+    | SPBconst cb -> add_map (Constant cb)
+    | SPBmind mib ->
+       add_nameobjects_of_mib (make_kn mp empty_dirpath l) mib map
+    | SPBmodule mb -> add_map (Module mb)
+    | SPBmodtype mtb -> add_map (Modtype mtb)
   in
     List.fold_right add_one list Labmap.empty
 
@@ -81,8 +78,7 @@ let check_inductive cst env msid1 l info1 mib2 spec2 =
   let check_conv cst f = check_conv_error error cst f in
   let mib1 = 
     match info1 with
-      | Mind mib -> mib
-    (*  | IndType (_,mib) -> mib   we will enable this later*)
+      | IndType ((_,0), mib) -> mib
       | _ -> error ()
   in
   let check_packet cst p1 p2 =
@@ -118,8 +114,8 @@ let check_inductive cst env msid1 l info1 mib2 spec2 =
 	    && Array.length mib2.mind_packets >= 1);
 
        (* TODO: we should allow renaming of parameters at least ! *)
-  check (fun mib -> mib.mind_packets.(0).mind_nparams);
-  check (fun mib -> mib.mind_packets.(0).mind_params_ctxt); 
+  check (fun mib -> mib.mind_nparams);
+  check (fun mib -> mib.mind_params_ctxt); 
 
   begin 
     match mib2.mind_equiv with
@@ -133,32 +129,19 @@ let check_inductive cst env msid1 l info1 mib2 spec2 =
 	    if kn1 <> kn2 then error ()
   end;
   (* we check that records and their field names are preserved. *)
-  (* To stay compatible, we don't fail but only issue a warning. *)
-  if mib1.mind_record <> mib2.mind_record then begin
-    let sid = string_of_id mib1.mind_packets.(0).mind_typename in 
-    Pp.warning 
-      (sid^": record is implemented as an inductive type or conversely.\n"^
-	 "Beware that extraction cannot handle this situation.\n")
-  end; 
+  check (fun mib -> mib.mind_record);
   if mib1.mind_record then begin 
     let rec names_prod_letin t = match kind_of_term t with 
       | Prod(n,_,t) -> n::(names_prod_letin t)
       | LetIn(n,_,_,t) -> n::(names_prod_letin t)
-      | Cast(t,_) -> names_prod_letin t
+      | Cast(t,_,_) -> names_prod_letin t
       | _ -> []
     in 
     assert (Array.length mib1.mind_packets = 1);
     assert (Array.length mib2.mind_packets = 1);
     assert (Array.length mib1.mind_packets.(0).mind_user_lc = 1); 
     assert (Array.length mib2.mind_packets.(0).mind_user_lc = 1); 
-    let fields1 = names_prod_letin mib1.mind_packets.(0).mind_user_lc.(0)
-    and fields2 = names_prod_letin mib2.mind_packets.(0).mind_user_lc.(0) in  
-    if fields1 <> fields2 then 
-      let sid = string_of_id mib1.mind_packets.(0).mind_typename in 
-      Pp.warning 
-	(sid^": record has different field names in its signature and "^
-	   "implemantation.\n"^
-	   "Beware that extraction cannot handle this situation.\n");
+    check (fun mib -> names_prod_letin mib.mind_packets.(0).mind_user_lc.(0));
   end;
   (* we first check simple things *)
   let cst = 
@@ -173,23 +156,43 @@ let check_inductive cst env msid1 l info1 mib2 spec2 =
 let check_constant cst env msid1 l info1 cb2 spec2 = 
   let error () = error_not_match l spec2 in
   let check_conv cst f = check_conv_error error cst f in
-  let cb1 = 
-    match info1 with
-      | Constant cb -> cb
-      | _ -> error ()
-  in 
-    assert (cb1.const_hyps=[] && cb2.const_hyps=[]) ;
-  (*Start by checking types*)
-    let cst = check_conv cst conv_leq env cb1.const_type cb2.const_type in
-    match cb2.const_body with
-      | None -> cst
-      | Some lc2 ->
-	  let c2 = Declarations.force lc2 in
-	  let c1 = match cb1.const_body with
-	    | Some lc1 -> Declarations.force lc1
-	    | None -> mkConst (make_kn (MPself msid1) empty_dirpath l)
-	  in
-	    check_conv cst conv env c1 c2
+  match info1 with
+   | Constant cb1 ->
+      assert (cb1.const_hyps=[] && cb2.const_hyps=[]) ;
+      (*Start by checking types*)
+      let cst = check_conv cst conv_leq env cb1.const_type cb2.const_type in
+      let con = make_con (MPself msid1) empty_dirpath l in
+      let cst =
+       match cb2.const_body with
+         | None -> cst
+         | Some lc2 ->
+	     let c2 = Declarations.force lc2 in
+	     let c1 = match cb1.const_body with
+	       | Some lc1 -> Declarations.force lc1
+	       | None -> mkConst con
+	     in
+	       check_conv cst conv env c1 c2
+      in
+       cst
+   | IndType ((kn,i),mind1) ->
+      Util.error ("The kernel does not recognize yet that a parameter can be " ^
+       "instantiated by an inductive type. Hint: you can rename the " ^
+       "inductive type and give a definition to map the old name to the new " ^
+       "name.") ;
+      assert (mind1.mind_hyps=[] && cb2.const_hyps=[]) ;
+      if cb2.const_body <> None then error () ;
+      let arity1 = mind1.mind_packets.(i).mind_user_arity in
+       check_conv cst conv_leq env arity1 cb2.const_type
+   | IndConstr (((kn,i),j) as cstr,mind1) ->
+      Util.error ("The kernel does not recognize yet that a parameter can be " ^
+       "instantiated by a constructor. Hint: you can rename the " ^
+       "constructor and give a definition to map the old name to the new " ^
+       "name.") ;
+      assert (mind1.mind_hyps=[] && cb2.const_hyps=[]) ;
+      if cb2.const_body <> None then error () ;
+      let ty1 = type_of_constructor cstr (mind1,mind1.mind_packets.(i)) in
+       check_conv cst conv env ty1 cb2.const_type
+   | _ -> error ()
 	      
 let rec check_modules cst env msid1 l msb1 msb2 =
   let mp = (MPdot(MPself msid1,l)) in
@@ -206,11 +209,11 @@ let rec check_modules cst env msid1 l msb1 msb2 =
   cst
 	
 
-and check_signatures cst env' (msid1,sig1) (msid2,sig2') = 
+and check_signatures cst env (msid1,sig1) (msid2,sig2') = 
   let mp1 = MPself msid1 in
-  let env = add_signature mp1 sig1 env' in 
+  let env = add_signature mp1 sig1 env in 
   let sig2 = subst_signature_msid msid2 mp1 sig2' in
-  let map1 = make_label_map msid1 sig1 in
+  let map1 = make_label_map mp1 sig1 in
   let check_one_body cst (l,spec2) = 
     let info1 = 
       try 
@@ -241,10 +244,10 @@ and check_signatures cst env' (msid1,sig1) (msid2,sig2') =
     List.fold_left check_one_body cst sig2
     
 and check_modtypes cst env mtb1 mtb2 equiv = 
-  if mtb1==mtb2 then (); (* just in case  :) *)
+  if mtb1==mtb2 then cst else (* just in case  :) *)
   let mtb1' = scrape_modtype env mtb1 in
   let mtb2' = scrape_modtype env mtb2 in
-    if mtb1'==mtb2' then ();
+    if mtb1'==mtb2' then cst else
     match mtb1', mtb2' with
       | MTBsig (msid1,list1), 
 	MTBsig (msid2,list2) -> 
@@ -257,15 +260,17 @@ and check_modtypes cst env mtb1 mtb2 equiv =
 	MTBfunsig (arg_id2,arg_t2,body_t2) ->
 	  let cst = check_modtypes cst env arg_t2 arg_t1 equiv in 
 	    (* contravariant *)
-	  let env' = 
+	  let env = 
 	    add_module (MPbound arg_id2) (module_body_of_type arg_t2) env 
 	  in
 	  let body_t1' = 
+            (* since we are just checking well-typedness we do not need
+               to expand any constant. Hence the identity resolver. *)
 	    subst_modtype 
-	      (map_mbid arg_id1 (MPbound arg_id2)) 
+              (map_mbid arg_id1 (MPbound arg_id2) None)
 	      body_t1
 	  in
-	  check_modtypes cst env' body_t1' body_t2 equiv
+	  check_modtypes cst env body_t1' body_t2 equiv
       | MTBident _ , _ -> anomaly "Subtyping: scrape failed"
       | _ , MTBident _ -> anomaly "Subtyping: scrape failed"
       | _ , _ -> error_incompatible_modtypes mtb1 mtb2

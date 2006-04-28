@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extraction.mli,v 1.27.2.1 2004/07/16 19:30:07 herbelin Exp $ i*)
+(*i $Id: extraction.mli 6303 2004-11-16 12:37:40Z sacerdot $ i*)
 
 (*s Extraction from Coq terms to Miniml. *)
 
@@ -17,12 +17,12 @@ open Environ
 open Libnames
 open Miniml
 
-val extract_constant : env -> kernel_name -> constant_body -> ml_decl
+val extract_constant : env -> constant -> constant_body -> ml_decl
 
-val extract_constant_spec : env -> kernel_name -> constant_body -> ml_spec
+val extract_constant_spec : env -> constant -> constant_body -> ml_spec
 
 val extract_fixpoint : 
-  env -> kernel_name array -> (constr, types) prec_declaration -> ml_decl 
+  env -> constant array -> (constr, types) prec_declaration -> ml_decl 
 
 val extract_inductive : env -> kernel_name -> ml_ind
 

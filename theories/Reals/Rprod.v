@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: Rprod.v,v 1.10.2.1 2004/07/16 19:31:13 herbelin Exp $ i*)
+(*i $Id: Rprod.v 6338 2004-11-22 09:10:51Z gregoire $ i*)
 
 Require Import Compare.
 Require Import Rbase.
@@ -17,7 +17,7 @@ Require Import Binomial.
 Open Local Scope R_scope.
 
 (* TT Ak; 1<=k<=N *)
-Fixpoint prod_f_SO (An:nat -> R) (N:nat) {struct N} : R :=
+Boxed Fixpoint prod_f_SO (An:nat -> R) (N:nat) {struct N} : R :=
   match N with
   | O => 1
   | S p => prod_f_SO An p * An (S p)

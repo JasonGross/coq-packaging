@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: entries.mli,v 1.3.8.2 2005/11/29 21:40:51 letouzey Exp $ i*)
+(*i $Id: entries.mli 8647 2006-03-18 15:33:09Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -32,9 +32,9 @@ type local_entry =
 
 (* Assume the following definition in concrete syntax:
 \begin{verbatim}
-Inductive I1 [x1:X1;...;xn:Xn] : A1 := c11 : T11 | ... | c1n1 : T1n1
+Inductive I1 (x1:X1) ... (xn:Xn) : A1 := c11 : T11 | ... | c1n1 : T1n1
 ...
-with  Ip [x1:X1;...;xn:Xn] : Ap := cp1 : Tp1 | ... | cpnp : Tpnp.
+with      Ip (x1:X1) ... (xn:Xn) : Ap := cp1 : Tp1 | ... | cpnp : Tpnp.
 \end{verbatim}
 then, in $i^{th}$ block, [mind_entry_params] is [[xn:Xn;...;x1:X1]];
 [mind_entry_arity] is [Ai], defined in context [[[x1:X1;...;xn:Xn]];
@@ -42,7 +42,6 @@ then, in $i^{th}$ block, [mind_entry_params] is [[xn:Xn;...;x1:X1]];
 *)
 
 type one_inductive_entry = {
-  mind_entry_params : (identifier * local_entry) list;
   mind_entry_typename : identifier;
   mind_entry_arity : constr;
   mind_entry_consnames : identifier list;
@@ -51,15 +50,16 @@ type one_inductive_entry = {
 type mutual_inductive_entry = {
   mind_entry_record : bool;
   mind_entry_finite : bool;
+  mind_entry_params : (identifier * local_entry) list;
   mind_entry_inds : one_inductive_entry list }
-
 
 (*s Constants (Definition/Axiom) *)
 
 type definition_entry = {
   const_entry_body   : constr;
   const_entry_type   : types option;
-  const_entry_opaque : bool }
+  const_entry_opaque : bool;
+  const_entry_boxed  : bool }
 
 type parameter_entry = types
 
@@ -84,8 +84,8 @@ and module_type_entry =
 and module_signature_entry = (label * specification_entry) list
 
 and with_declaration = 
-    With_Module of identifier * module_path
-  | With_Definition of identifier * constr
+    With_Module of identifier list * module_path
+  | With_Definition of identifier list * constr
 
 and module_expr = 
     MEident of module_path

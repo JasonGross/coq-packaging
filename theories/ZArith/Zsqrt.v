@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Zsqrt.v,v 1.11.2.1 2004/07/16 19:31:22 herbelin Exp $ *)
+(* $Id: Zsqrt.v 6199 2004-10-11 11:39:18Z herbelin $ *)
 
 Require Import Omega.
 Require Export ZArith_base.
@@ -22,12 +22,12 @@ Ltac compute_POS :=
   match goal with
   |  |- context [(Zpos (xI ?X1))] =>
       match constr:X1 with
-      | context [1%positive] => fail
+      | context [1%positive] => fail 1
       | _ => rewrite (BinInt.Zpos_xI X1)
       end
   |  |- context [(Zpos (xO ?X1))] =>
       match constr:X1 with
-      | context [1%positive] => fail
+      | context [1%positive] => fail 1
       | _ => rewrite (BinInt.Zpos_xO X1)
       end
   end.

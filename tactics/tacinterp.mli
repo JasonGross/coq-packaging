@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacinterp.mli,v 1.13.2.1 2004/07/16 19:30:55 herbelin Exp $ i*)
+(*i $Id: tacinterp.mli 7841 2006-01-11 11:24:54Z herbelin $ i*)
 
 (*i*)
 open Dyn
@@ -19,6 +19,7 @@ open Term
 open Tacexpr
 open Genarg
 open Topconstr
+open Mod_subst
 (*i*)
 
 (* Values for interpretation *)
@@ -78,7 +79,7 @@ val add_interp_genarg :
     (glob_sign -> raw_generic_argument -> glob_generic_argument) *
     (interp_sign -> goal sigma -> glob_generic_argument -> 
       closed_generic_argument) *
-    (Names.substitution -> glob_generic_argument -> glob_generic_argument)
+    (substitution -> glob_generic_argument -> glob_generic_argument)
     -> unit
 
 val interp_genarg :
@@ -87,19 +88,31 @@ val interp_genarg :
 val intern_genarg :
   glob_sign -> raw_generic_argument -> glob_generic_argument
 
+val intern_constr :
+  glob_sign -> constr_expr -> rawconstr_and_expr
+
+val intern_hyp :
+  glob_sign -> identifier Util.located -> identifier Util.located
+
 val subst_genarg :
-  Names.substitution -> glob_generic_argument -> glob_generic_argument
+  substitution -> glob_generic_argument -> glob_generic_argument
+
+val subst_rawconstr_and_expr :
+  substitution -> rawconstr_and_expr -> rawconstr_and_expr
 
 (* Interprets any expression *)
 val val_interp : interp_sign -> goal sigma -> glob_tactic_expr -> value
 
 (* Interprets redexp arguments *)
 val interp_redexp : Environ.env -> Evd.evar_map -> raw_red_expr
-  -> Tacred.red_expr
+  -> Redexpr.red_expr
 
 (* Interprets tactic expressions *)
 val interp_tac_gen : (identifier * value) list -> 
                  debug_info -> raw_tactic_expr -> tactic
+
+val interp_hyp :  interp_sign -> goal sigma -> 
+  identifier Util.located -> identifier
 
 (* Initial call for interpretation *)
 val glob_tactic : raw_tactic_expr -> glob_tactic_expr
@@ -116,11 +129,12 @@ val subst_tactic : substitution -> glob_tactic_expr -> glob_tactic_expr
 
 val hide_interp : raw_tactic_expr -> tactic option -> tactic
 
-(* Adds an interpretation function *)
-val interp_add : string * (interp_sign -> Coqast.t -> value) -> unit
+(* Declare the default tactic to fill implicit arguments *)
+val declare_implicit_tactic : tactic -> unit
 
-(* Adds a possible existing interpretation function *)
-val overwriting_interp_add : string * (interp_sign -> Coqast.t -> value) ->
-                             unit
+(* Declare the xml printer *)
+val declare_xml_printer : 
+  (out_channel -> Environ.env -> Evd.evar_map -> constr -> unit) -> unit
 
-
+(* printing *)
+val print_ltac : Libnames.qualid -> std_ppcmds

@@ -14,7 +14,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: xmlentries.ml4,v 1.12.2.2 2004/07/16 19:30:15 herbelin Exp $ *)
+(* $Id: xmlentries.ml4 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Util;;
 open Vernacinterp;;

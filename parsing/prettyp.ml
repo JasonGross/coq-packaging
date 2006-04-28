@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: prettyp.ml,v 1.50.2.2 2005/11/21 09:16:28 herbelin Exp $ *)
+(* $Id: prettyp.ml 7938 2006-01-28 22:03:33Z herbelin $ *)
 
 open Pp
 open Util
@@ -20,7 +20,6 @@ open Inductiveops
 open Sign
 open Reduction
 open Environ
-open Instantiate
 open Declare
 open Impargs
 open Libobject
@@ -28,6 +27,7 @@ open Printer
 open Printmod
 open Libnames
 open Nametab
+open Recordops
 
 (*********************)
 (** Basic printing   *)
@@ -58,8 +58,7 @@ let print_impl_args_by_name = function
       str" are implicit" ++ fnl()
 
 let print_impl_args l = 
-  if !Options.v7 then print_impl_args_by_pos (positions_of_implicits l)
-  else print_impl_args_by_name (List.filter is_status_implicit l)
+  print_impl_args_by_name (List.filter is_status_implicit l)
 
 (*********************)
 (** Printing Scopes  *)
@@ -71,7 +70,7 @@ let print_ref reduce ref =
       let ctx,ccl = Reductionops.splay_prod_assum (Global.env()) Evd.empty typ
       in it_mkProd_or_LetIn ccl ctx 
     else typ in
-  hov 0 (pr_global ref ++ str " :" ++ spc () ++ prtype typ) ++ fnl ()
+  hov 0 (pr_global ref ++ str " :" ++ spc () ++ pr_ltype typ) ++ fnl ()
 
 let print_argument_scopes = function
   | [Some sc] -> str"Argument scope is [" ++ str sc ++ str"]" ++ fnl()
@@ -89,9 +88,32 @@ let need_expansion impl ref =
   impl <> [] & let _,lastimpl = list_chop nprods impl in
   List.filter is_status_implicit lastimpl <> []
 
+type opacity =
+  | FullyOpaque
+  | TransparentMaybeOpacified of bool
+
+let opacity env = function
+  | VarRef v when pi2 (Environ.lookup_named v env) <> None -> 
+      Some (TransparentMaybeOpacified (Conv_oracle.is_opaque_var v))
+  | ConstRef cst ->
+      let cb = Environ.lookup_constant cst env in
+      if cb.const_body = None then None
+      else if cb.const_opaque then Some FullyOpaque
+      else Some (TransparentMaybeOpacified (Conv_oracle.is_opaque_cst cst))
+  | _ -> None
+
+let print_opacity ref =
+  match opacity (Global.env()) ref with
+    | None -> mt ()
+    | Some s -> pr_global ref ++ str " is " ++ 
+        str (match s with
+          | FullyOpaque -> "opaque"
+          | TransparentMaybeOpacified true -> "basically transparent but considered opaque for reduction"
+          | TransparentMaybeOpacified false -> "transparent") ++ fnl()
+    
 let print_name_infos ref =
   let impl = implicits_of_global ref in
-  let scopes = Symbols.find_arguments_scope ref in
+  let scopes = Notation.find_arguments_scope ref in
   let type_for_implicit = 
     if need_expansion impl ref then
       (* Need to reduce since implicits are computed with products flattened *)
@@ -127,7 +149,7 @@ let print_inductive_implicit_args =
 
 let print_inductive_argument_scopes =
   print_args_data_of_inductive_ids 
-    Symbols.find_arguments_scope ((<>) None) print_argument_scopes
+    Notation.find_arguments_scope ((<>) None) print_argument_scopes
 
 (*********************)
 (* "Locate" commands *)
@@ -160,8 +182,7 @@ let pr_located_qualid = function
 	| VarRef _ -> "Variable" in
       str ref_str ++ spc () ++ pr_sp (Nametab.sp_of_global ref)
   | Syntactic kn ->
-      str (if !Options.v7 then "Syntactic Definition" else "Notation") ++ 
-      spc () ++ pr_sp (Nametab.sp_of_syntactic_definition kn)
+      str "Notation" ++ spc () ++ pr_sp (Nametab.sp_of_syntactic_definition kn)
   | Dir dir ->
       let s,dir = match dir with
 	| DirOpenModule (dir,_) -> "Open Module", dir
@@ -180,9 +201,9 @@ let print_located_qualid ref =
   let (loc,qid) = qualid_of_reference ref in
   let module N = Nametab in
   let expand = function
-    | TrueGlobal ref -> 
+    | TrueGlobal ref ->
 	Term ref, N.shortest_qualid_of_global Idset.empty ref
-    | SyntacticDef kn -> 
+    | SyntacticDef kn ->
 	Syntactic kn, N.shortest_qualid_of_syndef Idset.empty kn in
   match List.map expand (N.extended_locate_all qid) with
     | [] -> 
@@ -196,7 +217,7 @@ let print_located_qualid ref =
 	(fun (o,oqid) ->
 	  hov 2 (pr_located_qualid o ++
 	  (if oqid <> qid then
-	    spc() ++ str "(visible as " ++ pr_qualid oqid ++ str")"
+	    spc() ++ str "(shorter name to refer to it in current context is " ++ pr_qualid oqid ++ str")"
 	  else
 	    mt ()))) l
 
@@ -204,8 +225,8 @@ let print_located_qualid ref =
 (**** Printing declarations and judgments *)
 
 let print_typed_value_in_env env (trm,typ) =
-  (prterm_env env trm ++ fnl () ++
-     str "     : " ++ prtype_env env typ ++ fnl ())
+  (pr_lconstr_env env trm ++ fnl () ++
+     str "     : " ++ pr_ltype_env env typ ++ fnl ())
 
 let print_typed_value x = print_typed_value_in_env (Global.env ()) x
 
@@ -218,20 +239,20 @@ let print_safe_judgment env j =
   print_typed_value_in_env env (trm, typ)
     
 (* To be improved; the type should be used to provide the types in the
-   abstractions. This should be done recursively inside prterm, so that
+   abstractions. This should be done recursively inside pr_lconstr, so that
    the pretty-print of a proposition (P:(nat->nat)->Prop)(P [u]u)
    synthesizes the type nat of the abstraction on u *)
 
 let print_named_def name body typ =
-  let pbody = prterm body in
-  let ptyp = prtype typ in
+  let pbody = pr_lconstr body in
+  let ptyp = pr_ltype typ in
   (str "*** [" ++ str name ++ str " " ++
      hov 0 (str ":=" ++ brk (1,2) ++ pbody ++ spc () ++
 	      str ":" ++ brk (1,2) ++ ptyp) ++
 	   str "]" ++ fnl ())
 
 let print_named_assum name typ =
-  (str "*** [" ++ str name ++ str " : " ++ prtype typ ++ str "]" ++ fnl ())
+  (str "*** [" ++ str name ++ str " : " ++ pr_ltype typ ++ str "]" ++ fnl ())
 
 let print_named_decl (id,c,typ) =
   let s = string_of_id id in
@@ -246,25 +267,19 @@ let assumptions_for_print lna =
 (* *)
 
 let print_params env params =
-  if List.length params = 0 then 
-    (mt ()) 
-  else
-    if !Options.v7 then
-      (str "[" ++ pr_rel_context env params ++ str "]" ++ brk(1,2))
-    else 
-      (pr_rel_context env params ++ brk(1,2))
+  if params = [] then mt () else pr_rel_context env params ++ brk(1,2)
 
 let print_constructors envpar names types =
   let pc =
     prlist_with_sep (fun () -> brk(1,0) ++ str "| ")
-      (fun (id,c) -> pr_id id ++ str " : " ++ prterm_env envpar c)
+      (fun (id,c) -> pr_id id ++ str " : " ++ pr_lconstr_env envpar c)
       (Array.to_list (array_map2 (fun n t -> (n,t)) names types))
   in 
   hv 0 (str "  " ++ pc)
 
 let build_inductive sp tyi =
   let (mib,mip) = Global.lookup_inductive (sp,tyi) in
-  let params = mip.mind_params_ctxt in
+  let params = mib.mind_params_ctxt in
   let args = extended_rel_list 0 params in
   let env = Global.env() in
   let arity = hnf_prod_applist env mip.mind_user_arity args in
@@ -280,7 +295,7 @@ let print_one_inductive (sp,tyi) =
   let envpar = push_rel_context params env in
   hov 0 (
     pr_global (IndRef (sp,tyi)) ++ brk(1,4) ++ print_params env params ++
-    str ": " ++ prterm_env envpar arity ++ str " :=") ++
+    str ": " ++ pr_lconstr_env envpar arity ++ str " :=") ++
   brk(0,2) ++ print_constructors envpar cstrnames cstrtypes
 
 let pr_mutual_inductive finite indl =
@@ -304,11 +319,11 @@ let print_section_variable sp =
   print_name_infos (VarRef sp)
 
 let print_body = function
-  | Some lc  -> prterm (Declarations.force lc)
+  | Some lc  -> pr_lconstr (Declarations.force lc)
   | None -> (str"<no body>")
 
 let print_typed_body (val_0,typ) =
-  (print_body val_0 ++ fnl () ++ str "     : " ++ prtype typ ++ fnl ())
+  (print_body val_0 ++ fnl () ++ str "     : " ++ pr_ltype typ ++ fnl ())
 
 let print_constant with_values sep sp =
   let cb = Global.lookup_constant sp in
@@ -318,11 +333,11 @@ let print_constant with_values sep sp =
     match val_0 with 
     | None -> 
 	str"*** [ " ++ 
-	print_basename sp ++ str " : " ++ cut () ++ prtype typ ++ 
+	print_basename sp ++ str " : " ++ cut () ++ pr_ltype typ ++ 
 	str" ]" ++ fnl ()
     | _ -> 
 	print_basename sp ++ str sep ++ cut () ++
-	(if with_values then print_typed_body (val_0,typ) else prtype typ) ++
+	(if with_values then print_typed_body (val_0,typ) else pr_ltype typ) ++
 	fnl ())
 
 let print_constant_with_infos sp =
@@ -333,17 +348,18 @@ let print_inductive sp = (print_mutual sp)
 let print_syntactic_def sep kn =
   let qid = Nametab.shortest_qualid_of_syndef Idset.empty kn in
   let c = Syntax_def.search_syntactic_definition dummy_loc kn in 
-  (str (if !Options.v7 then "Syntactic Definition " else "Notation ")
-   ++ pr_qualid qid ++ str sep ++ 
-  Constrextern.without_symbols pr_rawterm c ++ fnl ())
+  str "Notation " ++ pr_qualid qid ++ str sep ++ 
+  Constrextern.without_symbols pr_lrawconstr c ++ fnl ()
 
 let print_leaf_entry with_values sep ((sp,kn as oname),lobj) =
   let tag = object_tag lobj in
   match (oname,tag) with
     | (_,"VARIABLE") ->
-	Some (print_section_variable (basename sp))
+	(* Outside sections, VARIABLES still exist but only with universes 
+           constraints *)
+	(try Some(print_section_variable (basename sp)) with Not_found -> None)
     | (_,"CONSTANT") ->
-	Some (print_constant with_values sep kn)
+	Some (print_constant with_values sep (constant_of_kn kn))
     | (_,"INDUCTIVE") ->
 	Some (print_inductive kn)
     | (_,"MODULE") ->
@@ -369,7 +385,7 @@ let rec print_library_entry with_values ent =
 	print_leaf_entry with_values sep (oname,lobj)
     | (oname,Lib.OpenedSection (dir,_)) -> 
         Some (str " >>>>>>> Section " ++ pr_name oname)
-    | (oname,Lib.ClosedSection _) -> 
+    | (oname,Lib.ClosedSection) -> 
         Some (str " >>>>>>> Closed Section " ++ pr_name oname)
     | (_,Lib.CompilingLibrary (dir,_)) ->
 	Some (str " >>>>>>> Library " ++ pr_dirpath dir)
@@ -419,9 +435,9 @@ let read_sec_context r =
     with Not_found ->
       user_err_loc (loc,"read_sec_context", str "Unknown section") in
   let rec get_cxt in_cxt = function
-    | ((_,Lib.OpenedSection ((dir',_),_)) as hd)::rest ->
+    | (_,Lib.OpenedSection ((dir',_),_) as hd)::rest ->
         if dir = dir' then (hd::in_cxt) else get_cxt (hd::in_cxt) rest
-    | ((_,Lib.ClosedSection (_,_,ctxt)) as hd)::rest ->
+    | (_,Lib.ClosedSection)::rest ->
         error "Cannot print the contents of a closed section"
     | [] -> []
     | hd::rest -> get_cxt (hd::in_cxt) rest 
@@ -474,9 +490,7 @@ let print_name ref =
       "print_name" (pr_qualid qid ++ spc () ++ str "not a defined object")
 
 let print_opaque_name qid = 
-  let sigma = Evd.empty in
   let env = Global.env () in
-  let sign = Global.named_context () in
   match global qid with
     | ConstRef cst ->
 	let cb = Global.lookup_constant cst in
@@ -487,19 +501,21 @@ let print_opaque_name qid =
     | IndRef (sp,_) ->
         print_mutual sp
     | ConstructRef cstr -> 
-	let ty = Inductive.type_of_constructor env cstr in
+	let ty = Inductiveops.type_of_constructor env cstr in
 	print_typed_value (mkConstruct cstr, ty)
     | VarRef id ->
         let (_,c,ty) = lookup_named id env in 
 	print_named_decl (id,c,ty)
 
 let print_about ref = 
-  let sigma = Evd.empty in
   let k = locate_any_name ref in
   begin match k with
-  | Term ref -> print_ref false ref ++ print_name_infos ref
-  | Syntactic kn -> print_syntactic_def " := " kn
-  | Dir _ | ModuleType _ | Undefined _ -> mt () end
+  | Term ref -> 
+      print_ref false ref ++ print_name_infos ref ++ print_opacity ref
+  | Syntactic kn ->
+      print_syntactic_def " := " kn
+  | Dir _ | ModuleType _ | Undefined _ ->
+      mt () end
   ++
   hov 0 (str "Expands to: " ++ pr_located_qualid k)
 
@@ -511,38 +527,6 @@ let print_impargs ref =
   print_ref (need_expansion impl ref) ref ++ fnl() ++
   (if has_impl then print_impl_args impl 
    else (str "No implicit arguments" ++ fnl ()))
-
-let print_local_context () =
-  let env = Lib.contents_after None in
-  let rec print_var_rec = function 
-    | [] -> (mt ())
-    | (oname,Lib.Leaf lobj)::rest ->
-	if "VARIABLE" = object_tag lobj then
-          let d = get_variable (basename (fst oname)) in 
-	  (print_var_rec rest ++
-             print_named_decl d)
-	else 
-	  print_var_rec rest
-    | _::rest -> print_var_rec rest
-
-  and print_last_const = function
-    | (oname,Lib.Leaf lobj)::rest -> 
-        (match object_tag lobj with
-           | "CONSTANT" -> 
-	       let kn = snd oname in
-               let {const_body=val_0;const_type=typ} = 
-		 Global.lookup_constant kn in
-		 (print_last_const rest ++
-                  print_basename kn ++str" = " ++
-                  print_typed_body (val_0,typ))
-           | "INDUCTIVE" -> 
-	       let kn = snd oname in
-               (print_last_const rest ++print_mutual kn ++ fnl ())
-           | "VARIABLE" ->  (mt ())
-           | _          ->  print_last_const rest)
-    | _ -> (mt ())
-  in 
-  (print_var_rec env ++  print_last_const env)
 
 let unfold_head_fconst = 
   let rec unfrec k = match kind_of_term k with
@@ -563,17 +547,17 @@ let inspect depth =
 
 open Classops
 
-let print_coercion_value v = prterm (get_coercion_value v)
+let print_coercion_value v = pr_lconstr (get_coercion_value v)
 
 let print_class i =
   let cl,_ = class_info_from_index i in
   pr_class cl
   
 let print_path ((i,j),p) = 
-  (str"[" ++ 
-     prlist_with_sep pr_semicolon print_coercion_value p ++
-     str"] : " ++ print_class i ++ str" >-> " ++
-     print_class j)
+  hov 2 (
+    str"[" ++ hov 0 (prlist_with_sep pr_semicolon print_coercion_value p) ++
+    str"] : ") ++
+  print_class i ++ str" >-> " ++ print_class j
 
 let _ = Classops.install_path_printer print_path
 
@@ -603,5 +587,10 @@ let print_path_between cls clt =
         (str"No path between " ++ pr_class cls ++ str" and " ++ pr_class clt)
   in
   print_path ((i,j),p)
+
+let print_canonical_projections () =
+  prlist_with_sep pr_fnl (fun ((r1,r2),o) -> 
+    pr_global r2 ++ str " <- " ++ pr_global r1 ++ str " ( " ++ pr_lconstr o.o_DEF ++ str " )")
+    (canonical_projections ())
 
 (*************************************************************************)

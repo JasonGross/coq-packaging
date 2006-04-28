@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: eauto.ml4,v 1.11.2.1 2004/07/16 19:30:52 herbelin Exp $ *)
+(* $Id: eauto.ml4 7991 2006-02-05 22:56:16Z herbelin $ *)
 
 open Pp
 open Util
@@ -32,7 +32,7 @@ open Rawterm
 
 let e_give_exact c gl = let t1 = (pf_type_of gl c) and t2 = pf_concl gl in 
   if occur_existential t1 or occur_existential t2 then 
-     tclTHEN (unify t1) (exact_check c) gl
+     tclTHEN (Clenvtac.unify t1) (exact_check c) gl
   else exact_check c gl
 
 let assumption id = e_give_exact (mkVar id)
@@ -40,19 +40,19 @@ let assumption id = e_give_exact (mkVar id)
 let e_assumption gl = 
   tclFIRST (List.map assumption (pf_ids_of_hyps gl)) gl
 
+TACTIC EXTEND eassumption
+| [ "eassumption" ] -> [ e_assumption ]
+END
+
 let e_resolve_with_bindings_tac  (c,lbind) gl = 
-  let (wc,kONT) = startWalk gl in
-  let t = w_hnf_constr wc (w_type_of wc c) in 
-  let clause = make_clenv_binding_apply wc (-1) (c,t) lbind in 
-  e_res_pf kONT clause gl
+  let t = pf_hnf_constr gl (pf_type_of gl c) in 
+  let clause = make_clenv_binding_apply gl (-1) (c,t) lbind in 
+  Clenvtac.e_res_pf clause gl
 
 let e_resolve_constr c gls = e_resolve_with_bindings_tac (c,NoBindings) gls
 			     
-(* V8 TACTIC EXTEND eexact
+TACTIC EXTEND eexact
 | [ "eexact" constr(c) ] -> [ e_give_exact c ]
-END*)
-TACTIC EXTEND Eexact
-| [ "EExact" constr(c) ] -> [ e_give_exact c ]
 END
 
 let e_give_exact_constr = h_eexact
@@ -62,11 +62,8 @@ let registered_e_assumption gl =
               (pf_ids_of_hyps gl)) gl
 
 (* This automatically define h_eApply (among other things) *)
-(*V8 TACTIC EXTEND eapply
-  [ "eapply" constr_with_bindings(c) ] -> [ e_resolve_with_bindings_tac c ]
-END*)
 TACTIC EXTEND eapply
-  [ "EApply" constr_with_bindings(c) ] -> [ e_resolve_with_bindings_tac c ]
+  [ "eapply" constr_with_bindings(c) ] -> [ e_resolve_with_bindings_tac c ]
 END
 
 let vernac_e_resolve_constr c = h_eapply (c,NoBindings)
@@ -75,8 +72,7 @@ let e_constructor_tac boundopt i lbind gl =
     let cl = pf_concl gl in 
   let (mind,redcl) = pf_reduce_to_quantified_ind gl cl in 
   let nconstr =
-    Array.length (snd (Global.lookup_inductive mind)).mind_consnames
-  and sigma   = project gl in
+    Array.length (snd (Global.lookup_inductive mind)).mind_consnames in
   if i=0 then error "The constructors are numbered starting from 1";
   if i > nconstr then error "Not enough constructors";
   begin match boundopt with 
@@ -87,7 +83,8 @@ let e_constructor_tac boundopt i lbind gl =
   end;
   let cons = mkConstruct (ith_constructor_of_inductive mind i) in
   let apply_tac = e_resolve_with_bindings_tac (cons,lbind) in
-  (tclTHENLIST [convert_concl_no_check redcl; intros; apply_tac]) gl
+  (tclTHENLIST [convert_concl_no_check redcl DEFAULTcast
+; intros; apply_tac]) gl
 
 let e_one_constructor i = e_constructor_tac None i
 
@@ -107,33 +104,30 @@ let e_right = e_constructor_tac (Some 2) 2
 let e_split = e_constructor_tac (Some 1) 1
 
 (* This automatically define h_econstructor (among other things) *)
-(*V8 TACTIC EXTEND eapply
-  [ "econstructor" integer(n) with_bindings(c) ] -> [ e_constructor_tac None n c ]
-END*)
 TACTIC EXTEND econstructor
-  [ "EConstructor" integer(n) "with" bindings(c) ] -> [ e_constructor_tac None n c ]
-  | [ "EConstructor" integer(n) ] -> [ e_constructor_tac None n NoBindings ]
-  | [ "EConstructor" tactic_opt(t) ] -> [ e_any_constructor (option_app Tacinterp.eval_tactic t) ] 
+  [ "econstructor" integer(n) "with" bindings(c) ] -> [ e_constructor_tac None n c ]
+| [ "econstructor" integer(n) ] -> [ e_constructor_tac None n NoBindings ]
+| [ "econstructor" tactic_opt(t) ] -> [ e_any_constructor (option_app Tacinterp.eval_tactic t) ] 
       END
 
 TACTIC EXTEND eleft
-  [ "ELeft" "with" bindings(l) ] -> [e_left l]
-  | [ "ELeft"] -> [e_left NoBindings]
+  [ "eleft" "with" bindings(l) ] -> [e_left l]
+| [ "eleft"] -> [e_left NoBindings]
 END
 
 TACTIC EXTEND eright
-  [ "ERight" "with" bindings(l) ] -> [e_right l]
-  | [ "ERight" ] -> [e_right NoBindings]
+  [ "eright" "with" bindings(l) ] -> [e_right l]
+| [ "eright" ] -> [e_right NoBindings]
 END
 
 TACTIC EXTEND esplit
-  [ "ESplit" "with" bindings(l) ] -> [e_split l]
-  | [ "ESplit"] -> [e_split NoBindings]
+  [ "esplit" "with" bindings(l) ] -> [e_split l]
+| [ "esplit"] -> [e_split NoBindings]
 END
 
 
 TACTIC EXTEND eexists
-  [ "EExists" bindings(l) ] -> [e_split l]
+  [ "eexists" bindings(l) ] -> [e_split l]
 END
 
 
@@ -162,28 +156,9 @@ let prolog_tac l n gl =
   with UserError ("Refiner.tclFIRST",_) ->
     errorlabstrm "Prolog.prolog" (str "Prolog failed")
 
-(* V8 TACTIC EXTEND prolog
+TACTIC EXTEND prolog
 | [ "prolog" "[" constr_list(l) "]" int_or_var(n) ] -> [ prolog_tac l n ]
-END*)
-TACTIC EXTEND Prolog
-| [ "Prolog" "[" constr_list(l) "]" int_or_var(n) ] -> [ prolog_tac l n ]
 END
-
-(*
-let vernac_prolog =
-  let uncom = function
-    | Constr c -> c
-    | _ -> assert false
-  in
-  let gentac = 
-    hide_tactic "Prolog"
-      (function
-	 | (Integer n) :: al -> prolog_tac (List.map uncom al) n
-	 | _ -> assert false)
-  in 
-  fun coms n -> 
-    gentac ((Integer n) :: (List.map (fun com -> (Constr com)) coms))
-*)
 
 open Auto
 
@@ -192,8 +167,7 @@ open Auto
 (***************************************************************************)
 
 let unify_e_resolve  (c,clenv) gls = 
-  let (wc,kONT) = startWalk gls in
-  let clenv' = connect_clenv wc clenv in
+  let clenv' = connect_clenv gls clenv in
   let _ = clenv_unique_resolver false clenv' gls in
   vernac_e_resolve_constr c gls
 
@@ -219,7 +193,7 @@ and e_my_find_search db_list local_db hdc concl =
       list_map_append (Hint_db.map_auto (hdc,concl)) (local_db::db_list)
   in 
   let tac_of_hint = 
-    fun ({pri=b; pat = p; code=t} as patac) -> 
+    fun {pri=b; pat = p; code=t} -> 
       (b, 
        let tac =
 	 match t with
@@ -229,7 +203,7 @@ and e_my_find_search db_list local_db hdc concl =
 	   | Res_pf_THEN_trivial_fail (term,cl) ->
                tclTHEN (unify_e_resolve (term,cl)) 
 		 (e_trivial_fail_db db_list local_db)
-	   | Unfold_nth c -> unfold_constr c
+	   | Unfold_nth c -> unfold_in_concl [[],c]
 	   | Extern tacast -> conclPattern concl 
 	       (out_some p) tacast
        in 
@@ -309,7 +283,7 @@ module SearchProblem = struct
 	  filter_tactics s.tacres
 	    (List.map 
 	       (fun id -> (e_give_exact_constr (mkVar id),
-			   (str "Exact" ++ spc () ++ pr_id id)))
+			   (str "exact" ++ spc () ++ pr_id id)))
 	       (pf_ids_of_hyps g))
 	in
 	List.map (fun (res,pp) -> { depth = s.depth; tacres = res;
@@ -327,7 +301,7 @@ module SearchProblem = struct
 	     { depth = s.depth; tacres = res; 
 	       last_tactic = pp; dblist = s.dblist;
 	       localdb = ldb :: List.tl s.localdb })
-	  (filter_tactics s.tacres [Tactics.intro,(str "Intro")])
+	  (filter_tactics s.tacres [Tactics.intro,(str "intro")])
       in
       let rec_tacs = 
 	let l = 
@@ -380,33 +354,32 @@ let e_breadth_search debug n db_list local_db gl =
     s.SearchProblem.tacres
   with Not_found -> error "EAuto: breadth first search failed"
 
-let e_search_auto debug (in_depth,p) db_list gl = 
-  let local_db = make_local_hint_db gl in 
+let e_search_auto debug (in_depth,p) lems db_list gl = 
+  let local_db = make_local_hint_db lems gl in 
   if in_depth then 
     e_depth_search debug p db_list local_db gl
   else 
     e_breadth_search debug p db_list local_db gl
 
-let eauto debug np dbnames = 
+let eauto debug np lems dbnames =
   let db_list =
     List.map
       (fun x -> 
-	 try Stringmap.find x !searchtable
+	 try searchtable_map x
 	 with Not_found -> error ("EAuto: "^x^": No such Hint database"))
       ("core"::dbnames) 
   in
-  tclTRY (e_search_auto debug np db_list)
+  tclTRY (e_search_auto debug np lems db_list)
 
-let full_eauto debug n gl = 
-  let dbnames = stringmap_dom !searchtable in
+let full_eauto debug n lems gl = 
+  let dbnames = current_db_names () in
   let dbnames =  list_subtract dbnames ["v62"] in
-  let db_list = List.map (fun x -> Stringmap.find x !searchtable) dbnames in
-  let local_db = make_local_hint_db gl in
-  tclTRY (e_search_auto debug n db_list) gl
+  let db_list = List.map searchtable_map dbnames in
+  tclTRY (e_search_auto debug n lems db_list) gl
 
-let gen_eauto d np = function
-  | None -> full_eauto d np
-  | Some l -> eauto d np l
+let gen_eauto d np lems = function
+  | None -> full_eauto d np lems
+  | Some l -> eauto d np lems l
 
 let make_depth = function
   | None -> !default_search_depth 
@@ -422,10 +395,7 @@ open Genarg
 
 (* Hint bases *)
 
-let pr_hintbases _prc _prt = function 
-  | None -> str " with *"
-  | Some [] -> mt ()
-  | Some l -> str " with " ++ Util.prlist_with_sep spc str l
+let pr_hintbases _prc _prlc _prt = Pptactic.pr_hintbases
 
 ARGUMENT EXTEND hintbases
   TYPED AS preident_list_opt
@@ -435,14 +405,26 @@ ARGUMENT EXTEND hintbases
 | [ ] -> [ Some [] ]
 END
 
-TACTIC EXTEND EAuto
-| [ "EAuto" int_or_var_opt(n) int_or_var_opt(p) hintbases(db) ] ->
-    [ gen_eauto false (make_dimension n p) db ]
+let pr_constr_coma_sequence prc _ _ = prlist_with_sep pr_coma prc
+
+ARGUMENT EXTEND constr_coma_sequence
+  TYPED AS constr_list
+  PRINTED BY pr_constr_coma_sequence
+| [ constr(c) "," constr_coma_sequence(l) ] -> [ c::l ]
+| [ constr(c) ] -> [ [c] ]
 END
 
-V7 TACTIC EXTEND EAutodebug
-| [ "EAutod" int_or_var_opt(n) int_or_var_opt(p) hintbases(db) ] ->
-    [ gen_eauto true (make_dimension n p) db ]
+let pr_auto_using prc _prlc _prt = Pptactic.pr_auto_using prc
+
+ARGUMENT EXTEND auto_using
+  TYPED AS constr_list
+  PRINTED BY pr_auto_using
+| [ "using" constr_coma_sequence(l) ] -> [ l ]
+| [ ] -> [ [] ]
 END
 
-
+TACTIC EXTEND eauto
+| [ "eauto" int_or_var_opt(n) int_or_var_opt(p) auto_using(lems) 
+    hintbases(db) ] ->
+    [ gen_eauto false (make_dimension n p) lems db ]
+END

@@ -8,10 +8,10 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: g_fourier.ml4,v 1.1.12.1 2004/07/16 19:30:11 herbelin Exp $ *)
+(* $Id: g_fourier.ml4 7734 2005-12-26 14:06:51Z herbelin $ *)
 
 open FourierR
 
-TACTIC EXTEND Fourier
-  [ "FourierZ" (* constr_list(l) *) ] -> [ fourier (* l *) ]
+TACTIC EXTEND fourier
+  [ "fourierz" ] -> [ fourier ]
 END

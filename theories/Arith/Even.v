@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Even.v,v 1.14.2.1 2004/07/16 19:31:00 herbelin Exp $ i*)
+(*i $Id: Even.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (** Here we define the predicates [even] and [odd] by mutual induction
     and we prove the decidability and the exclusion of those predicates.

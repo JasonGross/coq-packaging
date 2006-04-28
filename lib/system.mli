@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: system.mli,v 1.17.16.3 2006/01/10 17:06:23 barras Exp $ i*)
+(*i $Id: system.mli 7603 2005-11-23 17:21:53Z barras $ i*)
 
 (*s Files and load paths. Load path entries remember the original root
     given by the user. For efficiency, we keep the full path (field
@@ -15,8 +15,6 @@
 
 type physical_path = string
 type load_path = physical_path list
-
-val canonical_path_name : string -> physical_path
 
 val all_subdirs : unix_path:string -> (physical_path * string list) list
 val is_in_path : load_path -> string -> bool
@@ -48,6 +46,18 @@ val raw_extern_intern : int -> string ->
 val extern_intern : 
   int -> string -> (string -> 'a -> unit) * (load_path -> string -> 'a)
 
+(*s Sending/receiving once with external executable *)
+
+val connect : (out_channel -> unit) -> (in_channel -> 'a) -> string -> 'a 
+
+(*s [run_command converter f com] launches command [com], and returns
+    the contents of stdout and stderr that have been processed with
+    [converter]; the processed contents of stdout and stderr is also
+    passed to [f] *)
+
+val run_command : (string -> string) -> (string -> unit) -> string -> 
+  Unix.process_status * string
+
 (*s Time stamps. *)
 
 type time
@@ -56,5 +66,3 @@ val process_time : unit -> float * float
 val get_time : unit -> time
 val time_difference : time -> time -> float (* in seconds *)
 val fmt_time_difference : time -> time -> Pp.std_ppcmds
-
-

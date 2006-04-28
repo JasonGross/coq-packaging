@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: prename.ml,v 1.3.14.1 2004/07/16 19:30:05 herbelin Exp $ *)
+(* $Id: prename.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Names
 open Nameops

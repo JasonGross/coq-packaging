@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: gmapl.ml,v 1.2.16.2 2006/01/03 20:31:16 herbelin Exp $ *)
+(* $Id: gmapl.ml 7780 2006-01-03 20:33:53Z herbelin $ *)
 
 open Util
 

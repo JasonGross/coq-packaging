@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: reductionops.ml,v 1.6.2.2 2004/07/16 19:30:46 herbelin Exp $ *)
+(* $Id: reductionops.ml 8708 2006-04-14 08:13:02Z jforest $ *)
 
 open Pp
 open Util
@@ -17,7 +17,6 @@ open Univ
 open Evd
 open Declarations
 open Environ
-open Instantiate
 open Closure
 open Esubst
 open Reduction
@@ -48,7 +47,7 @@ type local_state_reduction_function = state -> state
 let rec whd_state (x, stack as s) =
   match kind_of_term x with
     | App (f,cl) -> whd_state (f, append_stack cl stack)
-    | Cast (c,_)  -> whd_state (c, stack)
+    | Cast (c,_,_)  -> whd_state (c, stack)
     | _             -> s
 
 let appterm_of_stack (f,s) = (f,list_of_stack s)
@@ -189,7 +188,7 @@ let contract_cofix (bodynum,(types,names,bodies as typedbodies)) =
 
 let reduce_mind_case mia =
   match kind_of_term mia.mconstr with
-    | Construct (ind_sp,i as cstr_sp) ->
+    | Construct (ind_sp,i) ->
 (*	let ncargs = (fst mia.mci).(i-1) in*)
 	let real_cargs = list_skipn mia.mci.ci_npar mia.mcargs in
         applist (mia.mlf.(i-1),real_cargs)
@@ -255,7 +254,7 @@ let rec whd_state_gen flags env sigma =
 	     | Some  body -> whrec (body, stack)
 	     | None -> s)
       | LetIn (_,b,_,c) when red_zeta flags -> stacklam whrec [b] c stack
-      | Cast (c,_) -> whrec (c, stack)
+      | Cast (c,_,_) -> whrec (c, stack)
       | App (f,cl)  -> whrec (f, append_stack cl stack)
       | Lambda (na,t,c) ->
           (match decomp_stack stack with
@@ -300,7 +299,7 @@ let local_whd_state_gen flags =
   let rec whrec (x, stack as s) =
     match kind_of_term x with
       | LetIn (_,b,_,c) when red_zeta flags -> stacklam whrec [b] c stack
-      | Cast (c,_) -> whrec (c, stack)
+      | Cast (c,_,_) -> whrec (c, stack)
       | App (f,cl)  -> whrec (f, append_stack cl stack)
       | Lambda (_,_,c) ->
           (match decomp_stack stack with
@@ -338,6 +337,7 @@ let local_whd_state_gen flags =
       | x -> s
   in 
   whrec
+
 
 (* 1. Beta Reduction Functions *)
 
@@ -427,12 +427,14 @@ let whd_betadeltaiota_nolet env sigma x =
 (* Replacing defined evars for error messages *)
 let rec whd_evar sigma c =
   match kind_of_term c with
-    | Evar (ev,args) when Evd.in_dom sigma ev & Evd.is_defined sigma ev ->
-	whd_evar sigma (Instantiate.existential_value sigma (ev,args))
+    | Evar (ev,args)
+        when Evd.in_dom sigma ev & Evd.is_defined sigma ev ->
+	whd_evar sigma (Evd.existential_value sigma (ev,args))
+    | Sort s when is_sort_variable sigma s -> whd_sort_variable sigma c
     | _ -> collapse_appl c
 
-let nf_evar sigma =
-  local_strong (whd_evar sigma)
+let nf_evar evd =
+  local_strong (whd_evar evd)
 
 (* lazy reduction functions. The infos must be created for each term *)
 let clos_norm_flags flgs env sigma t =
@@ -442,6 +444,120 @@ let nf_beta = clos_norm_flags Closure.beta empty_env Evd.empty
 let nf_betaiota = clos_norm_flags Closure.betaiota empty_env Evd.empty
 let nf_betadeltaiota env sigma =
   clos_norm_flags Closure.betadeltaiota env sigma
+
+
+(* Attention reduire un beta-redexe avec un argument qui n'est pas 
+   une variable, peut changer enormement le temps de conversion lors
+   du type checking :
+     (fun x => x + x) M
+*)
+let nf_betaiotaevar_preserving_vm_cast env sigma t = 
+  let push decl (env,subst) = 
+    (Environ.push_rel decl env, Esubst.subs_lift subst) in
+  let cons decl v (env, subst) = (push_rel decl env, Esubst.subs_cons (v,subst)) in
+
+  let app_stack t (f, stack) = 
+    let t' = app_stack (f,stack) in
+    match kind_of_term t, kind_of_term t' with
+      | App(f,args), App(f',args') when f == f' && array_for_all2 (==) args args' -> t
+      | _ -> t'
+  in
+  let rec whrec (env, subst as es) (t, stack as s) =
+    match kind_of_term t with
+      | Rel i -> 
+	  let t' = 
+	    match Esubst.expand_rel i subst with
+	      | Inl (k,e) -> lift k e
+	      | Inr (k,None) -> mkRel k
+	      | Inr (k, Some p) -> lift (k-p) (mkRel p) (*??????? == mkRel k !  Julien *)
+                           (* Est correct ??? *)
+	  in
+	  if t = t' then s else t', stack
+      | Meta _ | Var _ | Sort _ | Const _ | Ind _ | Construct _ -> s
+      | Evar (e,al) -> 
+	  let al' = Array.map (norm es) al in
+	  begin match existential_opt_value sigma (e,al') with
+	    | Some body -> whrec (env,Esubst.ESID 0) (body, stack) (**** ????? ****)
+	    | None ->
+		if array_for_all2 (==) al al' then s else (mkEvar (e, al'), stack)
+	  end
+      | Cast (c,VMcast,t) ->
+	  let c' = norm es c in
+	  let t' = norm es t in 
+	  if c == c' && t == t' then s
+	  else (mkCast(c',VMcast,t'),stack)
+      | Cast (c,DEFAULTcast,_) ->
+	  whrec es (c, stack)
+
+      | Prod (na,t,c) ->
+	  let t' = norm es t in
+	  let c' = norm (push (na, None, t') es) c in
+	  if t==t' && c==c' then s else (mkProd (na, t', c'), stack)
+
+      | Lambda (na,t,c) ->
+          begin match decomp_stack stack with
+            | Some (a,m) -> 
+		begin match kind_of_term a with
+		  | Rel i when not (evaluable_rel i env) ->
+                      whrec (cons (na,None,t) a es) (c, m)
+		  | Var id when  not (evaluable_named id env)->
+                      whrec (cons (na,None,t) a es) (c, m)
+		  | _ -> 
+		      let t' = norm es t in
+		      let c' = norm (push (na, None, t') es) c in
+		      if t == t' && c == c' then s
+		      else mkLambda (na, t', c'), stack
+		end
+            | _ -> 
+		let t' = norm es t in 
+		let c' =  norm (push (na, None, t') es) c  in 
+		if t == t' && c == c' then s 
+		else mkLambda(na,t',c'),stack
+		
+	  end
+      | LetIn (na,b,t,c) ->
+	  let b' = norm es b in
+	  let t' = norm es t in
+	  let c' = norm (push (na, Some b', t') es) c in
+	  if b==b' && t==t' && c==c' then s 
+	  else mkLetIn (na, b', t', c'), stack
+
+      | App (f,cl)  -> 
+          let cl' = Array.map (norm es) cl in
+          whrec es (f, append_stack cl' stack)
+
+      | Case (ci,p,d,lf) ->
+          let (c,cargs) = whrec es (d, empty_stack) in
+          if reducible_mind_case c then
+            whrec es (reduce_mind_case
+                     {mP=p; mconstr=c; mcargs=list_of_stack cargs;
+		      mci=ci; mlf=lf}, stack)
+          else     
+	    let p' = norm es p in
+	    let d' = app_stack d (c,cargs) in 
+	    let lf' = Array.map (norm es) lf in
+	    if p==p' && d==d' && array_for_all2 (==) lf lf' then s 
+	    else (mkCase (ci, p', d', lf'), stack)
+      | Fix (ln,(lna,tl,bl)) ->
+	  let tl' = Array.map (norm es) tl in
+	  let es' =
+            array_fold_left2 (fun es na t -> push (na,None,t) es) es lna tl' in
+	  let bl' = Array.map (norm es') bl in
+	  if array_for_all2 (==) tl tl' && array_for_all2 (==) bl bl'
+	  then s
+	  else (mkFix (ln,(lna,tl',bl')), stack)
+      | CoFix(ln,(lna,tl,bl)) ->
+	  let tl' = Array.map (norm es) tl in
+	  let es' =
+            array_fold_left2 (fun es na t -> push (na,None,t) es) es lna tl in
+	  let bl' = Array.map (norm es') bl in
+	  if array_for_all2 (==) tl tl' && array_for_all2 (==) bl bl'
+	  then s
+	  else (mkCoFix (ln,(lna,tl',bl')), stack)
+
+  and norm es t = app_stack t (whrec es (t,empty_stack)) in
+  norm (env, Esubst.ESID 0) t
+
 
 (* lazy weak head reduction functions *)
 let whd_flags flgs env sigma t =
@@ -461,10 +577,6 @@ let fhnf_apply info k h a = Profile.profile4 fakey fhnf_apply info k h a;;
 (* Conversion utility functions *)
 
 type conversion_test = constraints -> constraints
-
-type conv_pb = 
-  | CONV 
-  | CUMUL
 
 let pb_is_equal pb = pb = CONV
 
@@ -515,22 +627,22 @@ let plain_instance s c =
   let rec irec u = match kind_of_term u with
     | Meta p -> (try List.assoc p s with Not_found -> u)
     | App (f,l) when isCast f ->
-        let (f,t) = destCast f in
+        let (f,_,t) = destCast f in
         let l' = Array.map irec l in 
         (match kind_of_term f with
-          | Meta p ->
-              (* Don't flatten application nodes: this is used to extract a
-                 proof-term from a proof-tree and we want to keep the structure
-                 of the proof-tree *)
-              (try let g = List.assoc p s in
-              match kind_of_term g with
-                | App _ -> 
-                    let h = id_of_string "H" in
-                    mkLetIn (Name h,g,t,mkApp(mkRel 1,Array.map (lift 1) l'))
-                | _ -> mkApp (g,l')
-              with Not_found -> mkApp (f,l'))
-          | _ -> mkApp (irec f,l'))
-    | Cast (m,_) when isMeta m ->
+        | Meta p ->
+	    (* Don't flatten application nodes: this is used to extract a
+               proof-term from a proof-tree and we want to keep the structure
+               of the proof-tree *)
+	    (try let g = List.assoc p s in
+	    match kind_of_term g with
+            | App _ -> 
+                let h = id_of_string "H" in
+                mkLetIn (Name h,g,t,mkApp(mkRel 1,Array.map (lift 1) l'))
+            | _ -> mkApp (g,l')
+	    with Not_found -> mkApp (f,l'))
+        | _ -> mkApp (irec f,l'))	
+    | Cast (m,_,_) when isMeta m ->
 	(try List.assoc (destMeta m) s with Not_found -> u)
     | _ -> map_constr irec u
   in 
@@ -580,17 +692,28 @@ let splay_prod env sigma =
   in 
   decrec env []
 
+let splay_lambda env sigma = 
+  let rec decrec env m c =
+    let t = whd_betadeltaiota env sigma c in
+    match kind_of_term t with
+      | Lambda (n,a,c0) ->
+	  decrec (push_rel (n,None,a) env)
+	    ((n,a)::m) c0
+      | _ -> m,t
+  in 
+  decrec env []
+
 let splay_prod_assum env sigma = 
   let rec prodec_rec env l c =
     let t = whd_betadeltaiota_nolet env sigma c in
-    match kind_of_term c with
+    match kind_of_term t with
     | Prod (x,t,c)  ->
 	prodec_rec (push_rel (x,None,t) env)
 	  (Sign.add_rel_decl (x, None, t) l) c
     | LetIn (x,b,t,c) ->
 	prodec_rec (push_rel (x, Some b, t) env)
 	  (Sign.add_rel_decl (x, Some b, t) l) c
-    | Cast (c,_)    -> prodec_rec env l c
+    | Cast (c,_,_)    -> prodec_rec env l c
     | _               -> l,t
   in
   prodec_rec env Sign.empty_rel_context
@@ -612,6 +735,13 @@ let decomp_n_prod env sigma n =
       | _                      -> error "decomp_n_prod: Not enough products"
   in 
   decrec env n Sign.empty_rel_context
+
+exception NotASort
+
+let decomp_sort env sigma t =
+  match kind_of_term (whd_betadeltaiota env sigma t) with
+  | Sort s -> s
+  | _ -> raise NotASort
 
 (* One step of approximation *)
 
@@ -715,3 +845,27 @@ let is_info_type env sigma t =
   (s = Prop Pos) ||
   (s <> Prop Null && 
    try info_arity env sigma t.utj_val with IsType -> true)
+
+(*************************************)
+(* Metas *)
+
+let meta_value evd mv = 
+  let rec valrec mv =
+    try
+      let b = meta_fvalue evd mv in
+      instance
+        (List.map (fun mv' -> (mv',valrec mv')) (Metaset.elements b.freemetas))
+        b.rebus
+    with Anomaly _ | Not_found -> 
+      mkMeta mv
+  in 
+  valrec mv
+
+let meta_instance env b =
+  let c_sigma =
+    List.map 
+      (fun mv -> (mv,meta_value env mv)) (Metaset.elements b.freemetas)
+  in 
+  instance c_sigma b.rebus
+
+let nf_meta env c = meta_instance env (mk_freelisted c)

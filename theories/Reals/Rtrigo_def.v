@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: Rtrigo_def.v,v 1.17.2.1 2004/07/16 19:31:14 herbelin Exp $ i*)
+(*i $Id: Rtrigo_def.v 6295 2004-11-12 16:40:39Z gregoire $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.

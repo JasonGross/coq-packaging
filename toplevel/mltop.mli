@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mltop.mli,v 1.8.14.1 2004/07/16 19:31:49 herbelin Exp $ i*)
+(*i $Id: mltop.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (* If there is a toplevel under Coq, it is described by the following 
    record. *)

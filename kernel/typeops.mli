@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: typeops.mli,v 1.44.8.1 2004/07/16 19:30:28 herbelin Exp $ i*)
+(*i $Id: typeops.mli 8673 2006-03-29 21:21:52Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -33,6 +33,8 @@ val infer_local_decls :
 
 val assumption_of_judgment :  env -> unsafe_judgment -> types
 val type_judgment          :  env -> unsafe_judgment -> unsafe_type_judgment
+val on_judgment_type       :  
+  (types -> types) -> unsafe_judgment -> unsafe_judgment
 
 (*s Type of sorts. *)
 val judge_of_prop_contents : contents -> unsafe_judgment
@@ -69,8 +71,8 @@ val judge_of_letin :
 
 (*s Type of a cast. *)
 val judge_of_cast :
-  env -> unsafe_judgment -> unsafe_type_judgment
-    -> unsafe_judgment * constraints
+  env -> unsafe_judgment -> cast_kind -> unsafe_type_judgment ->
+    unsafe_judgment * constraints
 
 (*s Inductive types. *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Zhints.v,v 1.8.2.1 2004/07/16 19:31:21 herbelin Exp $ i*)
+(*i $Id: Zhints.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (** This file centralizes the lemmas about [Z], classifying them
     according to the way they can be used in automatic search  *)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: genarg.ml,v 1.9.2.2 2005/01/15 14:56:54 herbelin Exp $ *)
+(* $Id: genarg.ml 7879 2006-01-16 13:58:09Z herbelin $ *)
 
 open Pp
 open Util
@@ -26,16 +26,15 @@ type argument_type =
   | PreIdentArgType
   | IntroPatternArgType
   | IdentArgType
-  | HypArgType
+  | VarArgType
   | RefArgType
   (* Specific types *)
   | SortArgType
   | ConstrArgType
   | ConstrMayEvalArgType
   | QuantHypArgType
-  | TacticArgType
-  | OpenConstrArgType
-  | CastedOpenConstrArgType
+  | TacticArgType of int
+  | OpenConstrArgType of bool
   | ConstrWithBindingsArgType
   | BindingsArgType
   | RedExprArgType
@@ -70,15 +69,17 @@ type intro_pattern_expr =
   | IntroOrAndPattern of case_intro_pattern_expr
   | IntroWildcard
   | IntroIdentifier of identifier
+  | IntroAnonymous
 and case_intro_pattern_expr = intro_pattern_expr list list
 
 let rec pr_intro_pattern = function
   | IntroOrAndPattern pll -> pr_case_intro_pattern pll
   | IntroWildcard -> str "_"
   | IntroIdentifier id -> pr_id id
+  | IntroAnonymous -> str "?"
 
 and pr_case_intro_pattern = function
-  | [_::_ as pl] ->
+  | [pl] ->
       str "(" ++ hv 0 (prlist_with_sep pr_coma pr_intro_pattern pl) ++ str ")"
   | pll ->
       str "[" ++
@@ -117,9 +118,9 @@ let rawwit_ident = IdentArgType
 let globwit_ident = IdentArgType
 let wit_ident = IdentArgType
 
-let rawwit_var = HypArgType
-let globwit_var = HypArgType
-let wit_var = HypArgType
+let rawwit_var = VarArgType
+let globwit_var = VarArgType
+let wit_var = VarArgType
 
 let rawwit_ref = RefArgType
 let globwit_ref = RefArgType
@@ -141,17 +142,21 @@ let rawwit_constr_may_eval = ConstrMayEvalArgType
 let globwit_constr_may_eval = ConstrMayEvalArgType
 let wit_constr_may_eval = ConstrMayEvalArgType
 
-let rawwit_tactic = TacticArgType
-let globwit_tactic = TacticArgType
-let wit_tactic = TacticArgType
+let rawwit_tactic n = TacticArgType n
+let globwit_tactic n = TacticArgType n
+let wit_tactic n = TacticArgType n
 
-let rawwit_open_constr = OpenConstrArgType
-let globwit_open_constr = OpenConstrArgType
-let wit_open_constr = OpenConstrArgType
+let rawwit_open_constr_gen b = OpenConstrArgType b
+let globwit_open_constr_gen b = OpenConstrArgType b 
+let wit_open_constr_gen b = OpenConstrArgType b
 
-let rawwit_casted_open_constr = CastedOpenConstrArgType
-let globwit_casted_open_constr = CastedOpenConstrArgType
-let wit_casted_open_constr = CastedOpenConstrArgType
+let rawwit_open_constr = rawwit_open_constr_gen false
+let globwit_open_constr = globwit_open_constr_gen false
+let wit_open_constr = wit_open_constr_gen false
+
+let rawwit_casted_open_constr = rawwit_open_constr_gen true
+let globwit_casted_open_constr = globwit_open_constr_gen true
+let wit_casted_open_constr = wit_open_constr_gen true
 
 let rawwit_constr_with_bindings = ConstrWithBindingsArgType
 let globwit_constr_with_bindings = ConstrWithBindingsArgType
@@ -178,24 +183,24 @@ let out_gen t (t',o) = if t = t' then Obj.magic o else failwith "out_gen"
 let genarg_tag (s,_) = s
 
 let fold_list0 f = function
-  | (List0ArgType t as u, l) ->
+  | (List0ArgType t, l) ->
       List.fold_right (fun x -> f (in_gen t x)) (Obj.magic l)
   | _ -> failwith "Genarg: not a list0"
 
 let fold_list1 f = function
-  | (List1ArgType t as u, l) ->
+  | (List1ArgType t, l) ->
       List.fold_right (fun x -> f (in_gen t x)) (Obj.magic l)
   | _ -> failwith "Genarg: not a list1"
 
 let fold_opt f a = function
-  | (OptArgType t as u, l) ->
+  | (OptArgType t, l) ->
       (match Obj.magic l with
 	| None -> a
 	| Some x -> f (in_gen t x))
   | _ -> failwith "Genarg: not a opt"
 
 let fold_pair f = function
-  | (PairArgType (t1,t2) as u, l) ->
+  | (PairArgType (t1,t2), l) ->
       let (x1,x2) = Obj.magic l in
       f (in_gen t1 x1) (in_gen t2 x2)
   | _ -> failwith "Genarg: not a pair"

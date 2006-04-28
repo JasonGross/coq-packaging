@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Zwf.v,v 1.7.2.1 2004/07/16 19:31:22 herbelin Exp $ *)
+(* $Id: Zwf.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Require Import ZArith_base.
 Require Export Wf_nat.

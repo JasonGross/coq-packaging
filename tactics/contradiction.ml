@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: contradiction.ml,v 1.3.2.1 2004/07/16 19:30:52 herbelin Exp $ *)
+(* $Id: contradiction.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Util
 open Term

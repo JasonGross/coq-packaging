@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i        $Id: DiscrR.v,v 1.21.2.1 2004/07/16 19:31:10 herbelin Exp $       i*)
+(*i        $Id: DiscrR.v 5920 2004-07-16 20:01:26Z herbelin $       i*)
 
 Require Import RIneq.
 Require Import Omega. Open Local Scope R_scope.

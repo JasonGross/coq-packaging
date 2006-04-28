@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: utf8_convert.mll,v 1.1.2.1 2004/07/16 19:30:21 herbelin Exp $ *)
+(* $Id: utf8_convert.mll 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 {
   open Lexing 

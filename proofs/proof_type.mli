@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: proof_type.mli,v 1.33.2.1 2004/07/16 19:30:49 herbelin Exp $ i*)
+(*i $Id: proof_type.mli 7639 2005-12-02 10:01:15Z gregoire $ i*)
 
 (*i*)
 open Environ
@@ -32,7 +32,7 @@ type prim_rule =
   | FixRule of identifier * int * (identifier * int * constr) list
   | Cofix of identifier * (identifier * constr) list
   | Refine of constr
-  | Convert_concl of types
+  | Convert_concl of types * cast_kind 
   | Convert_hyp of named_declaration
   | Thin of identifier list
   | ThinBody of identifier list
@@ -66,12 +66,6 @@ type prim_rule =
    }
 \end{verbatim}
 *)
-
-(* The type constructor ['a sigma] adds an evar map to an object of
-  type ['a] (see below the form of a [goal sigma] *)
-type 'a sigma = { 
-  it : 'a ; 
-  sigma : evar_map}
 
 (*s Proof trees. 
   [ref] = [None] if the goal has still to be proved, 

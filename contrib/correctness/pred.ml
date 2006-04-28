@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: pred.ml,v 1.6.14.1 2004/07/16 19:30:05 herbelin Exp $ *)
+(* $Id: pred.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Pp
 open Past

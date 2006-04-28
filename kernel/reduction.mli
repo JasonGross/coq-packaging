@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: reduction.mli,v 1.56.8.1 2004/07/16 19:30:26 herbelin Exp $ i*)
+(*i $Id: reduction.mli 7639 2005-12-02 10:01:15Z gregoire $ i*)
 
 (*i*)
 open Term
@@ -29,12 +29,27 @@ exception NotConvertible
 exception NotConvertibleVect of int
 type 'a conversion_function = env -> 'a -> 'a -> Univ.constraints
 
+type conv_pb = CONV | CUMUL
+
+val sort_cmp : 
+    conv_pb -> sorts -> sorts -> Univ.constraints -> Univ.constraints
+
 val conv_sort      : sorts conversion_function
 val conv_sort_leq  : sorts conversion_function
 
-val conv           : types conversion_function
+val conv_cmp       : conv_pb -> constr conversion_function
+
+val conv           : constr conversion_function
 val conv_leq       : types conversion_function
 val conv_leq_vecti : types array conversion_function
+
+(* option for conversion *)
+val set_vm_conv : (conv_pb -> types conversion_function) -> unit
+val vm_conv : conv_pb -> types conversion_function
+
+val set_default_conv : (conv_pb -> types conversion_function) -> unit
+val default_conv     : conv_pb -> types conversion_function
+val default_conv_leq : types conversion_function
 
 (************************************************************************)
 

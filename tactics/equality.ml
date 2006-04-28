@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: equality.ml,v 1.120.2.4 2004/11/21 22:24:09 herbelin Exp $ *)
+(* $Id: equality.ml 8677 2006-04-02 17:05:59Z herbelin $ *)
 
 open Pp
 open Util
@@ -20,7 +20,6 @@ open Inductiveops
 open Environ
 open Libnames
 open Reductionops
-open Instantiate
 open Typeops
 open Typing
 open Retyping
@@ -40,6 +39,7 @@ open Coqlib
 open Vernacexpr
 open Setoid_replace
 open Declarations
+open Indrec
 
 (* Rewriting tactics *)
 
@@ -48,10 +48,28 @@ open Declarations
    with type (A:<sort>)(x:A)(P:A->Prop)(P x)->(y:A)(eqname A y x)->(P y).
    If another equality myeq is introduced, then corresponding theorems
    myeq_ind_r, myeq_rec_r and myeq_rect_r have to be proven. See below.
-   -- Eduardo (19/8/97
+   -- Eduardo (19/8/97)
 *)
 
-let general_rewrite_bindings lft2rgt (c,l) gl =
+let general_s_rewrite_clause = function
+  | None -> general_s_rewrite
+  | Some id -> general_s_rewrite_in id
+
+(* Ad hoc asymmetric general_elim_clause *)
+let general_elim_clause cls c elim = match cls with
+  | None ->
+      (* was tclWEAK_PROGRESS which only fails for tactics generating one 
+         subgoal and did not fail for useless conditional rewritings generating
+         an extra condition *)
+      tclNOTSAMEGOAL (general_elim c elim ~allow_K:false)
+  | Some id ->
+      general_elim_in id c elim 
+
+let elimination_sort_of_clause = function
+  | None -> elimination_sort_of_goal
+  | Some id -> elimination_sort_of_hyp id
+
+let general_rewrite_bindings_clause cls lft2rgt (c,l) gl =
   let ctype = pf_type_of gl c in 
   let env = pf_env gl in
   let sigma = project gl in 
@@ -59,21 +77,27 @@ let general_rewrite_bindings lft2rgt (c,l) gl =
   match match_with_equation t with
     | None -> 
 	if l = NoBindings
-	then general_s_rewrite lft2rgt c gl
+	then general_s_rewrite_clause cls lft2rgt c [] gl
 	else error "The term provided does not end with an equation" 
     | Some (hdcncl,_) -> 
         let hdcncls = string_of_inductive hdcncl in 
-	let suffix = Indrec.elimination_suffix (elimination_sort_of_goal gl)in
+	let suffix = elimination_suffix (elimination_sort_of_clause cls gl) in
+        let dir = if cls=None then lft2rgt else not lft2rgt in
+        let rwr_thm = if dir then hdcncls^suffix^"_r" else hdcncls^suffix in
         let elim =
-	  if lft2rgt then
-            pf_global gl (id_of_string (hdcncls^suffix^"_r"))
-          else
-	    pf_global gl (id_of_string (hdcncls^suffix))
+	  try pf_global gl (id_of_string rwr_thm)
+          with Not_found ->
+            error ("Cannot find rewrite principle "^rwr_thm)
         in 
-	tclNOTSAMEGOAL (general_elim (c,l) (elim,NoBindings) ~allow_K:false) gl
-   (* was tclWEAK_PROGRESS which only fails for tactics generating one subgoal 
-      and did not fail for useless conditional rewritings generating an
-      extra condition *)
+	general_elim_clause cls (c,l) (elim,NoBindings) gl
+
+let general_rewrite_bindings = general_rewrite_bindings_clause None
+let general_rewrite l2r c = general_rewrite_bindings l2r (c,NoBindings)
+
+let general_rewrite_bindings_in l2r id =
+  general_rewrite_bindings_clause (Some id) l2r
+let general_rewrite_in l2r id c = 
+  general_rewrite_bindings_clause (Some id) l2r (c,NoBindings)
 
 (* Conditional rewriting, the success of a rewriting is related 
    to the resolution of the conditions by a given tactic *)
@@ -82,73 +106,69 @@ let conditional_rewrite lft2rgt tac (c,bl) =
   tclTHENSFIRSTn (general_rewrite_bindings lft2rgt (c,bl))
     [|tclIDTAC|] (tclCOMPLETE tac)
 
-let general_rewrite lft2rgt c = general_rewrite_bindings lft2rgt (c,NoBindings)
-
 let rewriteLR_bindings = general_rewrite_bindings true
 let rewriteRL_bindings = general_rewrite_bindings false
 
 let rewriteLR = general_rewrite true
 let rewriteRL = general_rewrite false
 
-(* The Rewrite in tactic *)
-let general_rewrite_in lft2rgt id (c,l) gl =
-  let ctype = pf_type_of gl c in 
-  let env = pf_env gl in
-  let sigma = project gl in 
-  let _,t = splay_prod env sigma ctype in
-  match match_with_equation t with
-    | None -> (* Do not deal with setoids yet *) 
-        error "The term provided does not end with an equation" 
-    | Some (hdcncl,_) -> 
-        let hdcncls = string_of_inductive hdcncl in 
-	let suffix =
-          Indrec.elimination_suffix (elimination_sort_of_hyp id gl) in
-        let rwr_thm =
-          if lft2rgt then hdcncls^suffix else hdcncls^suffix^"_r" in
-        let elim =
-	  try pf_global gl (id_of_string rwr_thm)
-          with Not_found ->
-            error ("Cannot find rewrite principle "^rwr_thm) in 
-	general_elim_in id (c,l) (elim,NoBindings) gl
-
-let rewriteLRin = general_rewrite_in true
-let rewriteRLin = general_rewrite_in false
+let rewriteLRin_bindings = general_rewrite_bindings_in true
+let rewriteRLin_bindings = general_rewrite_bindings_in false
 
 let conditional_rewrite_in lft2rgt id tac (c,bl) = 
-  tclTHENSFIRSTn (general_rewrite_in lft2rgt id (c,bl))
+  tclTHENSFIRSTn (general_rewrite_bindings_in lft2rgt id (c,bl))
     [|tclIDTAC|] (tclCOMPLETE tac)
 
 let rewriteRL_clause = function
   | None -> rewriteRL_bindings
-  | Some id -> rewriteRLin id
+  | Some id -> rewriteRLin_bindings id
 
 (* Replacing tactics *)
 
-(* eqt,sym_eqt : equality on Type and its symmetry theorem
+(* eq,sym_eq : equality on Type and its symmetry theorem
    c2 c1 : c1 is to be replaced by c2
    unsafe : If true, do not check that c1 and c2 are convertible
+   tac : Used to prove the equality c1 = c2 
    gl : goal *)
 
-let abstract_replace clause c2 c1 unsafe gl =
+let abstract_replace clause c2 c1 unsafe tac gl =
   let t1 = pf_type_of gl c1 
   and t2 = pf_type_of gl c2 in
   if unsafe or (pf_conv_x gl t1 t2) then
-    let e = (build_coq_eqT_data ()).eq in
-    let sym = (build_coq_eqT_data ()).sym in
+    let e = build_coq_eq () in
+    let sym = build_coq_sym_eq () in
     let eq = applist (e, [t1;c1;c2]) in
     tclTHENS (assert_tac false Anonymous eq)
       [onLastHyp (fun id -> 
 	tclTHEN 
 	  (tclTRY (rewriteRL_clause clause (mkVar id,NoBindings)))
 	  (clear [id]));
-       tclORELSE assumption 
-	(tclTRY (tclTHEN (apply sym) assumption))] gl
+       tclFIRST
+	 [assumption;
+	  tclTHEN (apply sym) assumption;
+	  tclTRY (tclCOMPLETE tac)
+	 ]
+      ] gl
   else
     error "terms does not have convertible types"
 
-let replace c2 c1 gl = abstract_replace None c2 c1 false gl
 
-let replace_in id c2 c1 gl = abstract_replace (Some id) c2 c1 false gl
+let replace c2 c1 gl = abstract_replace None c2 c1 false tclIDTAC gl
+
+let replace_in id c2 c1 gl = abstract_replace (Some id) c2 c1 false tclIDTAC gl
+
+let replace_by c2 c1 tac gl = abstract_replace None c2 c1 false tac gl
+
+let replace_in_by id c2 c1 tac gl = abstract_replace (Some id) c2 c1 false tac gl
+
+
+let new_replace c2 c1 id tac_opt gl = 
+  let tac = 
+    match tac_opt with 
+      | Some tac -> tac 
+      | _ -> tclIDTAC
+  in
+  abstract_replace id c2 c1 false tac gl
 
 (* End of Eduardo's code. The rest of this file could be improved
    using the functions match_with_equation, etc that I defined
@@ -156,24 +176,8 @@ let replace_in id c2 c1 gl = abstract_replace (Some id) c2 c1 false gl
    -- Eduardo (19/8/97)
 *)
 
-(* Tactics for equality reasoning with the "eq"  or "eqT"
-   relation This code  will work with any equivalence relation which 
-   is substitutive *)
-
-(* Patterns *)
-
-let build_coq_eq eq = eq.eq
-let build_ind eq = eq.ind
-let build_rect eq = 
-  match eq.rect with
-    | None -> assert false
-    | Some c -> c
-	  
-(*********** List of constructions depending of the initial state *)
-
-let find_eq_pattern aritysort sort = 
-  (* "eq" now accept arguments in Type and elimination to Type *)
-  Coqlib.build_coq_eq ()
+(* Tactics for equality reasoning with the "eq" relation. This code
+   will work with any equivalence relation which is substitutive *)
 
 (* [find_positions t1 t2]
 
@@ -317,7 +321,7 @@ let discriminable env sigma t1 t2 =
    the continuation then constructs the case-split.
  *)
 let descend_then sigma env head dirn =
-  let IndType (indf,_) as indt =
+  let IndType (indf,_) =
     try find_rectype env sigma (get_type_of env sigma head)
     with Not_found -> assert false in
   let ind,_ = dest_ind_family indf in
@@ -360,7 +364,7 @@ let descend_then sigma env head dirn =
    giving [True], and all the rest giving False. *)
 
 let construct_discriminator sigma env dirn c sort =
-  let (IndType(indf,_) as indt) =
+  let IndType(indf,_) =
     try find_rectype env sigma (type_of env sigma c)
     with Not_found ->
        (* one can find Rel(k) in case of dependent constructors 
@@ -395,8 +399,7 @@ let rec build_discriminator sigma env dirn c sort = function
 	try find_rectype env sigma cty with Not_found -> assert false in
       let (ind,_) = dest_ind_family indf in
       let (mib,mip) = lookup_mind_specif env ind in
-      let _,arsort = get_arity env indf in
-      let nparams = mip.mind_nparams  in
+      let nparams = mib.mind_nparams  in
       let (cnum_nlams,cnum_env,kont) = descend_then sigma env c cnum in
       let newc = mkRel(cnum_nlams-(argnum-nparams)) in
       let subval = build_discriminator sigma cnum_env dirn newc sort l  in
@@ -420,7 +423,7 @@ let gen_absurdity id gl =
 let discrimination_pf e (t,t1,t2) discriminator lbeq gls =
   let i           = build_coq_I () in
   let absurd_term = build_coq_False () in
-  let eq_elim     = build_ind lbeq in
+  let eq_elim     = lbeq.ind in
   (applist (eq_elim, [t;t1;mkNamedLambda e t discriminator;i;t2]), absurd_term)
 
 exception NotDiscriminable
@@ -437,7 +440,6 @@ let discrEq (lbeq,(t,t1,t2)) id gls =
 	 let e_env = push_named (e,None,t) env in
 	 let discriminator =
 	   build_discriminator sigma e_env dirn (mkVar e) sort cpath in
-	 let (indt,_) = find_mrectype env sigma t in 
 	 let (pf, absurd_term) =
 	   discrimination_pf e (t,t1,t2) discriminator lbeq gls 
 	 in
@@ -457,22 +459,16 @@ let onEquality tac id gls =
       errorlabstrm "" (pr_id id ++ str": not a primitive equality") 
   in tac eq id gls
 
-let check_equality tac id gls =
-  let eqn = pf_whd_betadeltaiota gls (pf_get_hyp_typ gls id) in
-  let eq =
-    try find_eq_data_decompose eqn
-    with PatternMatchingFailure ->
-      errorlabstrm "" (str "The goal should negate an equality")
-  in tac eq id gls
-
 let onNegatedEquality tac gls =
-   if is_matching_not (pf_concl gls) then
-     (tclTHEN (tclTHEN hnf_in_concl intro) (onLastHyp(check_equality tac))) gls
-   else if is_matching_imp_False (pf_concl gls)then
-     (tclTHEN intro (onLastHyp (check_equality tac))) gls
-  else
-    errorlabstrm "extract_negated_equality_then"
-      (str"The goal should negate an equality")
+  let ccl = pf_concl gls in
+  let eq =
+    try match kind_of_term (hnf_constr (pf_env gls) (project gls) ccl) with
+      | Prod (_,t,u) when is_empty_type u ->
+          find_eq_data_decompose (pf_whd_betadeltaiota gls t)
+      | _ -> raise PatternMatchingFailure
+    with PatternMatchingFailure ->
+      errorlabstrm "" (str "Not a negated primitive equality")
+  in tclTHEN introf (onLastHyp (tac eq)) gls
 
 let discrSimpleClause = function
   | None -> onNegatedEquality discrEq
@@ -577,33 +573,34 @@ let minimal_free_rels env sigma (c,cty) =
 
  *)
 
-let sig_clausal_form env sigma sort_of_ty siglen ty (dFLT,dFLTty) =
+let sig_clausal_form env sigma sort_of_ty siglen ty dflt =
   let { intro = exist_term } = find_sigma_data sort_of_ty in 
-  let isevars = Evarutil.create_evar_defs sigma in
+  let isevars = ref (Evd.create_evar_defs sigma) in
   let rec sigrec_clausal_form siglen p_i =
     if siglen = 0 then
-      if Evarconv.the_conv_x_leq env isevars dFLTty p_i then
+      (* is the default value typable with the expected type *)
+      let dflt_typ = type_of env sigma dflt in
+      if Evarconv.e_cumul env isevars dflt_typ p_i then
 	(* the_conv_x had a side-effect on isevars *)
-	dFLT
+	dflt
       else
 	error "Cannot solve an unification problem"
     else
       let (a,p_i_minus_1) = match whd_beta_stack p_i with
 	| (_sigS,[a;p]) -> (a,p)
  	| _ -> anomaly "sig_clausal_form: should be a sigma type" in
-      let ev = Evarutil.new_isevar isevars env (dummy_loc,InternalHole)
-	(Evarutil.new_Type ()) in
+      let ev = Evarutil.e_new_evar isevars env a in
       let rty = beta_applist(p_i_minus_1,[ev]) in
       let tuple_tail = sigrec_clausal_form (siglen-1) rty in
       match
-	Instantiate.existential_opt_value (Evarutil.evars_of isevars) 
+	Evd.existential_opt_value (Evd.evars_of !isevars) 
 	(destEvar ev)
       with
 	| Some w -> applist(exist_term,[a;p_i_minus_1;w;tuple_tail])
 	| None -> anomaly "Not enough components to build the dependent tuple"
   in
   let scf = sigrec_clausal_form siglen ty in
-  Evarutil.nf_evar (Evarutil.evars_of isevars) scf
+  Evarutil.nf_evar (Evd.evars_of !isevars) scf
 
 (* The problem is to build a destructor (a generalization of the
    predecessor) which, when applied to a term made of constructors
@@ -675,25 +672,23 @@ let make_iterated_tuple env sigma dflt (z,zty) =
   let dfltval = sig_clausal_form env sigma sort_of_zty n tuplety dflt in
   (tuple,tuplety,dfltval)
 
-let rec build_injrec sigma env (t1,t2) c = function
-  | [] ->
-      make_iterated_tuple env sigma (t1,type_of env sigma t1)
-        (c,type_of env sigma c)
+let rec build_injrec sigma env dflt c = function
+  | [] -> make_iterated_tuple env sigma dflt (c,type_of env sigma c)
   | ((sp,cnum),argnum)::l ->
       let cty = type_of env sigma c in
       let (ity,_) = find_mrectype env sigma cty in
       let (mib,mip) = lookup_mind_specif env ity in
-      let nparams = mip.mind_nparams in
+      let nparams = mib.mind_nparams in
       let (cnum_nlams,cnum_env,kont) = descend_then sigma env c cnum in
       let newc = mkRel(cnum_nlams-(argnum-nparams)) in
       let (subval,tuplety,dfltval) =
-      	build_injrec sigma cnum_env (t1,t2) newc l
+      	build_injrec sigma cnum_env dflt newc l
       in
       (kont subval (dfltval,tuplety),
        tuplety,dfltval)
 
-let build_injector sigma env (t1,t2) c cpath =
-  let (injcode,resty,_) = build_injrec sigma env (t1,t2) c cpath in
+let build_injector sigma env dflt c cpath =
+  let (injcode,resty,_) = build_injrec sigma env dflt c cpath in
   (injcode,resty)
 
 let try_delta_expand env sigma t =
@@ -702,7 +697,7 @@ let try_delta_expand env sigma t =
     match kind_of_term c with
       | Construct _ -> whdt
       | App (f,_)  -> hd_rec f
-      | Cast (c,_) -> hd_rec c
+      | Cast (c,_,_) -> hd_rec c
       | _  -> t
   in 
   hd_rec whdt 
@@ -730,7 +725,8 @@ let injEq (eq,(t,t1,t2)) id gls =
 	    (fun (cpath,t1_0,t2_0) ->
 	      try 
 		let (injbody,resty) =
-		  build_injector sigma e_env (t1_0,t2_0) (mkVar e) cpath in
+                  (* take arbitrarily t1_0 as the injector default value *)
+		  build_injector sigma e_env t1_0 (mkVar e) cpath in
 		let injfun = mkNamedLambda e t injbody in
 		let _ = type_of env sigma injfun in (injfun,resty)
 	      with e when catchable_exception e ->
@@ -794,7 +790,8 @@ let decompEqThen ntac (lbeq,(t,t1,t2)) id gls =
 	    map_succeed
 	      (fun (cpath,t1_0,t2_0) ->
 		 let (injbody,resty) =
-		   build_injector sigma e_env (t1_0,t2_0) (mkVar e) cpath in
+                  (* take arbitrarily t1_0 as the injector default value *)
+		   build_injector sigma e_env t1_0 (mkVar e) cpath in
 		 let injfun = mkNamedLambda e t injbody in
 		 try 
 		   let _ = type_of env sigma injfun in (injfun,resty)
@@ -833,67 +830,37 @@ let swap_equands gls eqn =
 let swapEquandsInConcl gls =
   let (lbeq,(t,e1,e2)) = find_eq_data_decompose (pf_concl gls) in
   let sym_equal = lbeq.sym in
-  refine (applist(sym_equal,[t;e2;e1;mkMeta (Clenv.new_meta())])) gls
+  refine (applist(sym_equal,[t;e2;e1;Evarutil.mk_new_meta()])) gls
 
 let swapEquandsInHyp id gls =
-  ((tclTHENS (cut_replacing id (swap_equands gls (pf_get_hyp_typ gls id)))
-      ([tclIDTAC;
-      	(tclTHEN (swapEquandsInConcl) (exact_no_check (mkVar id)))]))) gls
+  cut_replacing id (swap_equands gls (pf_get_hyp_typ gls id))
+    (tclTHEN swapEquandsInConcl) gls
 
 (* find_elim determines which elimination principle is necessary to
-   eliminate lbeq on sort_of_gl. It yields the boolean true wether
-   it is a dependent elimination principle (as idT.rect) and false
-   otherwise *)
+   eliminate lbeq on sort_of_gl.
+   This is somehow an artificial choice as we could take eq_rect in
+   all cases (eq_ind - and eq_rec - are instances of eq_rect) [HH 2/4/06].
+*)
 
-let find_elim  sort_of_gl  lbeq =
+let find_elim sort_of_gl lbeq =
   match kind_of_term sort_of_gl  with
-    | Sort(Prop Null)  (* Prop *)  -> (lbeq.ind, false)  
-    | Sort(Prop Pos)   (* Set *)   ->  
-	(match lbeq.rrec with
-           | Some eq_rec -> (eq_rec, false) 
-	   | None -> errorlabstrm "find_elim"
-		 (str "this type of elimination is not allowed"))
-    | _ (* Type *) -> 
+    | Sort(Prop Null)  (* Prop *)  -> lbeq.ind
+    | _ (* Set/Type *) -> 
         (match lbeq.rect with
-           | Some eq_rect -> (eq_rect, true) 
+           | Some eq_rect -> eq_rect
            | None -> errorlabstrm "find_elim"
-		 (str "this type of elimination is not allowed"))
+		 (str "this type of substitution is not allowed"))
 
-(* builds a predicate [e:t][H:(lbeq t e t1)](body e)
-   to be used as an argument for equality dependent elimination principle:
-   Preconditon: dependent body (mkRel 1) *)
-
-let build_dependent_rewrite_predicate (t,t1,t2) body lbeq gls =
-  let e = pf_get_new_id  (id_of_string "e") gls in 
-  let h = pf_get_new_id  (id_of_string "HH") gls in 
-  let eq_term = lbeq.eq in
-  (mkNamedLambda e t 
-     (mkNamedLambda h (applist (eq_term, [t;t1;(mkRel 1)])) 
-        (lift 1 body))) 
-
-(* builds a predicate [e:t](body e) ???
-   to be used as an argument for equality non-dependent elimination principle:
-   Preconditon: dependent body (mkRel 1) *)
-
-let build_non_dependent_rewrite_predicate (t,t1,t2) body gls =
-  lambda_create (pf_env gls) (t,body)
+(* Refine from [|- P e2] to [|- P e1] and [|- e1=e2:>t] (body is P (Rel 1)) *)
 
 let bareRevSubstInConcl lbeq body (t,e1,e2) gls =
-  let (eq_elim,dep) =
-    try 
-      find_elim (pf_type_of gls (pf_concl gls)) lbeq  
-    with e when catchable_exception e -> 
-      errorlabstrm "RevSubstIncConcl"
-        (str "this type of substitution is not allowed")  
-  in 
-  let p =
-    if dep then
-      (build_dependent_rewrite_predicate (t,e1,e2)  body lbeq gls)
-    else
-      (build_non_dependent_rewrite_predicate (t,e1,e2)  body  gls)
-  in
-  refine (applist(eq_elim,[t;e1;p;mkMeta(Clenv.new_meta());
-                           e2;mkMeta(Clenv.new_meta())])) gls
+  (* find substitution scheme *)
+  let eq_elim = find_elim (pf_type_of gls (pf_concl gls)) lbeq in
+  (* build substitution predicate *)
+  let p = lambda_create (pf_env gls) (t,body) in
+  (* apply substitution scheme *)
+  refine (applist(eq_elim,[t;e1;p;Evarutil.mk_new_meta();
+                           e2;Evarutil.mk_new_meta()])) gls
 
 (* [subst_tuple_term dep_pair B]
 
@@ -925,8 +892,7 @@ let bareRevSubstInConcl lbeq body (t,e1,e2) gls =
 let decomp_tuple_term env c t = 
   let rec decomprec inner_code ex exty =
     try
-      let {proj1 = p1; proj2 = p2 },(a,p,car,cdr) =
-	find_sigma_data_decompose ex in
+      let {proj1=p1; proj2=p2},(a,p,car,cdr) = find_sigma_data_decompose ex in
       let car_code = applist (p1,[a;p;inner_code])
       and cdr_code = applist (p2,[a;p;inner_code]) in
       let cdrtyp = beta_applist (p,[car]) in
@@ -942,48 +908,41 @@ let subst_tuple_term env sigma dep_pair b =
   let abst_B =
     List.fold_right
       (fun (e,t) body -> lambda_create env (t,subst_term e body)) e_list b in
-  let app_B = applist(abst_B,proj_list) in app_B
+  applist(abst_B,proj_list)
     
-(* |- (P e2)
-     BY RevSubstInConcl (eq T e1 e2)
-     |- (P e1)
-     |- (eq T e1 e2)
- *)
-(* Redondant avec Replace ! *)
+(* Comme "replace" mais decompose les egalites dependantes *)
 
-let substInConcl_RL eqn gls =
-  let (lbeq,(t,e1,e2)) = find_eq_data_decompose eqn in
-  let body = subst_tuple_term (pf_env gls) (project gls) e2 (pf_concl gls) in
+let cutSubstInConcl_RL eqn gls =
+  let (lbeq,(t,e1,e2 as eq)) = find_eq_data_decompose eqn in
+  let body = pf_apply subst_tuple_term gls e2 (pf_concl gls) in
   assert (dependent (mkRel 1) body);
-  bareRevSubstInConcl lbeq body (t,e1,e2) gls
+  bareRevSubstInConcl lbeq body eq gls
 
 (* |- (P e1)
-     BY SubstInConcl (eq T e1 e2)
+     BY CutSubstInConcl_LR (eq T e1 e2)
      |- (P e2)
      |- (eq T e1 e2)
  *)
-let substInConcl_LR eqn gls =
-  (tclTHENS (substInConcl_RL (swap_equands gls eqn))
+let cutSubstInConcl_LR eqn gls =
+  (tclTHENS (cutSubstInConcl_RL (swap_equands gls eqn))
      ([tclIDTAC;
        swapEquandsInConcl])) gls
 
-let substInConcl l2r = if l2r then substInConcl_LR else substInConcl_RL
+let cutSubstInConcl l2r =if l2r then cutSubstInConcl_LR else cutSubstInConcl_RL
 
-let substInHyp_LR eqn id gls =
-  let (lbeq,(t,e1,e2)) = find_eq_data_decompose eqn in 
-  let body = subst_term e1 (pf_get_hyp_typ gls id) in
-  if not (dependent (mkRel 1) body) then errorlabstrm  "SubstInHyp" (mt ());
-  (tclTHENS (cut_replacing id (subst1 e2 body))
-     ([tclIDTAC;
-       (tclTHENS (bareRevSubstInConcl lbeq body (t,e1,e2))
-          ([exact_no_check (mkVar id);tclIDTAC]))])) gls
+let cutSubstInHyp_LR eqn id gls =
+  let (lbeq,(t,e1,e2 as eq)) = find_eq_data_decompose eqn in 
+  let body = pf_apply subst_tuple_term gls e1 (pf_get_hyp_typ gls id) in
+  assert (dependent (mkRel 1) body);
+  cut_replacing id (subst1 e2 body)
+    (tclTHENFIRST (bareRevSubstInConcl lbeq body eq)) gls
 
-let substInHyp_RL eqn id gls =
-  (tclTHENS (substInHyp_LR (swap_equands gls eqn) id)
+let cutSubstInHyp_RL eqn id gls =
+  (tclTHENS (cutSubstInHyp_LR (swap_equands gls eqn) id)
      ([tclIDTAC;
        swapEquandsInConcl])) gls
 
-let substInHyp l2r = if l2r then substInHyp_LR else substInHyp_RL
+let cutSubstInHyp l2r = if l2r then cutSubstInHyp_LR else cutSubstInHyp_RL
 
 let try_rewrite tac gls =
   try 
@@ -996,77 +955,51 @@ let try_rewrite tac gls =
           (str "Cannot find a well-typed generalization of the goal that" ++
              str " makes the proof progress")
 
-let subst l2r eqn cls gls =
+let cutSubstClause l2r eqn cls gls =
   match cls with
-    | None ->    substInConcl l2r eqn gls
-    | Some id -> substInHyp l2r eqn id gls
+    | None ->    cutSubstInConcl l2r eqn gls
+    | Some id -> cutSubstInHyp l2r eqn id gls
 
-(* |- (P a)
- * SubstConcl_LR a=b 
- *  |- (P b)
- *  |- a=b
- *)
+let cutRewriteClause l2r eqn cls = try_rewrite (cutSubstClause l2r eqn cls)
+let cutRewriteInHyp l2r eqn id = cutRewriteClause l2r eqn (Some id)
+let cutRewriteInConcl l2r eqn = cutRewriteClause l2r eqn None
 
-let substConcl l2r eqn gls = try_rewrite (subst l2r eqn None) gls
-let substConcl_LR = substConcl true
+let substClause l2r c cls gls =
+  let eq = pf_type_of gls c in
+  tclTHENS (cutSubstClause l2r eq cls) [tclIDTAC; exact_no_check c] gls
 
-(* id:(P a) |- G
- * SubstHyp a=b id
- *  id:(P b) |- G
- *  id:(P a) |-a=b
+let rewriteClause l2r c cls = try_rewrite (substClause l2r c cls)
+let rewriteInHyp l2r c id = rewriteClause l2r c (Some id)
+let rewriteInConcl l2r c = rewriteClause l2r c None
+
+(* Renaming scheme correspondence new name (old name)
+
+      give equality                    give proof of equality
+
+    / cutSubstClause (subst)          substClause (HypSubst on hyp)
+raw | cutSubstInHyp (substInHyp)      substInHyp (none)
+    \ cutSubstInConcl (substInConcl)  substInConcl (none) 
+
+    / cutRewriteClause (none)         rewriteClause (none)
+user| cutRewriteInHyp (substHyp)      rewriteInHyp (none)
+    \ cutRewriteInConcl (substConcl)  rewriteInConcl (substHypInConcl on hyp)
+
+raw = raise typing error or PatternMatchingFailure
+user = raise user error specific to rewrite
 *)
 
-let hypSubst l2r id cls gls =
-  onClauses (function
-    | None -> 
-	(tclTHENS (substInConcl l2r (pf_get_hyp_typ gls id))
-	   ([tclIDTAC; exact_no_check (mkVar id)]))
-    | Some (hypid,_,_) -> 
-	(tclTHENS (substInHyp l2r (pf_get_hyp_typ gls id) hypid)
-	   ([tclIDTAC;exact_no_check (mkVar id)])))
-    cls gls
-
+(* Summary of obsolete forms
+let substInConcl = cutSubstInConcl
+let substInHyp = cutSubstInHyp
+let hypSubst l2r id = substClause l2r (mkVar id)
 let hypSubst_LR = hypSubst true
-
-(* id:a=b |- (P a)
- * HypSubst id.
- *  id:a=b |- (P b)
- *)
-let substHypInConcl l2r id gls = try_rewrite (hypSubst l2r id onConcl) gls
-let substHypInConcl_LR = substHypInConcl true
-
-(* id:a=b H:(P a) |- G
-   SubstHypInHyp id H.
-    id:a=b H:(P b) |- G
-*)
-(* |- (P b)
-   SubstConcl_RL a=b
-     |- (P a)
-     |- a=b
-*)
-let substConcl_RL = substConcl false
-
-(* id:(P b) |-G
-   SubstHyp_RL a=b id 
-      id:(P a) |- G
-      |- a=b  
-*)
-let substHyp l2r eqn id gls = try_rewrite (subst l2r eqn (Some id)) gls
-let substHyp_RL = substHyp false
-
 let hypSubst_RL = hypSubst false
-
-(* id:a=b |- (P b)
- * HypSubst id.
- * id:a=b |- (P a)
- *)
-let substHypInConcl_RL = substHypInConcl false
-
-(* id:a=b H:(P b) |- G
-   SubstHypInHyp id H.
-    id:a=b H:(P a) |- G
+let substHypInConcl l2r id = rewriteInConcl l2r (mkVar id)
+let substConcl = cutRewriteInConcl
+let substHyp = cutRewriteInHyp
 *)
 
+(**********************************************************************)
 (* Substitutions tactics (JCF) *)
 
 let unfold_body x gl =
@@ -1077,13 +1010,12 @@ let unfold_body x gl =
       | _ -> errorlabstrm "unfold_body"
           (pr_id x ++ str" is not a defined hypothesis") in
   let aft = afterHyp x gl in
-  let hl = List.fold_right
-    (fun (y,yval,_) cl -> (y,[],(InHyp,ref None)) :: cl) aft [] in
+  let hl = List.fold_right (fun (y,yval,_) cl -> (y,[],InHyp) :: cl) aft [] in
   let xvar = mkVar x in
   let rfun _ _ c = replace_term xvar xval c in
   tclTHENLIST
     [tclMAP (fun h -> reduct_in_hyp rfun h) hl;
-     reduct_in_concl rfun] gl
+     reduct_in_concl (rfun,DEFAULTcast)] gl
 
 
 
@@ -1135,8 +1067,10 @@ let subst_one x gl =
   let introtac = function
       (id,None,_) -> intro_using id
     | (id,Some hval,htyp) ->
-        forward true (Name id) (mkCast(replace_term varx rhs hval,
-                                       replace_term varx rhs htyp)) in
+        letin_tac true (Name id)
+	  (mkCast(replace_term varx rhs hval,DEFAULTcast,
+	          replace_term varx rhs htyp)) nowhere
+  in
   let need_rewrite = dephyps <> [] || depconcl in
   tclTHENLIST 
     ((if need_rewrite then
@@ -1181,7 +1115,7 @@ let rewrite_assumption_cond_in faildir hyp gl =
       | [] -> error "No such assumption"
       | (id,_,t)::rest -> 
 	  (try let dir = faildir t gl in 
-	       general_rewrite_in dir hyp ((mkVar id),NoBindings) gl
+	       general_rewrite_in dir hyp (mkVar id) gl
 	   with Failure _ | UserError _ ->  arec rest)
    in arec (pf_hyps gl)
 
@@ -1216,3 +1150,6 @@ let replace_term_in_left t = rewrite_assumption_cond_in (cond_eq_term_left t)
 let replace_term_in_right t = rewrite_assumption_cond_in (cond_eq_term_right t)
    
 let replace_term_in t = rewrite_assumption_cond_in (cond_eq_term t)
+
+let _ = Setoid_replace.register_replace replace
+let _ = Setoid_replace.register_general_rewrite general_rewrite

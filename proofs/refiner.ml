@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: refiner.ml,v 1.67.2.3 2005/11/04 08:59:30 herbelin Exp $ *)
+(* $Id: refiner.ml 8708 2006-04-14 08:13:02Z jforest $ *)
 
 open Pp
 open Util
@@ -17,12 +17,10 @@ open Evd
 open Sign
 open Environ
 open Reductionops
-open Instantiate
 open Type_errors
 open Proof_trees
 open Proof_type
 open Logic
-open Printer
 
 type transformation_tactic = proof_tree -> (goal list * validation)
 
@@ -30,10 +28,7 @@ let hypotheses gl = gl.evar_hyps
 let conclusion gl = gl.evar_concl
 
 let sig_it x = x.it
-let sig_sig x = x.sigma
-
-
-let project_with_focus gls = rc_of_gc (gls.sigma) (gls.it)
+let project x = x.sigma
 
 let pf_status pf = pf.open_subgoals
 
@@ -43,6 +38,11 @@ let on_open_proofs f pf = if is_complete pf then pf else f pf
 
 let and_status = List.fold_left (+) 0
 
+(* Getting env *)
+
+let pf_env gls = Global.env_of_context (sig_it gls).evar_hyps
+let pf_hyps gls = named_context_of_val (sig_it gls).evar_hyps
+
 (* Normalizing evars in a goal. Called by tactic Local_constraints
    (i.e. when the sigma of the proof tree changes). Detect if the
    goal is unchanged *)
@@ -51,13 +51,9 @@ let norm_goal sigma gl =
   let ncl = red_fun gl.evar_concl in
   let ngl =
     { evar_concl = ncl;
-      evar_hyps =
-      Sign.fold_named_context 
-        (fun (d,b,ty) sign ->
-          add_named_decl (d, option_app red_fun b, red_fun ty) sign)
-        gl.evar_hyps ~init:empty_named_context;
+      evar_hyps = map_named_val red_fun gl.evar_hyps; 
       evar_body = gl.evar_body} in
-  if ngl = gl then None else Some ngl
+  if Evd.eq_evar_info ngl gl then None else Some ngl
 
 
 (* [mapshape [ l1 ; ... ; lk ] [ v1 ; ... ; vk ] [ p_1 ; .... ; p_(l1+...+lk) ]]
@@ -85,7 +81,7 @@ let rec frontier p =
 	([p.goal],
 	 (fun lp' -> 
 	    let p' = List.hd lp' in
-            if p'.goal = p.goal then 
+            if Evd.eq_evar_info p'.goal p.goal then 
 	      p'
             else 
 	      errorlabstrm "Refiner.frontier"
@@ -105,7 +101,7 @@ let rec frontier_map_rec f n p =
   match p.ref with
     | None -> 
         let p' = f p in
-        if p'.goal == p.goal || p'.goal = p.goal then p'
+        if Evd.eq_evar_info p'.goal p.goal then p'
         else 
 	  errorlabstrm "Refiner.frontier_map"
             (str"frontier_map was handed back a ill-formed proof.")
@@ -131,7 +127,7 @@ let rec frontier_mapi_rec f i p =
   match p.ref with
     | None -> 
         let p' = f i p in
-        if p'.goal == p.goal || p'.goal = p.goal then p'
+        if Evd.eq_evar_info p'.goal p.goal then p'
         else 
 	  errorlabstrm "Refiner.frontier_mapi"
             (str"frontier_mapi was handed back a ill-formed proof.")
@@ -189,7 +185,7 @@ let lookup_tactic s =
 (* refiner r is a tactic applying the rule r *)
 
 let check_subproof_connection gl spfl =
-  list_for_all2eq (fun g pf -> g=pf.goal) gl spfl
+  list_for_all2eq (fun g pf -> Evd.eq_evar_info g pf.goal) gl spfl
 
 let abstract_tactic_expr te tacfun gls =
   let (sgl_sigma,v) = tacfun gls in
@@ -255,12 +251,6 @@ let vernac_tactic (s,args) =
   let tacfun = lookup_tactic s args in
   abstract_extended_tactic s args tacfun
 
-(* [rc_of_pfsigma : proof sigma -> readable_constraints] *)
-let rc_of_pfsigma sigma = rc_of_gc sigma.sigma sigma.it.goal
-
-(* [rc_of_glsigma : proof sigma -> readable_constraints] *)
-let rc_of_glsigma sigma = rc_of_gc sigma.sigma sigma.it
-
 (* [extract_open_proof : proof_tree -> constr * (int * constr) list]
   takes a (not necessarly complete) proof and gives a pair (pfterm,obl)
   where pfterm is the constr corresponding to the proof
@@ -292,13 +282,13 @@ let extract_open_proof sigma pf =
 	let visible_rels =
           map_succeed
             (fun id ->
-               try let n = list_index id vl in (n,id)
+               try let n = proof_variable_index id vl in (n,id)
 	       with Not_found -> failwith "caught")
-            (ids_of_named_context goal.evar_hyps) in
+            (ids_of_named_context (named_context_of_val goal.evar_hyps)) in
 	let sorted_rels =
 	  Sort.list (fun (n1,_) (n2,_) -> n1 > n2 ) visible_rels in
         let sorted_env =
-          List.map (fun (n,id) -> (n,Sign.lookup_named id goal.evar_hyps))
+          List.map (fun (n,id) -> (n,lookup_named_val id goal.evar_hyps))
             sorted_rels in
 	let abs_concl =
           List.fold_right (fun (_,decl) c -> mkNamedProd_or_LetIn decl c)
@@ -308,7 +298,7 @@ let extract_open_proof sigma pf =
 	open_obligations := (meta,abs_concl):: !open_obligations;
 	applist (mkMeta meta, List.map (fun (n,_) -> mkRel n) inst) 
 	  
-    | _ -> anomaly "Bug : a case has been forgotten in proof_extractor"
+    | _ -> anomaly "Bug: a case has been forgotten in proof_extractor"
   in
   let pfterm = proof_extractor [] pf in
   (pfterm, List.rev !open_obligations)
@@ -345,17 +335,13 @@ let tclIDTAC gls = (goal_goal_list gls, idtac_valid)
 
 (* the message printing identity tactic *)
 let tclIDTAC_MESSAGE s gls = 
-  if s = "" then tclIDTAC gls
-  else 
-    begin
-      msgnl (str ("Idtac says : "^s)); tclIDTAC gls
-    end
+  msg (hov 0 s); tclIDTAC gls
 
 (* General failure tactic *)
 let tclFAIL_s s gls = errorlabstrm "Refiner.tclFAIL_s" (str s)
 
 (* A special exception for levels for the Fail tactic *)
-exception FailError of int * string
+exception FailError of int * std_ppcmds
 
 (* The Fail tactic *)
 let tclFAIL lvl s g = raise (FailError (lvl,s))
@@ -469,7 +455,7 @@ let rec tclTHENLIST = function
 
 (* various progress criterions *)
 let same_goal gl subgoal = 
-  (hypotheses subgoal) = (hypotheses gl) &
+  eq_named_context_val (hypotheses subgoal) (hypotheses gl) &&
   eq_constr (conclusion subgoal) (conclusion gl)
 
 
@@ -774,15 +760,16 @@ let extract_pftreestate pts =
       (str"Cannot extract from a proof-tree in which we have descended;" ++
          spc () ++ str"Please ascend to the root");
   let pfterm,subgoals = extract_open_pftreestate pts in
-  let exl = Evd.non_instantiated pts.tpfsigma in 
+  let exl = Evarutil.non_instantiated pts.tpfsigma in
   if subgoals <> [] or exl <> [] then
-   errorlabstrm "extract_proof"
-   (if subgoals <> [] then 
-     str "Attempt to save an incomplete proof"
-    else
-      str "Attempt to save a proof with existential variables still non-instantiated");
+    errorlabstrm "extract_proof"
+      (if subgoals <> [] then
+        str "Attempt to save an incomplete proof"
+      else
+        str "Attempt to save a proof with existential variables still non-instantiated");
   let env = Global.env_of_context pts.tpf.goal.evar_hyps in
-  strong whd_betaiotaevar env pts.tpfsigma pfterm
+  nf_betaiotaevar_preserving_vm_cast env pts.tpfsigma pfterm
+  (* strong whd_betaiotaevar env pts.tpfsigma pfterm *)
   (***
   local_strong (Evarutil.whd_ise (ts_it pts.tpfsigma)) pfterm
   ***)
@@ -894,136 +881,21 @@ let rec top_of_tree pts =
   if is_top_pftreestate pts then pts else top_of_tree(traverse 0 pts)
 
 
+(* Change evars *)
+let tclEVARS sigma gls = tclIDTAC {gls with sigma=sigma}
+
 (* Pretty-printers. *)
 
-open Pp
-
-let pr_tactic = function
-  | Tacexpr.TacArg (Tacexpr.Tacexp t) ->
-      if !Options.v7 then
-	Pptactic.pr_glob_tactic t (*top tactic from tacinterp*)
-      else
-	Pptacticnew.pr_glob_tactic (Global.env()) t
-  | t -> 
-      if !Options.v7 then
-	Pptactic.pr_tactic t
-      else
-	Pptacticnew.pr_tactic (Global.env()) t
-
-let pr_rule = function
-  | Prim r -> hov 0 (pr_prim_rule r)
-  | Tactic (texp,_) -> hov 0 (pr_tactic texp)
-  | Change_evars ->
-      (* This is internal tactic and cannot be replayed at user-level.
-         Function pr_rule_dot below is used when we want to hide
-         Change_evars *)
-      str "Evar change"
-
-(* Does not print change of evars *)
-let pr_rule_dot = function 
-  | Change_evars -> mt ()
-  | r -> pr_rule r ++ str"."
-
-exception Different
-
-(* We remove from the var context of env what is already in osign *)
-let thin_sign osign sign =
-  Sign.fold_named_context
-    (fun (id,c,ty as d) sign ->
-       try 
-	 if Sign.lookup_named id osign = (id,c,ty) then sign
-	 else raise Different
-       with Not_found | Different -> add_named_decl d sign)
-    sign ~init:empty_named_context
-
-let rec print_proof sigma osign pf =
-  let {evar_hyps=hyps; evar_concl=cl; 
-       evar_body=body} = pf.goal in
-  let hyps' = thin_sign osign hyps in
-  match pf.ref with
-    | None -> 
-	hov 0 (pr_seq {evar_hyps=hyps'; evar_concl=cl; evar_body=body})
-    | Some(r,spfl) ->
-    	hov 0 
-	  (hov 0 (pr_seq {evar_hyps=hyps'; evar_concl=cl; evar_body=body}) ++
-	   spc () ++ str" BY " ++
-	   hov 0 (pr_rule r) ++ fnl () ++
-	   str"  " ++
-	   hov 0 (prlist_with_sep pr_fnl (print_proof sigma hyps) spfl)
-)
-	  
-let pr_change gl = 
-  (str"Change " ++ prterm_env (Global.env()) gl.evar_concl ++ str".")
-
-let rec print_script nochange sigma osign pf =
-  let {evar_hyps=sign; evar_concl=cl} = pf.goal in
-  match pf.ref with
-    | None ->
-        (if nochange then 
-	  (str"<Your Tactic Text here>") 
-	else 
-	  pr_change pf.goal)
-	++ fnl ()
-    | Some(r,spfl) ->
-        ((if nochange then (mt ()) else (pr_change pf.goal ++ fnl ())) ++
-           pr_rule_dot r ++ fnl () ++
-           prlist_with_sep pr_fnl
-             (print_script nochange sigma sign) spfl)
-
-let print_treescript nochange sigma _osign pf =
-  let rec aux top pf =
-    let {evar_hyps=sign; evar_concl=cl} = pf.goal in
-    match pf.ref with
-    | None ->
-        if nochange then 
-	  (str"<Your Tactic Text here>") 
-	else 
-	  (pr_change pf.goal)
-    | Some(r,spfl) ->
-        (if nochange then mt () else (pr_change pf.goal ++ fnl ())) ++
-	pr_rule_dot r ++
-	match spfl with
-	| [] -> mt ()
-	| [spf] -> fnl () ++ (if top then mt () else str "  ") ++ aux top spf
-	| _ -> fnl () ++ str " " ++
-	    hov 0 (prlist_with_sep fnl (aux false) spfl)
-  in hov 0 (aux true pf)
-
-let rec print_info_script sigma osign pf =
-  let {evar_hyps=sign; evar_concl=cl} = pf.goal in
-  match pf.ref with
-    | None -> (mt ())
-    | Some(Change_evars,[spf]) ->
-        print_info_script sigma osign spf
-    | Some(r,spfl) ->
-        (pr_rule r ++ 
-           match spfl with
-             | [pf1] ->
-                 if pf1.ref = None then 
-		   (str "." ++ fnl ())
-                 else 
-		   (str";" ++ brk(1,3) ++
-		      print_info_script sigma sign pf1)
-             | _ -> (str"." ++ fnl () ++
-                       prlist_with_sep pr_fnl
-                         (print_info_script sigma sign) spfl))
-
-let format_print_info_script sigma osign pf = 
-  hov 0 (print_info_script sigma osign pf)
-    
-let print_subscript sigma sign pf = 
-  if is_tactic_proof pf then 
-    format_print_info_script sigma sign (subproof_of_proof pf)
-  else 
-    format_print_info_script sigma sign pf
+let pp_info = ref (fun _ _ _ -> assert false)
+let set_info_printer f = pp_info := f
 
 let tclINFO (tac : tactic) gls = 
   let (sgl,v) as res = tac gls in 
   begin try 
     let pf = v (List.map leaf (sig_it sgl)) in
-    let sign = (sig_it gls).evar_hyps in
+    let sign = named_context_of_val (sig_it gls).evar_hyps in
     msgnl (hov 0 (str" == " ++
-                  print_subscript (sig_sig gls) sign pf))
+                  !pp_info (project gls) sign pf))
   with e when catchable_exception e -> 
     msgnl (hov 0 (str "Info failed to apply validation"))
   end;

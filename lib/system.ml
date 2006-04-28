@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: system.ml,v 1.31.8.3 2006/01/10 17:06:23 barras Exp $ *)
+(* $Id: system.ml 7603 2005-11-23 17:21:53Z barras $ *)
 
 open Pp
 open Util
@@ -34,7 +34,7 @@ let rec expand_atom s i =
   then expand_atom s (i+1)
   else i
 
-let rec expand_macros b s i =
+let rec expand_macros s i =
   let l = String.length s in
   if i=l then s else
     match s.[i] with
@@ -42,9 +42,7 @@ let rec expand_macros b s i =
 	  let n = expand_atom s (i+1) in
 	  let v = safe_getenv (String.sub s (i+1) (n-i-1)) in
 	  let s = (String.sub s 0 i)^v^(String.sub s n (l-n)) in
-	  expand_macros false s (i + String.length v)
-      | '/' ->
-	  expand_macros true s (i+1)
+	  expand_macros s (i + String.length v)
       | '~' ->
 	  let n = expand_atom s (i+1) in
 	  let v =
@@ -52,43 +50,15 @@ let rec expand_macros b s i =
 	    else (getpwnam (String.sub s (i+1) (n-i-1))).pw_dir
 	  in
 	  let s = v^(String.sub s n (l-n)) in
-	  expand_macros false s (String.length v)
-      | c -> expand_macros false s (i+1)
+	  expand_macros s (String.length v)
+      | c -> expand_macros s (i+1)
 
-let glob s = expand_macros true s 0
+let glob s = expand_macros s 0
 
 (* Files and load path. *)
 
 type physical_path = string
 type load_path = physical_path list
-
-(* Hints to partially detects if two paths refer to the same repertory *)
-let rec remove_path_dot p = 
-  let curdir = Filename.concat Filename.current_dir_name "" in (* Unix: "./" *)
-  let n = String.length curdir in
-  if String.length p > n && String.sub p 0 n = curdir then
-    remove_path_dot (String.sub p n (String.length p - n))
-  else
-    p
-
-let strip_path p =
-  let cwd = Filename.concat (Sys.getcwd ()) "" in (* Unix: "`pwd`/" *)
-  let n = String.length cwd in
-  if String.length p > n && String.sub p 0 n = cwd then
-    remove_path_dot (String.sub p n (String.length p - n))
-  else
-    remove_path_dot p
-
-let canonical_path_name p =
-  let current = Sys.getcwd () in
-  try 
-    Sys.chdir p;
-    let p' = Sys.getcwd () in
-    Sys.chdir current;
-    p'
-  with Sys_error _ ->
-    (* We give up to find a canonical name and just simplify it... *)
-    strip_path p
 
 (* All subdirectories, recursively *)
 
@@ -214,6 +184,61 @@ let extern_intern magic suffix =
   in 
   (extern_state,intern_state)
 
+(* Communication through files with another executable *)
+
+let connect writefun readfun com =
+  let name = Filename.basename com in
+  let tmp_to = Filename.temp_file ("coq-"^name^"-in") ".xml" in
+  let tmp_from = Filename.temp_file ("coq-"^name^"-out") ".xml" in
+  let ch_to_in,ch_to_out =
+    try open_in tmp_to, open_out tmp_to
+    with Sys_error s -> error ("Cannot set connection to "^com^"("^s^")") in
+  let ch_from_in,ch_from_out = 
+    try open_in tmp_from, open_out tmp_from
+    with Sys_error s ->
+      close_out ch_to_out; close_in ch_to_in; 
+      error ("Cannot set connection from "^com^"("^s^")") in
+  writefun ch_to_out;
+  close_out ch_to_out;
+  let pid = 
+    let ch_to' = Unix.descr_of_in_channel ch_to_in in
+    let ch_from' = Unix.descr_of_out_channel ch_from_out in
+    try Unix.create_process com [||] ch_to' ch_from' Unix.stdout
+    with Unix.Unix_error (err,_,_) ->
+      close_in ch_to_in; close_in ch_from_in; close_out ch_from_out;
+      unlink tmp_from; unlink tmp_to;
+      error ("Cannot execute "^com^"("^(Unix.error_message err)^")") in
+  close_in ch_to_in;
+  close_out ch_from_out;
+  (match snd (Unix.waitpid [] pid) with
+    | Unix.WEXITED 127 -> error (com^": cannot execute")
+    | Unix.WEXITED 0 -> ()
+    | _ -> error (com^" exited abnormally"));
+  let a = readfun ch_from_in in
+  close_in ch_from_in;
+  unlink tmp_from;
+  unlink tmp_to;
+  a
+
+let run_command converter f c =
+  let result = Buffer.create 127 in
+  let cin,cout,cerr = Unix.open_process_full c (Unix.environment ()) in
+  let buff = String.make 127 ' ' in
+  let buffe = String.make 127 ' ' in
+  let n = ref 0 in
+  let ne = ref 0 in
+
+  while n:= input cin buff 0 127 ; ne := input cerr buffe 0 127 ; 
+    !n+ !ne <> 0
+  do 
+    let r = converter (String.sub buff 0 !n) in 
+    f r;
+    Buffer.add_string result r;
+    let r = converter (String.sub buffe 0 !ne) in 
+    f r;
+    Buffer.add_string result r 
+  done;
+  (Unix.close_process_full (cin,cout,cerr),  Buffer.contents result)
 
 (* Time stamps. *)
 

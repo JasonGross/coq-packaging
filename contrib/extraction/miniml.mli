@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: miniml.mli,v 1.46.2.3 2005/12/01 16:43:58 letouzey Exp $ i*)
+(*i $Id: miniml.mli 6064 2004-09-06 07:49:51Z letouzey $ i*)
 
 (*s Target language for extraction: a core ML called MiniML. *)
 

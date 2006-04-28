@@ -6,13 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Logic.v,v 1.29.2.1 2004/07/16 19:31:03 herbelin Exp $ i*)
+(*i $Id: Logic.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Set Implicit Arguments.
 
 Require Import Notations.
 
-(** * Propositional connectives *)
+(** *** Propositional connectives *)
 
 (** [True] is the always true proposition *)
 Inductive True : Prop :=
@@ -28,19 +28,19 @@ Notation "~ x" := (not x) : type_scope.
 
 Hint Unfold not: core.
 
-Inductive and (A B:Prop) : Prop :=
-    conj : A -> B -> A /\ B 
- where "A /\ B" := (and A B) : type_scope.
-
-
-Section Conjunction.
-
   (** [and A B], written [A /\ B], is the conjunction of [A] and [B]
 
       [conj p q] is a proof of [A /\ B] as soon as 
       [p] is a proof of [A] and [q] a proof of [B]
 
       [proj1] and [proj2] are first and second projections of a conjunction *)
+
+Inductive and (A B:Prop) : Prop :=
+    conj : A -> B -> A /\ B 
+
+where "A /\ B" := (and A B) : type_scope.
+
+Section Conjunction.
 
   Variables A B : Prop.
 
@@ -61,7 +61,8 @@ End Conjunction.
 Inductive or (A B:Prop) : Prop :=
   | or_introl : A -> A \/ B
   | or_intror : B -> A \/ B 
- where "A \/ B" := (or A B) : type_scope.
+
+where "A \/ B" := (or A B) : type_scope.
 
 (** [iff A B], written [A <-> B], expresses the equivalence of [A] and [B] *)
 
@@ -94,19 +95,27 @@ End Equivalence.
 Definition IF_then_else (P Q R:Prop) := P /\ Q \/ ~ P /\ R.
 
 Notation "'IF' c1 'then' c2 'else' c3" := (IF_then_else c1 c2 c3)
-  (at level 200) : type_scope.
+  (at level 200, right associativity) : type_scope.
 
-(** * First-order quantifiers
-  - [ex A P], or simply [exists x, P x], expresses the existence of an 
-      [x] of type [A] which satisfies the predicate [P] ([A] is of type 
-      [Set]). This is existential quantification.
-  - [ex2 A P Q], or simply [exists2 x, P x & Q x], expresses the
-      existence of an [x] of type [A] which satisfies both the predicates
-      [P] and [Q].
-  - Universal quantification (especially first-order one) is normally 
-    written [forall x:A, P x]. For duality with existential quantification, 
-    the construction [all P] is provided too.
+(** *** First-order quantifiers *)
+
+(** [ex P], or simply [exists x, P x], or also [exists x:A, P x],
+    expresses the existence of an [x] of some type [A] in [Set] which
+    satisfies the predicate [P].  This is existential quantification.
+
+    [ex2 P Q], or simply [exists2 x, P x & Q x], or also 
+    [exists2 x:A, P x & Q x], expresses the existence of an [x] of
+    type [A] which satisfies both predicates [P] and [Q].
+
+    Universal quantification is primitively written [forall x:A, Q]. By
+    symmetry with existential quantification, the construction [all P]
+    is provided too.
 *)
+
+(* Remark: [exists x, Q] denotes [ex (fun x => Q)] so that [exists x,
+   P x] is in fact equivalent to [ex (fun x => P x)] which may be not
+   convertible to [ex P] if [P] is not itself an abstraction *)
+
 
 Inductive ex (A:Type) (P:A -> Prop) : Prop :=
     ex_intro : forall x:A, P x -> ex (A:=A) P.
@@ -119,18 +128,18 @@ Definition all (A:Type) (P:A -> Prop) := forall x:A, P x.
 (* Rule order is important to give printing priority to fully typed exists *)
 
 Notation "'exists' x , p" := (ex (fun x => p))
-  (at level 200, x ident) : type_scope.
+  (at level 200, x ident, right associativity) : type_scope.
 Notation "'exists' x : t , p" := (ex (fun x:t => p))
-  (at level 200, x ident, format "'exists'  '/  ' x  :  t ,  '/  ' p")
+  (at level 200, x ident, right associativity, 
+   format "'[' 'exists'  '/  ' x  :  t ,  '/  ' p ']'")
   : type_scope.
 
 Notation "'exists2' x , p & q" := (ex2 (fun x => p) (fun x => q))
-  (at level 200, x ident, p at level 200) : type_scope.
+  (at level 200, x ident, p at level 200, right associativity) : type_scope.
 Notation "'exists2' x : t , p & q" := (ex2 (fun x:t => p) (fun x:t => q))
-  (at level 200, x ident, t at level 200, p at level 200,
-   format "'exists2'  '/  ' x  :  t ,  '/  ' '[' p  &  '/' q ']'")
+  (at level 200, x ident, t at level 200, p at level 200, right associativity,
+   format "'[' 'exists2'  '/  ' x  :  t ,  '/  ' '[' p  &  '/' q ']' ']'")
   : type_scope.
-
 
 (** Derived rules for universal quantification *)
 
@@ -151,18 +160,21 @@ Section universal_quantification.
 
 End universal_quantification.
 
-(** * Equality *)
+(** *** Equality *)
 
-(** [eq x y], or simply [x=y], expresses the (Leibniz') equality
-    of [x] and [y]. Both [x] and [y] must belong to the same type [A].
+(** [eq x y], or simply [x=y] expresses the equality of [x] and
+    [y]. Both [x] and [y] must belong to the same type [A].
     The definition is inductive and states the reflexivity of the equality.
     The others properties (symmetry, transitivity, replacement of 
-    equals) are proved below. The type of [x] and [y] can be made explicit
-    using the notation [x = y :> A] *)
+    equals by equals) are proved below. The type of [x] and [y] can be
+    made explicit using the notation [x = y :> A]. This is Leibniz equality
+    as it expresses that [x] and [y] are equal iff every property on
+    [A] which is true of [x] is also true of [y] *)
 
 Inductive eq (A:Type) (x:A) : A -> Prop :=
     refl_equal : x = x :>A 
- where "x = y :> A" := (@eq A x y) : type_scope.
+
+where "x = y :> A" := (@eq A x y) : type_scope.
 
 Notation "x = y" := (x = y :>_) : type_scope.
 Notation "x <> y  :> T" := (~ x = y :>T) : type_scope.
@@ -217,16 +229,6 @@ Section Logic_lemmas.
 
   End equality.
 
-(* Is now a primitive principle 
-  Theorem eq_rect: (A:Type)(x:A)(P:A->Type)(P x)->(y:A)(eq ? x y)->(P y).
-  Proof.
-   Intros.
-   Cut (identity A x y).
-   NewDestruct 1; Auto.
-   NewDestruct H; Auto.
-  Qed.
-*)
-
   Definition eq_ind_r :
     forall (A:Type) (x:A) (P:A -> Prop), P x -> forall y:A, y = x -> P y.
    intros A x P H y H0; elim sym_eq with (1 := H0); assumption.
@@ -277,3 +279,14 @@ Proof.
 Qed.
 
 Hint Immediate sym_eq sym_not_eq: core v62.
+
+(** Other notations *)
+
+Notation "'exists' ! x , P" := 
+  (exists x',  (fun x => P) x' /\ forall x'', (fun x => P) x'' -> x' = x'')
+  (at level 200, x ident, right associativity,
+   format "'[' 'exists' !  '/  ' x ,  '/  ' P ']'") : type_scope.
+Notation "'exists' ! x : A , P" := 
+  (exists x' : A,  (fun x => P) x' /\ forall x'':A, (fun x => P) x'' -> x' = x'')
+  (at level 200, x ident, right associativity,
+   format "'[' 'exists' !  '/  ' x  :  A ,  '/  ' P ']'") : type_scope.

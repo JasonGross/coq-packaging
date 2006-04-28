@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: ProgramsExtraction.v,v 1.2.16.1 2004/07/16 19:30:00 herbelin Exp $ *)
+(* $Id: ProgramsExtraction.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Require Export Extraction.
 

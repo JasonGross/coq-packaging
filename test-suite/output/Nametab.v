@@ -1,7 +1,7 @@
 Module Q.
   Module N.
     Module K.
-      Definition id:=Set.
+      Definition id := Set.
     End K.
   End N.
 End Q.
@@ -12,18 +12,17 @@ End Q.
 (* OK  *) Locate Q.N.K.id.
 (* OK  *) Locate Top.Q.N.K.id.
 
-(* Bad *) Locate K.
-(* Bad *) Locate N.K.
-(* OK  *) Locate Q.N.K.
-(* OK  *) Locate Top.Q.N.K.
+(* Bad *) Locate Module K.
+(* Bad *) Locate Module N.K.
+(* OK  *) Locate Module Q.N.K.
+(* OK  *) Locate Module Top.Q.N.K.
 
-(* Bad *) Locate N.
-(* OK  *) Locate Q.N.
-(* OK  *) Locate Top.Q.N.
+(* Bad *) Locate Module N.
+(* OK  *) Locate Module Q.N.
+(* OK  *) Locate Module Top.Q.N.
 
-(* OK  *) Locate Q.
-(* OK  *) Locate Top.Q.
-
+(* OK  *) Locate Module Q.
+(* OK  *) Locate Module Top.Q.
 
 
 Import Q.N.
@@ -35,14 +34,14 @@ Import Q.N.
 (* OK  *) Locate Q.N.K.id.
 (* OK  *) Locate Top.Q.N.K.id.
 
-(* OK  *) Locate K.
-(* Bad *) Locate N.K.
-(* OK  *) Locate Q.N.K.
-(* OK  *) Locate Top.Q.N.K.
+(* OK  *) Locate Module K.
+(* Bad *) Locate Module N.K.
+(* OK  *) Locate Module Q.N.K.
+(* OK  *) Locate Module Top.Q.N.K.
 
-(* Bad *) Locate N.
-(* OK  *) Locate Q.N.
-(* OK  *) Locate Top.Q.N.
+(* Bad *) Locate Module N.
+(* OK  *) Locate Module Q.N.
+(* OK  *) Locate Module Top.Q.N.
 
-(* OK  *) Locate Q.
-(* OK  *) Locate Top.Q.
+(* OK  *) Locate Module Q.
+(* OK  *) Locate Module Top.Q.

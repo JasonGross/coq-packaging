@@ -6,12 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: nameops.mli,v 1.12.2.3 2005/01/21 17:14:10 herbelin Exp $ i*)
+(*i $Id: nameops.mli 6616 2005-01-21 17:18:23Z herbelin $ i*)
 
 open Names
 
 (* Identifiers and names *)
 val pr_id : identifier -> Pp.std_ppcmds
+val pr_name : name -> Pp.std_ppcmds
+
 val wildcard : identifier
 
 val make_ident : string -> int option -> identifier

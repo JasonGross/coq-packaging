@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: prettyp.mli,v 1.12.2.1 2004/07/16 19:30:40 herbelin Exp $ i*)
+(*i $Id: prettyp.mli 7740 2005-12-26 20:07:21Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -42,7 +42,6 @@ val build_inductive : mutual_inductive -> int ->
 val print_mutual : mutual_inductive -> std_ppcmds
 val print_name : reference -> std_ppcmds
 val print_opaque_name : reference -> std_ppcmds
-val print_local_context : unit -> std_ppcmds
 val print_about : reference -> std_ppcmds
 val print_impargs : reference -> std_ppcmds
 
@@ -57,6 +56,7 @@ val print_graph : unit -> std_ppcmds
 val print_classes : unit -> std_ppcmds
 val print_coercions : unit -> std_ppcmds
 val print_path_between : Classops.cl_typ -> Classops.cl_typ -> std_ppcmds
+val print_canonical_projections : unit -> std_ppcmds
 
 val inspect : int -> std_ppcmds
 

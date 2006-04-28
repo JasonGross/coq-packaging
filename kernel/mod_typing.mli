@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mod_typing.mli,v 1.2.8.2 2005/01/21 17:14:10 herbelin Exp $ i*)
+(*i $Id: mod_typing.mli 6621 2005-01-21 17:24:37Z herbelin $ i*)
 
 (*i*)
 open Declarations
@@ -18,6 +18,8 @@ open Entries
 val translate_modtype : env -> module_type_entry -> module_type_body
 
 val translate_module : env -> module_entry -> module_body
+
+val translate_mexpr : env -> module_expr -> module_expr_body * module_type_body
 
 val add_modtype_constraints : env -> module_type_body -> env
 

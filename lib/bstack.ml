@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: bstack.ml,v 1.3.2.1 2004/07/16 19:30:29 herbelin Exp $ *)
+(* $Id: bstack.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (* Queues of a given length *)
 

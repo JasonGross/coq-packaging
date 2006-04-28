@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Sumbool.v,v 1.12.2.1 2004/07/16 19:31:03 herbelin Exp $ i*)
+(*i $Id: Sumbool.v 7235 2005-07-15 17:11:57Z coq $ i*)
 
 (** Here are collected some results about the type sumbool (see INIT/Specif.v)
    [sumbool A B], which is written [{A}+{B}], is the informative
@@ -63,8 +63,8 @@ Defined.
 
 End connectives.
 
-Hint Resolve sumbool_and sumbool_or sumbool_not: core.
-
+Hint Resolve sumbool_and sumbool_or: core.
+Hint Immediate sumbool_not : core.
 
 (** Any decidability function in type [sumbool] can be turned into a function
     returning a boolean with the corresponding specification: *)

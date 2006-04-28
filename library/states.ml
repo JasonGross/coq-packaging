@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: states.ml,v 1.8.14.1 2004/07/16 19:30:36 herbelin Exp $ *)
+(* $Id: states.ml 6692 2005-02-06 13:03:51Z herbelin $ *)
 
 open System
 
@@ -24,7 +24,7 @@ let state_magic_number = 19764
 let (extern_state,intern_state) =
   let (raw_extern, raw_intern) = extern_intern state_magic_number ".coq" in
   (fun s -> raw_extern s (get_state())),
-  (fun s -> set_state (raw_intern (Library.get_load_path ()) s))
+  (fun s -> set_state (raw_intern (Library.get_load_paths ()) s))
 
 (* Rollback. *)
 

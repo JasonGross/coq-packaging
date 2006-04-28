@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: SeqSeries.v,v 1.14.2.1 2004/07/16 19:31:15 herbelin Exp $ i*)
+(*i $Id: SeqSeries.v 8670 2006-03-28 22:16:14Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -36,12 +36,12 @@ intros;
   (sigT
      (fun l:R =>
         Un_cv (fun n:nat => sum_f_R0 (fun l:nat => fn (S N + l)%nat x) n) l)).
-intro;
+intro X;
  cut
   (sigT
      (fun l:R =>
         Un_cv (fun n:nat => sum_f_R0 (fun l:nat => An (S N + l)%nat) n) l)).
-intro; elim X; intros l1N H2.
+intro X0; elim X; intros l1N H2.
 elim X0; intros l2N H3.
 cut (l1 - SP fn N x = l1N).
 intro; cut (l2 - sum_f_R0 An N = l2N).
@@ -217,7 +217,7 @@ Lemma Rseries_CV_comp :
    (forall n:nat, 0 <= An n <= Bn n) ->
    sigT (fun l:R => Un_cv (fun N:nat => sum_f_R0 Bn N) l) ->
    sigT (fun l:R => Un_cv (fun N:nat => sum_f_R0 An N) l).
-intros; apply cv_cauchy_2.
+intros An Bn H X; apply cv_cauchy_2.
 assert (H0 := cv_cauchy_1 _ X).
 unfold Cauchy_crit_series in |- *; unfold Cauchy_crit in |- *.
 intros; elim (H0 eps H1); intros.

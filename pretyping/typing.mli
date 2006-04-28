@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: typing.mli,v 1.7.14.1 2004/07/16 19:30:47 herbelin Exp $ i*)
+(*i $Id: typing.mli 6113 2004-09-17 20:28:19Z barras $ i*)
 
 (*i*)
 open Term
@@ -17,11 +17,18 @@ open Evd
 (* This module provides the typing machine with existential variables
    (but without universes). *)
 
-val unsafe_machine : env -> evar_map -> constr -> unsafe_judgment
-
-val type_of : env -> evar_map -> constr -> constr
-
-val execute_type : env -> evar_map -> constr -> types
-
-val execute_rec_type : env -> evar_map -> constr -> types
-
+(* Typecheck a term and return its type *)
+val type_of : env -> evar_map -> constr -> types
+(* Typecheck a type and return its sort *)
+val sort_of : env -> evar_map -> types -> sorts
+(* Typecheck a term has a given type (assuming the type is OK *)
+val check   : env -> evar_map -> constr -> types -> unit
+ 
+(* The same but with metas... *)
+val mtype_of : env -> evar_defs -> constr -> types
+val msort_of : env -> evar_defs -> types -> sorts
+val mcheck   : env -> evar_defs -> constr -> types -> unit
+val meta_type : evar_defs -> metavariable -> types
+ 
+(* unused typing function... *)
+val mtype_of_type : env -> evar_defs -> types -> types

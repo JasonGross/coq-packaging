@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declaremods.mli,v 1.8.2.2 2005/01/21 16:41:50 herbelin Exp $ i*)
+(*i $Id: declaremods.mli 6758 2005-02-20 18:13:28Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -43,9 +43,8 @@ val declare_module :
   'modexpr option -> unit
  
 val start_module : (env -> 'modtype -> module_type_entry) -> 
-  identifier -> 
-  (identifier located list * 'modtype) list -> ('modtype * bool) option -> 
-  unit
+  bool option -> identifier -> (identifier located list * 'modtype) list ->
+   ('modtype * bool) option -> unit
 
 val end_module : identifier -> unit
 
@@ -97,14 +96,12 @@ val really_import_module : module_path -> unit
 val import_module : bool -> module_path -> unit
 
 
-(*s [fold_all_segments] and [iter_all_segments] iterate over all
-    segments, the modules' segments first and then the current
-    segment. Modules are presented in an arbitrary order. The given
-    function is applied to all leaves (together with their section
-    path). The boolean indicates if we must enter closed sections. *)
+(*s [iter_all_segments] iterate over all segments, the modules'
+    segments first and then the current segment. Modules are presented
+    in an arbitrary order. The given function is applied to all leaves
+    (together with their section path). *)
 
-val fold_all_segments : bool -> ('a -> object_name -> obj -> 'a) -> 'a -> 'a
-val iter_all_segments : bool -> (object_name -> obj -> unit) -> unit
+val iter_all_segments : (object_name -> obj -> unit) -> unit
 
 
 val debug_print_modtab : unit -> Pp.std_ppcmds

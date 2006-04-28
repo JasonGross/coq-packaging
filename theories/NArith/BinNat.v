@@ -6,9 +6,10 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: BinNat.v,v 1.7.2.1 2004/07/16 19:31:07 herbelin Exp $ i*)
+(*i $Id: BinNat.v 8685 2006-04-06 13:22:02Z letouzey $ i*)
 
 Require Import BinPos.
+Unset Boxed Definitions.
 
 (**********************************************************************)
 (** Binary natural numbers *)
@@ -21,10 +22,10 @@ Inductive N : Set :=
 
 Delimit Scope N_scope with N.
 
-(** Automatically open scope N_scope for the constructors of N *)
+(** Automatically open scope positive_scope for the constructors of N *)
 
 Bind Scope N_scope with N.
-Arguments Scope Npos [N_scope].
+Arguments Scope Npos [positive_scope].
 
 Open Local Scope N_scope.
 
@@ -32,7 +33,7 @@ Open Local Scope N_scope.
 
 Definition Ndouble_plus_one x :=
   match x with
-  | N0 => Npos 1%positive
+  | N0 => Npos 1
   | Npos p => Npos (xI p)
   end.
 
@@ -47,7 +48,7 @@ Definition Ndouble n := match n with
 
 Definition Nsucc n :=
   match n with
-  | N0 => Npos 1%positive
+  | N0 => Npos 1
   | Npos p => Npos (Psucc p)
   end.
 
@@ -57,7 +58,7 @@ Definition Nplus n m :=
   match n, m with
   | N0, _ => m
   | _, N0 => n
-  | Npos p, Npos q => Npos (p + q)%positive
+  | Npos p, Npos q => Npos (p + q)
   end.
 
 Infix "+" := Nplus : N_scope.
@@ -68,7 +69,7 @@ Definition Nmult n m :=
   match n, m with
   | N0, _ => N0
   | _, N0 => N0
-  | Npos p, Npos q => Npos (p * q)%positive
+  | Npos p, Npos q => Npos (p * q)
   end.
 
 Infix "*" := Nmult : N_scope.
@@ -154,7 +155,7 @@ Qed.
 
 (** Properties of multiplication *)
 
-Theorem Nmult_1_l : forall n:N, Npos 1%positive * n = n.
+Theorem Nmult_1_l : forall n:N, Npos 1 * n = n.
 Proof.
 destruct n; reflexivity.
 Qed.

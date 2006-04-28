@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: instances.mli,v 1.3.2.1 2004/07/16 19:30:10 herbelin Exp $ i*)
+(*i $Id: instances.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 open Term
 open Tacmach

@@ -6,11 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: libobject.ml,v 1.8.8.1 2004/07/16 19:30:35 herbelin Exp $ *)
+(* $Id: libobject.ml 6748 2005-02-18 22:17:50Z herbelin $ *)
 
 open Util
 open Names
 open Libnames
+open Mod_subst
 
 (* The relax flag is used to make it possible to load files while ignoring
    failures to incorporate some objects.  This can be useful when one
@@ -35,6 +36,7 @@ type 'a object_declaration = {
   open_function : int -> object_name * 'a -> unit;
   classify_function : object_name * 'a -> 'a substitutivity;
   subst_function : object_name * substitution * 'a -> 'a;
+  discharge_function : object_name * 'a -> 'a option;
   export_function : 'a -> 'a option }
 
 let yell s = anomaly s
@@ -47,6 +49,7 @@ let default_object s = {
   subst_function = (fun _ -> 
     yell ("The object "^s^" does not know how to substitute!"));
   classify_function = (fun (_,obj) -> Keep obj);
+  discharge_function = (fun _ -> None);
   export_function = (fun _ -> None)} 
 
 
@@ -71,6 +74,7 @@ type dynamic_object_declaration = {
   dyn_open_function : int -> object_name * obj -> unit;
   dyn_subst_function : object_name * substitution * obj -> obj;
   dyn_classify_function : object_name * obj -> obj substitutivity;
+  dyn_discharge_function : object_name * obj -> obj option;
   dyn_export_function : obj -> obj option }
 
 let object_tag lobj = Dyn.tag lobj
@@ -103,6 +107,11 @@ let declare_object odecl =
 	| Anticipate (obj) -> Anticipate (infun obj)
     else 
       anomaly "somehow we got the wrong dynamic object in the classifyfun"
+  and discharge (oname,lobj) = 
+    if Dyn.tag lobj = na then 
+      option_app infun (odecl.discharge_function (oname,outfun lobj))
+    else 
+      anomaly "somehow we got the wrong dynamic object in the dischargefun"
   and exporter lobj = 
     if Dyn.tag lobj = na then 
       option_app infun (odecl.export_function (outfun lobj))
@@ -115,6 +124,7 @@ let declare_object odecl =
                              dyn_open_function = opener;
 			     dyn_subst_function = substituter;
 			     dyn_classify_function = classifier;
+			     dyn_discharge_function = discharge;
                              dyn_export_function = exporter };
   (infun,outfun)
 
@@ -152,6 +162,9 @@ let subst_object ((_,_,lobj) as node) =
 
 let classify_object ((_,lobj) as node) = 
   apply_dyn_fun Dispose (fun d -> d.dyn_classify_function node) lobj
+
+let discharge_object ((_,lobj) as node) = 
+  apply_dyn_fun None (fun d -> d.dyn_discharge_function node) lobj
 
 let export_object lobj =
   apply_dyn_fun None (fun d -> d.dyn_export_function lobj) lobj

@@ -6,9 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: JMeq.v,v 1.8.2.2 2004/08/03 17:42:32 herbelin Exp $ i*)
+(*i $Id: JMeq.v 6009 2004-08-03 17:42:55Z herbelin $ i*)
 
-(** John Major's Equality as proposed by C. Mc Bride
+(** John Major's Equality as proposed by Conor McBride
 
   Reference:
 

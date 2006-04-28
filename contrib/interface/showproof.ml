@@ -11,7 +11,6 @@ open Term
 open Termops
 open Util
 open Proof_type
-open Coqast
 open Pfedit
 open Translate
 open Term
@@ -54,7 +53,7 @@ and ngoal=
      {newhyp : nhyp list;
       t_concl : Term.constr;
       t_full_concl: Term.constr;
-      t_full_env: Sign.named_context}
+      t_full_env: Environ.named_context_val}
 and ntree=
       {t_info:string;
 	t_goal:ngoal;
@@ -151,7 +150,7 @@ let seq_to_lnhyp sign sign' cl =
       {newhyp=nh;
        t_concl=cl;
        t_full_concl=long_type_hyp !lh cl;
-       t_full_env = sign@sign'}
+       t_full_env = Environ.val_of_named_context (sign@sign')}
 ;;
 
 
@@ -163,26 +162,6 @@ let rule_is_complex r =
    |_ -> false
 ;;
 
-let ast_of_constr = Termast.ast_of_constr true (Global.env()) ;;
-
-(*
-let rule_to_ntactic r =
-   let rast =
-     (match r with
-       Tactic (s,l) ->
-	 Ast.ope (s,(List.map ast_of_cvt_arg l))
-     | Prim (Refine h) ->
-	 Ast.ope ("Exact",
-		  [Node ((0,0), "COMMAND", [ast_of_constr h])])
-     | _ -> Ast.ope ("Intros",[])) in
-   if rule_is_complex r
-   then (match rast with
-           Node(_,_,[Node(_,_,[Node(_,_,x)])]) ->x
-          | _ -> assert false)
-
-   else [rast ]
-;;
-*)
 let rule_to_ntactic r =
    let rt =
      (match r with
@@ -196,14 +175,6 @@ let rule_to_ntactic r =
 
    else rt
 ;;
-
-(*
-let term_of_command x =
-  match x with
-    Node(_,_,y::_) -> y
-  | _ -> x
-;;
-*)
 
 (* Attribue les preuves de la liste l aux sous-buts non-prouvés de nt  *)
 
@@ -226,7 +197,7 @@ let fill_unproved nt l =
 let new_sign osign sign =
     let res=ref [] in
     List.iter (fun (id,c,ty) ->
-		   try (let  (_,_,ty1)= (lookup_named id osign) in
+		   try (let  (_,_,_ty1)= (lookup_named id osign) in
 			())
 		   with Not_found -> res:=(id,c,ty)::(!res))
               sign;
@@ -247,6 +218,7 @@ let old_sign osign sign =
 let  to_nproof sigma osign pf =
   let rec to_nproof_rec sigma osign pf =
     let {evar_hyps=sign;evar_concl=cl} = pf.goal in
+    let sign = Environ.named_context_of_val sign in
     let nsign = new_sign osign sign in 
     let oldsign = old_sign osign sign in 
     match pf.ref with
@@ -417,13 +389,6 @@ let enumerate f ln =
 
 let constr_of_ast = Constrintern.interp_constr Evd.empty (Global.env());;
 
-(*
-let sp_tac tac =
-   try spt (constr_of_ast (term_of_command tac))
-   with _ -> (* let Node(_,t,_) = tac in *)
-             spe (* sps ("error in sp_tac " ^ t) *)
-;;
-*)
 let sp_tac tac = failwith "TODO"
 
 let soit_A_une_proposition nh ln t=  match !natural_language with
@@ -759,7 +724,7 @@ let rec nsortrec vl x =
           nsortrec vl (mkInd (inductive_of_constructor c))
    | Case(_,x,t,a) 
         -> nsortrec vl x
-   | Cast(x,t)-> nsortrec vl t
+   | Cast(x,_, t)-> nsortrec vl t
    | Const c  -> nsortrec vl (lookup_constant c vl).const_type
    | _ -> nsortrec vl (type_of vl Evd.empty x)
 ;;
@@ -791,7 +756,7 @@ let rec group_lhyp lh =
 let natural_ghyp (sort,ln,lt) intro =
   let t=List.hd lt in
   let nh=List.length ln in
-  let ns=List.hd ln in
+  let _ns=List.hd ln in
   match sort with
     Nprop -> soit_A_une_proposition nh ln t
   | Ntype -> soit_X_un_element_de_T nh ln t
@@ -963,16 +928,6 @@ let  natural_lhyp lh hi =
     Analyse des tactiques.
 *)
 
-(*
-let name_tactic tac =
-      match tac with
-        (Node(_,"Interp",
-		(Node(_,_,
-		      (Node(_,t,_))::_))::_))::_  -> t
-       |(Node(_,t,_))::_ -> t
-       | _ -> assert false
-;;
-*)
 let name_tactic = function
   | TacIntroPattern _ -> "Intro"
   | TacAssumption -> "Assumption"
@@ -991,51 +946,8 @@ let arg1_tactic tac =
 ;;
 *)
 
-let arg1_tactic tac = failwith "TODO"
+let arg1_tactic tac = failwith "TODO";;
 
-let arg2_tactic tac =
-   match tac with
-     (Node(_,"Interp",
-		(Node(_,_,
-		      (Node(_,_,_::x::_))::_))::_))::_ -> x
-    | (Node(_,_,_::x::_))::_ -> x
-    | _ -> assert false
-;;
-
-(*
-type nat_tactic =
-    Split of (Coqast.t list)
-  | Generalize of (Coqast.t list)
-  | Reduce of string*(Coqast.t list)
-  | Other of string*(Coqast.t list)
-;;
-
-let analyse_tac tac =
-  match tac with
-    [Node (_, "Split", [Node (_, "BINDINGS", [])])]
-      -> Split []
-  | [Node (_, "Split",[Node(_, "BINDINGS",[Node(_, "BINDING",
-	[Node (_, "COMMAND", x)])])])] 
-     -> Split x
-  | [Node (_, "Generalize", [Node (_, "COMMAND", x)])] 
-     ->Generalize x
-  | [Node (_, "Reduce", [Node (_, "REDEXP", [Node (_, mode, _)]);
-             Node (_, "CLAUSE", lhyp)])] 
-     -> Reduce(mode,lhyp)
-  | [Node (_, x,la)] -> Other (x,la)
-  | _ -> assert false
-;;
-*)
-      
-
-
-
-
-let id_of_command x =
-  match x with
-      Node(_,_,Node(_,_,y::_)::_) ->  y
-     |_ -> assert false
-;;
 type type_info_subgoals =
     {ihsg: type_info_subgoals_hyp;
      isgintro : string}
@@ -1285,7 +1197,7 @@ let rec natural_ntree ig ntree =
 	  | TacAssumption -> natural_trivial ig lh g gs ltree
 	  | TacClear _ -> natural_clear ig lh g gs ltree
 (* Besoin de l'argument de la tactique *)
-	  | TacSimpleInduction (NamedHyp id,_) -> 
+	  | TacSimpleInduction (NamedHyp id) -> 
               natural_induction ig lh g gs ge id ltree false
 	  | TacExtend (_,"InductionIntro",[a]) -> 
               let id=(out_gen wit_ident a) in
@@ -1294,7 +1206,7 @@ let rec natural_ntree ig ntree =
 	  | TacExact c -> natural_exact ig lh g gs c ltree
 	  | TacCut c -> natural_cut ig lh g gs c ltree
 	  | TacExtend (_,"CutIntro",[a]) ->
-	      let c = out_gen wit_constr a in
+	      let _c = out_gen wit_constr a in
 	      natural_cutintro ig lh g gs a ltree
 	  | TacCase (c,_) -> natural_case ig lh g gs ge c ltree false
 	  | TacExtend (_,"CaseIntro",[a]) ->
@@ -1518,7 +1430,7 @@ and natural_case ig lh g gs ge arg1 ltree with_intros =
 	 if with_intros
          then (arity_of_constr_of_mind env indf 1)
 	 else 0 in
-       let ici= 1 in
+       let _ici= 1 in
        sph[ (natural_ntree  
                {ihsg=
                  (match (nsort targ1) with
@@ -1547,7 +1459,7 @@ and prod_list_var t =
 and  hd_is_mind t ti =
     try (let env = Global.env() in
          let IndType (indf,targ) = find_rectype env Evd.empty t in
-	 let ncti= Array.length(get_constructors env indf) in
+	 let _ncti= Array.length(get_constructors env indf) in
 	 let (ind,_) = dest_ind_family indf in
          let (mib,mip) = lookup_mind_specif env ind in
 	 (string_of_id mip.mind_typename) = ti)
@@ -1556,7 +1468,7 @@ and mind_ind_info_hyp_constr indf c =
   let env = Global.env() in
   let (ind,_) = dest_ind_family indf in
   let (mib,mip) = lookup_mind_specif env ind in
-  let p = mip.mind_nparams in
+  let _p = mib.mind_nparams in
   let a = arity_of_constr_of_mind env indf c in
   let lp=ref (get_constructors env indf).(c).cs_args in
   let lr=ref [] in
@@ -1586,8 +1498,8 @@ and natural_elim ig lh g gs ge arg1 ltree with_intros=
  let ncti= Array.length(get_constructors env indf) in
  let (ind,_) = dest_ind_family indf in
  let (mib,mip) = lookup_mind_specif env ind in
- let ti =(string_of_id mip.mind_typename) in
- let type_arg=targ1 (* List.nth targ (mis_index dmi) *) in
+ let _ti =(string_of_id mip.mind_typename) in
+ let _type_arg=targ1 (* List.nth targ (mis_index dmi) *) in
   spv
          [  (natural_lhyp lh ig.ihsg);
              (show_goal2 lh ig g gs "");
@@ -1630,11 +1542,11 @@ and natural_induction ig lh g gs ge arg2 ltree with_intros=
  let arg1= mkVar arg2 in
  let targ1 = prod_head (type_of env Evd.empty arg1) in
  let IndType (indf,targ) = find_rectype env Evd.empty targ1 in
- let ncti= Array.length(get_constructors env indf) in
+ let _ncti= Array.length(get_constructors env indf) in
  let (ind,_) = dest_ind_family indf in
  let (mib,mip) = lookup_mind_specif env ind in
- let ti =(string_of_id mip.mind_typename) in
- let type_arg= targ1(*List.nth targ (mis_index dmi)*) in
+ let _ti =(string_of_id mip.mind_typename) in
+ let _type_arg= targ1(*List.nth targ (mis_index dmi)*) in
 
  let lh1= hyps (List.hd ltree) in (* la liste des hyp jusqu'a n *)
  (* on les enleve des hypotheses des sous-buts *)
@@ -1719,8 +1631,8 @@ and natural_reduce ig lh g gs ge mode la ltree =
 and natural_split ig lh g gs ge la ltree =
   match la with
     [arg] -> 
-      let env= (gLOB ge) in
-      let arg1= (*dbize env*) arg in
+      let _env= (gLOB ge) in
+      let arg1= (*dbize _env*) arg in
       spv
       	[ (natural_lhyp lh ig.ihsg);
           (show_goal2 lh ig g gs ""); 
@@ -1740,9 +1652,9 @@ and natural_split ig lh g gs ge la ltree =
 and natural_generalize ig lh g gs ge la ltree =
   match la with
     [arg] ->
-      let env= (gLOB ge) in
+      let _env= (gLOB ge) in
       let arg1= (*dbize env*) arg in
-      let type_arg=type_of (Global.env()) Evd.empty arg in
+      let _type_arg=type_of (Global.env()) Evd.empty arg in
 (*      let type_arg=type_of_ast ge arg in*)
       spv
       	[ (natural_lhyp lh ig.ihsg);

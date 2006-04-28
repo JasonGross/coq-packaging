@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: nameops.ml,v 1.21.2.2 2004/10/12 10:12:31 herbelin Exp $ *)
+(* $Id: nameops.ml 6205 2004-10-12 10:13:15Z herbelin $ *)
 
 open Pp
 open Util
@@ -15,6 +15,10 @@ open Names
 (* Identifiers *)
 
 let pr_id id = str (string_of_id id)
+
+let pr_name = function
+  | Anonymous -> str "_"
+  | Name id -> pr_id id
 
 let wildcard = id_of_string "_"
 

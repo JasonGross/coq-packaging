@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: line_oriented_parser.ml,v 1.2.16.1 2004/07/16 19:31:49 herbelin Exp $ *)
+(* $Id: line_oriented_parser.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 let line_oriented_channel_to_option stop_string input_channel =
   let count = ref 0 in

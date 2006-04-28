@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: instances.ml,v 1.9.2.1 2004/07/16 19:30:10 herbelin Exp $ i*)
+(*i $Id: instances.ml 8654 2006-03-22 15:36:58Z msozeau $ i*)
 
 open Formula
 open Sequent
@@ -105,10 +105,10 @@ let dummy_bvid=id_of_string "x"
 
 let mk_open_instance id gl m t=
   let env=pf_env gl in
-  let evmap=Refiner.sig_sig gl in
+  let evmap=Refiner.project gl in
   let var_id=
     if id==dummy_id then dummy_bvid else
-      let typ=pf_type_of gl (constr_of_reference id) in
+      let typ=pf_type_of gl (constr_of_global id) in
 	(* since we know we will get a product, 
 	   reduction is not too expensive *)
       let (nam,_,_)=destProd (whd_betadeltaiota env evmap typ) in
@@ -121,15 +121,18 @@ let mk_open_instance id gl m t=
       let nid=(fresh_id avoid var_id gl) in
 	(Name nid,None,dummy_constr)::(aux (n-1) (nid::avoid)) in
   let nt=it_mkLambda_or_LetIn revt (aux m []) in
-  let rawt=Detyping.detype (false,env) [] [] nt in
+  let rawt=Detyping.detype false [] [] nt in
   let rec raux n t=
     if n=0 then t else 
       match t with
 	  RLambda(loc,name,_,t0)->
 	    let t1=raux (n-1) t0 in
-	      RLambda(loc,name,RHole (dummy_loc,BinderType name),t1)
+	      RLambda(loc,name,RHole (dummy_loc,Evd.BinderType name),t1)
 	| _-> anomaly "can't happen" in
-  let ntt=Pretyping.understand evmap env (raux m rawt) in
+  let ntt=try 
+    Pretyping.Default.understand evmap env (raux m rawt)
+  with _ -> 
+    error "Untypable instance, maybe higher-order non-prenex quantification" in
     Sign.decompose_lam_n_assum m ntt
 
 (* tactics   *)
@@ -138,13 +141,13 @@ let left_instance_tac (inst,id) continue seq=
   match inst with
       Phantom dom->
 	if lookup (id,None) seq then 
-	  tclFAIL 0 "already done"
+	  tclFAIL 0 (Pp.str "already done")
 	else
 	  tclTHENS (cut dom) 
 	    [tclTHENLIST
 	       [introf;
 		(fun gls->generalize 
-		   [mkApp(constr_of_reference id,
+		   [mkApp(constr_of_global id,
 			  [|mkVar (Tacmach.pf_nth_hyp_id gls 1)|])] gls);
 		introf;
 		tclSOLVE [wrap 1 false continue 
@@ -152,7 +155,7 @@ let left_instance_tac (inst,id) continue seq=
 	    tclTRY assumption]
     | Real((m,t) as c,_)->
 	if lookup (id,Some c) seq then 
-	  tclFAIL 0 "already done" 
+	  tclFAIL 0 (Pp.str "already done")
 	else 
 	  let special_generalize=
 	    if m>0 then 
@@ -160,10 +163,10 @@ let left_instance_tac (inst,id) continue seq=
 		let (rc,ot)= mk_open_instance id gl m t in
 		let gt= 
 		  it_mkLambda_or_LetIn 
-		    (mkApp(constr_of_reference id,[|ot|])) rc in
+		    (mkApp(constr_of_global id,[|ot|])) rc in
 		  generalize [gt] gl
 	    else
-	      generalize [mkApp(constr_of_reference id,[|t|])]
+	      generalize [mkApp(constr_of_global id,[|t|])]
 	  in
 	    tclTHENLIST 
 	      [special_generalize;
@@ -186,7 +189,7 @@ let right_instance_tac inst continue seq=
 	(tclTHEN (split (Rawterm.ImplicitBindings [t]))
 	   (tclSOLVE [wrap 0 true continue (deepen seq)]))
     | Real ((m,t),_) ->
-	tclFAIL 0 "not implemented ... yet"
+	tclFAIL 0 (Pp.str "not implemented ... yet")
 
 let instance_tac inst=
   if (snd inst)==dummy_id then 

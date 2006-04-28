@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inductive.ml,v 1.74.2.2 2004/07/16 19:30:25 herbelin Exp $ *)
+(* $Id: inductive.ml 8673 2006-03-29 21:21:52Z herbelin $ *)
 
 open Util
 open Names
@@ -17,6 +17,8 @@ open Declarations
 open Environ
 open Reduction
 open Type_errors
+
+type mind_specif = mutual_inductive_body * one_inductive_body
 
 (* raise Not_found if not an inductive type *)
 let lookup_mind_specif env (kn,tyi) =
@@ -57,13 +59,10 @@ let ind_subst mind mib =
 (* Instantiate inductives in constructor type *)
 let constructor_instantiate mind mib c =
   let s = ind_subst mind mib in
-  type_app (substl s) c
+  substl s c
 
-(* Instantiate the parameters of the inductive type *)
-(* TODO: verify the arg of LetIn correspond to the value in the
-   signature ? *)
-let instantiate_params t args sign =
-  let fail () =
+let instantiate_params full t args sign =
+  let fail () = 
     anomaly "instantiate_params: type, ctxt and args mismatch" in
   let (rem_args, subs, ty) =
     Sign.fold_rel_context
@@ -71,38 +70,134 @@ let instantiate_params t args sign =
         match (copt, largs, kind_of_term ty) with
           | (None, a::args, Prod(_,_,t)) -> (args, a::subs, t)
           | (Some b,_,LetIn(_,_,_,t))    -> (largs, (substl subs b)::subs, t)
-	  | _                            -> fail())
+	  | (_,[],_)                -> if full then fail() else ([], subs, ty)
+	  | _                       -> fail ())
       sign
       ~init:(args,[],t) 
   in
   if rem_args <> [] then fail();
-  type_app (substl subs) ty
+  substl subs ty
 
-let full_inductive_instantiate mip params t =
-  instantiate_params t params mip.mind_params_ctxt
+let instantiate_partial_params = instantiate_params false
 
-let full_constructor_instantiate (((mind,_),mib,mip),params) =
+let full_inductive_instantiate mib params t =
+  instantiate_params true t params mib.mind_params_ctxt
+
+let full_constructor_instantiate (((mind,_),mib,_),params) =
   let inst_ind = constructor_instantiate mind mib in
   (fun t ->
-    instantiate_params (inst_ind t) params mip.mind_params_ctxt)
+    instantiate_params true (inst_ind t) params mib.mind_params_ctxt)
 
 (************************************************************************)
 (************************************************************************)
 
 (* Functions to build standard types related to inductive *)
 
+(* For each inductive type of a block that is of level u_i, we have
+   the constraints that u_i >= v_i where v_i is the type level of the
+   types of the constructors of this inductive type. Each v_i depends
+   of some of the u_i and of an extra (maybe non variable) universe,
+   say w_i. Typically, for three inductive types, we could have
+
+   u1,u2,u3,w1 <= u1
+   u1       w2 <= u2
+      u2,u3,w3 <= u3
+
+   From this system of inequations, we shall deduce
+
+   w1,w2,w3 <= u1
+   w1,w2 <= u2
+   w1,w2,w3 <= u3
+*)   
+
+let number_of_inductives mib = Array.length mib.mind_packets
+let number_of_constructors mip = Array.length mip.mind_consnames
+
+(* 
+Computing the actual sort of an applied or partially applied inductive type:
+
+I_i: forall uniformparams:utyps, forall otherparams:otyps, Type(a)
+uniformargs : utyps 
+otherargs : otyps
+I_1:forall ...,s_1;...I_n:forall ...,s_n |- sort(C_kj(uniformargs)) = s_kj
+s'_k = max(..s_kj..)
+merge(..s'_k..) = ..s''_k..
+--------------------------------------------------------------------
+Gamma |- I_i uniformargs otherargs : phi(s''_i)
+
+where
+
+- if p=0, phi() = Prop
+- if p=1, phi(s) = s
+- if p<>1, phi(s) = sup(Set,s)
+
+Remark: Set (predicative) is encoded as Type(0)
+*)
+
+let find_constraint levels level_bounds i nci =
+  if nci = 0 then mk_Prop
+  else
+    let level_bounds' = solve_constraints_system levels level_bounds in
+    let level = level_bounds'.(i) in
+    if nci = 1 & is_empty_universe level then mk_Prop
+    else if Univ.is_base level then mk_Set else Type level
+
+let find_inductive_level env (mib,mip) (_,i) levels level_bounds =
+  find_constraint levels level_bounds i (number_of_constructors mip)
+
+let set_inductive_level env s t = 
+  let sign,s' = dest_prod_assum env t in
+  if family_of_sort s <> family_of_sort (destSort s') then
+    (* This induces reductions if user_arity <> nf_arity *)
+    mkArity (sign,s)
+  else
+    t
+
+let constructor_instances env (mib,mip) (_,i) args =
+  let nargs = Array.length args in
+  let args = Array.to_list args in
+  let uargs = 
+    if nargs > mib.mind_nparams_rec then
+      fst (list_chop mib.mind_nparams_rec args)
+    else args in
+  let arities =
+    Array.map (fun mip -> destArity mip.mind_nf_arity) mib.mind_packets in
+  (* Compute the minimal type *)
+  let levels = Array.init 
+    (number_of_inductives mib) (fun _ -> fresh_local_univ ()) in
+  let arities = list_tabulate (fun i -> 
+    let ctx,s = arities.(i) in
+    let s = match s with Type _ -> Type (levels.(i)) | s -> s in
+    (Name mib.mind_packets.(i).mind_typename,None,mkArity (ctx,s)))
+    (number_of_inductives mib) in
+             (* Remark: all arities are closed hence no need for lift *)
+  let env_ar = push_rel_context (List.rev arities) env in
+  let uargs = List.map (lift (number_of_inductives mib)) uargs in
+  let lc =
+    Array.map (fun mip ->
+        Array.map (fun c -> 
+	    instantiate_partial_params c uargs mib.mind_params_ctxt)
+          mip.mind_nf_lc)
+      mib.mind_packets in
+  env_ar, lc, levels
+
+let is_small_inductive (mip,mib) = is_small (snd (destArity mib.mind_nf_arity))
+
+let max_inductive_sort v =
+  let v = Array.map (function
+    | Type u -> u
+    | _ -> anomaly "Only type levels when computing the minimal sort of an inductive type") v in
+  Univ.sup_array v
+
 (* Type of an inductive type *)
 
-let type_of_inductive env i =
-  let (_,mip) = lookup_mind_specif env i in
-  mip.mind_user_arity
+let type_of_inductive (_,mip) = mip.mind_user_arity
 
 (************************************************************************)
 (* Type of a constructor *)
 
-let type_of_constructor env cstr =
+let type_of_constructor cstr (mib,mip) =
   let ind = inductive_of_constructor cstr in
-  let (mib,mip) = lookup_mind_specif env ind in
   let specif = mip.mind_user_lc in
   let i = index_of_constructor cstr in
   let nconstr = Array.length mip.mind_consnames in
@@ -113,8 +208,8 @@ let arities_of_specif kn (mib,mip) =
   let specif = mip.mind_nf_lc in
   Array.map (constructor_instantiate kn mib) specif
 
-let arities_of_constructors env ind = 
-  arities_of_specif (fst ind) (lookup_mind_specif env ind)
+let arities_of_constructors ind specif = 
+  arities_of_specif (fst ind) specif
 
 
 
@@ -149,23 +244,28 @@ let local_rels ctxt =
   rels
 
 (* Get type of inductive, with parameters instantiated *)
-let get_arity mip params =
+let get_arity mib mip params =
   let arity = mip.mind_nf_arity in
-  destArity (full_inductive_instantiate mip params arity)
+  destArity (full_inductive_instantiate mib params arity)
 
-let build_dependent_inductive ind mip params =
-  let arsign,_ = get_arity mip params in
+let rel_list n m = 
+  let rec reln l p = 
+    if p>m then l else reln (mkRel(n+p)::l) (p+1)
+  in 
+  reln [] 1
+
+let build_dependent_inductive ind mib mip params =
   let nrealargs = mip.mind_nrealargs in
   applist 
-    (mkInd ind, (List.map (lift nrealargs) params)@(local_rels arsign))
+    (mkInd ind, (List.map (lift nrealargs) params)@(rel_list 0 nrealargs))
 
 
 (* This exception is local *)
 exception LocalArity of (constr * constr * arity_error) option
 
-let is_correct_arity env c pj ind mip params = 
+let is_correct_arity env c pj ind mib mip params = 
   let kelim = mip.mind_kelim in
-  let arsign,s = get_arity mip params in
+  let arsign,s = get_arity mib mip params in
   let nodep_ar = it_mkProd_or_LetIn (mkSort s) arsign in
   let rec srec env pt t u =
     let pt' = whd_betadeltaiota env pt in
@@ -181,7 +281,9 @@ let is_correct_arity env c pj ind mip params =
           let ksort = match kind_of_term k with
             | Sort s -> family_of_sort s 
 	    | _ -> raise (LocalArity None) in
-	  let dep_ind = build_dependent_inductive ind mip params in
+
+	  let dep_ind = build_dependent_inductive ind mib mip params
+	  in 
           let univ =
             try conv env a1 dep_ind
             with NotConvertible -> raise (LocalArity None) in
@@ -225,7 +327,7 @@ let build_branches_type ind mib mip params dep p =
     let (args,ccl) = decompose_prod_assum typi in
     let nargs = rel_context_length args in
     let (_,allargs) = decompose_app ccl in
-    let (lparams,vargs) = list_chop mip.mind_nparams allargs in
+    let (lparams,vargs) = list_chop mib.mind_nparams allargs in
     let cargs =
       if dep then
         let cstr = ith_constructor_of_inductive ind (i+1) in
@@ -245,10 +347,10 @@ let build_case_type dep p c realargs =
 
 let type_case_branches env (ind,largs) pj c =
   let (mib,mip) = lookup_mind_specif env ind in 
-  let nparams = mip.mind_nparams in
+  let nparams = mib.mind_nparams in
   let (params,realargs) = list_chop nparams largs in
   let p = pj.uj_val in
-  let (dep,univ) = is_correct_arity env c pj ind mip params in
+  let (dep,univ) = is_correct_arity env c pj ind mib mip params in
   let lc = build_branches_type ind mib mip params dep p in
   let ty = build_case_type dep p c realargs in
   (lc, ty, univ)
@@ -257,11 +359,22 @@ let type_case_branches env (ind,largs) pj c =
 (************************************************************************)
 (* Checking the case annotation is relevent *)
 
+let rec inductive_kn_equiv env kn1 kn2 =
+  match (lookup_mind kn1 env).mind_equiv with
+    | Some kn1' -> inductive_kn_equiv env kn2 kn1'
+    | None -> match (lookup_mind kn2 env).mind_equiv with
+        | Some kn2' -> inductive_kn_equiv env kn2' kn1
+	| None -> false
+
+let inductive_equiv env (kn1,i1) (kn2,i2) =
+  i1=i2 & inductive_kn_equiv env kn1 kn2
+
 let check_case_info env indsp ci =
   let (mib,mip) = lookup_mind_specif env indsp in
   if
     (indsp <> ci.ci_ind) or
-    (mip.mind_nparams <> ci.ci_npar)
+    (mib.mind_nparams <> ci.ci_npar) or
+    (mip.mind_consnrealdecls <> ci.ci_cstr_nargs)
   then raise (TypeError(env,WrongCaseInfo(indsp,ci)))
 
 (************************************************************************)
@@ -416,7 +529,7 @@ let inductive_of_fix env recarg body =
    subterm_specif env c ind 
 
    subterm_specif should test if [c] (building objects of inductive
-   type [ind], not necassarily the same as that of the recursive
+   type [ind], not necessarily the same as that of the recursive
    argument) is a subterm of the recursive argument of the fixpoint we
    are checking and fails with Not_found if not. In case it is, it
    should send its recursive specification (i.e. on which arguments we
@@ -584,7 +697,6 @@ let check_one_fix renv recpos def =
       | Fix ((recindxs,i),(_,typarray,bodies as recdef)) ->
           List.for_all (check_rec_call renv) l &&
           array_for_all (check_rec_call renv) typarray && 
-	  let nbfix = Array.length typarray in
           let decrArg = recindxs.(i) in
           let renv' = push_fix_renv renv recdef in 
           if (List.length l < (decrArg+1)) then
@@ -604,7 +716,7 @@ let check_one_fix renv recpos def =
                 bodies in
             array_for_all (fun b -> b) ok_vect
 
-      | Const kn as c -> 
+      | Const kn -> 
           (try List.for_all (check_rec_call renv) l
            with (FixGuardError _ ) as e ->
              if evaluable_constant kn renv.env then 
@@ -614,7 +726,7 @@ let check_one_fix renv recpos def =
 
       (* The cases below simply check recursively the condition on the
          subterms *)
-      | Cast (a,b) -> 
+      | Cast (a,_, b) -> 
           List.for_all (check_rec_call renv) (a::b::l)
 
       | Lambda (x,a,b) ->
@@ -668,8 +780,8 @@ let inductive_of_mutfix env ((nvect,bodynum),(names,types,bodies as recdef)) =
     or bodynum >= nbfix
   then anomaly "Ill-formed fix term";
   let fixenv = push_rec_types recdef env in
-  let raise_err i err =
-    error_ill_formed_rec_body fixenv err names i in
+  let raise_err env i err =
+    error_ill_formed_rec_body env err names i in
   (* Check the i-th definition with recarg k *)
   let find_ind i k def = 
     if k < 0 then anomaly "negative recarg position";
@@ -684,18 +796,19 @@ let inductive_of_mutfix env ((nvect,bodynum),(names,types,bodies as recdef)) =
                 (* get the inductive type of the fixpoint *)
                 let (mind, _) = 
                   try find_inductive env a 
-                  with Not_found -> raise_err i RecursionNotOnInductiveType in
+                  with Not_found ->
+		    raise_err env i (RecursionNotOnInductiveType a) in
                 (mind, (env', b))
 	      else check_occur env' (n+1) b
             else anomaly "check_one_fix: Bad occurrence of recursive call"
-        | _ -> raise_err i NotEnoughAbstractionInFixBody in
+        | _ -> raise_err env i NotEnoughAbstractionInFixBody in
     check_occur fixenv 1 def in
   (* Do it on every fixpoint *)
   let rv = array_map2_i find_ind nvect bodies in
   (Array.map fst rv, Array.map snd rv)
 
 
-let check_fix env ((nvect,_),(names,_,bodies as recdef) as fix) =
+let check_fix env ((nvect,_),(names,_,bodies as _recdef) as fix) =
   let (minds, rdef) = inductive_of_mutfix env fix in
   for i = 0 to Array.length bodies - 1 do
     let (fenv,body) = rdef.(i) in
@@ -760,7 +873,7 @@ let check_one_cofix env nbfix def deftype =
             let lra =vlra.(i-1) in 
             let mI = inductive_of_constructor cstr_kn in
 	    let (mib,mip) = lookup_mind_specif env mI in
-            let realargs = list_skipn mip.mind_nparams args in
+            let realargs = list_skipn mib.mind_nparams args in
             let rec process_args_of_constr = function
               | (t::lr), (rar::lrar) -> 
                   if rar = mk_norec then

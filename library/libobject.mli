@@ -6,11 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libobject.mli,v 1.9.8.2 2005/01/21 16:41:51 herbelin Exp $ i*)
+(*i $Id: libobject.mli 6748 2005-02-18 22:17:50Z herbelin $ i*)
 
 (*i*)
 open Names
 open Libnames
+open Mod_subst
 (*i*)
 
 (* [Libobject] declares persistent objects, given with methods:
@@ -69,6 +70,7 @@ type 'a object_declaration = {
   open_function : int -> object_name * 'a -> unit;
   classify_function : object_name * 'a -> 'a substitutivity;
   subst_function : object_name * substitution * 'a -> 'a;
+  discharge_function : object_name * 'a -> 'a option;
   export_function : 'a -> 'a option }
 
 (* The default object is a "Keep" object with empty methods. 
@@ -102,4 +104,5 @@ val open_object : int -> object_name * obj -> unit
 val subst_object : object_name * substitution * obj -> obj
 val classify_object : object_name * obj -> obj substitutivity
 val export_object : obj -> obj option
+val discharge_object : object_name * obj -> obj option
 val relax : bool -> unit

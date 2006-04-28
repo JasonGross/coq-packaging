@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: gallina.ml,v 1.2.16.1 2004/07/16 19:31:46 herbelin Exp $ *)
+(* $Id: gallina.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 open Gallina_lexer
 

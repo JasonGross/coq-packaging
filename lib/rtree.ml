@@ -6,16 +6,16 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: rtree.ml,v 1.2.8.1 2004/07/16 19:30:31 herbelin Exp $ i*)
+(*i $Id: rtree.ml 8648 2006-03-18 15:37:14Z herbelin $ i*)
 
 
 (* Type of regular trees:
    - Param denotes tree variables (like de Bruijn indices)
-   - Node denotes the usual tree node, labelles with 'a
+   - Node denotes the usual tree node, labelled with 'a
    - Rec(j,v1..vn) introduces infinite tree. It denotes
      v(j+1) with parameters 0..n-1 replaced by
      Rec(0,v1..vn)..Rec(n-1,v1..vn) respectively.
-     Parameters n and higher denote parameters globals to the
+     Parameters n and higher denote parameters global to the
      current Rec node (as usual in de Bruijn binding system)
  *)
 type 'a t =

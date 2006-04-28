@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: states.mli,v 1.6.16.1 2004/07/16 19:30:36 herbelin Exp $ i*)
+(*i $Id: states.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (*s States of the system. In that module, we provide functions to get
   and set the state of the whole system. Internally, it is done by

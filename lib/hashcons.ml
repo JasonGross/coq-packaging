@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: hashcons.ml,v 1.3.16.1 2004/07/16 19:30:30 herbelin Exp $ *)
+(* $Id: hashcons.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (* Hash consing of datastructures *)
 

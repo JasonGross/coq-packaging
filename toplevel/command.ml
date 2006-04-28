@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: command.ml,v 1.116.2.4 2005/11/29 21:40:53 letouzey Exp $ *)
+(* $Id: command.ml 8689 2006-04-07 20:20:16Z herbelin $ *)
 
 open Pp
 open Util
@@ -18,7 +18,7 @@ open Entries
 open Inductive
 open Environ
 open Reduction
-open Tacred
+open Redexpr
 open Declare
 open Nametab
 open Names
@@ -37,31 +37,45 @@ open Indtypes
 open Vernacexpr
 open Decl_kinds
 open Pretyping
-open Symbols
+open Notation
 
 let mkLambdaCit = List.fold_right (fun (x,a) b -> mkLambdaC(x,a,b))
 let mkProdCit = List.fold_right (fun (x,a) b -> mkProdC(x,a,b))
 
-let rec abstract_rawconstr c = function
+let rec abstract_constr_expr c = function
   | [] -> c
-  | LocalRawDef (x,b)::bl -> mkLetInC(x,b,abstract_rawconstr c bl)
+  | LocalRawDef (x,b)::bl -> mkLetInC(x,b,abstract_constr_expr c bl)
   | LocalRawAssum (idl,t)::bl ->
       List.fold_right (fun x b -> mkLambdaC([x],t,b)) idl
-        (abstract_rawconstr c bl)
+        (abstract_constr_expr c bl)
 
-let rec generalize_rawconstr c = function
+let rec generalize_constr_expr c = function
   | [] -> c
-  | LocalRawDef (x,b)::bl -> mkLetInC(x,b,generalize_rawconstr c bl)
+  | LocalRawDef (x,b)::bl -> mkLetInC(x,b,generalize_constr_expr c bl)
   | LocalRawAssum (idl,t)::bl ->
       List.fold_right (fun x b -> mkProdC([x],t,b)) idl
-        (generalize_rawconstr c bl)
+        (generalize_constr_expr c bl)
+
+let rec length_of_raw_binders = function
+  | [] -> 0
+  | LocalRawDef _::bl -> 1 + length_of_raw_binders bl
+  | LocalRawAssum (idl,_)::bl -> List.length idl + length_of_raw_binders bl
+
+let rec under_binders env f n c =
+  if n = 0 then f env Evd.empty c else
+    match kind_of_term c with
+      | Lambda (x,t,c) ->
+	  mkLambda (x,t,under_binders (push_rel (x,None,t) env) f (n-1) c)
+      | LetIn (x,b,t,c) ->
+	  mkLetIn (x,b,t,under_binders (push_rel (x,Some b,t) env) f (n-1) c)
+      | _ -> assert false
 
 let rec destSubCast c = match kind_of_term c with
   | Lambda (x,t,c) -> 
       let (b,u) = destSubCast c in mkLambda (x,t,b), mkProd (x,t,u)
   | LetIn (x,b,t,c) ->
       let (d,u) = destSubCast c in mkLetIn (x,b,t,d), mkLetIn (x,b,t,u)
-  | Cast (b,u) -> (b,u)
+  | Cast (b,_, u) -> (b,u)
   | _ -> assert false
 
 let rec adjust_conclusion a cs = function
@@ -84,63 +98,51 @@ let rec adjust_conclusion a cs = function
 let definition_message id =
   if_verbose message ((string_of_id id) ^ " is defined")
 
-let constant_entry_of_com (bl,com,comtypopt,opacity) =
+let constant_entry_of_com (bl,com,comtypopt,opacity,boxed) =
   let sigma = Evd.empty in
   let env = Global.env() in
   match comtypopt with
       None -> 
-	let b = abstract_rawconstr com bl in
-	let j = judgment_of_rawconstr sigma env b in
+	let b = abstract_constr_expr com bl in
+	let j = interp_constr_judgment sigma env b in
 	{ const_entry_body = j.uj_val;
-	  const_entry_type = Some (Evarutil.refresh_universes j.uj_type);
-          const_entry_opaque = opacity }
+	  const_entry_type = Some (refresh_universes j.uj_type);
+          const_entry_opaque = opacity;
+	  const_entry_boxed = boxed }
     | Some comtyp ->
 	(* We use a cast to avoid troubles with evars in comtyp *)
 	(* that can only be resolved knowing com *)
-	let b = abstract_rawconstr (mkCastC (com,comtyp)) bl in
+	let b = abstract_constr_expr (mkCastC (com,DEFAULTcast,comtyp)) bl in
 	let (body,typ) = destSubCast (interp_constr sigma env b) in
 	{ const_entry_body = body;
 	  const_entry_type = Some typ;
-          const_entry_opaque = opacity }
-
-let rec length_of_raw_binders = function
-  | [] -> 0
-  | LocalRawDef _::bl -> 1 + length_of_raw_binders bl
-  | LocalRawAssum (idl,_)::bl -> List.length idl + length_of_raw_binders bl
-
-let rec under_binders env f n c =
-  if n = 0 then f env Evd.empty c else
-    match kind_of_term c with
-      | Lambda (x,t,c) ->
-        mkLambda (x,t,under_binders (push_rel (x,None,t) env) f (n-1) c)
-      | LetIn (x,b,t,c) ->
-        mkLetIn (x,b,t,under_binders (push_rel (x,Some b,t) env) f (n-1) c)
-      | _ -> assert false
+          const_entry_opaque = opacity;
+	  const_entry_boxed = boxed }
 
 let red_constant_entry bl ce = function
   | None -> ce
   | Some red ->
       let body = ce.const_entry_body in
       { ce with const_entry_body = 
-      under_binders (Global.env()) (reduction_of_redexp red)
-        (length_of_raw_binders bl)
-        body }
+	under_binders (Global.env()) (fst (reduction_of_red_expr red))
+	  (length_of_raw_binders bl)
+	  body }
 
 let declare_global_definition ident ce local =
-  let (_,kn) = declare_constant ident (DefinitionEntry ce,IsDefinition) in
-  if local = Local then
+  let kn = declare_constant ident (DefinitionEntry ce,IsDefinition Definition) in
+  if local = Local && Options.is_verbose() then
     msg_warning (pr_id ident ++ str" is declared as a global definition");
   definition_message ident;
   ConstRef kn
 
-let declare_definition ident (local,_) bl red_option c typopt hook =
-  let ce = constant_entry_of_com (bl,c,typopt,false) in
+let declare_definition ident (local,boxed,dok) bl red_option c typopt hook =
+  let ce = constant_entry_of_com (bl,c,typopt,false,boxed) in
   let ce' = red_constant_entry bl ce red_option in
   let r = match local with
     | Local when Lib.sections_are_opened () ->
         let c =
           SectionLocalDef(ce'.const_entry_body,ce'.const_entry_type,false) in
-        let _ = declare_variable ident (Lib.cwd(), c, IsDefinition) in
+        let _ = declare_variable ident (Lib.cwd(),c,IsDefinition Definition) in
         definition_message ident;
         if Pfedit.refining () then 
           msgerrnl (str"Warning: Local definition " ++ pr_id ident ++ 
@@ -152,7 +154,6 @@ let declare_definition ident (local,_) bl red_option c typopt hook =
 
 let syntax_definition ident c local onlyparse =
   let c = snd (interp_aconstr [] [] c) in
-  let onlyparse = !Options.v7_only or onlyparse in
   Syntax_def.declare_syntactic_definition local ident onlyparse c
 
 (* 2| Variable/Hypothesis/Parameter/Axiom declarations *)
@@ -163,7 +164,7 @@ let assumption_message id =
 let declare_one_assumption is_coe (local,kind) c (_,ident) =
   let r = match local with
     | Local when Lib.sections_are_opened () ->
-        let r = 
+        let _ = 
           declare_variable ident 
             (Lib.cwd(), SectionLocalAssum c, IsAssumption kind) in
         assumption_message ident;
@@ -172,7 +173,7 @@ let declare_one_assumption is_coe (local,kind) c (_,ident) =
           str" is not visible from current goals");
         VarRef ident
     | (Global|Local) ->
-        let (_,kn) =
+        let kn =
           declare_constant ident (ParameterEntry c, IsAssumption kind) in
         assumption_message ident;
         if local=Local & Options.is_verbose () then
@@ -182,9 +183,13 @@ let declare_one_assumption is_coe (local,kind) c (_,ident) =
   if is_coe then Class.try_add_new_coercion r local
 
 let declare_assumption idl is_coe k bl c =
-  let c = generalize_rawconstr c bl in
-  let c = interp_type Evd.empty (Global.env()) c in
-  List.iter (declare_one_assumption is_coe k c) idl
+  if not (Pfedit.refining ()) then 
+    let c = generalize_constr_expr c bl in
+    let c = interp_type Evd.empty (Global.env()) c in
+      List.iter (declare_one_assumption is_coe k c) idl
+  else
+    errorlabstrm "Command.Assumption"
+	(str "Cannot declare an assumption while in proof editing mode.")
 
 (* 3a| Elimination schemes for mutual inductive definitions *)
 
@@ -203,16 +208,17 @@ let declare_one_elimination ind =
       (DefinitionEntry
         { const_entry_body = c;
           const_entry_type = t;
-          const_entry_opaque = false }, 
-       Decl_kinds.IsDefinition) in
+          const_entry_opaque = false;
+	  const_entry_boxed = Options.boxed_definitions() }, 
+       Decl_kinds.IsDefinition Definition) in
     definition_message id;
     kn
   in
   let env = Global.env () in
   let sigma = Evd.empty in
   let elim_scheme = Indrec.build_indrec env sigma ind in
-  let npars = mip.mind_nparams in
-  let make_elim s = Indrec.instanciate_indrec_scheme s npars elim_scheme in
+  let npars = mib.mind_nparams_rec in
+  let make_elim s = Indrec.instantiate_indrec_scheme s npars elim_scheme in
   let kelim = mip.mind_kelim in
   (* in case the inductive has a type elimination, generates only one
      induction scheme, the other ones share the same code with the
@@ -220,10 +226,10 @@ let declare_one_elimination ind =
   if List.mem InType kelim then
     let elim = make_elim (new_sort_in_family InType) in
     let cte = declare (mindstr^(Indrec.elimination_suffix InType)) elim None in
-    let c = mkConst (snd cte) and t = constant_type (Global.env()) (snd cte) in
+    let c = mkConst cte and t = constant_type (Global.env()) cte in
     List.iter (fun (sort,suff) -> 
       let (t',c') = 
-	Indrec.instanciate_type_indrec_scheme (new_sort_in_family sort)
+	Indrec.instantiate_type_indrec_scheme (new_sort_in_family sort)
 	  npars c t in
       let _ = declare (mindstr^suff) c' (Some t') in ())
       non_type_eliminations
@@ -270,27 +276,9 @@ let interp_mutual lparams lnamearconstrs finite =
       [] lnamearconstrs in
   if not (list_distinct allnames) then
     error "Two inductive objects have the same name";
-  let nparams = local_binders_length lparams
-  and sigma = Evd.empty 
-  and env0 = Global.env() in
-  let env_params, params =
-    List.fold_left
-      (fun (env, params) d -> match d with
-	| LocalRawAssum ([_,na],(CHole _ as t)) ->
-	    let t = interp_binder sigma env na t in
-	    let d = (na,None,t) in
-	    (push_rel d env, d::params)
-	| LocalRawAssum (nal,t) ->
-	    let t = interp_type sigma env t in
-	    let ctx = list_map_i (fun i (_,na) -> (na,None,lift i t)) 0 nal in
-	    let ctx = List.rev ctx in
-	    (push_rel_context ctx env, ctx@params)
-	| LocalRawDef ((_,na),c) ->
-	    let c = judgment_of_rawconstr sigma env c in
-	    let d = (na, Some c.uj_val, c.uj_type) in
-	    (push_rel d env,d::params))
-      (env0,[]) lparams
-  in
+  let sigma = Evd.empty and env0 = Global.env() in
+  let env_params, params = interp_context sigma env0 lparams in
+
   (* Builds the params of the inductive entry *)
   let params' =
     List.map (fun (na,b,t) ->
@@ -304,8 +292,6 @@ let interp_mutual lparams lnamearconstrs finite =
   let paramassums = 
     List.fold_right (fun d l -> match d with
 	(id,LocalAssum _) -> id::l | (_,LocalDef _) -> l) params' [] in
-  let indnames =
-    List.map (fun (id,_,_,_)-> id) lnamearconstrs @ paramassums in
   let nparamassums = List.length paramassums in
   let (ind_env,ind_impls,arityl) =
     List.fold_left
@@ -316,7 +302,7 @@ let interp_mutual lparams lnamearconstrs finite =
 	 let argsc = compute_arguments_scope fullarity in
 	 let ind_impls' = 
 	   if Impargs.is_implicit_args() then
-	     let impl = Impargs.compute_implicits false env_params fullarity in
+	     let impl = Impargs.compute_implicits env_params fullarity in
 	     let paramimpl,_ = list_chop nparamassums impl in
 	     let l = List.fold_right
 	       (fun imp l -> if Impargs.is_status_implicit imp then
@@ -337,8 +323,9 @@ let interp_mutual lparams lnamearconstrs finite =
   let fs = States.freeze() in
   (* Declare the notations for the inductive types pushed in local context*)
   try
-  List.iter (fun (df,c,scope) -> (* No scope for tmp notation *)
-    Metasyntax.add_notation_interpretation df ind_impls c None) notations;
+  List.iter (fun (df,c,scope) ->
+    silently (Metasyntax.add_notation_interpretation df ind_impls c) scope)
+    notations;
   let ind_env_params = push_rel_context params ind_env in
 
   let mispecvec = 
@@ -358,21 +345,20 @@ let interp_mutual lparams lnamearconstrs finite =
          (* Interpret the constructor types *)
          let constrs =
 	   List.map 
-	     (interp_type_with_implicits sigma ind_env_params
-	       (paramassums,ind_impls))
+	     (interp_type sigma ind_env_params ~impls:(paramassums,ind_impls))
 	     bodies
 	 in
 
          (* Build the inductive entry *)
-	 { mind_entry_params = params';
-	   mind_entry_typename = name;
+	 { mind_entry_typename = name;
 	   mind_entry_arity = ar;
 	   mind_entry_consnames = constrnames;
 	   mind_entry_lc = constrs })
       (List.rev arityl) lnamearconstrs
   in
   States.unfreeze fs;
-  notations, { mind_entry_record = false; 
+  notations, { mind_entry_params = params';
+	       mind_entry_record = false; 
 	       mind_entry_finite = finite; 
 	       mind_entry_inds = mispecvec }
   with e -> States.unfreeze fs; raise e
@@ -388,6 +374,7 @@ let declare_mutual_with_eliminations isrecord mie =
 (* Very syntactical equality *)
 let eq_la d1 d2 = match d1,d2 with
   | LocalRawAssum (nal,ast), LocalRawAssum (nal',ast') ->
+      (List.length nal = List.length nal') &&
       List.for_all2 (fun (_,na) (_,na') -> na = na') nal nal'
       & (try let _ = Constrextern.check_same_type ast ast' in true with _ -> false)
   | LocalRawDef ((_,id),ast), LocalRawDef ((_,id'),ast') ->
@@ -422,7 +409,7 @@ let extract_coe_la_lc = function
 let build_mutual lind finite =
   let ((coes:identifier list),lparams,lnamearconstructs) = extract_coe_la_lc lind in
   let notations,mie = interp_mutual lparams lnamearconstructs finite in
-  let kn = declare_mutual_with_eliminations false mie in
+  let _ = declare_mutual_with_eliminations false mie in
   (* Declare the notations now bound to the inductive types *)
   List.iter (fun (df,c,scope) ->
     Metasyntax.add_notation_interpretation df [] c scope) notations;
@@ -465,7 +452,8 @@ let collect_non_rec env =
   in 
   searchrec [] 
 
-let build_recursive (lnameargsardef:(fixpoint_expr *decl_notation) list)  =
+let build_recursive (lnameargsardef:(fixpoint_expr *decl_notation) list)
+                                                                   boxed =
   let lrecnames = List.map (fun ((f,_,_,_,_),_) -> f) lnameargsardef 
   and sigma = Evd.empty
   and env0 = Global.env()
@@ -474,11 +462,11 @@ let build_recursive (lnameargsardef:(fixpoint_expr *decl_notation) list)  =
   let (rec_sign,rec_impls,arityl) = 
     List.fold_left 
       (fun (env,impls,arl) ((recname,_,bl,arityc,_),_) -> 
-        let arityc = generalize_rawconstr arityc bl in
+        let arityc = generalize_constr_expr arityc bl in
         let arity = interp_type sigma env0 arityc in
 	let impl = 
 	  if Impargs.is_implicit_args()
-	  then Impargs.compute_implicits false env0 arity
+	  then Impargs.compute_implicits env0 arity
 	  else [] in
 	let impls' =(recname,([],impl,compute_arguments_scope arity))::impls in
         (Environ.push_named (recname,None,arity) env, impls', arity::arl))
@@ -494,13 +482,15 @@ let build_recursive (lnameargsardef:(fixpoint_expr *decl_notation) list)  =
     let fs = States.freeze() in
     let def = 
       try
-	List.iter (fun (df,c,scope) -> (* No scope for tmp notation *)
-	 Metasyntax.add_notation_interpretation df rec_impls c None) notations;
+	List.iter (fun (df,c,scope) ->
+	 silently
+	  (Metasyntax.add_notation_interpretation df rec_impls c) scope)
+	  notations;
 	List.map2
 	  (fun ((_,_,bl,_,def),_) arity ->
-            let def = abstract_rawconstr def bl in
-            interp_casted_constr_with_implicits 
-	      sigma rec_sign rec_impls def arity)
+            let def = abstract_constr_expr def bl in
+            interp_casted_constr sigma rec_sign ~impls:([],rec_impls)
+              def arity)
           lnameargsardef arityl
       with e ->
 	States.unfreeze fs; raise e in
@@ -514,11 +504,12 @@ let build_recursive (lnameargsardef:(fixpoint_expr *decl_notation) list)  =
   let recdecls = (Array.map (fun id -> Name id) namerec, arrec, recvec) in
   let rec declare i fi =
     let ce = 
-      { const_entry_body = mkFix ((nvrec,i),recdecls);
+      { const_entry_body = mkFix ((Array.map fst nvrec,i),recdecls); (* ignore rec order *)
         const_entry_type = Some arrec.(i);
-        const_entry_opaque = false } in
-    let (_,kn) = declare_constant fi (DefinitionEntry ce, IsDefinition) in
-    (ConstRef kn)
+        const_entry_opaque = false;
+        const_entry_boxed = boxed} in
+    let kn = declare_constant fi (DefinitionEntry ce,IsDefinition Fixpoint)
+    in (ConstRef kn)
   in 
   (* declare the recursive definitions *)
   let lrefrec = Array.mapi declare namerec in
@@ -530,8 +521,11 @@ let build_recursive (lnameargsardef:(fixpoint_expr *decl_notation) list)  =
       (fun subst (f,def,t) ->
 	 let ce = { const_entry_body = replace_vars subst def;
 		    const_entry_type = Some t;
-                    const_entry_opaque = false } in
-	 let _ = declare_constant f (DefinitionEntry ce, IsDefinition) in
+                    const_entry_opaque = false;
+		    const_entry_boxed = boxed } in
+	 let _ =
+	   declare_constant f (DefinitionEntry ce,IsDefinition Definition)
+	 in
       	 warning ((string_of_id f)^" is non-recursively defined");
       	 (var_subst f) :: subst)
       (List.map var_subst (Array.to_list namerec))
@@ -540,7 +534,7 @@ let build_recursive (lnameargsardef:(fixpoint_expr *decl_notation) list)  =
   List.iter (fun (df,c,scope) ->
     Metasyntax.add_notation_interpretation df [] c scope) notations
 
-let build_corecursive lnameardef = 
+let build_corecursive lnameardef boxed = 
   let lrecnames = List.map (fun (f,_,_,_) -> f) lnameardef
   and sigma = Evd.empty
   and env0 = Global.env() in
@@ -549,11 +543,10 @@ let build_corecursive lnameardef =
     try 
       List.fold_left 
         (fun (env,arl) (recname,bl,arityc,_) -> 
-           let arityc = generalize_rawconstr arityc bl in
-           let arj = type_judgment_of_rawconstr Evd.empty env0 arityc in
-	   let arity = arj.utj_val in
+           let arityc = generalize_constr_expr arityc bl in
+           let arity = interp_type Evd.empty env0 arityc in
            let _ = declare_variable recname
-	     (Lib.cwd(),SectionLocalAssum arj.utj_val,IsAssumption Definitional) in
+	     (Lib.cwd(),SectionLocalAssum arity,IsAssumption Definitional) in
            (Environ.push_named (recname,None,arity) env, (arity::arl)))
         (env0,[]) lnameardef
     with e -> 
@@ -562,10 +555,10 @@ let build_corecursive lnameardef =
   let recdef =
     try 
       List.map (fun (_,bl,arityc,def) ->
-        let arityc = generalize_rawconstr arityc bl in
-        let def = abstract_rawconstr def bl in
+        let arityc = generalize_constr_expr arityc bl in
+        let def = abstract_constr_expr def bl in
 	let arity = interp_constr sigma rec_sign arityc in
-                  interp_casted_constr sigma rec_sign def arity)
+        interp_casted_constr sigma rec_sign def arity)
         lnameardef
     with e -> 
       States.unfreeze fs; raise e 
@@ -580,10 +573,11 @@ let build_corecursive lnameardef =
     let ce = 
       { const_entry_body = mkCoFix (i, recdecls);
         const_entry_type = Some (arrec.(i));
-        const_entry_opaque = false } 
+        const_entry_opaque = false;
+        const_entry_boxed = boxed } 
     in
-    let _,kn = declare_constant fi (DefinitionEntry ce, IsDefinition) in
-    (ConstRef kn)
+    let kn = declare_constant fi (DefinitionEntry ce,IsDefinition CoFixpoint)
+    in (ConstRef kn)
   in 
   let lrefrec = Array.mapi declare namerec in
   if_verbose ppnl (corecursive_message lrefrec);
@@ -593,8 +587,10 @@ let build_corecursive lnameardef =
       (fun subst (f,def,t) ->
 	 let ce = { const_entry_body = replace_vars subst def;
 		    const_entry_type = Some t;
-                    const_entry_opaque = false } in
-	 let _ = declare_constant f (DefinitionEntry ce,IsDefinition) in
+                    const_entry_opaque = false;
+		    const_entry_boxed = boxed } in
+	 let _ = 
+	   declare_constant f (DefinitionEntry ce,IsDefinition Definition) in
       	 warning ((string_of_id f)^" is non-recursively defined");
       	 (var_subst f) :: subst)
       (List.map var_subst (Array.to_list namerec))
@@ -616,11 +612,12 @@ let build_scheme lnamedepindsort =
   let listdecl = Indrec.build_mutual_indrec env0 sigma lrecspec in 
   let rec declare decl fi lrecref =
     let decltype = Retyping.get_type_of env0 Evd.empty decl in
-    let decltype = Evarutil.refresh_universes decltype in
+    let decltype = refresh_universes decltype in
     let ce = { const_entry_body = decl;
                const_entry_type = Some decltype;
-               const_entry_opaque = false } in
-    let _,kn = declare_constant fi (DefinitionEntry ce, IsDefinition) in
+               const_entry_opaque = false;
+	       const_entry_boxed = Options.boxed_definitions() } in
+    let kn = declare_constant fi (DefinitionEntry ce, IsDefinition Scheme) in
     ConstRef kn :: lrecref
   in 
   let lrecref = List.fold_right2 declare listdecl lrecnames [] in
@@ -643,29 +640,30 @@ let start_proof_com sopt kind (bl,t) hook =
  	  (Pfedit.get_all_proof_names ())
   in
   let env = Global.env () in
-  let c = interp_type Evd.empty env (generalize_rawconstr t bl) in
+  let c = interp_type Evd.empty env (generalize_constr_expr t bl) in
   let _ = Typeops.infer_type env c in
   start_proof id kind c hook
 
-let save id const kind hook =
+let save id const (locality,kind) hook =
   let {const_entry_body = pft;
        const_entry_type = tpo;
        const_entry_opaque = opacity } = const in
-  let l,r = match kind with
-    | IsLocal when Lib.sections_are_opened () ->
+  let l,r = match locality with
+    | Local when Lib.sections_are_opened () ->
+        let k = logical_kind_of_goal_kind kind in
 	let c = SectionLocalDef (pft, tpo, opacity) in
-	let _ = declare_variable id (Lib.cwd(), c, IsDefinition) in
+	let _ = declare_variable id (Lib.cwd(), c, k) in
 	(Local, VarRef id)
-    | IsLocal ->
-        let k = IsDefinition in
-        let _,kn = declare_constant id (DefinitionEntry const, k) in
+    | Local ->
+        let k = logical_kind_of_goal_kind kind in
+        let kn = declare_constant id (DefinitionEntry const, k) in
 	(Global, ConstRef kn)
-    | IsGlobal k ->
-        let k = theorem_kind_of_goal_kind k in
-        let _,kn = declare_constant id (DefinitionEntry const, k) in
+    | Global ->
+        let k = logical_kind_of_goal_kind kind in
+        let kn = declare_constant id (DefinitionEntry const, k) in
 	(Global, ConstRef kn) in
-  hook l r;
   Pfedit.delete_current_proof ();
+  hook l r;
   definition_message id
 
 let save_named opacity =
@@ -691,7 +689,7 @@ let save_anonymous_with_strength kind opacity save_ident =
   let const = { const with const_entry_opaque = opacity } in
   check_anonymity id save_ident;
   (* we consider that non opaque behaves as local for discharge *)
-  save save_ident const (IsGlobal (Proof kind)) hook
+  save save_ident const (Global, Proof kind) hook
 
 let admit () =
   let (id,k,typ,hook) = Pfedit.current_proof_statement () in
@@ -699,9 +697,10 @@ let admit () =
   if k <> IsGlobal (Proof Conjecture) then
     error "Only statements declared as conjecture can be admitted";
 *)
-  let (_,kn) = declare_constant id (ParameterEntry typ, IsConjecture) in
-  hook Global (ConstRef kn);
+  let kn =
+    declare_constant id (ParameterEntry typ, IsAssumption Conjectural) in
   Pfedit.delete_current_proof ();
+  hook Global (ConstRef kn);
   assumption_message id
 
 let get_current_context () =

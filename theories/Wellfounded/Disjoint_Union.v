@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Disjoint_Union.v,v 1.9.2.1 2004/07/16 19:31:19 herbelin Exp $ i*)
+(*i $Id: Disjoint_Union.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (** Author: Cristina Cornes
     From : Constructing Recursion Operators in Type Theory                 

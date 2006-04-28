@@ -6,14 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ListSet.v,v 1.13.2.1 2004/07/16 19:31:05 herbelin Exp $ i*)
+(*i $Id: ListSet.v 6844 2005-03-16 13:09:55Z herbelin $ i*)
 
-(** A Library for finite sets, implemented as lists 
-    A Library with similar interface will soon be available under
-    the name TreeSet in the theories/Trees directory *)
+(** A Library for finite sets, implemented as lists *)
 
-(** PolyList is loaded, but not exported.
-    This allow to "hide" the definitions, functions and theorems of PolyList
+(** List is loaded, but not exported.
+    This allow to "hide" the definitions, functions and theorems of List
     and to see only the ones of ListSet *)
 
 Require Import List.

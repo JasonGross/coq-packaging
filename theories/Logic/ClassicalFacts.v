@@ -6,23 +6,55 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalFacts.v,v 1.6.2.1 2004/07/16 19:31:06 herbelin Exp $ i*)
+(*i $Id: ClassicalFacts.v 8136 2006-03-05 21:57:47Z herbelin $ i*)
 
-(** Some facts and definitions about classical logic *)
+(** ** Some facts and definitions about classical logic
 
-(** [prop_degeneracy] (also referred as propositional completeness) *)
-(*  asserts (up to consistency) that there are only two distinct formulas *)
+Table of contents:
+
+A. Propositional degeneracy = excluded-middle + propositional extensionality
+
+B. Classical logic and proof-irrelevance
+
+B. 1. CC |- prop. ext. + A inhabited -> (A = A->A) -> A has fixpoint
+
+B. 2. CC |- prop. ext. + dep elim on bool -> proof-irrelevance
+
+B. 3. CIC |- prop. ext. -> proof-irrelevance
+
+B. 4. CC |- excluded-middle + dep elim on bool -> proof-irrelevance
+
+B. 5. CIC |- excluded-middle -> proof-irrelevance
+
+C. Weak classical axioms
+
+C. 1. Weak excluded middle
+
+C. 2. Gödel-Dummet axiom and right distributivity of implication over
+      disjunction
+
+C. 3. Independence of general premises and drinker's paradox
+
+*)
+
+(************************************************************************)
+(** *** A. Prop degeneracy = excluded-middle + prop extensionality      *)
+(**
+ i.e.        [(forall A, A=True \/ A=False)
+                         <->
+       (forall A, A\/~A) /\ (forall A B, (A<->B) -> A=B)]
+*)
+
+(** [prop_degeneracy] (also referred to as propositional completeness)
+    asserts (up to consistency) that there are only two distinct formulas *)
 Definition prop_degeneracy := forall A:Prop, A = True \/ A = False.
 
-(** [prop_extensionality] asserts equivalent formulas are equal *)
+(** [prop_extensionality] asserts that equivalent formulas are equal *)
 Definition prop_extensionality := forall A B:Prop, (A <-> B) -> A = B.
 
-(** [excluded_middle] asserts we can reason by case on the truth *)
-(*  or falsity of any formula *)
+(** [excluded_middle] asserts that we can reason by case on the truth
+    or falsity of any formula *)
 Definition excluded_middle := forall A:Prop, A \/ ~ A.
-
-(** [proof_irrelevance] asserts equality of all proofs of a given formula *)
-Definition proof_irrelevance := forall (A:Prop) (a1 a2:A), a1 = a2.
 
 (** We show [prop_degeneracy <-> (prop_extensionality /\ excluded_middle)] *)
 
@@ -57,6 +89,12 @@ destruct (EM A).
    [ exact (fun _ => I) | exact (fun _ => H) ].
   right; apply (Ext A False); split; [ exact H | apply False_ind ].
 Qed.
+
+(************************************************************************)
+(** *** B. Classical logic and proof-irrelevance *)
+
+(************************************************************************)
+(** **** B. 1. CC |- prop ext + A inhabited -> (A = A->A) -> A has fixpoint *)
 
 (** We successively show that:
 
@@ -104,13 +142,20 @@ rewrite (g1_o_g2 (fun x:A => f (g1 x x))).
 reflexivity.
 Qed.
 
-(** Assume we have booleans with the property that there is at most 2
+(************************************************************************)
+(** **** B. 2. CC |- prop_ext /\ dep elim on bool -> proof-irrelevance  *)
+
+(** [proof_irrelevance] asserts equality of all proofs of a given formula *)
+Definition proof_irrelevance := forall (A:Prop) (a1 a2:A), a1 = a2.
+
+(** Assume that we have booleans with the property that there is at most 2
     booleans (which is equivalent to dependent case analysis). Consider
     the fixpoint of the negation function: it is either true or false by
     dependent case analysis, but also the opposite by fixpoint. Hence
     proof-irrelevance.
 
-    We then map bool proof-irrelevance to all propositions.
+    We then map equality of boolean proofs to proof irrelevance in all
+    propositions.
 *)
 
 Section Proof_irrelevance_gen.
@@ -161,7 +206,7 @@ End Proof_irrelevance_gen.
     most 2 elements.
 *)
 
-Section Proof_irrelevance_CC.
+Section Proof_irrelevance_Prop_Ext_CC.
 
 Definition BoolP := forall C:Prop, C -> C -> C.
 Definition TrueP : BoolP := fun C c1 c2 => c1.
@@ -181,7 +226,10 @@ Proof
   ext_prop_dep_proof_irrel_gen BoolP TrueP FalseP BoolP_elim BoolP_elim_redl
     BoolP_elim_redr.
 
-End Proof_irrelevance_CC.
+End Proof_irrelevance_Prop_Ext_CC.
+
+(************************************************************************)
+(** **** B. 3. CIC |- prop. ext. -> proof-irrelevance                   *)
 
 (** In the Calculus of Inductive Constructions, inductively defined booleans
     enjoy dependent case analysis, hence directly proof-irrelevance from
@@ -211,9 +259,286 @@ End Proof_irrelevance_CIC.
   (i.e. propositional extensionality + excluded middle) without
   dependent case analysis ?
 
-  Conjecture: it seems possible to build a model of CC interpreting
-  all non-empty types by the set of all lambda-terms. Such a model would
-  satisfy propositional degeneracy without satisfying proof-irrelevance
-  (nor dependent case analysis). This would imply that the previous
-  results cannot be refined.
+  Berardi [[Berardi90]] built a model of CC interpreting inhabited
+  types by the set of all untyped lambda-terms. This model satisfies
+  propositional degeneracy without satisfying proof-irrelevance (nor
+  dependent case analysis). This implies that the previous results
+  cannot be refined.
+
+  [[Berardi90]] Stefano Berardi, "Type dependence and constructive
+  mathematics", Ph. D. thesis, Dipartimento Matematica, Università di
+  Torino, 1990.
 *)
+
+(************************************************************************)
+(** **** B. 4. CC |- excluded-middle + dep elim on bool -> proof-irrelevance *)
+
+(** This is a proof in the pure Calculus of Construction that
+    classical logic in [Prop] + dependent elimination of disjunction entails
+    proof-irrelevance.
+
+    Reference:
+
+    [[Coquand90]] T. Coquand, "Metamathematical Investigations of a
+    Calculus of Constructions", Proceedings of Logic in Computer Science
+    (LICS'90), 1990.
+
+    Proof skeleton: classical logic + dependent elimination of
+    disjunction + discrimination of proofs implies the existence of a
+    retract from [Prop] into [bool], hence inconsistency by encoding any
+    paradox of system U- (e.g. Hurkens' paradox).
+*)
+
+Require Import Hurkens.
+
+Section Proof_irrelevance_EM_CC.
+
+Variable or : Prop -> Prop -> Prop.
+Variable or_introl : forall A B:Prop, A -> or A B.
+Variable or_intror : forall A B:Prop, B -> or A B.
+Hypothesis or_elim : forall A B C:Prop, (A -> C) -> (B -> C) -> or A B -> C.
+Hypothesis
+  or_elim_redl :
+    forall (A B C:Prop) (f:A -> C) (g:B -> C) (a:A),
+      f a = or_elim A B C f g (or_introl A B a).
+Hypothesis
+  or_elim_redr :
+    forall (A B C:Prop) (f:A -> C) (g:B -> C) (b:B),
+      g b = or_elim A B C f g (or_intror A B b).
+Hypothesis
+  or_dep_elim :
+    forall (A B:Prop) (P:or A B -> Prop),
+      (forall a:A, P (or_introl A B a)) ->
+      (forall b:B, P (or_intror A B b)) -> forall b:or A B, P b.
+
+Hypothesis em : forall A:Prop, or A (~ A).
+Variable B : Prop.
+Variables b1 b2 : B.
+
+(** [p2b] and [b2p] form a retract if [~b1=b2] *)
+
+Definition p2b A := or_elim A (~ A) B (fun _ => b1) (fun _ => b2) (em A).
+Definition b2p b := b1 = b.
+
+Lemma p2p1 : forall A:Prop, A -> b2p (p2b A).
+Proof.
+  unfold p2b in |- *; intro A; apply or_dep_elim with (b := em A);
+   unfold b2p in |- *; intros.
+  apply (or_elim_redl A (~ A) B (fun _ => b1) (fun _ => b2)).
+  destruct (b H).
+Qed.
+Lemma p2p2 : b1 <> b2 -> forall A:Prop, b2p (p2b A) -> A.
+Proof.
+  intro not_eq_b1_b2.
+  unfold p2b in |- *; intro A; apply or_dep_elim with (b := em A);
+   unfold b2p in |- *; intros.
+  assumption.
+  destruct not_eq_b1_b2.
+  rewrite <- (or_elim_redr A (~ A) B (fun _ => b1) (fun _ => b2)) in H.
+  assumption.
+Qed.
+
+(** Using excluded-middle a second time, we get proof-irrelevance *)
+
+Theorem proof_irrelevance_cc : b1 = b2.
+Proof.
+  refine (or_elim _ _ _ _ _ (em (b1 = b2))); intro H.
+    trivial.
+  apply (paradox B p2b b2p (p2p2 H) p2p1).
+Qed.
+
+End Proof_irrelevance_EM_CC.
+
+(** Remark: Hurkens' paradox still holds with a retract from the
+    _negative_ fragment of [Prop] into [bool], hence weak classical
+    logic, i.e. [forall A, ~A\/~~A], is enough for deriving
+    proof-irrelevance.
+*)
+
+(************************************************************************)
+(** **** B. 5. CIC |- excluded-middle -> proof-irrelevance               *)
+
+(**
+    Since, dependent elimination is derivable in the Calculus of
+    Inductive Constructions (CCI), we get proof-irrelevance from classical
+    logic in the CCI.
+*)
+
+Section Proof_irrelevance_CCI.
+
+Hypothesis em : forall A:Prop, A \/ ~ A.
+
+Definition or_elim_redl (A B C:Prop) (f:A -> C) (g:B -> C) 
+  (a:A) : f a = or_ind f g (or_introl B a) := refl_equal (f a).
+Definition or_elim_redr (A B C:Prop) (f:A -> C) (g:B -> C) 
+  (b:B) : g b = or_ind f g (or_intror A b) := refl_equal (g b).
+Scheme or_indd := Induction for or Sort Prop.
+
+Theorem proof_irrelevance_cci : forall (B:Prop) (b1 b2:B), b1 = b2.
+Proof
+  proof_irrelevance_cc or or_introl or_intror or_ind or_elim_redl
+    or_elim_redr or_indd em.
+
+End Proof_irrelevance_CCI.
+
+(** Remark: in the Set-impredicative CCI, Hurkens' paradox still holds with
+    [bool] in [Set] and since [~true=false] for [true] and [false]
+    in [bool] from [Set], we get the inconsistency of
+    [em : forall A:Prop, {A}+{~A}] in the Set-impredicative CCI.
+*)
+
+(** *** C. Weak classical axioms *)
+
+(** We show the following increasing in the strength of axioms:
+ - weak excluded-middle
+ - right distributivity of implication over disjunction and Gödel-Dummet axiom
+ - independence of general premises and drinker's paradox
+ - excluded-middle
+*)
+
+(** **** C. 1. Weak excluded-middle *)
+
+(** The weak classical logic based on [~~A \/ ~A] is referred to with
+    name KC in {[ChagrovZakharyaschev97]]
+
+   [[ChagrovZakharyaschev97]] Alexander Chagrov and Michael
+   Zakharyaschev, "Modal Logic", Clarendon Press, 1997.
+*)
+
+Definition weak_excluded_middle :=
+  forall A:Prop, ~~A \/ ~A.
+
+(** The interest in the equivalent variant
+    [weak_generalized_excluded_middle] is that it holds even in logic
+    without a primitive [False] connective (like Gödel-Dummett axiom) *)
+
+Definition weak_generalized_excluded_middle := 
+  forall A B:Prop, ((A -> B) -> B) \/ (A -> B).
+
+(** **** C. 2. Gödel-Dummett axiom *)
+
+(** [(A->B) \/ (B->A)] is studied in [[Dummett59]] and is based on [[Gödel33]].
+
+    [[Dummett59]] Michael A. E. Dummett. "A Propositional Calculus
+    with a Denumerable Matrix", In the Journal of Symbolic Logic, Vol
+    24 No. 2(1959), pp 97-103.
+
+    [[Gödel33]] Kurt Gödel. "Zum intuitionistischen Aussagenkalkül",
+    Ergeb. Math. Koll. 4 (1933), pp. 34-38.
+ *)
+
+Definition GodelDummett := forall A B:Prop, (A -> B) \/ (B -> A).
+
+Lemma excluded_middle_Godel_Dummett : excluded_middle -> GodelDummett.
+Proof.
+intros EM A B. destruct (EM B) as [HB|HnotB].
+  left; intros _; exact HB.
+  right; intros HB; destruct (HnotB HB).
+Qed.
+
+(** [(A->B) \/ (B->A)] is equivalent to [(C -> A\/B) -> (C->A) \/ (C->B)]
+    (proof from [[Dummett59]]) *)
+
+Definition RightDistributivityImplicationOverDisjunction :=
+  forall A B C:Prop, (C -> A\/B) -> (C->A) \/ (C->B).
+
+Lemma Godel_Dummett_iff_right_distr_implication_over_disjunction :
+  GodelDummett <-> RightDistributivityImplicationOverDisjunction.
+Proof.
+split.
+  intros GD A B C HCAB.
+  destruct (GD B A) as [HBA|HAB]; [left|right]; intro HC; 
+    destruct (HCAB HC) as [HA|HB]; [ | apply HBA | apply HAB | ]; assumption.
+  intros Distr A B.
+  destruct (Distr A B (A\/B)) as [HABA|HABB].
+    intro HAB; exact HAB.
+    right; intro HB; apply HABA; right; assumption.
+    left; intro HA; apply HABB; left; assumption.
+Qed.
+
+(** [(A->B) \/ (B->A)] is stronger than the weak excluded middle *)
+
+Lemma Godel_Dummett_weak_excluded_middle : 
+  GodelDummett -> weak_excluded_middle.
+Proof.
+intros GD A. destruct (GD (~A) A) as [HnotAA|HAnotA].
+  left; intro HnotA; apply (HnotA (HnotAA HnotA)).
+  right; intro HA; apply (HAnotA HA HA).
+Qed.
+
+(** **** C. 3. Independence of general premises and drinker's paradox *)
+
+(** Independence of general premises is the unconstrained, non
+    constructive, version of the Independence of Premises as
+    considered in [[Troelstra73]].
+
+    It is a generalization to predicate logic of the right
+    distributivity of implication over disjunction (hence of
+    Gödel-Dummett axiom) whose own constructive form (obtained by a
+    restricting the third formula to be negative) is called
+    Kreisel-Putnam principle [[KreiselPutnam57]].
+
+    [[KreiselPutnam57]], Georg Kreisel and Hilary Putnam. "Eine
+    Unableitsbarkeitsbeweismethode für den intuitionistischen
+    Aussagenkalkül". Archiv für Mathematische Logik und
+    Graundlagenforschung, 3:74- 78, 1957.
+
+    [[Troelstra73]], Anne Troelstra, editor. Metamathematical
+    Investigation of Intuitionistic Arithmetic and Analysis, volume
+    344 of Lecture Notes in Mathematics, Springer-Verlag, 1973.
+*)
+
+Notation Local "'inhabited' A" := A (at level 10, only parsing).
+
+Definition IndependenceOfGeneralPremises :=
+  forall (A:Type) (P:A -> Prop) (Q:Prop),
+    inhabited A -> (Q -> exists x, P x) -> exists x, Q -> P x.
+
+Lemma
+  independence_general_premises_right_distr_implication_over_disjunction :
+  IndependenceOfGeneralPremises -> RightDistributivityImplicationOverDisjunction.
+Proof.
+intros IP A B C HCAB.
+destruct (IP bool (fun b => if b then A else B) C true) as ([|],H).
+  intro HC; destruct (HCAB HC); [exists true|exists false]; assumption.
+  left; assumption.
+  right; assumption.
+Qed.
+
+Lemma independence_general_premises_Godel_Dummett :
+  IndependenceOfGeneralPremises -> GodelDummett.
+Proof.
+destruct Godel_Dummett_iff_right_distr_implication_over_disjunction.
+auto using independence_general_premises_right_distr_implication_over_disjunction.
+Qed.
+
+(** Independence of general premises is equivalent to the drinker's paradox *)
+
+Definition DrinkerParadox :=
+  forall (A:Type) (P:A -> Prop), 
+  inhabited A -> exists x, (exists x, P x) -> P x.
+
+Lemma independence_general_premises_drinker : 
+  IndependenceOfGeneralPremises <-> DrinkerParadox.
+Proof.
+split.
+  intros IP A P InhA; apply (IP A P (exists x, P x) InhA); intro Hx; exact Hx.
+  intros Drinker A P Q InhA H; destruct (Drinker A P InhA) as (x,Hx).
+    exists x; intro HQ; apply (Hx (H HQ)).
+Qed.
+
+(** Independence of general premises is weaker than (generalized) 
+    excluded middle *)
+
+Definition generalized_excluded_middle := 
+  forall A B:Prop, A \/ (A -> B).
+
+Lemma excluded_middle_independence_general_premises :
+  generalized_excluded_middle -> DrinkerParadox.
+Proof.
+intros GEM A P x0.
+destruct (GEM (exists x, P x) (P x0)) as [(x,Hx)|Hnot].
+  exists x; intro; exact Hx.
+  exists x0; exact Hnot.
+Qed.
+ 

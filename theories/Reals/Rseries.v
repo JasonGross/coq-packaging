@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rseries.v,v 1.11.2.1 2004/07/16 19:31:13 herbelin Exp $ i*)
+(*i $Id: Rseries.v 6338 2004-11-22 09:10:51Z gregoire $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -28,7 +28,7 @@ Section sequence.
 Variable Un : nat -> R.
 
 (*********)
-Fixpoint Rmax_N (N:nat) : R :=
+Boxed Fixpoint Rmax_N (N:nat) : R :=
   match N with
   | O => Un 0
   | S n => Rmax (Un (S n)) (Rmax_N n)

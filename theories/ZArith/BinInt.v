@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: BinInt.v,v 1.5.2.1 2004/07/16 19:31:20 herbelin Exp $ i*)
+(*i $Id: BinInt.v 6295 2004-11-12 16:40:39Z gregoire $ i*)
 
 (***********************************************************)
 (** Binary Integers (Pierre Crégut, CNET, Lannion, France) *)
@@ -17,6 +17,8 @@ Require Export Pnat.
 Require Import BinNat.
 Require Import Plus.
 Require Import Mult.
+
+Unset Boxed Definitions.
 (**********************************************************************)
 (** Binary integer numbers *)
 

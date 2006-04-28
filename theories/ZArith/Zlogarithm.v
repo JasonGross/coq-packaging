@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Zlogarithm.v,v 1.14.2.1 2004/07/16 19:31:21 herbelin Exp $ i*)
+(*i $Id: Zlogarithm.v 6295 2004-11-12 16:40:39Z gregoire $ i*)
 
 (**********************************************************************)
 (** The integer logarithms with base 2. 
@@ -36,6 +36,7 @@ Fixpoint log_inf (p:positive) : Z :=
   | xO q => Zsucc (log_inf q)	(* 2n *)
   | xI q => Zsucc (log_inf q)	(* 2n+1 *)
   end.
+
 Fixpoint log_sup (p:positive) : Z :=
   match p with
   | xH => 0	(* 1 *)

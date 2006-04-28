@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pp.ml4,v 1.5.2.1 2004/07/16 19:30:30 herbelin Exp $ *)
+(* $Id: pp.ml4 7751 2005-12-28 12:58:53Z herbelin $ *)
 
 open Pp_control
 
@@ -122,17 +122,17 @@ let int n = str (string_of_int n)
 let real r = str (string_of_float r)
 let bool b = str (string_of_bool b)
 
+(* In new syntax only double quote char is escaped by repeating it *)
 let rec escape_string s =
   let rec escape_at s i =
     if i<0 then s
-    else if s.[i] == '\\' || s.[i] == '"' then
-      let s' = String.sub s 0 i^"\\"^String.sub s i (String.length s - i) in
+    else if s.[i] == '"' then
+      let s' = String.sub s 0 i^"\""^String.sub s i (String.length s - i) in
       escape_at s' (i-1)
     else escape_at s (i-1) in
   escape_at s (String.length s - 1)
 
-
-let qstring s = str ("\""^(escape_string s)^"\"")
+let qstring s = str ("\""^escape_string s^"\"")
 let qs = qstring
 
 (* boxing commands *)
@@ -183,7 +183,6 @@ let rec pr_com ft s =
 
 (* pretty printing functions *)
 let pp_dirs ft = 
-  let maxbox = (get_gp ft).max_depth in
   let pp_open_box = function
     | Pp_hbox n   -> Format.pp_open_hbox ft ()
     | Pp_vbox n   -> Format.pp_open_vbox ft n

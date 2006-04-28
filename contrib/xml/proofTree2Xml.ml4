@@ -46,7 +46,8 @@ let constr_to_xml obj sigma env =
   let rel_context = Sign.push_named_to_rel_context named_context' [] in
   let rel_env =
    Environ.push_rel_context rel_context
-    (Environ.reset_with_named_context real_named_context env) in
+    (Environ.reset_with_named_context 
+	(Environ.val_of_named_context real_named_context) env) in
   let obj' =
    Term.subst_vars (List.map (function (i,_,_) -> i) named_context') obj in
   let seed = ref 0 in
@@ -66,9 +67,9 @@ Pp.ppnl (Pp.str "Problem during the conversion of constr into XML") ;
 Pp.ppnl (Pp.str "ENVIRONMENT:") ;
 Pp.ppnl (Printer.pr_context_of rel_env) ;
 Pp.ppnl (Pp.str "TERM:") ;
-Pp.ppnl (Printer.prterm_env rel_env obj') ;
+Pp.ppnl (Printer.pr_lconstr_env rel_env obj') ;
 Pp.ppnl (Pp.str "RAW-TERM:") ;
-Pp.ppnl (Printer.prterm obj') ;
+Pp.ppnl (Printer.pr_lconstr obj') ;
 Xml.xml_empty "MISSING TERM" [] (*; raise e*)
 *)
 ;;
@@ -95,7 +96,7 @@ let string_of_prim_rule x = match x with
 
 
 let
- print_proof_tree curi sigma0 pf proof_tree_to_constr
+ print_proof_tree curi sigma pf proof_tree_to_constr
   proof_tree_to_flattened_proof_tree constr_to_ids
 =
  let module PT = Proof_type in
@@ -119,7 +120,7 @@ in
    with _ ->
 Pp.ppnl (Pp.(++) (Pp.str
 "The_generated_term_is_not_a_subterm_of_the_final_lambda_term")
-(Printer.prterm constr)) ;
+(Printer.pr_lconstr constr)) ;
     None
   in
   let rec aux node old_hyps =
@@ -155,7 +156,7 @@ Pp.ppnl (Pp.(++) (Pp.str
             aux flat_proof old_hyps
         | _ ->
          (****** la tactique employee *)
-	 let prtac = if !Options.v7 then Pptactic.pr_tactic else Pptacticnew.pr_tactic (Global.env()) in
+	 let prtac = Pptactic.pr_tactic (Global.env()) in
          let tac = std_ppcmds_to_string (prtac tactic_expr) in
          let tacname= first_word tac in
          let of_attribute = ("name",tacname)::("script",tac)::of_attribute in
@@ -164,10 +165,7 @@ Pp.ppnl (Pp.(++) (Pp.str
          let {Evd.evar_concl=concl;
               Evd.evar_hyps=hyps}=goal in
 
-         let rc = (Proof_trees.rc_of_gc sigma0 goal) in
-         let sigma = Proof_trees.get_gc rc in
-         let hyps = Proof_trees.get_hyps rc in
-         let env= Proof_trees.get_env rc in
+         let env = Global.env_of_context hyps in
 
          let xgoal =
           X.xml_nempty "Goal" [] (constr_to_xml concl sigma env) in
@@ -183,11 +181,12 @@ Pp.ppnl (Pp.(++) (Pp.str
                     (constr_to_xml tid sigma env))
                >] in
          let old_names = List.map (fun (id,c,tid)->id) old_hyps in
+	 let nhyps = Environ.named_context_of_val hyps in
          let new_hyps =
-          List.filter (fun (id,c,tid)-> not (List.mem id old_names)) hyps in
+          List.filter (fun (id,c,tid)-> not (List.mem id old_names)) nhyps in
 
          X.xml_nempty "Tactic" of_attribute
-          [<(build_hyps new_hyps) ; (aux flat_proof hyps)>]
+          [<(build_hyps new_hyps) ; (aux flat_proof nhyps)>]
         end
 
      | {PT.ref=Some(PT.Change_evars,nodes)} ->

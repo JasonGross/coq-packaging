@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Berardi.v,v 1.5.2.2 2004/08/03 17:42:43 herbelin Exp $ i*)
+(*i $Id: Berardi.v 8122 2006-03-04 19:26:40Z herbelin $ i*)
 
 (** This file formalizes Berardi's paradox which says that in
    the calculus of constructions, excluded middle (EM) and axiom of
@@ -92,14 +92,10 @@ End Retracts.
 Lemma L1 : forall A B:Prop, retract_cond (pow A) (pow B).
 Proof.
 intros A B.
-elim (EM (retract (pow A) (pow B))).
-intros [f0 g0 e].
-exists f0 g0.
-trivial.
-
-intros hf.
-exists (fun (x:pow A) (y:B) => F) (fun (x:pow B) (y:A) => F).
-intros; elim hf; auto.
+destruct (EM (retract (pow A) (pow B))) as [(f0,g0,e) | hf].
+  exists f0 g0; trivial.
+  exists (fun (x:pow A) (y:B) => F) (fun (x:pow B) (y:A) => F); intros; 
+    destruct hf; auto.
 Qed.
 
 

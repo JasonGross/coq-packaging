@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: R_Ifp.v,v 1.14.2.1 2004/07/16 19:31:12 herbelin Exp $ i*)
+(*i $Id: R_Ifp.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (**********************************************************)
 (** Complements for the reals.Integer and fractional part *)

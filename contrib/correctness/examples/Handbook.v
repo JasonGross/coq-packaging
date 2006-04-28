@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: Handbook.v,v 1.3 2001/04/11 07:56:19 filliatr Exp $ *)
+(* $Id: Handbook.v 1577 2001-04-11 07:56:19Z filliatr $ *)
 
 (* This file contains proofs of programs taken from the
  * "Handbook of Theoretical Computer Science", volume B,

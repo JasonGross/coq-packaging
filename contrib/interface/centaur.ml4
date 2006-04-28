@@ -4,7 +4,6 @@
 open Names;;
 open Nameops;;
 open Util;;
-open Ast;;
 open Term;;
 open Pp;;
 open Libnames;;
@@ -13,7 +12,6 @@ open Library;;
 open Vernacinterp;;
 open Evd;;
 open Proof_trees;;
-open Termast;;
 open Tacmach;;
 open Pfedit;;
 open Proof_type;;
@@ -28,7 +26,6 @@ open Vernacinterp;;
 open Vernac;;
 open Command;;
 open Protectedtoplevel;;
-open Coqast;;
 open Line_oriented_parser;;
 open Xlate;;
 open Vtp;;
@@ -283,15 +280,12 @@ let print_check judg =
  let value_ct_ast = 
      (try translate_constr false (Global.env()) value 
       with UserError(f,str) ->
-           raise(UserError(f,
-			   Ast.print_ast 
-				(ast_of_constr true (Global.env()) value) ++
+           raise(UserError(f,Printer.pr_lconstr value ++
 			      fnl () ++ str ))) in
  let type_ct_ast =
      (try translate_constr false (Global.env()) typ
       with UserError(f,str) ->
-           raise(UserError(f, Ast.print_ast (ast_of_constr true (Global.env())
-					       value) ++ fnl() ++ str))) in
+           raise(UserError(f, Printer.pr_lconstr value ++ fnl() ++ str))) in
  ((ctf_SearchResults !global_request_id),
  (Some  (P_pl
   (CT_premises_list
@@ -314,18 +308,6 @@ and ntyp = nf_betaiota typ in
     translate_constr false env ntyp)]))));;
 
 
-
-(* The following function is copied from globpr in env/printer.ml *)
-let globcv x =
-    match x with
-      | Node(_,"MUTIND", (Path(_,sp))::(Num(_,tyi))::_) ->
-	    convert_qualid
-	      (Nametab.shortest_qualid_of_global Idset.empty (IndRef(sp,tyi)))
-      | Node(_,"MUTCONSTRUCT",(Path(_,sp))::(Num(_,tyi))::(Num(_,i))::_) ->
-	  convert_qualid
-            (Nametab.shortest_qualid_of_global Idset.empty
-	       (ConstructRef ((sp, tyi), i)))
-  | _ -> failwith "globcv : unexpected value";;
 
 let pbp_tac_pcoq =
     pbp_tac (function (x:raw_tactic_expr) -> 
@@ -360,12 +342,13 @@ let debug_tac2_pcoq tac =
 	let the_ast = ref tac in
 	let the_path = ref ([] : int list) in
 	try
-	  let result = report_error tac the_goal the_ast the_path [] g in
+	  let _result = report_error tac the_goal the_ast the_path [] g in
 	  (errorlabstrm "DEBUG TACTIC"
-	     (str "no error here " ++ fnl () ++ pr_goal (sig_it g) ++
+	     (str "no error here " ++ fnl () ++ Printer.pr_goal (sig_it g) ++
 	      fnl () ++ str "the tactic is" ++ fnl () ++
-	      Pptactic.pr_glob_tactic tac);
-	   result)
+	      Pptactic.pr_glob_tactic (Global.env()) tac) (*
+Caution, this is in the middle of what looks like dead code. ;
+	   result *))
 	with
 	  e ->
 	    match !the_goal with
@@ -413,11 +396,11 @@ let inspect n =
 			 let (_, _, v) = get_variable (basename sp) in
 			   add_search2 (Nametab.locate (qualid_of_sp sp)) v
 		     | (sp,kn), "CONSTANT" ->
-			 let {const_type=typ} = Global.lookup_constant kn in
+			 let {const_type=typ} = Global.lookup_constant (constant_of_kn kn) in
 			   add_search2 (Nametab.locate (qualid_of_sp sp)) typ
 		     | (sp,kn), "MUTUALINDUCTIVE" ->
 			 add_search2 (Nametab.locate (qualid_of_sp sp))
-			   (Pretyping.understand Evd.empty (Global.env())
+			   (Pretyping.Default.understand Evd.empty (Global.env())
 			      (RRef(dummy_loc, IndRef(kn,0))))
 		     | _ -> failwith ("unexpected value 1 for "^ 
 				      (string_of_id (basename (fst oname)))))
@@ -571,11 +554,11 @@ let pcoq_search s l =
 
 (* Check sequentially whether the pattern is one of the premises *)
 let rec hyp_pattern_filter pat name a c =
-  let c1 = strip_outer_cast c in
+  let _c1 = strip_outer_cast c in
     match kind_of_term c with
       | Prod(_, hyp, c2) -> 
 	  (try
-(*	     let _ = msgnl ((str "WHOLE ") ++ (Printer.prterm c)) in
+(*	     let _ = msgnl ((str "WHOLE ") ++ (Printer.pr_lconstr c)) in
              let _ = msgnl ((str "PAT ") ++ (Printer.pr_pattern pat)) in *)
              if Matching.is_matching pat hyp then
 	       (msgnl (str "ok"); true)
@@ -616,7 +599,7 @@ let pcoq_show_goal = function
   | Some n -> show_nth n
   | None ->
       if !pcoq_started = Some true (* = debug *) then
-	msg (Pfedit.pr_open_subgoals ())
+	msg (Printer.pr_open_subgoals ())
       else errorlabstrm "show_goal"
 	(str "Show must be followed by an integer in Centaur mode");;
 
@@ -632,17 +615,17 @@ let pcoq_hook = {
 }
 
 
-TACTIC EXTEND Pbp
-| [ "Pbp" ident_opt(idopt) natural_list(nl) ] -> 
+TACTIC EXTEND pbp
+| [ "pbp" ident_opt(idopt) natural_list(nl) ] -> 
     [ if_pcoq pbp_tac_pcoq idopt nl ]
 END
 
-TACTIC EXTEND CtDebugTac
-| [ "DebugTac" tactic(t) ] -> [ if_pcoq debug_tac2_pcoq (fst t) ]
+TACTIC EXTEND ct_debugtac
+| [ "debugtac" tactic(t) ] -> [ if_pcoq debug_tac2_pcoq (fst t) ]
 END
 
-TACTIC EXTEND CtDebugTac2
-| [ "DebugTac2" tactic(t) ] -> [ if_pcoq debug_tac2_pcoq (fst t) ]
+TACTIC EXTEND ct_debugtac2
+| [ "debugtac2" tactic(t) ] -> [ if_pcoq debug_tac2_pcoq (fst t) ]
 END
 
 

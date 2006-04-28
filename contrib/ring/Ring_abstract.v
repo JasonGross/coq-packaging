@@ -6,11 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Ring_abstract.v,v 1.13.2.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: Ring_abstract.v 6295 2004-11-12 16:40:39Z gregoire $ *)
 
 Require Import Ring_theory.
 Require Import Quote.
 Require Import Ring_normalize.
+
+Unset Boxed Definitions.
 
 Section abstract_semi_rings.
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Quote.v,v 1.7.2.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: Quote.v 6295 2004-11-12 16:40:39Z gregoire $ *)
 
 (***********************************************************************
   The "abstract" type index is defined to represent variables.
@@ -26,6 +26,7 @@
 ***********************************************************************)
 
 Set Implicit Arguments.
+Unset Boxed Definitions.
 
 Section variables_map.
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernac.ml,v 1.59.2.3 2004/07/16 20:48:17 herbelin Exp $ *)
+(* $Id: vernac.ml 7744 2005-12-27 09:16:06Z herbelin $ *)
 
 (* Parsing of vernacular. *)
 
@@ -15,10 +15,9 @@ open Lexer
 open Util
 open Options
 open System
-open Coqast
 open Vernacexpr
 open Vernacinterp
-open Ppvernacnew
+open Ppvernac
 
 (* The functions in this module may raise (unexplainable!) exceptions.
    Use the module Coqtoplevel, which catches these exceptions
@@ -57,7 +56,7 @@ let real_error = function
    the file we parse seems a bit risky to me.  B.B.  *)
 
 let open_file_twice_if verbosely fname =
-  let _,longfname = find_file_in_path (Library.get_load_path ()) fname in
+  let _,longfname = find_file_in_path (Library.get_load_paths ()) fname in
   let in_chan = open_in longfname in
   let verb_ch = if verbosely then Some (open_in longfname) else None in
   let po = Pcoq.Gram.parsable (Stream.of_channel in_chan) in
@@ -95,62 +94,18 @@ let parse_phrase (po, verbch) =
 
 let just_parsing = ref false
 let chan_translate = ref stdout
-let last_char = ref '\000'
 
-(* postprocessor to avoid lexical icompatibilities between V7 and V8.
-   Ex: auto.(* comment *)  or  simpl.auto
- *)
 let set_formatter_translator() =
   let ch = !chan_translate in
-  let out s b e =
-    let n = e-b in
-    if n > 0 then begin
-      (match !last_char with
-          '.' -> 
-            (match s.[b] with
-                '('|'a'..'z'|'A'..'Z' -> output ch " " 0 1 
-              | _ -> ())
-        | _ -> ());
-      last_char := s.[e-1]
-    end;
-    output ch s b e
-  in
+  let out s b e = output ch s b e in
   Format.set_formatter_output_functions out (fun () -> flush ch);
   Format.set_max_boxes max_int
-
-let pre_printing = function
-  | VernacSolve (i,tac,deftac) when Options.do_translate () ->
-      (try
-        let (_,env) = Pfedit.get_goal_context i in
-        let t = Options.with_option Options.translate_syntax
-	  (Tacinterp.glob_tactic_env [] env) tac in
-        let pfts = Pfedit.get_pftreestate () in
-        let gls = fst (Refiner.frontier (Tacmach.proof_of_pftreestate pfts)) in
-        Some (env,t,Pfedit.focus(),List.length gls)
-      with UserError _|Stdpp.Exc_located _ -> None)
-  | _ -> None
-
-let post_printing loc (env,t,f,n) = function
-  | VernacSolve (i,_,deftac) ->
-      let loc = unloc loc in
-      set_formatter_translator();
-      let pp = Ppvernacnew.pr_vernac_solve (i,env,t,deftac) ++ sep_end () in
-      (if !translate_file then begin
-	msg (hov 0 (comment (fst loc) ++ pp ++ comment (snd loc - 1)));
-      end
-      else
-	msgnl (hov 4 (str"New Syntax:" ++ fnl() ++ pp)));
-      Format.set_formatter_out_channel stdout
-  | _ -> ()
 
 let pr_new_syntax loc ocom =
   let loc = unloc loc in
   if !translate_file then set_formatter_translator();
   let fs = States.freeze () in
   let com = match ocom with
-    | Some (VernacV7only _) ->
-        Options.v7_only := true;
-        mt()
     | Some VernacNop -> mt()
     | Some com -> pr_vernac com
     | None -> mt() in
@@ -159,8 +114,6 @@ let pr_new_syntax loc ocom =
   else
     msgnl (hov 4 (str"New Syntax:" ++ fnl() ++ (hov 0 com)));
   States.unfreeze fs;
-  Constrintern.set_temporary_implicits_in [];
-  Constrextern.set_temporary_implicits_out [];
   Format.set_formatter_out_channel stdout
 
 let rec vernac_com interpfun (loc,com) =
@@ -174,7 +127,7 @@ let rec vernac_com interpfun (loc,com) =
         (* coqdoc state *)
         let cds = Constrintern.coqdoc_freeze() in
         if !Options.translate_file then begin
-          let _,f = find_file_in_path (Library.get_load_path ())
+          let _,f = find_file_in_path (Library.get_load_paths ())
             (make_suffix fname ".v") in
           chan_translate := open_out (f^"8");
           Pp.comments := []
@@ -203,39 +156,14 @@ let rec vernac_com interpfun (loc,com) =
         msgnl (str"Finished transaction in " ++
                  System.fmt_time_difference tstart tend)
 
-    (* To be interpreted in v7 or translator input only *)
-    | VernacV7only v ->
-        Options.v7_only := true;
-        if !Options.v7 || Options.do_translate() then interp v;
-        Options.v7_only := false
-
-    (* To be interpreted in translator output only *)
-    | VernacV8only v -> 
-        if not !Options.v7 && not (do_translate()) then
-          interp v
-
     | v -> if not !just_parsing then interpfun v
 
   in 
   try
-    Options.v7_only := false;
-    if do_translate () then
-      match pre_printing com with
-          None ->
-            pr_new_syntax loc (Some com);
-            interp com
-        | Some state ->
-            (try
-              interp com;
-              post_printing loc state com
-            with e ->
-              post_printing loc state com;
-              raise e)
-    else
-      interp com
+    if do_translate () then pr_new_syntax loc (Some com);
+    interp com
   with e -> 
     Format.set_formatter_out_channel stdout;
-    Options.v7_only := false;
     raise (DuringCommandInterp (loc, e))
 
 and vernac interpfun input =

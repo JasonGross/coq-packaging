@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacred.ml,v 1.75.2.7 2005/11/02 13:18:43 herbelin Exp $ *)
+(* $Id: tacred.ml 8003 2006-02-07 22:11:50Z herbelin $ *)
 
 open Pp
 open Util
@@ -20,39 +20,26 @@ open Inductive
 open Environ
 open Reductionops
 open Closure
-open Instantiate
 open Cbv
 open Rawterm
 
+(* Errors *)
+
+type reduction_tactic_error = 
+    InvalidAbstraction of env * constr * (env * Type_errors.type_error)
+
+exception ReductionTacticError of reduction_tactic_error
+
+(* Evaluable reference *)
+
 exception Elimconst
 exception Redelimination
-
-let set_opaque_const = Conv_oracle.set_opaque_const
-let set_transparent_const sp =
-  let cb = Global.lookup_constant sp in
-  if cb.const_body <> None & cb.const_opaque then
-    errorlabstrm "set_transparent_const"
-      (str "Cannot make" ++ spc () ++ 
-         Nametab.pr_global_env Idset.empty (ConstRef sp) ++
-         spc () ++ str "transparent because it was declared opaque.");
-  Conv_oracle.set_transparent_const sp
-
-let set_opaque_var      = Conv_oracle.set_opaque_var
-let set_transparent_var = Conv_oracle.set_transparent_var
-
-let _ = 
-  Summary.declare_summary "Transparent constants and variables"
-    { Summary.freeze_function = Conv_oracle.freeze;
-      Summary.unfreeze_function = Conv_oracle.unfreeze;
-      Summary.init_function = Conv_oracle.init;
-      Summary.survive_module = false;
-      Summary.survive_section = false }
 
 let is_evaluable env ref =
   match ref with
       EvalConstRef kn ->
         let (ids,kns) = Conv_oracle.freeze() in
-        KNpred.mem kn kns &
+        Cpred.mem kn kns &
         let cb = Environ.lookup_constant kn env in
         cb.const_body <> None & not cb.const_opaque
     | EvalVarRef id ->
@@ -84,7 +71,7 @@ let destEvalRef c = match kind_of_term c with
   | Var id  -> EvalVar id
   | Rel n -> EvalRel n
   | Evar ev -> EvalEvar ev
-  | _ -> anomaly "Not an evaluable reference"
+  | _ -> anomaly "Not an unfoldable reference"
 
 let reference_opt_value sigma env = function
   | EvalConst cst -> constant_opt_value env cst
@@ -94,7 +81,7 @@ let reference_opt_value sigma env = function
   | EvalRel n ->
       let (_,v,_) = lookup_rel n env in
       option_app (lift n) v
-  | EvalEvar ev -> existential_opt_value sigma ev
+  | EvalEvar ev -> Evd.existential_opt_value sigma ev
 
 exception NotEvaluable
 let reference_value sigma env c =
@@ -145,17 +132,21 @@ let _ =
       Summary.survive_module = false;
       Summary.survive_section = false }
 
-
 (* Check that c is an "elimination constant"
-   [xn:An]..[x1:A1](<P>MutCase (Rel i) of f1..fk end g1 ..gp)
-   or [xn:An]..[x1:A1](Fix(f|t) (Rel i1) ..(Rel ip)) 
-    with i1..ip distinct variables not occuring in t 
-   keep relevenant information ([i1,Ai1;..;ip,Aip],n,b)
-   with b = true in case of a fixpoint in order to compute 
-   an equivalent of Fix(f|t)[xi<-ai] as 
-   [yip:Bip]..[yi1:Bi1](F bn..b1) 
-   == [yip:Bip]..[yi1:Bi1](Fix(f|t)[xi<-ai] (Rel 1)..(Rel p))
-   with bj=aj if j<>ik and bj=(Rel c) and Bic=Aic[xn..xic-1 <- an..aic-1] *)
+
+   either [xn:An]..[x1:A1](<P>Case (Rel i) of f1..fk end g1 ..gp)
+
+   or     [xn:An]..[x1:A1](Fix(f|t) (Rel i1) ..(Rel ip))
+          with i1..ip distinct variables not occuring in t 
+
+   In the second case, keep relevenant information ([i1,Ai1;..;ip,Aip],n)
+   in order to compute an equivalent of Fix(f|t)[xi<-ai] as 
+
+      [yip:Bip]..[yi1:Bi1](F bn..b1) 
+   == [yip:Bip]..[yi1:Bi1](Fix(f|t)[xi<-ai] (Rel p)..(Rel 1))
+
+   with bj=aj if j<>ik and bj=(Rel c) and Bic=Aic[xn..xic-1 <- an..aic-1]
+*)
 
 let check_fix_reversibility labs args ((lv,i),(_,tys,bds)) =
   let n = List.length labs in
@@ -199,8 +190,8 @@ let invert_name labs l na0 env sigma ref = function
 	  | EvalRel _ | EvalEvar _ -> None
 	  | EvalVar id' -> Some (EvalVar id)
 	  | EvalConst kn ->
-	      let (mp,dp,_) = repr_kn kn in
-	      Some (EvalConst (make_kn mp dp (label_of_id id))) in
+	      let (mp,dp,_) = repr_con kn in
+	      Some (EvalConst (make_con mp dp (label_of_id id))) in
 	match refi with
 	  | None -> None
 	  | Some ref ->
@@ -242,7 +233,7 @@ let compute_consteval_mutual_fix sigma env ref =
     match kind_of_term c' with
       | Lambda (na,t,g) when l=[] ->
 	  srec (push_rel (na,None,t) env) (minarg+1) (t::labs) ref g
-      | Fix ((lv,i),(names,_,_) as fix) ->
+      | Fix ((lv,i),(names,_,_)) ->
 	  (* Last known constant wrapping Fix is ref = [labs](Fix l) *)
 	  (match compute_consteval_direct sigma env ref with
 	     | NotAnElimination -> (*Above const was eliminable but this not!*)
@@ -294,43 +285,49 @@ let rev_firstn_liftn fn ln =
   in 
   rfprec fn []
 
-(*  EliminationFix ([(yi1,Ti1);...;(yip,Tip)],n) means f is some
-   [y1:T1,...,yn:Tn](Fix(..) yi1 ... yip);
-   f is applied to largs and we need for recursive calls to build
-   [x1:Ti1',...,xp:Tip'](f a1..a(n-p) yi1 ... yip) 
-   where a1...an are the n first arguments of largs and Tik' is Tik[yil=al]
-   To check ... *)
+(* If f is bound to EliminationFix (n',infos), then n' is the minimal
+   number of args for starting the reduction and infos is
+   (nbfix,[(yi1,Ti1);...;(yip,Tip)],n) indicating that f converts
+   to some [y1:T1,...,yn:Tn](Fix(..) yip .. yi1) where we can remark that
+   yij = Rel(n+1-j)
+
+   f is applied to largs and we need for recursive calls to build the function
+      g := [xp:Tip',...,x1:Ti1'](f a1 ... an)
+
+   s.t. (g u1 ... up) reduces to (Fix(..) u1 ... up)
+
+   This is made possible by setting 
+      a_k:=z_j    if k=i_j
+      a_k:=y_k    otherwise
+
+   The type Tij' is Tij[yn..yi(j-1)..y1 <- ai(j-1)..a1]
+*)
+
+let x = Name (id_of_string "x")
 
 let make_elim_fun (names,(nbfix,lv,n)) largs =
-  let labs = list_firstn n (list_of_stack largs) in
+  let lu = list_firstn n (list_of_stack largs) in
   let p = List.length lv in
-  let ylv = List.map fst lv in
-  let la' = list_map_i 
-	      (fun q aq ->
-		 try (mkRel (p+1-(list_index (n-q) ylv))) 
-		 with Not_found -> aq) 0
-              (List.map (lift p) labs) 
+  let lyi = List.map fst lv in
+  let la =
+    list_map_i (fun q aq -> 
+      (* k from the comment is q+1 *) 
+      try mkRel (p+1-(list_index (n-q) lyi))
+      with Not_found -> aq)
+      0 (List.map (lift p) lu) 
   in 
   fun i ->
     match names.(i) with
       | None -> None
-      | Some ref -> Some (
-(*    let fi =
-      if nbfix = 1 then
-	mkEvalRef ref
-      else
-	match ref with
-	  | EvalConst (sp,args) ->
-	      mkConst (make_path (dirpath sp) id (kind_of_path sp),args)
-	  | _ -> anomaly "elimination of local fixpoints not implemented"
-    in
-*)
-      list_fold_left_i 
-	(fun i c (k,a) -> 
-	   mkLambda (Name(id_of_string"x"),
-		     substl (rev_firstn_liftn (n-k) (-i) la') a,
-		     c))
-	1 (applistc (mkEvalRef ref) la') (List.rev lv))
+      | Some ref ->
+          let body = applistc (mkEvalRef ref) la in
+          let g = 
+            list_fold_left_i (fun q (* j from comment is n+1-q *) c (ij,tij) ->
+              let subst = List.map (lift (-q)) (list_firstn (n-ij) la) in
+              let tij' = substl (List.rev subst) tij in
+	      mkLambda (x,tij',c)
+            ) 1 body (List.rev lv)
+          in Some g
 
 (* [f] is convertible to [Fix(recindices,bodynum),bodyvect)] make 
    the reduction using this extra information *)
@@ -372,7 +369,7 @@ let contract_cofix_use_function f (bodynum,(_,names,bodies as typedbodies)) =
 
 let reduce_mind_case_use_function func env mia =
   match kind_of_term mia.mconstr with 
-    | Construct(ind_sp,i as cstr_sp) ->
+    | Construct(ind_sp,i) ->
 	let real_cargs = list_skipn mia.mci.ci_npar mia.mcargs in
 	applist (mia.mlf.(i-1), real_cargs)
     | CoFix (_,(names,_,_) as cofix) ->
@@ -380,8 +377,8 @@ let reduce_mind_case_use_function func env mia =
 	  match names.(i) with 
 	    | Name id ->
                 if isConst func then
-		  let (mp,dp,_) = repr_kn (destConst func) in
-		  let kn = make_kn mp dp (label_of_id id) in
+		  let (mp,dp,_) = repr_con (destConst func) in
+		  let kn = make_con mp dp (label_of_id id) in
 		  (match constant_opt_value env kn with
 		    | None -> None
 		    | Some _ -> Some (mkConst kn))
@@ -452,7 +449,7 @@ let rec red_elim_const env sigma ref largs =
 and construct_const env sigma = 
   let rec hnfstack (x, stack as s) =
     match kind_of_term x with
-      | Cast (c,_) -> hnfstack (c, stack)
+      | Cast (c,_,_) -> hnfstack (c, stack)
       | App (f,cl) -> hnfstack (f, append_stack cl stack)
       | Lambda (id,t,c) ->
           (match decomp_stack stack with 
@@ -491,7 +488,7 @@ and construct_const env sigma =
 
 (* Red reduction tactic: reduction to a product *)
 
-let internal_red_product env sigma c = 
+let try_red_product env sigma c = 
   let simpfun = clos_norm_flags betaiotazeta env sigma in
   let rec redrec env x =
     match kind_of_term x with
@@ -506,7 +503,7 @@ let internal_red_product env sigma c =
                         let stack' = stack_assign stack recargnum recarg' in
                         simpfun (app_stack (f,stack')))
              | _ -> simpfun (appvect (redrec env f, l)))
-      | Cast (c,_) -> redrec env c
+      | Cast (c,_,_) -> redrec env c
       | Prod (x,a,b) -> mkProd (x, a, redrec (push_rel (x,None,a) env) b)
       | LetIn (x,a,b,t) -> redrec env (subst1 a t)
       | Case (ci,p,d,lf) -> simpfun (mkCase (ci,p,redrec env d,lf))
@@ -521,10 +518,8 @@ let internal_red_product env sigma c =
   in redrec env c
 
 let red_product env sigma c = 
-  try internal_red_product env sigma c
+  try try_red_product env sigma c
   with Redelimination -> error "Not reducible"
-
-(* Hnf reduction tactic: *)
 
 let hnf_constr env sigma c = 
   let rec redrec (x, largs as s) =
@@ -536,7 +531,7 @@ let hnf_constr env sigma c =
 		 stacklam redrec [a] c rest)
       | LetIn (n,b,t,c) -> stacklam redrec [b] c largs
       | App (f,cl)   -> redrec (f, append_stack cl largs)
-      | Cast (c,_) -> redrec (c, largs)
+      | Cast (c,_,_) -> redrec (c, largs)
       | Case (ci,p,c,lf) ->
           (try
              redrec 
@@ -577,7 +572,7 @@ let whd_nf env sigma c =
 		 stacklam nf_app [a1] c2 rest)
       | LetIn (n,b,t,c) -> stacklam nf_app [b] c stack
       | App (f,cl) -> nf_app (f, append_stack cl stack)
-      | Cast (c,_) -> nf_app (c, stack)
+      | Cast (c,_,_) -> nf_app (c, stack)
       | Case (ci,p,d,lf) ->
           (try
              nf_app (special_red_case sigma env nf_app (ci,p,d,lf), stack)
@@ -598,9 +593,6 @@ let whd_nf env sigma c =
 
 let nf env sigma c = strong whd_nf env sigma c
 
-let is_reference c = 
-  try let r = reference_of_constr c in true with _ -> false
-
 let is_head c t =
   match kind_of_term t with
     | App (f,_) -> f = c
@@ -609,7 +601,6 @@ let is_head c t =
 let contextually byhead (locs,c) f env sigma t =
   let maxocc = List.fold_right max locs 0 in
   let pos = ref 1 in
-  let check = ref true in
   let except = List.exists (fun n -> n<0) locs in
   if except & (List.exists (fun n -> n>=0) locs) 
   then error "mixing of positive and negative occurences"
@@ -626,7 +617,7 @@ let contextually byhead (locs,c) f env sigma t =
 	f env sigma t
       else if byhead then
 	(* find other occurrences of c in t; TODO: ensure left-to-right *)
-        let (f,l) = destApplication t in
+        let (f,l) = destApp t in
 	mkApp (f, array_map_left (traverse envc) l)
       else
 	t
@@ -637,7 +628,7 @@ let contextually byhead (locs,c) f env sigma t =
   in
   let t' = traverse (env,c) t in
   if locs <> [] & List.exists (fun o -> o >= !pos or o <= - !pos) locs then
-    errorlabstrm "contextually" (str "Too few occurences");
+    error_invalid_occurrence locs;
   t'
 
 (* linear bindings (following pretty-printer) of the value of name in c.
@@ -652,7 +643,7 @@ let rec substlin env name n ol c =
           with
 	      NotEvaluableConst _ ->
 		errorlabstrm "substlin"
-		  (pr_kn kn ++ str " is not a defined constant")
+		  (pr_con kn ++ str " is not a defined constant")
         else 
 	  ((n+1), ol, c)
 
@@ -701,7 +692,7 @@ let rec substlin env name n ol c =
                let (n2,ol2,c2') = substlin env name n1 ol1 c2 in
                (n2,ol2,mkProd (na,c1',c2')))
 	
-    | Case (ci,p,d,llf) -> 
+    | Case (ci,p,d,llf) ->
         let rec substlist nn oll = function
           | []     -> (nn,oll,[])
           | f::lfe ->
@@ -712,24 +703,25 @@ let rec substlin env name n ol c =
                      let (nn2,oll2,lfe') = substlist nn1 oll1 lfe in
                      (nn2,oll2,f'::lfe'))
 	in
-	let (n1,ol1,p') = substlin env name n ol p in  (* ATTENTION ERREUR *)
-        (match ol1 with                                 (* si P pas affiche *)
-           | [] -> (n1,[],mkCase (ci, p', d, llf))
+	(* p is printed after d in v8 syntax *)
+	let (n1,ol1,d') = substlin env name n ol d in
+        (match ol1 with
+           | [] -> (n1,[],mkCase (ci, p, d', llf))
            | _  ->
-               let (n2,ol2,d') = substlin env name n1 ol1 d in
+               let (n2,ol2,p') = substlin env name n1 ol1 p in
                (match ol2 with
 		  | [] -> (n2,[],mkCase (ci, p', d', llf))
 		  | _  -> 
 	              let (n3,ol3,lf') = substlist n2 ol2 (Array.to_list llf)
                       in (n3,ol3,mkCase (ci, p', d', Array.of_list lf'))))
         
-    | Cast (c1,c2)   ->
+    | Cast (c1,k,c2)   ->
         let (n1,ol1,c1') = substlin env name n ol c1 in
         (match ol1 with 
-           | [] -> (n1,[],mkCast (c1',c2))
-           | _  ->
-               let (n2,ol2,c2') = substlin env name n1 ol1 c2 in
-               (n2,ol2,mkCast (c1',c2')))
+           | [] -> (n1,[],mkCast (c1',k,c2))
+           | _  -> 
+	       let (n2,ol2,c2') = substlin env name n1 ol1 c2 in
+               (n2,ol2,mkCast (c1',k,c2')))
 
     | Fix _ -> 
         (warning "do not consider occurrences inside fixpoints"; (n,ol,c))
@@ -764,8 +756,8 @@ let unfoldoccs env sigma (occl,name) c =
           | (_,[],uc) -> nf_betaiota uc
           | (1,_,_) ->
               error ((string_of_evaluable_ref env name)^" does not occur")
-          | _ -> error ("bad occurrence numbers of "
-			^(string_of_evaluable_ref env name))
+          | (_,l,_) ->
+	      error_invalid_occurrence l
 
 (* Unfold reduction tactic: *)
 let unfoldn loccname env sigma c = 
@@ -797,78 +789,29 @@ let compute = cbv_betadeltaiota
 (* gives [na:ta]c' such that c converts to ([na:ta]c' a), abstracting only
  * the specified occurrences. *)
 
-let abstract_scheme env sigma (locc,a) t =
+let abstract_scheme env sigma (locc,a) c =
   let ta = Retyping.get_type_of env sigma a in
   let na = named_hd env ta Anonymous in
   if occur_meta ta then error "cannot find a type for the generalisation";
   if occur_meta a then 
-    mkLambda (na,ta,t)
+    mkLambda (na,ta,c)
   else 
-    mkLambda (na, ta,subst_term_occ locc a t)
-
+    mkLambda (na,ta,subst_term_occ locc a c)
 
 let pattern_occs loccs_trm env sigma c =
   let abstr_trm = List.fold_right (abstract_scheme env sigma) loccs_trm c in
-  let _ = Typing.type_of env sigma abstr_trm in
-  applist(abstr_trm, List.map snd loccs_trm)
+  try
+    let _ = Typing.type_of env sigma abstr_trm in
+    applist(abstr_trm, List.map snd loccs_trm)
+  with Type_errors.TypeError (env',t) ->
+    raise (ReductionTacticError (InvalidAbstraction (env,abstr_trm,(env',t))))
 
-(* Generic reduction: reduction functions used in reduction tactics *)
-
-type red_expr = (constr, evaluable_global_reference) red_expr_gen
-
-open RedFlags
-
-let make_flag_constant = function
-  | EvalVarRef id -> fVAR id
-  | EvalConstRef sp -> fCONST sp
-
-let make_flag f =
-  let red = no_red in
-  let red = if f.rBeta then red_add red fBETA else red in
-  let red = if f.rIota then red_add red fIOTA else red in
-  let red = if f.rZeta then red_add red fZETA else red in
-  let red =
-    if f.rDelta then (* All but rConst *)
-        let red = red_add red fDELTA in
-        let red = red_add_transparent red (Conv_oracle.freeze ()) in
-	List.fold_right
-	  (fun v red -> red_sub red (make_flag_constant v))
-	  f.rConst red
-    else (* Only rConst *)
-        let red = red_add_transparent (red_add red fDELTA) all_opaque in
-	List.fold_right
-	  (fun v red -> red_add red (make_flag_constant v))
-	  f.rConst red
-  in red
-
-let red_expr_tab = ref Stringmap.empty
-
-let declare_red_expr s f =
-  try 
-    let _ = Stringmap.find s !red_expr_tab in
-    error ("There is already a reduction expression of name "^s)
-  with Not_found ->
-    red_expr_tab := Stringmap.add s f !red_expr_tab
-
-let reduction_of_redexp = function
-  | Red internal -> if internal then internal_red_product else red_product
-  | Hnf -> hnf_constr
-  | Simpl (Some (_,c as lp)) -> contextually (is_reference c) lp nf
-  | Simpl None -> nf
-  | Cbv f -> cbv_norm_flags (make_flag f)
-  | Lazy f -> clos_norm_flags (make_flag f)
-  | Unfold ubinds -> unfoldn ubinds
-  | Fold cl -> fold_commands cl
-  | Pattern lp -> pattern_occs lp
-  | ExtraRedExpr s ->
-      (try Stringmap.find s !red_expr_tab
-      with Not_found -> error("unknown user-defined reduction \""^s^"\""))
 (* Used in several tactics. *)
 
 exception NotStepReducible
 
 let one_step_reduce env sigma c = 
-  let rec redrec (x, largs as s) =
+  let rec redrec (x, largs) =
     match kind_of_term x with
       | Lambda (n,t,c)  ->
           (match decomp_stack largs with
@@ -885,7 +828,7 @@ let one_step_reduce env sigma c =
 	  (match reduce_fix (whd_betadeltaiota_state env sigma) fix largs with
              | Reduced s' -> s'
 	     | NotReducible -> raise NotStepReducible)
-      | Cast (c,_) -> redrec (c,largs)
+      | Cast (c,_,_) -> redrec (c,largs)
       | _ when isEvalRef env x ->
 	  let ref =
             try destEvalRef x
@@ -940,14 +883,14 @@ let reduce_to_ref_gen allow_product env sigma ref t =
 	       (str"Not an induction object of atomic type")
       | _ ->
 	  try 
-	    if reference_of_constr c = ref 
+	    if global_of_constr c = ref 
 	    then it_mkProd_or_LetIn t l
 	    else raise Not_found
 	  with Not_found ->
           try 
 	    let t' = nf_betaiota (one_step_reduce env sigma t) in 
 	    elimrec env t' l
-          with NotStepReducible -> 
+          with NotStepReducible ->
 	    errorlabstrm ""
 	    (str "Not a statement of conclusion " ++ 
 	     Nametab.pr_global_env Idset.empty ref)

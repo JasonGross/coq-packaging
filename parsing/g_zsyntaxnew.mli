@@ -6,6 +6,6 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: g_zsyntaxnew.mli,v 1.1.2.1 2004/07/16 19:30:39 herbelin Exp $ i*)
+(*i $Id: g_zsyntaxnew.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (* Nice syntax for integers. *)

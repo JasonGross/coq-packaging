@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inv.ml,v 1.53.2.3 2005/09/08 12:28:00 herbelin Exp $ *)
+(* $Id: inv.ml 7880 2006-01-16 13:59:08Z herbelin $ *)
 
 open Pp
 open Util
@@ -46,13 +46,13 @@ let collect_meta_variables c =
 
 let check_no_metas clenv ccl =
   if occur_meta ccl then
-    let metas = List.map (fun n -> Metamap.find n clenv.namenv)
-		  (collect_meta_variables ccl) in
+    let metas = List.filter (fun na -> na<>Anonymous)
+      (List.map (Evd.meta_name clenv.env) (collect_meta_variables ccl)) in
     errorlabstrm "inversion" 
       (str ("Cannot find an instantiation for variable"^
 	       (if List.length metas = 1 then " " else "s ")) ++
-	 prlist_with_sep pr_coma pr_id metas
-	 (* ajouter "in " ++ prterm ccl mais il faut le bon contexte *))
+	 prlist_with_sep pr_coma pr_name metas
+	 (* ajouter "in " ++ pr_lconstr ccl mais il faut le bon contexte *))
 
 let var_occurs_in_pf gl id =
   let env = pf_env gl in
@@ -88,8 +88,7 @@ let var_occurs_in_pf gl id =
 type inversion_status = Dep of constr option | NoDep
 
 let compute_eqn env sigma n i ai =
-  (ai,get_type_of env sigma ai),
-  (mkRel (n-i),get_type_of env sigma (mkRel (n-i)))
+  (ai, (mkRel (n-i),get_type_of env sigma (mkRel (n-i))))
 
 let make_inv_predicate env sigma indf realargs id status concl =
   let nrealargs = List.length realargs in
@@ -112,7 +111,7 @@ let make_inv_predicate env sigma indf realargs id status concl =
               | None ->
 		let sort = get_sort_of env sigma concl in
 		let p = make_arity env true indf sort in
-		abstract_list_all env sigma p concl (realargs@[mkVar id]) in
+		Unification.abstract_list_all env sigma p concl (realargs@[mkVar id]) in
 	  let hyps,bodypred = decompose_lam_n_assum (nrealargs+1) pred in
 	  (* We lift to make room for the equations *)
 	  (hyps,lift nrealargs bodypred)
@@ -128,14 +127,13 @@ let make_inv_predicate env sigma indf realargs id status concl =
    In any case, we carry along the rest of pairs *)
   let rec build_concl eqns n = function
     | [] -> (prod_it concl eqns,n)
-    | ((ai,ati),(xi,ti))::restlist ->
+    | (ai,(xi,ti))::restlist ->
         let (lhs,eqnty,rhs) =
           if closed0 ti then 
 	    (xi,ti,ai)
           else 
-	    make_iterated_tuple env' sigma (ai,ati) (xi,ti)
+	    make_iterated_tuple env' sigma ai (xi,ti)
 	in
-        let sort = get_sort_of env sigma concl in 
         let eq_term = Coqlib.build_coq_eq () in
         let eqn = applist (eq_term ,[eqnty;lhs;rhs]) in 
 	build_concl ((Anonymous,lift n eqn)::eqns) (n+1) restlist
@@ -306,17 +304,16 @@ let remember_first_eq id x = if !x = None then x := Some id
    a rewrite rule. It erases the clause which is given as input *)
 
 let projectAndApply thin id eqname names depids gls =
-  let env = pf_env gls in
-  let clearer id =
-    if thin then clear [id] else (remember_first_eq id eqname; tclIDTAC) in
-  let subst_hyp_LR id = tclTHEN (tclTRY(hypSubst_LR id onConcl)) (clearer id) in
-  let subst_hyp_RL id = tclTHEN (tclTRY(hypSubst_RL id onConcl)) (clearer id) in
+  let subst_hyp l2r id =
+    tclTHEN (tclTRY(rewriteInConcl l2r (mkVar id)))
+      (if thin then clear [id] else (remember_first_eq id eqname; tclIDTAC))
+  in
   let substHypIfVariable tac id gls =
     let (t,t1,t2) = Hipattern.dest_nf_eq gls (pf_get_hyp_typ gls id) in
     match (kind_of_term t1, kind_of_term t2) with
-      | Var id1, _ -> generalizeRewriteIntros (subst_hyp_LR id) depids id1 gls
-      | _, Var id2 -> generalizeRewriteIntros (subst_hyp_RL id) depids id2 gls
-      | _ -> tac id gls
+    | Var id1, _ -> generalizeRewriteIntros (subst_hyp true id) depids id1 gls
+    | _, Var id2 -> generalizeRewriteIntros (subst_hyp false id) depids id2 gls
+    | _ -> tac id gls
   in
   let deq_trailer id neqns =
     tclTHENSEQ 
@@ -326,7 +323,7 @@ let projectAndApply thin id eqname names depids gls =
 	   (intro_move idopt None)
 	   (* try again to substitute and if still not a variable after *)
 	   (* decomposition, arbitrarily try to rewrite RL !? *)
-	   (tclTRY (onLastHyp (substHypIfVariable subst_hyp_RL))))
+	   (tclTRY (onLastHyp (substHypIfVariable (subst_hyp false)))))
 	 names);
        (if names = [] then clear [id] else tclIDTAC)]
   in
@@ -380,6 +377,8 @@ let rewrite_equations_gene othin neqns ba gl =
 let rec get_names allow_conj = function
   | IntroWildcard ->
       error "Discarding pattern not allowed for inversion equations"
+  | IntroAnonymous ->
+      error "Anonymous pattern not allowed for inversion equations"
   | IntroOrAndPattern [l] -> 
       if allow_conj then
 	if l = [] then (None,[]) else
@@ -401,7 +400,6 @@ let rewrite_equations othin neqns names ba gl =
   let (depids,nodepids) = split_dep_and_nodep ba.assums gl in
   let rewrite_eqns =
     let first_eq = ref None in
-    let update id = if !first_eq = None then first_eq := Some id in
     match othin with
       | Some thin ->
           tclTHENSEQ
@@ -446,12 +444,11 @@ let rewrite_equations_tac (gene, othin) id neqns names ba =
 let raw_inversion inv_kind indbinding id status names gl =
   let env = pf_env gl and sigma = project gl in
   let c = mkVar id in
-  let (wc,kONT) = startWalk gl in
   let t = strong_prodspine (pf_whd_betadeltaiota gl) (pf_type_of gl c) in
-  let indclause = mk_clenv_from wc (c,t) in
+  let indclause = mk_clenv_from gl (c,t) in
   let indclause' = clenv_constrain_with_bindings indbinding indclause in
-  let newc = clenv_instance_template indclause' in
-  let ccl = clenv_instance_template_type indclause' in
+  let newc = clenv_value indclause' in
+  let ccl = clenv_type indclause' in
   check_no_metas indclause' ccl;
   let IndType (indf,realargs) =
     try find_rectype env sigma ccl
@@ -477,7 +474,7 @@ let raw_inversion inv_kind indbinding id status names gl =
         (fun id ->
            (tclTHEN
               (apply_term (mkVar id)
-                 (list_tabulate (fun _ -> mkMeta(Clenv.new_meta())) neqns))
+                 (list_tabulate (fun _ -> Evarutil.mk_new_meta()) neqns))
               reflexivity))])
   gl
 
@@ -524,15 +521,15 @@ open Tacexpr
 
 let inv k = inv_gen false k NoDep
 
-let half_inv_tac id  = inv SimpleInversion None (NamedHyp id)
-let inv_tac id       = inv FullInversion None (NamedHyp id)
-let inv_clear_tac id = inv FullInversionClear None (NamedHyp id)
+let half_inv_tac id  = inv SimpleInversion IntroAnonymous (NamedHyp id)
+let inv_tac id       = inv FullInversion IntroAnonymous (NamedHyp id)
+let inv_clear_tac id = inv FullInversionClear IntroAnonymous (NamedHyp id)
 
 let dinv k c = inv_gen false k (Dep c)
 
-let half_dinv_tac id  = dinv SimpleInversion None None (NamedHyp id)
-let dinv_tac id       = dinv FullInversion None None (NamedHyp id)
-let dinv_clear_tac id = dinv FullInversionClear None None (NamedHyp id)
+let half_dinv_tac id  = dinv SimpleInversion None IntroAnonymous (NamedHyp id)
+let dinv_tac id       = dinv FullInversion None IntroAnonymous (NamedHyp id)
+let dinv_clear_tac id = dinv FullInversionClear None IntroAnonymous (NamedHyp id)
 
 (* InvIn will bring the specified clauses into the conclusion, and then
  * perform inversion on the named hypothesis.  After, it will intro them

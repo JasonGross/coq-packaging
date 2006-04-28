@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: leminv.ml,v 1.41.2.1 2004/07/16 19:30:54 herbelin Exp $ *)
+(* $Id: leminv.ml 7837 2006-01-11 09:47:32Z herbelin $ *)
 
 open Pp
 open Util
@@ -40,7 +40,7 @@ let not_work_message = "tactic fails to build the inversion lemma, may be becaus
 
 let no_inductive_inconstr env constr =
   (str "Cannot recognize an inductive predicate in " ++ 
-     prterm_env env constr ++
+     pr_lconstr_env env constr ++
      str "." ++ spc () ++ str "If there is one, may be the structure of the arity" ++
      spc () ++ str "or of the type of constructors" ++ spc () ++
      str "is hidden by constant definitions.")
@@ -216,7 +216,7 @@ let inversion_scheme env sigma t sort dep_option inv_op =
     errorlabstrm "lemma_inversion"
     (str"Computed inversion goal was not closed in initial signature");
   *)
-  let invSign = named_context invEnv in
+  let invSign = named_context_val invEnv in
   let pfs = mk_pftreestate (mk_goal invSign invGoal) in
   let pfs = solve_pftreestate (tclTHEN intro (onLastHyp inv_op)) pfs in
   let (pfterm,meta_types) = extract_open_pftreestate pfs in
@@ -245,9 +245,11 @@ let add_inversion_lemma name env sigma t sort dep inv_op =
   let invProof = inversion_scheme env sigma t sort dep inv_op in
   let _ = 
     declare_constant name
-    (DefinitionEntry { const_entry_body = invProof;
-                     const_entry_type = None;
-                     const_entry_opaque = false }, 
+    (DefinitionEntry 
+       { const_entry_body = invProof;
+         const_entry_type = None;
+         const_entry_opaque = false;
+	 const_entry_boxed = true && (Options.boxed_definitions())}, 
      IsProof Lemma)
   in ()
 
@@ -256,13 +258,15 @@ let add_inversion_lemma name env sigma t sort dep inv_op =
 (* inv_op = Inv (derives de complete inv. lemma)
  * inv_op = InvNoThining (derives de semi inversion lemma) *)
 
-let inversion_lemma_from_goal n na id sort dep_option inv_op =
+let inversion_lemma_from_goal n na (loc,id) sort dep_option inv_op =
   let pts = get_pftreestate() in
   let gl = nth_goal_of_pftreestate n pts in
-  let t = pf_get_hyp_typ gl id in
+  let t = 
+    try pf_get_hyp_typ gl id
+    with Not_found -> Pretype_errors.error_var_not_found_loc loc id in
   let env = pf_env gl and sigma = project gl in
-  let fv = global_vars env t in
 (* Pourquoi ??? 
+  let fv = global_vars env t in
   let thin_ids = thin_ids (hyps,fv) in
   if not(list_subset thin_ids fv) then
     errorlabstrm "lemma_inversion"
@@ -287,15 +291,14 @@ let add_inversion_lemma_exn na com comsort bool tac =
 
 let lemInv id c gls =
   try
-    let (wc,kONT) = startWalk gls in
-    let clause = mk_clenv_type_of wc c in
+    let clause = mk_clenv_type_of gls c in
     let clause = clenv_constrain_with_bindings [(-1,mkVar id)] clause in
-    elim_res_pf kONT clause true gls
+    Clenvtac.res_pf clause ~allow_K:true gls
   with 
     |  UserError (a,b) -> 
 	 errorlabstrm "LemInv" 
 	   (str "Cannot refine current goal with the lemma " ++ 
-	      prterm_env (Global.env()) c) 
+	      pr_lconstr_env (Global.env()) c) 
 
 let lemInv_gen id c = try_intros_until (fun id -> lemInv id c) id
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: haskell.mli,v 1.15.6.2 2005/12/01 17:01:22 letouzey Exp $ i*)
+(*i $Id: haskell.mli 7632 2005-12-01 14:35:21Z letouzey $ i*)
 
 open Pp
 open Names

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: index.mll,v 1.2.2.2 2004/08/03 17:31:04 herbelin Exp $ i*)
+(*i $Id: index.mll 8617 2006-03-08 10:47:12Z notin $ i*)
 
 {
 
@@ -14,7 +14,7 @@ open Filename
 open Lexing 
 open Printf
 
-type coq_module = string
+open Cdglobals
 
 type loc = int
 

@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: Exchange.v,v 1.4.2.1 2004/07/16 19:30:00 herbelin Exp $ *)
+(* $Id: Exchange.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (****************************************************************************)
 (*                   Exchange of two elements in an array                   *)

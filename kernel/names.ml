@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: names.ml,v 1.53.2.1 2004/07/16 19:30:26 herbelin Exp $ *)
+(* $Id: names.ml 7834 2006-01-11 00:15:01Z herbelin $ *)
 
 open Pp
 open Util
@@ -19,13 +19,7 @@ let id_ord = Pervasives.compare
 
 let id_of_string s = String.copy s
 
-let map_ident id =
-  if Options.do_translate() then
-    match id with
-        "fix" -> "Fix"
-      | _ -> id
-  else id
-let string_of_id id = String.copy (map_ident id)
+let string_of_id id = String.copy id
 
 (* Hash-consing of identifier *)
 module Hident = Hashcons.Make(
@@ -138,74 +132,6 @@ end
 module MPset = Set.Make(MPord)
 module MPmap = Map.Make(MPord)
 
-
-(* this is correct under the condition that bound and struct
-   identifiers can never be identical (i.e. get the same stamp)! *) 
-
-type substitution = module_path Umap.t
-
-let empty_subst = Umap.empty
-
-let add_msid = Umap.add 
-let add_mbid = Umap.add
-
-let map_msid msid mp = add_msid msid mp empty_subst
-let map_mbid mbid mp = add_msid mbid mp empty_subst
-
-let list_contents sub = 
-  let one_pair uid mp l =
-    (string_of_uid uid, string_of_mp mp)::l
-  in
-    Umap.fold one_pair sub []
-
-let debug_string_of_subst sub = 
-  let l = List.map (fun (s1,s2) -> s1^"|->"^s2) (list_contents sub) in
-    "{" ^ String.concat "; " l ^ "}"
-
-let debug_pr_subst sub = 
-  let l = list_contents sub in
-  let f (s1,s2) = hov 2 (str s1 ++ spc () ++ str "|-> " ++ str s2) 
-  in
-    str "{" ++ hov 2 (prlist_with_sep pr_coma f l) ++ str "}" 
-
-let rec subst_mp sub mp = (* 's like subst *)
-  match mp with
-    | MPself sid -> 
-	(try Umap.find sid sub with Not_found -> mp)
-    | MPbound bid ->
-	(try Umap.find bid sub with Not_found -> mp)
-    | MPdot (mp1,l) -> 
-	let mp1' = subst_mp sub mp1 in
-	  if mp1==mp1' then 
-	    mp
-	  else
-	    MPdot (mp1',l)
-    | _ -> mp
-
-let join subst1 subst2 = 
-  let subst = Umap.map (subst_mp subst2) subst1 in
-  Umap.fold Umap.add subst2 subst
-
-let rec occur_in_path uid = function
-  | MPself sid -> sid = uid
-  | MPbound bid -> bid = uid
-  | MPdot (mp1,_) -> occur_in_path uid mp1
-  | _ -> false
-    
-let occur_uid uid sub = 
-  let check_one uid' mp =
-    if uid = uid' || occur_in_path uid mp then raise Exit
-  in
-    try 
-      Umap.iter check_one sub;
-      false
-    with Exit -> true
-
-let occur_msid = occur_uid
-let occur_mbid = occur_uid
-
-
-
 (* Kernel names *)
 
 type kernel_name = module_path * dir_path * label
@@ -223,11 +149,6 @@ let string_of_kn (mp,dir,l) =
   string_of_mp mp ^ "#" ^ string_of_dirpath dir ^ "#" ^ string_of_label l
 
 let pr_kn kn = str (string_of_kn kn)
-
-
-let subst_kn sub (mp,dir,l as kn) = 
-  let mp' = subst_mp sub mp in
-    if mp==mp' then kn else (mp',dir,l)
 
 
 let kn_ord kn1 kn2 = 
@@ -252,7 +173,9 @@ end
 module KNmap = Map.Make(KNord)
 module KNpred = Predicate.Make(KNord)
 module KNset = Set.Make(KNord)
-
+module Cmap = KNmap
+module Cpred = KNpred
+module Cset = KNset
 
 let default_module_name = id_of_string "If you see this, it's a bug"
 
@@ -267,10 +190,34 @@ type mutual_inductive = kernel_name
 type inductive = mutual_inductive * int
 type constructor = inductive * int
 
+let constant_of_kn kn = kn
+let make_con mp dir l = (mp,dir,l)
+let repr_con con = con
+let string_of_con = string_of_kn
+let con_label = label
+let pr_con = pr_kn
+let con_modpath = modpath
+
 let ith_mutual_inductive (kn,_) i = (kn,i)
 let ith_constructor_of_inductive ind i = (ind,i)
 let inductive_of_constructor (ind,i) = ind
 let index_of_constructor (ind,i) = i
+
+module InductiveOrdered = struct
+  type t = inductive
+  let compare (spx,ix) (spy,iy) = 
+    let c = ix - iy in if c = 0 then KNord.compare spx spy else c
+end
+
+module Indmap = Map.Make(InductiveOrdered)
+
+module ConstructorOrdered = struct
+  type t = constructor
+  let compare (indx,ix) (indy,iy) = 
+    let c = ix - iy in if c = 0 then InductiveOrdered.compare indx indy else c
+end
+
+module Constrmap = Map.Make(ConstructorOrdered)
 
 (* Better to have it here that in closure, since used in grammar.cma *)
 type evaluable_global_reference =
@@ -352,4 +299,24 @@ let hcons_names () =
   let huniqid = Hashcons.simple_hcons Huniqid.f (hstring,hdir) in
   let hmod = Hashcons.simple_hcons Hmod.f (hdir,huniqid,hstring) in
   let hkn = Hashcons.simple_hcons Hkn.f (hmod,hdir,hstring) in
-  (hkn,hdir,hname,hident,hstring)
+  (hkn,hkn,hdir,hname,hident,hstring)
+
+
+(*******)
+
+type transparent_state = Idpred.t * Cpred.t
+
+type 'a tableKey =
+  | ConstKey of constant
+  | VarKey of identifier
+  | RelKey of 'a 
+
+
+type inv_rel_key = int (* index in the [rel_context] part of environment
+			  starting by the end, {\em inverse} 
+			  of de Bruijn indice *)
+
+type id_key = inv_rel_key tableKey
+
+
+

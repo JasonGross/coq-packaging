@@ -6,11 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: termdn.mli,v 1.9.16.1 2004/07/16 19:30:56 herbelin Exp $ i*)
+(*i $Id: termdn.mli 6427 2004-12-07 17:41:10Z sacerdot $ i*)
 
 (*i*)
 open Term
 open Pattern
+open Libnames
 (*i*)
   
 (* Discrimination nets of terms. *)
@@ -44,8 +45,8 @@ val app : ((constr_pattern * 'a) -> unit) -> 'a t -> unit
 (* These are for Nbtermdn *)
 
 val constr_pat_discr : 
-  constr_pattern -> (constr_label * constr_pattern list) option
+  constr_pattern -> (global_reference * constr_pattern list) option
 val constr_val_discr :
-  constr -> (constr_label * constr list) option
+  constr -> (global_reference * constr list) option
 
 (*i*)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: Rtrigo_reg.v,v 1.15.2.1 2004/07/16 19:31:15 herbelin Exp $ i*)
+(*i $Id: Rtrigo_reg.v 8670 2006-03-28 22:16:14Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -32,7 +32,7 @@ cut
          (fun n:nat =>
             sum_f_R0 (fun k:nat => Rabs (/ INR (fact (2 * k)) * r ^ (2 * k)))
               n) l)).
-intro; elim X; intros.
+intro X; elim X; intros.
 apply existT with x.
 split.
 apply p.
@@ -206,7 +206,7 @@ cut
             sum_f_R0
               (fun k:nat => Rabs (/ INR (fact (2 * k + 1)) * r ^ (2 * k))) n)
          l)).
-intro; elim X; intros.
+intro X; elim X; intros.
 apply existT with x.
 split.
 apply p.

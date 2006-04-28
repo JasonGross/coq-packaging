@@ -6,12 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernacextend.ml4,v 1.5.2.2 2004/07/16 19:30:42 herbelin Exp $ *)
+(* $Id: vernacextend.ml4 7732 2005-12-26 13:51:24Z herbelin $ *)
 
 open Genarg
 open Q_util
 open Q_coqast
-open Ast
 open Argextend
 
 let join_loc (deb1,_) (_,fin2) = (deb1,fin2)
@@ -81,11 +80,8 @@ let mlexpr_of_grammar_production = function
 
 let mlexpr_of_clause =
   mlexpr_of_list
-    (fun (a,b,c) ->
-      (mlexpr_of_pair
-	mlexpr_of_string
-	(mlexpr_of_list mlexpr_of_grammar_production)
-	(a,b)))
+    (fun (a,b,c) -> 
+      mlexpr_of_list mlexpr_of_grammar_production (VernacTerm a::b))
 
 let declare_command loc s cl =
   let gl = mlexpr_of_clause cl in
@@ -98,40 +94,6 @@ let declare_command loc s cl =
       Egrammar.extend_vernac_command_grammar $mlexpr_of_string s$ $gl$;
     end
   >>
-
-open Vernacexpr
-open Pcoq
-
-let rec interp_entry_name loc s =
-  let l = String.length s in
-  if l > 8 & String.sub s 0 3 = "ne_" & String.sub s (l-5) 5 = "_list" then
-    let t, g = interp_entry_name loc (String.sub s 3 (l-8)) in
-    List1ArgType t, <:expr< Gramext.Slist1 $g$ >>
-  else if l > 5 & String.sub s (l-5) 5 = "_list" then
-    let t, g = interp_entry_name loc (String.sub s 0 (l-5)) in
-    List0ArgType t, <:expr< Gramext.Slist0 $g$ >>
-  else if l > 4 & String.sub s (l-4) 4 = "_opt" then
-    let t, g = interp_entry_name loc (String.sub s 0 (l-4)) in
-    OptArgType t, <:expr< Gramext.Sopt $g$ >>
-  else
-    let t, se = 
-      match Pcoq.entry_type (Pcoq.get_univ "prim") s with
-	| Some _ as x -> x, <:expr< Prim. $lid:s$ >>
-	| None ->
-      match Pcoq.entry_type (Pcoq.get_univ "constr") s with
-	| Some _ as x -> x, <:expr< Constr. $lid:s$ >>
-	| None -> 
-      match Pcoq.entry_type (Pcoq.get_univ "tactic") s with
-	| Some _ as x -> x, <:expr< Tactic. $lid:s$ >>
-	| None -> None, <:expr< $lid:s$ >> in
-    let t =
-      match t with
-	| Some t -> t
-	| None ->
-(*	    Pp.warning_with Pp_control.err_ft
-            ("Unknown primitive grammar entry: "^s);*)
-	    ExtraArgType s
-    in t, <:expr< Gramext.Snterm (Pcoq.Gram.Entry.obj $se$) >>
 
 open Pcaml
 
@@ -152,7 +114,7 @@ EXTEND
   ;
   args:
     [ [ e = LIDENT; "("; s = LIDENT; ")" ->
-        let t, g = interp_entry_name loc e in
+        let t, g = Q_util.interp_entry_name loc e in
         VernacNonTerm (loc, t, g, Some s)
       | s = STRING ->
         VernacTerm s

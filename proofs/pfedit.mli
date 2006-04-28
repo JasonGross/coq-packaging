@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pfedit.mli,v 1.35.2.1 2004/07/16 19:30:49 herbelin Exp $ i*)
+(*i $Id: pfedit.mli 7639 2005-12-02 10:01:15Z gregoire $ i*)
 
 (*i*)
 open Util
@@ -57,6 +57,14 @@ val delete_all_proofs : unit -> unit
 
 val undo : int -> unit
 
+(* Same as undo, but undoes the current proof stack to reach depth
+   [n]. This is used in [vernac_backtrack]. *)
+val undo_todepth : int -> unit
+
+(* Returns the depth of the current focused proof stack, this is used
+   to put informations in coq prompt (in emacs mode). *)
+val current_proof_depth: unit -> int
+
 (* [set_undo (Some n)] sets the size of the ``undo'' stack; [set_undo None]
    sets the size to the default value (12) *)
 
@@ -68,7 +76,7 @@ val get_undo : unit -> int option
     declare the built constructions as a coercion or a setoid morphism) *)
 
 val start_proof : 
-  identifier -> goal_kind -> named_context -> constr
+  identifier -> goal_kind -> named_context_val -> constr
     -> declaration_hook -> unit
 
 (* [restart_proof ()] restarts the current focused proof from the beginning
@@ -176,8 +184,3 @@ val traverse_prev_unproven : unit -> unit
    proof and goal management, as it is done, for instance in pcoq *)
 val traverse_to : int list -> unit
 val mutate : (pftreestate -> pftreestate) -> unit
-
-(** Printers *)
-
-val pr_open_subgoals    : unit -> std_ppcmds
-val pr_nth_open_subgoal : int -> std_ppcmds

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tlm.mli,v 1.5.16.1 2004/07/16 19:30:31 herbelin Exp $ i*)
+(*i $Id: tlm.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (* Tries. This module implements a data structure [('a,'b) t] mapping lists
    of values of type ['a] to sets (as lists) of values of type ['b]. *)

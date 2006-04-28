@@ -24,7 +24,7 @@
 (* in Summer 1995. Several developments by E. Ledinot were an inspiration.  *)
 (****************************************************************************)
 
-(*i $Id: Relations_3.v,v 1.7.2.1 2004/07/16 19:31:18 herbelin Exp $ i*)
+(*i $Id: Relations_3.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Require Export Relations_1.
 Require Export Relations_2.
@@ -46,9 +46,9 @@ Section Relations_3.
    
    Definition Confluent : Prop := forall x:U, confluent x.
    
-   Inductive noetherian : U -> Prop :=
+   Inductive noetherian (x: U) : Prop :=
        definition_of_noetherian :
-         forall x:U, (forall y:U, R x y -> noetherian y) -> noetherian x.
+         (forall y:U, R x y -> noetherian y) -> noetherian x.
    
    Definition Noetherian : Prop := forall x:U, noetherian x.
    

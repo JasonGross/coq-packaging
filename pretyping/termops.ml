@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: termops.ml,v 1.29.2.1 2004/07/16 19:30:46 herbelin Exp $ *)
+(* $Id: termops.ml 8003 2006-02-07 22:11:50Z herbelin $ *)
 
 open Pp
 open Util
@@ -35,60 +35,116 @@ let pr_name = function
   | Anonymous -> str "_"
 
 let pr_sp sp = str(string_of_kn sp)
+let pr_con sp = str(string_of_con sp)
 
-let rec print_constr c = match kind_of_term c with
+let rec pr_constr c = match kind_of_term c with
   | Rel n -> str "#"++int n
   | Meta n -> str "Meta(" ++ int n ++ str ")"
   | Var id -> pr_id id
   | Sort s -> print_sort s
-  | Cast (c,t) -> hov 1 
-      (str"(" ++ print_constr c ++ cut() ++
-       str":" ++ print_constr t ++ str")")
+  | Cast (c,_, t) -> hov 1 
+      (str"(" ++ pr_constr c ++ cut() ++
+       str":" ++ pr_constr t ++ str")")
   | Prod (Name(id),t,c) -> hov 1
-      (str"forall " ++ pr_id id ++ str":" ++ print_constr t ++ str"," ++
-       spc() ++ print_constr c)
+      (str"forall " ++ pr_id id ++ str":" ++ pr_constr t ++ str"," ++
+       spc() ++ pr_constr c)
   | Prod (Anonymous,t,c) -> hov 0
-      (str"(" ++ print_constr t ++ str " ->" ++ spc() ++
-       print_constr c ++ str")")
+      (str"(" ++ pr_constr t ++ str " ->" ++ spc() ++
+       pr_constr c ++ str")")
   | Lambda (na,t,c) -> hov 1
       (str"fun " ++ pr_name na ++ str":" ++
-       print_constr t ++ str" =>" ++ spc() ++ print_constr c)
+       pr_constr t ++ str" =>" ++ spc() ++ pr_constr c)
   | LetIn (na,b,t,c) -> hov 0
-      (str"let " ++ pr_name na ++ str":=" ++ print_constr b ++
-       str":" ++ brk(1,2) ++ print_constr t ++ cut() ++
-       print_constr c)
+      (str"let " ++ pr_name na ++ str":=" ++ pr_constr b ++
+       str":" ++ brk(1,2) ++ pr_constr t ++ cut() ++
+       pr_constr c)
   | App (c,l) ->  hov 1
-      (str"(" ++ print_constr c ++ spc() ++
-       prlist_with_sep spc print_constr (Array.to_list l) ++ str")")
+      (str"(" ++ pr_constr c ++ spc() ++
+       prlist_with_sep spc pr_constr (Array.to_list l) ++ str")")
   | Evar (e,l) -> hov 1
       (str"Evar#" ++ int e ++ str"{" ++
-       prlist_with_sep spc print_constr (Array.to_list l) ++str"}")
-  | Const c -> str"Cst(" ++ pr_sp c ++ str")"
+       prlist_with_sep spc pr_constr (Array.to_list l) ++str"}")
+  | Const c -> str"Cst(" ++ pr_con c ++ str")"
   | Ind (sp,i) -> str"Ind(" ++ pr_sp sp ++ str"," ++ int i ++ str")"
   | Construct ((sp,i),j) ->
       str"Constr(" ++ pr_sp sp ++ str"," ++ int i ++ str"," ++ int j ++ str")"
   | Case (ci,p,c,bl) -> v 0
-      (hv 0 (str"<"++print_constr p++str">"++ cut() ++ str"Case " ++
-             print_constr c ++ str"of") ++ cut() ++
-       prlist_with_sep (fun _ -> brk(1,2)) print_constr (Array.to_list bl) ++
+      (hv 0 (str"<"++pr_constr p++str">"++ cut() ++ str"Case " ++
+             pr_constr c ++ str"of") ++ cut() ++
+       prlist_with_sep (fun _ -> brk(1,2)) pr_constr (Array.to_list bl) ++
       cut() ++ str"end")
   | Fix ((t,i),(lna,tl,bl)) ->
       let fixl = Array.mapi (fun i na -> (na,t.(i),tl.(i),bl.(i))) lna in
       hov 1
         (str"fix " ++ int i ++ spc() ++  str"{" ++
          v 0 (prlist_with_sep spc (fun (na,i,ty,bd) ->
-           pr_name na ++ str"/" ++ int i ++ str":" ++ print_constr ty ++
-           cut() ++ str":=" ++ print_constr bd) (Array.to_list fixl)) ++
+           pr_name na ++ str"/" ++ int i ++ str":" ++ pr_constr ty ++
+           cut() ++ str":=" ++ pr_constr bd) (Array.to_list fixl)) ++
          str"}")
   | CoFix(i,(lna,tl,bl)) ->
       let fixl = Array.mapi (fun i na -> (na,tl.(i),bl.(i))) lna in
       hov 1
         (str"cofix " ++ int i ++ spc() ++  str"{" ++
          v 0 (prlist_with_sep spc (fun (na,ty,bd) ->
-           pr_name na ++ str":" ++ print_constr ty ++
-           cut() ++ str":=" ++ print_constr bd) (Array.to_list fixl)) ++
+           pr_name na ++ str":" ++ pr_constr ty ++
+           cut() ++ str":=" ++ pr_constr bd) (Array.to_list fixl)) ++
          str"}")
 
+let term_printer = ref (fun _ -> pr_constr)
+let print_constr_env t = !term_printer t
+let print_constr t = !term_printer (Global.env()) t
+let set_print_constr f = term_printer := f
+
+let pr_var_decl env (id,c,typ) =
+  let pbody = match c with
+    | None ->  (mt ())
+    | Some c ->
+	(* Force evaluation *) 
+	let pb = print_constr_env env c in
+	  (str" := " ++ pb ++ cut () ) in
+  let pt = print_constr_env env typ in
+  let ptyp = (str" : " ++ pt) in
+    (pr_id id ++ hov 0 (pbody ++ ptyp))
+
+let pr_rel_decl env (na,c,typ) =
+  let pbody = match c with
+    | None -> mt ()
+    | Some c ->
+	(* Force evaluation *) 
+	let pb = print_constr_env env c in
+	  (str":=" ++ spc () ++ pb ++ spc ()) in
+  let ptyp = print_constr_env env typ in
+    match na with
+      | Anonymous -> hov 0 (str"<>" ++ spc () ++ pbody ++ str":" ++ spc () ++ ptyp)
+      | Name id -> hov 0 (pr_id id ++ spc () ++ pbody ++ str":" ++ spc () ++ ptyp)
+
+let print_named_context env =
+  hv 0 (fold_named_context
+	  (fun env d pps -> 
+	    pps ++ ws 2 ++ pr_var_decl env d)
+          env ~init:(mt ()))
+
+let print_rel_context env = 
+  hv 0 (fold_rel_context
+	  (fun env d pps -> pps ++ ws 2 ++ pr_rel_decl env d)
+          env ~init:(mt ()))
+    
+let print_env env =
+  let sign_env =
+    fold_named_context
+      (fun env d pps ->
+         let pidt =  pr_var_decl env d in
+	 (pps ++ fnl () ++ pidt))
+      env ~init:(mt ()) 
+  in
+  let db_env =
+    fold_rel_context
+      (fun env d pps ->
+         let pnat = pr_rel_decl env d in (pps ++ fnl () ++ pnat))
+      env ~init:(mt ())
+  in 
+    (sign_env ++ db_env)
+    
 (*let current_module = ref empty_dirpath
 
 let set_module m = current_module := m*)
@@ -98,6 +154,20 @@ let new_univ =
   (fun sp ->
     incr univ_gen; 
     Univ.make_univ (Lib.library_dp(),!univ_gen))
+let new_Type () = mkType (new_univ ())
+let new_Type_sort () = Type (new_univ ())
+
+(* This refreshes universes in types; works only for inferred types (i.e. for
+   types of the form (x1:A1)...(xn:An)B with B a sort or an atom in
+   head normal form) *)
+let refresh_universes t =
+  let modified = ref false in
+  let rec refresh t = match kind_of_term t with
+    | Sort (Type _) -> modified := true; new_Type ()
+    | Prod (na,u,v) -> mkProd (na,u,refresh v)
+    | _ -> t in
+  let t' = refresh t in
+  if !modified then t' else t
 
 let new_sort_in_family = function 
   | InProp -> mk_Prop
@@ -185,6 +255,8 @@ let it_named_context_quantifier f ~init =
 let it_mkNamedProd_or_LetIn = it_named_context_quantifier mkNamedProd_or_LetIn
 let it_mkNamedLambda_or_LetIn = it_named_context_quantifier mkNamedLambda_or_LetIn
 
+let it_mkNamedProd_wo_LetIn = it_named_context_quantifier mkNamedProd_wo_LetIn
+
 (* *)
 
 (* strips head casts and flattens head applications *)
@@ -192,11 +264,11 @@ let rec strip_head_cast c = match kind_of_term c with
   | App (f,cl) -> 
       let rec collapse_rec f cl2 = match kind_of_term f with
 	| App (g,cl1) -> collapse_rec g (Array.append cl1 cl2)
-	| Cast (c,_) -> collapse_rec c cl2
-	| _ -> if cl2 = [||] then f else mkApp (f,cl2)
+	| Cast (c,_,_) -> collapse_rec c cl2
+	| _ -> if Array.length cl2 = 0 then f else mkApp (f,cl2)
       in 
       collapse_rec f cl
-  | Cast (c,t) -> strip_head_cast c
+  | Cast (c,_,_) -> strip_head_cast c
   | _ -> c
 
 (* [map_constr_with_named_binders g f l c] maps [f l] on the immediate
@@ -208,7 +280,7 @@ let rec strip_head_cast c = match kind_of_term c with
 let map_constr_with_named_binders g f l c = match kind_of_term c with
   | (Rel _ | Meta _ | Var _   | Sort _ | Const _ | Ind _
     | Construct _) -> c
-  | Cast (c,t) -> mkCast (f l c, f l t)
+  | Cast (c,k,t) -> mkCast (f l c, k, f l t)
   | Prod (na,t,c) -> mkProd (na, f l t, f (g na l) c)
   | Lambda (na,t,c) -> mkLambda (na, f l t, f (g na l) c)
   | LetIn (na,b,t,c) -> mkLetIn (na, f l b, f l t, f (g na l) c)
@@ -243,7 +315,7 @@ let fold_rec_types g (lna,typarray,_) e =
 let map_constr_with_binders_left_to_right g f l c = match kind_of_term c with
   | (Rel _ | Meta _ | Var _   | Sort _ | Const _ | Ind _
     | Construct _) -> c
-  | Cast (c,t) -> let c' = f l c in mkCast (c', f l t)
+  | Cast (c,k,t) -> let c' = f l c in mkCast (c',k,f l t)
   | Prod (na,t,c) ->
       let t' = f l t in
       mkProd (na, t', f (g (na,None,t) l) c)
@@ -263,7 +335,9 @@ let map_constr_with_binders_left_to_right g f l c = match kind_of_term c with
       mkApp (hd, [| f l a |])
   | Evar (e,al) -> mkEvar (e, array_map_left (f l) al)
   | Case (ci,p,c,bl) ->
-      let p' = f l p in let c' = f l c in
+      (* In v8 concrete syntax, predicate is after the term to match! *)
+      let c' = f l c in
+      let p' = f l p in
       mkCase (ci, p', c', array_map_left (f l) bl)
   | Fix (ln,(lna,tl,bl as fx)) ->
       let l' = fold_rec_types g fx l in
@@ -278,10 +352,10 @@ let map_constr_with_binders_left_to_right g f l c = match kind_of_term c with
 let map_constr_with_full_binders g f l cstr = match kind_of_term cstr with
   | (Rel _ | Meta _ | Var _   | Sort _ | Const _ | Ind _
     | Construct _) -> cstr
-  | Cast (c,t) -> 
+  | Cast (c,k, t) -> 
       let c' = f l c in
       let t' = f l t in
-      if c==c' && t==t' then cstr else mkCast (c', t')
+      if c==c' && t==t' then cstr else mkCast (c', k, t')
   | Prod (na,t,c) ->
       let t' = f l t in
       let c' = f (g (na,None,t) l) c in
@@ -335,7 +409,7 @@ let map_constr_with_full_binders g f l cstr = match kind_of_term cstr with
 let fold_constr_with_binders g f n acc c = match kind_of_term c with
   | (Rel _ | Meta _ | Var _   | Sort _ | Const _ | Ind _
     | Construct _) -> acc
-  | Cast (c,t) -> f n (f n acc c) t
+  | Cast (c,_, t) -> f n (f n acc c) t
   | Prod (_,t,c) -> f (g n) (f n acc t) c
   | Lambda (_,t,c) -> f (g n) (f n acc t) c
   | LetIn (_,b,t,c) -> f (g n) (f n (f n acc b) t) c
@@ -359,7 +433,7 @@ let fold_constr_with_binders g f n acc c = match kind_of_term c with
 let iter_constr_with_full_binders g f l c = match kind_of_term c with
   | (Rel _ | Meta _ | Var _   | Sort _ | Const _ | Ind _
     | Construct _) -> ()
-  | Cast (c,t) -> f l c; f l t
+  | Cast (c,_, t) -> f l c; f l t
   | Prod (na,t,c) -> f l t; f (g (na,None,t) l) c
   | Lambda (na,t,c) -> f l t; f (g (na,None,t) l) c
   | LetIn (na,b,t,c) -> f l b; f l t; f (g (na,Some b,t) l) c
@@ -541,10 +615,14 @@ let replace_term = replace_term_gen eq_constr
    bindings is done. The list may contain only negative occurrences
    that will not be substituted. *)
 
+let error_invalid_occurrence l =
+  errorlabstrm ""
+    (str ("Invalid occurrence " ^ plural (List.length l) "number" ^": ") ++ 
+     prlist_with_sep spc int l)
+
 let subst_term_occ_gen locs occ c t =
   let maxocc = List.fold_right max locs 0 in
   let pos = ref occ in
-  let check = ref true in
   let except = List.exists (fun n -> n<0) locs in
   if except & (List.exists (fun n -> n>=0) locs) 
   then error "mixing of positive and negative occurences"
@@ -573,8 +651,8 @@ let subst_term_occ locs c t =
     t
   else 
     let (nbocc,t') = subst_term_occ_gen locs 1 c t in
-    if List.exists (fun o -> o >= nbocc or o <= -nbocc) locs then
-      errorlabstrm "subst_term_occ" (str "Too few occurences");
+    let rest = List.filter (fun o -> o >= nbocc or o <= -nbocc) locs in
+    if rest <> [] then error_invalid_occurrence rest;
     t'
 
 let subst_term_occ_decl locs c (id,bodyopt,typ as d) =
@@ -588,8 +666,8 @@ let subst_term_occ_decl locs c (id,bodyopt,typ as d) =
 	else 
 	  let (nbocc,body') = subst_term_occ_gen locs 1 c body in
 	  let (nbocc',t') = subst_term_occ_gen locs nbocc c typ in
-	  if List.exists (fun o -> o >= nbocc' or o <= -nbocc') locs then
-	    errorlabstrm "subst_term_occ_decl" (str "Too few occurences");
+	  let rest = List.filter (fun o -> o >= nbocc' or o <= -nbocc') locs in
+	  if rest <> [] then error_invalid_occurrence rest;
 	  (id,Some body',t')
 
 
@@ -626,10 +704,10 @@ let hdchar env c =
     | Prod (_,_,c)       -> hdrec (k+1) c
     | Lambda (_,_,c)     -> hdrec (k+1) c
     | LetIn (_,_,_,c)    -> hdrec (k+1) c
-    | Cast (c,_)         -> hdrec k c
+    | Cast (c,_,_)         -> hdrec k c
     | App (f,l)         -> hdrec k f
     | Const kn       ->
-	let c = lowercase_first_char (id_of_label (label kn)) in
+	let c = lowercase_first_char (id_of_label (con_label kn)) in
 	if c = "?" then "y" else c
     | Ind ((kn,i) as x) ->
 	if i=0 then 
@@ -667,8 +745,11 @@ let named_hd env a = function
 
 let named_hd_type env a = named_hd env (body_of_type a)
 
-let prod_name   env (n,a,b) = mkProd (named_hd_type env a n, a, b)
-let lambda_name env (n,a,b) = mkLambda (named_hd_type env a n, a, b)
+let mkProd_name   env (n,a,b) = mkProd (named_hd_type env a n, a, b)
+let mkLambda_name env (n,a,b) = mkLambda (named_hd_type env a n, a, b)
+
+let lambda_name = mkLambda_name
+let prod_name = mkProd_name
 
 let prod_create   env (a,b) = mkProd (named_hd_type env a Anonymous, a, b)
 let lambda_create env (a,b) =  mkLambda (named_hd_type env a Anonymous, a, b)
@@ -714,12 +795,14 @@ let ids_of_rel_context sign =
   Sign.fold_rel_context
     (fun (na,_,_) l -> match na with Name id -> id::l | Anonymous -> l)
     sign ~init:[]
+
 let ids_of_named_context sign =
   Sign.fold_named_context (fun (id,_,_) idl -> id::idl) sign ~init:[]
 
 let ids_of_context env = 
   (ids_of_rel_context (rel_context env))
   @ (ids_of_named_context (named_context env))
+
 
 let names_of_rel_context env =
   List.map (fun (na,_,_) -> na) (rel_context env)
@@ -734,7 +817,6 @@ let rec is_imported_modpath = function
 
 let is_imported_ref = function
   | VarRef _ -> false
-  | ConstRef kn 
   | IndRef (kn,_)
   | ConstructRef ((kn,_),_) 
 (*  | ModTypeRef ln  *) -> 
@@ -742,6 +824,8 @@ let is_imported_ref = function
 (*  | ModRef mp ->
       is_imported_modpath mp
 *)
+  | ConstRef kn ->
+      let (mp,_,_) = repr_con kn in is_imported_modpath mp
 
 let is_global id =
   try 
@@ -751,7 +835,7 @@ let is_global id =
     false
 
 let is_section_variable id =
-  try let _ = Sign.lookup_named id (Global.named_context()) in true
+  try let _ = Global.lookup_named id in true
   with Not_found -> false
 
 let next_global_ident_from allow_secvar id avoid = 
@@ -861,7 +945,7 @@ let eta_eq_constr =
 
 (* iterator on rel context *)
 let process_rel_context f env =
-  let sign = named_context env in
+  let sign = named_context_val env in
   let rels = rel_context env in
   let env0 = reset_with_named_context sign env in
   Sign.fold_rel_context f rels ~init:env0
@@ -933,6 +1017,6 @@ let rec rename_bound_var env l c =
   | Prod (Anonymous,c1,c2) ->
         let env' = push_rel (Anonymous,None,c1) env in
         mkProd (Anonymous, c1, rename_bound_var env' l c2)
-  | Cast (c,t) -> mkCast (rename_bound_var env l c, t)
+  | Cast (c,k,t) -> mkCast (rename_bound_var env l c, k,t)
   | x -> c
 

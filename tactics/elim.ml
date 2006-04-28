@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: elim.ml,v 1.37.2.1 2004/07/16 19:30:53 herbelin Exp $ *)
+(* $Id: elim.ml 7538 2005-11-08 17:14:52Z herbelin $ *)
 
 open Pp
 open Util
@@ -181,7 +181,6 @@ let double_ind h1 h2 gls =
     if abs_i < abs_j then (abs_i,abs_j) else
     if abs_i > abs_j then (abs_j,abs_i) else
       error "Both hypotheses are the same" in
-  let cl = pf_concl gls in 
   (tclTHEN (tclDO abs_i intro)
      (onLastHyp
        	(fun id ->

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: line_oriented_parser.mli,v 1.3.16.1 2004/07/16 19:31:49 herbelin Exp $ i*)
+(*i $Id: line_oriented_parser.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 val line_oriented_channel_to_option: string -> in_channel -> int -> char option
 

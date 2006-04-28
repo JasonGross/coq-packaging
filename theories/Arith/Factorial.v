@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Factorial.v,v 1.5.2.1 2004/07/16 19:31:00 herbelin Exp $ i*)
+(*i $Id: Factorial.v 6338 2004-11-22 09:10:51Z gregoire $ i*)
 
 Require Import Plus.
 Require Import Mult.
@@ -15,7 +15,7 @@ Open Local Scope nat_scope.
 
 (** Factorial *)
 
-Fixpoint fact (n:nat) : nat :=
+Boxed Fixpoint fact (n:nat) : nat :=
   match n with
   | O => 1
   | S n => S n * fact n

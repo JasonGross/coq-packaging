@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Plus.v,v 1.18.2.1 2004/07/16 19:31:00 herbelin Exp $ i*)
+(*i $Id: Plus.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 (** Properties of addition *)
 
@@ -199,4 +199,29 @@ Definition tail_plus n m := plus_acc m n.
 Lemma plus_tail_plus : forall n m, n + m = tail_plus n m.
 unfold tail_plus in |- *; induction n as [| n IHn]; simpl in |- *; auto.
 intro m; rewrite <- IHn; simpl in |- *; auto.
+Qed.
+
+(** Discrimination *)
+
+Lemma succ_plus_discr : forall n m, n <> S (plus m n).
+Proof.
+intros n m; induction n as [|n IHn].
+ discriminate.
+ intro H; apply IHn; apply eq_add_S; rewrite H; rewrite <- plus_n_Sm; 
+   reflexivity.
+Qed.
+
+Lemma n_SSn : forall n, n <> S (S n).
+Proof.
+intro n; exact (succ_plus_discr n 1).
+Qed.
+
+Lemma n_SSSn : forall n, n <> S (S (S n)).
+Proof.
+intro n; exact (succ_plus_discr n 2).
+Qed.
+
+Lemma n_SSSSn : forall n, n <> S (S (S (S n))).
+Proof.
+intro n; exact (succ_plus_discr n 3).
 Qed.

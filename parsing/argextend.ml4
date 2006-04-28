@@ -6,12 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: argextend.ml4,v 1.9.2.4 2005/01/15 14:56:53 herbelin Exp $ *)
+(* $Id: argextend.ml4 7739 2005-12-26 17:08:16Z herbelin $ *)
 
 open Genarg
 open Q_util
 open Q_coqast
-open Ast
 
 let join_loc (deb1,_) (_,fin2) = (deb1,fin2)
 let loc = Util.dummy_loc
@@ -25,16 +24,15 @@ let rec make_rawwit loc = function
   | PreIdentArgType -> <:expr< Genarg.rawwit_pre_ident >>
   | IntroPatternArgType -> <:expr< Genarg.rawwit_intro_pattern >>
   | IdentArgType -> <:expr< Genarg.rawwit_ident >>
-  | HypArgType -> <:expr< Genarg.rawwit_var >>
+  | VarArgType -> <:expr< Genarg.rawwit_var >>
   | RefArgType -> <:expr< Genarg.rawwit_ref >>
   | SortArgType -> <:expr< Genarg.rawwit_sort >>
   | ConstrArgType -> <:expr< Genarg.rawwit_constr >>
   | ConstrMayEvalArgType -> <:expr< Genarg.rawwit_constr_may_eval >>
   | QuantHypArgType -> <:expr< Genarg.rawwit_quant_hyp >>
-  | TacticArgType -> <:expr< Genarg.rawwit_tactic >>
+  | TacticArgType n -> <:expr< Genarg.rawwit_tactic $mlexpr_of_int n$ >>
   | RedExprArgType -> <:expr< Genarg.rawwit_red_expr >>
-  | OpenConstrArgType -> <:expr< Genarg.rawwit_open_constr >>
-  | CastedOpenConstrArgType -> <:expr< Genarg.rawwit_casted_open_constr >>
+  | OpenConstrArgType b -> <:expr< Genarg.rawwit_open_constr_gen $mlexpr_of_bool b$ >>
   | ConstrWithBindingsArgType -> <:expr< Genarg.rawwit_constr_with_bindings >>
   | BindingsArgType -> <:expr< Genarg.rawwit_bindings >>
   | List0ArgType t -> <:expr< Genarg.wit_list0 $make_rawwit loc t$ >>
@@ -52,16 +50,15 @@ let rec make_globwit loc = function
   | PreIdentArgType -> <:expr< Genarg.globwit_pre_ident >>
   | IntroPatternArgType -> <:expr< Genarg.globwit_intro_pattern >>
   | IdentArgType -> <:expr< Genarg.globwit_ident >>
-  | HypArgType -> <:expr< Genarg.globwit_var >>
+  | VarArgType -> <:expr< Genarg.globwit_var >>
   | RefArgType -> <:expr< Genarg.globwit_ref >>
   | QuantHypArgType -> <:expr< Genarg.globwit_quant_hyp >>
   | SortArgType -> <:expr< Genarg.globwit_sort >>
   | ConstrArgType -> <:expr< Genarg.globwit_constr >>
   | ConstrMayEvalArgType -> <:expr< Genarg.globwit_constr_may_eval >>
-  | TacticArgType -> <:expr< Genarg.globwit_tactic >>
+  | TacticArgType n -> <:expr< Genarg.globwit_tactic  $mlexpr_of_int n$ >>
   | RedExprArgType -> <:expr< Genarg.globwit_red_expr >>
-  | OpenConstrArgType -> <:expr< Genarg.globwit_open_constr >>
-  | CastedOpenConstrArgType -> <:expr< Genarg.globwit_casted_open_constr >>
+  | OpenConstrArgType b -> <:expr< Genarg.globwit_open_constr_gen $mlexpr_of_bool b$ >>
   | ConstrWithBindingsArgType -> <:expr< Genarg.globwit_constr_with_bindings >>
   | BindingsArgType -> <:expr< Genarg.globwit_bindings >>
   | List0ArgType t -> <:expr< Genarg.wit_list0 $make_globwit loc t$ >>
@@ -79,16 +76,15 @@ let rec make_wit loc = function
   | PreIdentArgType -> <:expr< Genarg.wit_pre_ident >>
   | IntroPatternArgType -> <:expr< Genarg.wit_intro_pattern >>
   | IdentArgType -> <:expr< Genarg.wit_ident >>
-  | HypArgType -> <:expr< Genarg.wit_var >>
+  | VarArgType -> <:expr< Genarg.wit_var >>
   | RefArgType -> <:expr< Genarg.wit_ref >>
   | QuantHypArgType -> <:expr< Genarg.wit_quant_hyp >>
   | SortArgType -> <:expr< Genarg.wit_sort >>
   | ConstrArgType -> <:expr< Genarg.wit_constr >>
   | ConstrMayEvalArgType -> <:expr< Genarg.wit_constr_may_eval >>
-  | TacticArgType -> <:expr< Genarg.wit_tactic >>
+  | TacticArgType n -> <:expr< Genarg.wit_tactic $mlexpr_of_int n$ >>
   | RedExprArgType -> <:expr< Genarg.wit_red_expr >>
-  | OpenConstrArgType -> <:expr< Genarg.wit_open_constr >>
-  | CastedOpenConstrArgType -> <:expr< Genarg.wit_casted_open_constr >>
+  | OpenConstrArgType b -> <:expr< Genarg.wit_open_constr_gen $mlexpr_of_bool b$ >>
   | ConstrWithBindingsArgType -> <:expr< Genarg.wit_constr_with_bindings >>
   | BindingsArgType -> <:expr< Genarg.wit_bindings >>
   | List0ArgType t -> <:expr< Genarg.wit_list0 $make_wit loc t$ >>
@@ -105,7 +101,8 @@ let make_act loc act pil =
     | Some (p, t) :: tl ->
 	<:expr<
           Gramext.action 
-            (fun $lid:p$ -> let _ = in_gen $make_rawwit loc t$ $lid:p$ in $make tl$)
+            (fun $lid:p$ ->
+               let _ = Genarg.in_gen $make_rawwit loc t$ $lid:p$ in $make tl$)
         >> in
   make (List.rev pil)
 
@@ -113,22 +110,34 @@ let make_rule loc (prods,act) =
   let (symbs,pil) = List.split prods in
   <:expr< ($mlexpr_of_list (fun x -> x) symbs$,$make_act loc act pil$) >>
 
-let declare_tactic_argument for_v8 loc s typ pr f g h rawtyppr globtyppr cl =
-  let interp = match f with
-    | None -> <:expr< Tacinterp.interp_genarg >>
-    | Some f -> <:expr< $lid:f$>> in
-  let glob = match g with
-    | None -> <:expr< Tacinterp.intern_genarg >>
-    | Some f -> <:expr< $lid:f$>> in
-  let substitute = match h with
-    | None -> <:expr< Tacinterp.subst_genarg >>
-    | Some f -> <:expr< $lid:f$>> in
+let declare_tactic_argument loc s typ pr f g h rawtyppr globtyppr cl =
   let rawtyp, rawpr = match rawtyppr with
     | None -> typ,pr
     | Some (t,p) -> t,p in
   let globtyp, globpr = match globtyppr with
     | None -> typ,pr
     | Some (t,p) -> t,p in
+  let glob = match g with
+    | None ->
+	<:expr< fun e x ->
+          out_gen $make_globwit loc typ$
+            (Tacinterp.intern_genarg e
+               (Genarg.in_gen $make_rawwit loc rawtyp$ x)) >>
+    | Some f -> <:expr< $lid:f$>> in
+  let interp = match f with
+    | None -> 
+	<:expr< fun ist gl x ->
+          out_gen $make_wit loc typ$
+            (Tacinterp.interp_genarg ist gl
+               (Genarg.in_gen $make_globwit loc globtyp$ x)) >>
+    | Some f -> <:expr< $lid:f$>> in
+  let substitute = match h with
+    | None -> 
+	<:expr< fun s x ->
+          out_gen $make_globwit loc globtyp$
+	    (Tacinterp.subst_genarg s
+               (Genarg.in_gen $make_globwit loc globtyp$ x)) >>
+    | Some f -> <:expr< $lid:f$>> in
   let se = mlexpr_of_string s in
   let wit = <:expr< $lid:"wit_"^s$ >> in
   let rawwit = <:expr< $lid:"rawwit_"^s$ >> in
@@ -141,36 +150,22 @@ let declare_tactic_argument for_v8 loc s typ pr f g h rawtyppr globtyppr cl =
       value $lid:s$ = Pcoq.create_generic_entry $se$ $rawwit$;
       Tacinterp.add_interp_genarg $se$
         ((fun e x ->
-          (in_gen $globwit$
-             (out_gen $make_globwit loc typ$
-          	($glob$ e
-         	  (in_gen $make_rawwit loc rawtyp$
-	             (out_gen $rawwit$ x)))))),
+          (Genarg.in_gen $globwit$ ($glob$ e (out_gen $rawwit$ x)))),
         (fun ist gl x ->
-          (in_gen $wit$
-             (out_gen $make_wit loc typ$
-          	($interp$ ist gl
-         	  (in_gen $make_globwit loc rawtyp$
-	             (out_gen $globwit$ x)))))),
+          (Genarg.in_gen $wit$ ($interp$ ist gl (out_gen $globwit$ x)))),
         (fun subst x ->
-          (in_gen $globwit$
-             (out_gen $make_globwit loc typ$
-          	($substitute$ subst
-         	  (in_gen $make_globwit loc rawtyp$
-	             (out_gen $globwit$ x)))))));
+          (Genarg.in_gen $globwit$ ($substitute$ subst (out_gen $globwit$ x)))));
       Pcoq.Gram.extend ($lid:s$ : Pcoq.Gram.Entry.e 'a) None 
         [(None, None, $rules$)];
       Pptactic.declare_extra_genarg_pprule
-        $mlexpr_of_bool for_v8$
         ($rawwit$, $lid:rawpr$)
         ($globwit$, $lid:globpr$)
         ($wit$, $lid:pr$);
     end
   >>
 
-let declare_vernac_argument for_v8 loc s cl =
+let declare_vernac_argument loc s cl =
   let se = mlexpr_of_string s in
-  let typ = ExtraArgType s in
   let rawwit = <:expr< $lid:"rawwit_"^s$ >> in
   let rules = mlexpr_of_list (make_rule loc) (List.rev cl) in
   <:str_item<
@@ -238,40 +233,17 @@ EXTEND
         "END" ->
 	  if String.capitalize s = s then
 	    failwith "Argument entry names must be lowercase";
-         declare_tactic_argument true loc s typ pr f g h rawtyppr globtyppr l
+         declare_tactic_argument loc s typ pr f g h rawtyppr globtyppr l
       | "VERNAC"; "ARGUMENT"; "EXTEND"; s = [ UIDENT | LIDENT ];
         OPT "|"; l = LIST1 argrule SEP "|";
         "END" ->
 	  if String.capitalize s = s then
 	    failwith "Argument entry names must be lowercase";
-         declare_vernac_argument true loc s l
-      | "V7"; "ARGUMENT"; "EXTEND"; s = [ UIDENT | LIDENT ];
-        "TYPED"; "AS"; typ = argtype;
-        "PRINTED"; "BY"; pr = LIDENT;
-        f = OPT [ "INTERPRETED"; "BY"; f = LIDENT -> f ];
-        g = OPT [ "GLOBALIZED"; "BY"; f = LIDENT -> f ];
-        h = OPT [ "SUBSTITUTED"; "BY"; f = LIDENT -> f ];
-        rawtyppr =
-          OPT [ "GLOB_TYPED"; "AS"; t = argtype; 
-                "GLOB_PRINTED"; "BY"; pr = LIDENT -> (t,pr) ];
-        globtyppr =
-          OPT [ "GLOB_TYPED"; "AS"; t = argtype; 
-                "GLOB_PRINTED"; "BY"; pr = LIDENT -> (t,pr) ];
-        OPT "|"; l = LIST1 argrule SEP "|";
-        "END" ->
-	  if String.capitalize s = s then
-	    failwith "Argument entry names must be lowercase";
-         declare_tactic_argument false loc s typ pr f g h rawtyppr globtyppr l
-      | "V7"; "VERNAC"; "ARGUMENT"; "EXTEND"; s = [ UIDENT | LIDENT ];
-        OPT "|"; l = LIST1 argrule SEP "|";
-        "END" ->
-	  if String.capitalize s = s then
-	    failwith "Argument entry names must be lowercase";
-         declare_vernac_argument false loc s l ] ]
+         declare_vernac_argument loc s l ] ]
   ;
   argtype:
-    [ "2" RIGHTA
-      [ e1 = argtype; "*"; e2 = NEXT -> PairArgType (e1, e2) ]
+    [ "2" 
+      [ e1 = argtype; "*"; e2 = argtype -> PairArgType (e1, e2) ]
     | "1"
       [ e = argtype; LIDENT "list" -> List0ArgType e
       | e = argtype; LIDENT "option" -> OptArgType e ]
@@ -288,7 +260,8 @@ EXTEND
       | s = STRING ->
 	  if String.length s > 0 && Util.is_letter s.[0] then
 	    Pcoq.lexer.Token.using ("", s);
-        (<:expr< (Gramext.Stoken (Extend.terminal $str:s$)) >>, None)
+        (<:expr< (Gramext.Stoken (Lexer.terminal $str:s$)) >>, None)
     ] ]
   ;
   END
+

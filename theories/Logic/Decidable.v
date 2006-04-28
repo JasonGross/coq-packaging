@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i 	$Id: Decidable.v,v 1.5.2.1 2004/07/16 19:31:06 herbelin Exp $	 i*)
+(*i 	$Id: Decidable.v 5920 2004-07-16 20:01:26Z herbelin $	 i*)
 
 (** Properties of decidable propositions *)
 

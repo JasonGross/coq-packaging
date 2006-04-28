@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: himsg.mli,v 1.13.14.1 2004/07/16 19:31:49 herbelin Exp $ i*)
+(*i $Id: himsg.mli 8003 2006-02-07 22:11:50Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -15,6 +15,7 @@ open Indtypes
 open Environ
 open Type_errors
 open Pretype_errors
+open Indrec
 open Cases
 open Logic
 (*i*)
@@ -27,7 +28,12 @@ val explain_pretype_error : env -> pretype_error -> std_ppcmds
 
 val explain_inductive_error : inductive_error -> std_ppcmds
 
+val explain_recursion_scheme_error : recursion_scheme_error -> std_ppcmds
+
 val explain_refiner_error : refiner_error -> std_ppcmds
 
 val explain_pattern_matching_error :
   env -> pattern_matching_error -> std_ppcmds
+
+val explain_reduction_tactic_error :
+  Tacred.reduction_tactic_error -> std_ppcmds

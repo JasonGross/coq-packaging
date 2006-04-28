@@ -6,14 +6,8 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pretty.mli,v 1.1.2.1 2004/07/16 19:31:47 herbelin Exp $ i*)
+(*i $Id: pretty.mli 8617 2006-03-08 10:47:12Z notin $ i*)
 
 open Index
 
-type file =
-  | Vernac_file of string * coq_module
-  | Latex_file of string
-
-val gallina : bool ref
-
-val produce_document : file list -> unit
+val coq_file : string -> Cdglobals.coq_module -> unit

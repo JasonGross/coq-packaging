@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: Correctness.v,v 1.6.2.1 2004/07/16 19:29:59 herbelin Exp $ *)
+(* $Id: Correctness.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 (* Correctness is base on the tactic Refine (developped on purpose) *)
 

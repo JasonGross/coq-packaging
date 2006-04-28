@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: NewtonInt.v,v 1.11.2.1 2004/07/16 19:31:10 herbelin Exp $ i*)
+(*i $Id: NewtonInt.v 8670 2006-03-28 22:16:14Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -128,7 +128,8 @@ Lemma NewtonInt_P5 :
    Newton_integrable f a b ->
    Newton_integrable g a b ->
    Newton_integrable (fun x:R => l * f x + g x) a b.
-unfold Newton_integrable in |- *; intros; elim X; intros; elim X0; intros;
+unfold Newton_integrable in |- *; intros f g l a b X X0;
+ elim X; intros; elim X0; intros;
  exists (fun y:R => l * x y + x0 y).
 elim p; intro.
 elim p0; intro.

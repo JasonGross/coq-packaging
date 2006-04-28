@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: safe_typing.ml,v 1.76.2.2 2005/11/23 14:46:08 barras Exp $ *)
+(* $Id: safe_typing.ml 7602 2005-11-23 15:10:16Z barras $ *)
 
 open Util
 open Names
@@ -132,15 +132,15 @@ let hcons_constant_body cb =
 
 let add_constant dir l decl senv =
   check_label l senv.labset;
-  let cb = match decl with 
-      ConstantEntry ce -> translate_constant senv.env ce
+  let kn = make_con senv.modinfo.modpath dir l in 
+  let cb = 
+    match decl with 
+    | ConstantEntry ce -> translate_constant senv.env kn ce
     | GlobalRecipe r ->
-        let cb = translate_recipe senv.env r in
-        if dir = empty_dirpath then hcons_constant_body cb else cb
+	let cb = translate_recipe senv.env kn r in
+	if dir = empty_dirpath then hcons_constant_body cb else cb
   in
-(*  let cb = if dir = empty_dirpath then hcons_constant_body cb else cb in*)
   let env' = Environ.add_constraints cb.const_constraints senv.env in
-  let kn = make_kn senv.modinfo.modpath dir l in
   let env'' = Environ.add_constant kn cb env' in
   kn, { old = senv.old;
 	env = env'';
@@ -417,7 +417,6 @@ let check_engagement env c =
 let set_engagement c senv =
   {senv with env = Environ.set_engagement c senv.env}
 
-
 (* Libraries = Compiled modules *)
 
 type compiled_library = 
@@ -517,7 +516,7 @@ let import (dp,mb,depends,engmt) digest senv =
 	  loads = (mp,mb)::senv.loads }
 
 
-(** Remove the body of opaque constants in modules *)
+(* Remove the body of opaque constants in modules *)
  
 let rec lighten_module mb =
   { mb with

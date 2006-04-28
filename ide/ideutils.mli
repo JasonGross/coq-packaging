@@ -6,10 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ideutils.mli,v 1.6.2.4 2005/11/25 17:18:28 barras Exp $ i*)
+(*i $Id: ideutils.mli 7608 2005-11-25 17:09:25Z barras $ i*)
 
 val async : ('a -> unit) -> 'a -> unit
 val sync  : ('a -> 'b) -> 'a -> 'b
+
+(* avoid running two instances of a function concurrently *)
+val mutex : string -> ('a -> unit) -> 'a -> unit
+
 val browse : (string -> unit) -> string -> unit
 val browse_keyword : (string -> unit) -> string -> unit
 val byte_offset_to_char_offset : string -> int -> int
@@ -32,7 +36,6 @@ val prerr_endline : string -> unit
 val prerr_string : string -> unit
 val print_id : 'a -> unit
 
-val process_pending : unit -> unit
 val read_stdout : unit -> string
 val revert_timer : GMain.Timeout.id option ref
 val auto_save_timer : GMain.Timeout.id option ref

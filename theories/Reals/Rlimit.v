@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rlimit.v,v 1.23.2.1 2004/07/16 19:31:13 herbelin Exp $ i*)
+(*i $Id: Rlimit.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (*********************************************************)
 (*           Definition of the limit                     *)

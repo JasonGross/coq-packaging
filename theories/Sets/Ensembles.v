@@ -24,7 +24,7 @@
 (* in Summer 1995. Several developments by E. Ledinot were an inspiration.  *)
 (****************************************************************************)
 
-(*i $Id: Ensembles.v,v 1.7.2.1 2004/07/16 19:31:17 herbelin Exp $ i*)
+(*i $Id: Ensembles.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 Section Ensembles.
 Variable U : Type.

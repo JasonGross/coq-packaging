@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: inductive.mli,v 1.57.8.2 2005/01/21 16:41:49 herbelin Exp $ i*)
+(*i $Id: inductive.mli 8673 2006-03-29 21:21:52Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -28,24 +28,24 @@ val find_rectype     : env -> types -> inductive * constr list
 val find_inductive   : env -> types -> inductive * constr list
 val find_coinductive : env -> types -> inductive * constr list
 
+type mind_specif = mutual_inductive_body * one_inductive_body
+
 (*s Fetching information in the environment about an inductive type.
     Raises [Not_found] if the inductive type is not found. *)
-val lookup_mind_specif :
-  env -> inductive -> mutual_inductive_body * one_inductive_body
+val lookup_mind_specif : env -> inductive -> mind_specif
 
 (*s Functions to build standard types related to inductive *)
 
-val type_of_inductive    : env -> inductive -> types
+val type_of_inductive : mind_specif -> types
 
 (* Return type as quoted by the user *)
-val type_of_constructor  : env -> constructor -> types
+val type_of_constructor : constructor -> mind_specif -> types
 
 (* Return constructor types in normal form *)
-val arities_of_constructors : env -> inductive -> types array
+val arities_of_constructors : inductive -> mind_specif -> types array
 
 (* Transforms inductive specification into types (in nf) *)
-val arities_of_specif : mutual_inductive -> 
-  mutual_inductive_body * one_inductive_body -> types array 
+val arities_of_specif : mutual_inductive -> mind_specif -> types array 
 
 (* [type_case_branches env (I,args) (p:A) c] computes useful types
    about the following Cases expression:
@@ -69,3 +69,17 @@ val scrape_mind : env -> mutual_inductive -> mutual_inductive
 (*s Guard conditions for fix and cofix-points. *)
 val check_fix : env -> fixpoint -> unit
 val check_cofix : env -> cofixpoint -> unit
+
+(*s Support for sort-polymorphic inductive types *)
+
+val constructor_instances : env -> mind_specif -> inductive -> 
+  constr array -> env * types array array * universe array
+
+val set_inductive_level : env -> sorts -> types -> types
+
+val find_inductive_level : env -> mind_specif -> inductive -> 
+  universe array -> universe array -> sorts
+
+val is_small_inductive : mind_specif -> bool
+
+val max_inductive_sort : sorts array -> universe

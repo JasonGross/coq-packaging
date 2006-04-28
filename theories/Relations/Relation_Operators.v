@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Relation_Operators.v,v 1.8.2.1 2004/07/16 19:31:16 herbelin Exp $ i*)
+(*i $Id: Relation_Operators.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 (****************************************************************************)
 (*                      Bruno Barras, Cristina Cornes                       *)
@@ -22,31 +22,31 @@ Require Import List.
 (** Some operators to build relations *)
 
 Section Transitive_Closure.
-  Variable A : Set.
+  Variable A : Type.
   Variable R : relation A.
 
-  Inductive clos_trans : A -> A -> Prop :=
-    | t_step : forall x y:A, R x y -> clos_trans x y
+  Inductive clos_trans (x: A) : A -> Prop :=
+    | t_step : forall y:A, R x y -> clos_trans x y
     | t_trans :
-        forall x y z:A, clos_trans x y -> clos_trans y z -> clos_trans x z.
+        forall y z:A, clos_trans x y -> clos_trans y z -> clos_trans x z.
 End Transitive_Closure.
 
 
 Section Reflexive_Transitive_Closure.
-  Variable A : Set.
+  Variable A : Type.
   Variable R : relation A.
 
-  Inductive clos_refl_trans : relation A :=
-    | rt_step : forall x y:A, R x y -> clos_refl_trans x y
-    | rt_refl : forall x:A, clos_refl_trans x x
+  Inductive clos_refl_trans (x:A) : A -> Prop:=
+    | rt_step : forall y:A, R x y -> clos_refl_trans x y
+    | rt_refl : clos_refl_trans x x
     | rt_trans :
-        forall x y z:A,
+        forall y z:A,
           clos_refl_trans x y -> clos_refl_trans y z -> clos_refl_trans x z.
 End Reflexive_Transitive_Closure.
 
 
 Section Reflexive_Symetric_Transitive_Closure.
-  Variable A : Set.
+  Variable A : Type.
   Variable R : relation A.
 
   Inductive clos_refl_sym_trans : relation A :=
@@ -62,7 +62,7 @@ End Reflexive_Symetric_Transitive_Closure.
 
 
 Section Transposee.
-  Variable A : Set.
+  Variable A : Type.
   Variable R : relation A.
 
   Definition transp (x y:A) := R y x.
@@ -70,7 +70,7 @@ End Transposee.
 
 
 Section Union.
-  Variable A : Set.
+  Variable A : Type.
   Variables R1 R2 : relation A.
 
   Definition union (x y:A) := R1 x y \/ R2 x y.

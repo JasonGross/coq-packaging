@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: reserve.ml,v 1.10.2.1 2004/07/16 19:30:22 herbelin Exp $ i*)
+(*i $Id: reserve.ml 7732 2005-12-26 13:51:24Z herbelin $ i*)
 
 (* Reserved names *)
 
@@ -57,14 +57,11 @@ let rec unloc = function
   | RLambda (_,na,ty,c) -> RLambda (dummy_loc,na,unloc ty,unloc c)
   | RProd (_,na,ty,c) -> RProd (dummy_loc,na,unloc ty,unloc c)
   | RLetIn (_,na,b,c) -> RLetIn (dummy_loc,na,unloc b,unloc c)
-  | RCases (_,(tyopt,rtntypopt),tml,pl) ->
+  | RCases (_,rtntypopt,tml,pl) ->
       RCases (dummy_loc,
-        (option_app unloc tyopt,ref (option_app unloc !rtntypopt)),
+        (option_app unloc rtntypopt),
 	List.map (fun (tm,x) -> (unloc tm,x)) tml,
         List.map (fun (_,idl,p,c) -> (dummy_loc,idl,p,unloc c)) pl)
-  | ROrderedCase (_,b,tyopt,tm,bv,x) ->
-      ROrderedCase 
-      (dummy_loc,b,option_app unloc tyopt,unloc tm, Array.map unloc bv,x)
   | RLetTuple (_,nal,(na,po),b,c) ->
       RLetTuple (dummy_loc,nal,(na,option_app unloc po),unloc b,unloc c)
   | RIf (_,c,(na,po),b1,b2) ->
@@ -76,7 +73,7 @@ let rec unloc = function
               bl,
             Array.map unloc tyl,
             Array.map unloc bv)
-  | RCast (_,c,t) -> RCast (dummy_loc,unloc c,unloc t)
+  | RCast (_,c,k,t) -> RCast (dummy_loc,unloc c,k,unloc t)
   | RSort (_,x) -> RSort (dummy_loc,x)
   | RHole (_,x)  -> RHole (dummy_loc,x)
   | RRef (_,x) -> RRef (dummy_loc,x)
@@ -86,10 +83,9 @@ let rec unloc = function
 
 let anonymize_if_reserved na t = match na with
   | Name id as na ->
-      if !Options.v7 & id = id_of_string "_" then t else
       (try 
 	if unloc t = find_reserved_type id
-	then RHole (dummy_loc,BinderType na)
+	then RHole (dummy_loc,Evd.BinderType na)
 	else t
       with Not_found -> t)
   | Anonymous -> t

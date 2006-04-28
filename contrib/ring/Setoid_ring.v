@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Setoid_ring.v,v 1.4.2.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: Setoid_ring.v 5920 2004-07-16 20:01:26Z herbelin $ *)
 
 Require Export Setoid_ring_theory.
 Require Export Quote.

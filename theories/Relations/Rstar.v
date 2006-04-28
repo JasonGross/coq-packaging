@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rstar.v,v 1.8.2.1 2004/07/16 19:31:16 herbelin Exp $ i*)
+(*i $Id: Rstar.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 (** Properties of a binary relation [R] on type [A] *)
 

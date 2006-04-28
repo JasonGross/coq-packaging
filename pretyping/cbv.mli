@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cbv.mli,v 1.6.14.1 2004/07/16 19:30:44 herbelin Exp $ i*)
+(*i $Id: cbv.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
 
 (*i*)
 open Names

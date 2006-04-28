@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacmach.ml,v 1.61.2.1 2004/07/16 19:30:50 herbelin Exp $ *)
+(* $Id: tacmach.ml 7682 2005-12-21 15:06:11Z herbelin $ *)
 
 open Util
 open Names
@@ -14,11 +14,11 @@ open Nameops
 open Sign
 open Term
 open Termops
-open Instantiate
 open Environ
 open Reductionops
 open Evd
 open Typing
+open Redexpr
 open Tacred
 open Proof_trees
 open Proof_type
@@ -32,7 +32,7 @@ let re_sig it gc = { it = it; sigma = gc }
 (* Operations for handling terms under a local typing context *)
 (**************************************************************)
 
-type 'a sigma   = 'a Proof_type.sigma;;
+type 'a sigma   = 'a Evd.sigma;;
 type validation = Proof_type.validation;;
 type tactic     = Proof_type.tactic;;
 
@@ -40,10 +40,10 @@ let unpackage = Refiner.unpackage
 let repackage = Refiner.repackage
 let apply_sig_tac = Refiner.apply_sig_tac
 
-let sig_it     = Refiner.sig_it
-let project    = Refiner.sig_sig
-let pf_env gls = Global.env_of_context (sig_it gls).evar_hyps
-let pf_hyps gls = (sig_it gls).evar_hyps
+let sig_it   = Refiner.sig_it
+let project  = Refiner.project
+let pf_env   = Refiner.pf_env
+let pf_hyps  = Refiner.pf_hyps
 
 let pf_concl gls = (sig_it gls).evar_concl
 let pf_hyps_types gls  =
@@ -79,10 +79,6 @@ let pf_interp_constr gls c =
   let evc = project gls in 
   Constrintern.interp_constr evc (pf_env gls) c
 
-let pf_interp_openconstr gls c =
-  let evc = project gls in 
-  Constrintern.interp_openconstr evc (pf_env gls) c
-
 let pf_interp_type gls c =
   let evc = project gls in 
   Constrintern.interp_type evc (pf_env gls) c
@@ -91,12 +87,8 @@ let pf_global gls id = Constrintern.construct_reference (pf_hyps gls) id
 
 let pf_parse_const gls = compose (pf_global gls) id_of_string
 
-let pf_execute gls =
-  let evc = project gls in 
-  Typing.unsafe_machine (pf_env gls) evc
-
-let pf_reduction_of_redexp gls re c = 
-  reduction_of_redexp re (pf_env gls) (project gls) c 
+let pf_reduction_of_red_expr gls re c = 
+  (fst (reduction_of_red_expr re)) (pf_env gls) (project gls) c 
 
 let pf_apply f gls = f (pf_env gls) (project gls)
 let pf_reduce = pf_apply
@@ -119,7 +111,8 @@ let pf_reduce_to_atomic_ind     = pf_reduce reduce_to_atomic_ind
 
 let hnf_type_of gls = compose (pf_whd_betadeltaiota gls) (pf_type_of gls)
 
-let pf_check_type gls c1 c2 = ignore (pf_type_of gls (mkCast (c1, c2)))
+let pf_check_type gls c1 c2 = 
+  ignore (pf_type_of gls (mkCast (c1, DEFAULTcast, c2)))
 
 (************************************)
 (* Tactics handling a list of goals *)
@@ -194,8 +187,8 @@ let internal_cut_rev_no_check id t gl =
 let refine_no_check c gl = 
   refiner (Prim (Refine c)) gl
 
-let convert_concl_no_check c gl = 
-  refiner (Prim (Convert_concl c)) gl
+let convert_concl_no_check c sty gl = 
+  refiner (Prim (Convert_concl (c,sty))) gl
 
 let convert_hyp_no_check d gl =
   refiner (Prim (Convert_hyp d)) gl
@@ -221,9 +214,11 @@ let mutual_cofix f others gl =
   with_check (refiner (Prim (Cofix (f,others)))) gl
     
 let rename_bound_var_goal gls =
-  let { evar_hyps = sign; evar_concl = cl } as gl = sig_it gls in 
-  let ids = ids_of_named_context sign in
-  convert_concl_no_check (rename_bound_var (Global.env()) ids cl) gls
+  let { evar_hyps = sign; evar_concl = cl } = sig_it gls in 
+  let ids = ids_of_named_context (named_context_of_val sign) in
+  convert_concl_no_check 
+    (rename_bound_var (Global.env()) ids cl) DEFAULTcast gls 
+
 
 
 (* Versions with consistency checks *)
@@ -233,7 +228,7 @@ let intro_replacing id = with_check (intro_replacing_no_check id)
 let internal_cut d t     = with_check (internal_cut_no_check d t)
 let internal_cut_rev d t = with_check (internal_cut_rev_no_check d t)
 let refine c           = with_check (refine_no_check c)
-let convert_concl d    = with_check (convert_concl_no_check d)
+let convert_concl d sty = with_check (convert_concl_no_check d sty)
 let convert_hyp d      = with_check (convert_hyp_no_check d)
 let thin l             = with_check (thin_no_check l)
 let thin_body c        = with_check (thin_body_no_check c)
@@ -243,7 +238,6 @@ let rename_hyp id id'  = with_check (rename_hyp_no_check id id')
 (* Pretty-printers *)
 
 open Pp
-open Printer
 open Tacexpr
 open Rawterm
 
@@ -252,9 +246,9 @@ let rec pr_list f = function
   | a::l1 -> (f a) ++ pr_list f l1
 
 let pr_gls gls =
-  hov 0 (pr_decls (sig_sig gls) ++ fnl () ++ pr_seq (sig_it gls))
+  hov 0 (pr_evar_map (sig_sig gls) ++ fnl () ++ db_pr_goal (sig_it gls))
 
 let pr_glls glls =
-  hov 0 (pr_decls (sig_sig glls) ++ fnl () ++
-         prlist_with_sep pr_fnl pr_seq (sig_it glls))
+  hov 0 (pr_evar_map (sig_sig glls) ++ fnl () ++
+         prlist_with_sep pr_fnl db_pr_goal (sig_it glls))
   

@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: field.ml4,v 1.33.2.1 2004/07/16 19:30:09 herbelin Exp $ *)
+(* $Id: field.ml4 7837 2006-01-11 09:47:32Z herbelin $ *)
 
 open Names
 open Pp
@@ -21,6 +21,7 @@ open Util
 open Vernacinterp
 open Vernacexpr
 open Tacexpr
+open Mod_subst
 
 (* Interpretation of constr's *)
 let constr_of c = Constrintern.interp_constr Evd.empty (Global.env()) c
@@ -43,7 +44,7 @@ let lookup env typ =
   with Not_found -> 
     errorlabstrm "field"
       (str "No field is declared for type" ++ spc() ++
-      Printer.prterm_env env typ)
+      Printer.pr_lconstr_env env typ)
 
 let _ = 
   let init () = th_tab := Gmap.empty in
@@ -113,8 +114,8 @@ END
 *)
 
 (* For the translator, otherwise the code above is OK *)
-open Ppconstrnew
-let pp_minus_div_arg _prc _prt (omin,odiv) = 
+open Ppconstr
+let pp_minus_div_arg _prc _prlc _prt (omin,odiv) = 
   if omin=None && odiv=None then mt() else
     spc() ++ str "with" ++
     pr_opt (fun c -> str "minus := " ++ _prc c) omin ++
@@ -149,8 +150,7 @@ END
 
 (* Guesses the type and calls field_gen with the right theory *)
 let field g =
-  Library.check_required_library ["Coq";"field";"Field"];
-  let ist = { lfun=[]; debug=get_debug () } in
+  Coqlib.check_required_library ["Coq";"field";"Field"];
   let typ = 
     match Hipattern.match_with_equation (pf_concl g) with
       | Some (eq,t::args) when eq = (Coqlib.build_coq_eq_data()).Coqlib.eq -> t
@@ -172,7 +172,7 @@ let guess_theory env evc = function
 
 (* Guesses the type and calls Field_Term with the right theory *)
 let field_term l g =
-  Library.check_required_library ["Coq";"field";"Field"];
+  Coqlib.check_required_library ["Coq";"field";"Field"];
   let env = (pf_env g)
   and evc = (project g) in
   let th = valueIn (VConstr (guess_theory env evc l))
@@ -184,7 +184,7 @@ let field_term l g =
 
 (* Declaration of Field *)
 
-TACTIC EXTEND Field
-| [ "Field" ] -> [ field ]
-| [ "Field" ne_constr_list(l) ] -> [ field_term l ]
+TACTIC EXTEND field
+| [ "field" ] -> [ field ]
+| [ "field" ne_constr_list(l) ] -> [ field_term l ]
 END

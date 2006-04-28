@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: usage.ml,v 1.15.2.2 2004/09/03 14:35:26 herbelin Exp $ *)
+(* $Id: usage.ml 6053 2004-09-03 14:33:35Z herbelin $ *)
 
 let version () =
   Printf.printf "The Coq Proof Assistant, version %s (%s)\n"

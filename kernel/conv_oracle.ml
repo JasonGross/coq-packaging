@@ -6,18 +6,17 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: conv_oracle.ml,v 1.2.8.2 2004/07/16 19:30:24 herbelin Exp $ *)
+(* $Id: conv_oracle.ml 6303 2004-11-16 12:37:40Z sacerdot $ *)
 
 open Names
-open Closure
 
 (* Opaque constants *)
-let cst_transp = ref KNpred.full
+let cst_transp = ref Cpred.full
 
-let set_opaque_const kn = cst_transp := KNpred.remove kn !cst_transp
-let set_transparent_const kn = cst_transp := KNpred.add kn !cst_transp
+let set_opaque_const kn = cst_transp := Cpred.remove kn !cst_transp
+let set_transparent_const kn = cst_transp := Cpred.add kn !cst_transp
 
-let is_opaque_cst kn = not (KNpred.mem kn !cst_transp)
+let is_opaque_cst kn = not (Cpred.mem kn !cst_transp)
 
 (* Opaque variables *)
 let var_transp = ref Idpred.full
@@ -31,13 +30,13 @@ let is_opaque_var kn = not (Idpred.mem kn !var_transp)
 let is_opaque = function
   | ConstKey cst -> is_opaque_cst cst
   | VarKey id -> is_opaque_var id
-  | FarRelKey _ -> false
+  | RelKey _ -> false
 
 (* Unfold the first only if it is not opaque and the second is opaque *)
 let oracle_order k1 k2 = is_opaque k2 & not (is_opaque k1)
 
 (* summary operations *)
-
-let init() = (cst_transp := KNpred.full; var_transp := Idpred.full)
+type transparent_state = Idpred.t * Cpred.t
+let init() = (cst_transp := Cpred.full; var_transp := Idpred.full)
 let freeze () = (!var_transp, !cst_transp)
 let unfreeze (vo,co) = (cst_transp := co; var_transp := vo)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: options.ml,v 1.27.2.1 2004/07/16 19:30:30 herbelin Exp $ *)
+(* $Id: options.ml 7740 2005-12-26 20:07:21Z herbelin $ *)
 
 open Util
 
@@ -23,8 +23,6 @@ let debug = ref false
 
 let print_emacs = ref false
 
-let emacs_str s = if !print_emacs then s else "" 
-
 let term_quality = ref false
 
 let xml_export = ref false
@@ -33,22 +31,11 @@ let dont_load_proofs = ref false
 
 let raw_print = ref false
 
-let v7 =
-  let transl = array_exists ((=) "-translate") Sys.argv in
-  let v7 = array_exists ((=) "-v7") Sys.argv in
-  let v8 = array_exists ((=) "-v8") Sys.argv in
-  if v8 & transl then error "Options -translate and -v8 are incompatible";
-  if v8 & v7 then error "Options -v7 and -v8 are incompatible";
-  ref (v7 or transl)
-
-let v7_only = ref false
-
 (* Translate *)
 let translate = ref false
-let make_translate f = translate := f; v7 := f; ()
+let make_translate f = translate := f
 let do_translate () = !translate
 let translate_file = ref false
-let translate_strict_impargs = ref true
 
 (* True only when interning from pp*new.ml *)
 let translate_syntax = ref false
@@ -72,6 +59,8 @@ let silently f x =
 
 let if_silent f x = if !silent then f x
 let if_verbose f x = if not !silent then f x
+
+let hash_cons_proofs = ref true
 
 (* The number of printed hypothesis in a goal *)
 
@@ -105,3 +94,30 @@ let dump_it () =
   end
 
 let _ = at_exit dump_it
+
+(* Options for the virtual machine *)
+
+let boxed_definitions = ref true
+let set_boxed_definitions b = boxed_definitions := b
+let boxed_definitions _ = !boxed_definitions 
+ 
+(* Options for external tools *)
+
+let browser_cmd_fmt =
+ try
+  let coq_netscape_remote_var = "COQREMOTEBROWSER" in
+  let coq_netscape_remote = Sys.getenv coq_netscape_remote_var in
+  let i = Util.string_index_from coq_netscape_remote 0 "%s" in
+  let pre = String.sub coq_netscape_remote 0 i in
+  let post = String.sub coq_netscape_remote (i + 2)
+              (String.length coq_netscape_remote - (i + 2)) in
+   if Util.string_string_contains ~where:post ~what:"%s" then
+    error ("The environment variable \"" ^
+           coq_netscape_remote_var ^
+           "\" must contain exactly one placeholder \"%s\".")
+   else pre,post
+ with
+  Not_found ->
+   if Sys.os_type = "Win32"
+   then "C:\\PROGRA~1\\INTERN~1\\IEXPLORE ", ""
+   else "netscape -remote \"OpenURL(", ")\""

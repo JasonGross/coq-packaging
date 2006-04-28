@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: find_phrase.mll,v 1.8.2.2 2004/10/15 14:50:13 coq Exp $ *)
+(* $Id: find_phrase.mll 6218 2004-10-15 14:27:04Z coq $ *)
 
 {
   exception Lex_error of string
@@ -36,10 +36,12 @@ rule next_phrase = parse
       length := !length + 1; 
       Buffer.add_string buff (Lexing.lexeme lexbuf);
       Buffer.contents buff}
-  | phrase_sep phrase_sep {
-      length := !length + 2; 
-      Buffer.add_string buff (Lexing.lexeme lexbuf);
-      next_phrase lexbuf}
+  | phrase_sep phrase_sep
+      { 
+	length := !length + 2; 
+	Buffer.add_string buff (Lexing.lexeme lexbuf);
+	next_phrase lexbuf
+      }
   | _ 
       { 
 	let c = Lexing.lexeme_char lexbuf 0 in 

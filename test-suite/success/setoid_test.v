@@ -1,104 +1,106 @@
-Require Setoid.
+Require Import Setoid.
 
 Parameter A : Set.
 
-Axiom eq_dec : (a,b :A) {a=b}+{~a=b}.
+Axiom eq_dec : forall a b : A, {a = b} + {a <> b}.
 
 Inductive set : Set :=
-|Empty : set
-|Add : A -> set -> set.
+  | Empty : set
+  | Add : A -> set -> set.
 
-Fixpoint In [a:A; s:set] : Prop :=
-Cases s of
-|Empty => False
-|(Add b s') => a=b \/ (In a s')
-end.
+Fixpoint In (a : A) (s : set) {struct s} : Prop :=
+  match s with
+  | Empty => False
+  | Add b s' => a = b \/ In a s'
+  end.
 
-Definition same [s,t:set] : Prop :=
-(a:A) (In a s) <-> (In a t).
+Definition same (s t : set) : Prop := forall a : A, In a s <-> In a t.
 
-Lemma setoid_set : (Setoid_Theory set same).
+Lemma setoid_set : Setoid_Theory set same.
 
-Unfold same; Split.
-Red; Auto.
+unfold same in |- *; split.
+red in |- *; auto.
 
-Red.
-Intros.
-Elim (H a); Auto.
+red in |- *.
+intros.
+elim (H a); auto.
 
-Intros.
-Elim (H a); Elim (H0 a).
-Split; Auto.
-Save.
+intros.
+elim (H a); elim (H0 a).
+split; auto.
+Qed.
 
-Add Setoid set same setoid_set.
+Add Setoid set same setoid_set as setsetoid.
 
 Add Morphism In : In_ext.
-Unfold same; Intros a s t H; Elim (H a); Auto.
-Save.
+unfold same in |- *; intros a s t H; elim (H a); auto.
+Qed.
 
-Lemma add_aux : (s,t:set) (same s t) ->
-  (a,b:A)(In a (Add b s)) -> (In a (Add b t)).
-Unfold same; Induction 2; Intros.
-Rewrite H1.
-Simpl; Left; Reflexivity.
+Lemma add_aux :
+ forall s t : set,
+ same s t -> forall a b : A, In a (Add b s) -> In a (Add b t).
+unfold same in |- *; simple induction 2; intros.
+rewrite H1.
+simpl in |- *; left; reflexivity.
 
-Elim (H a).
-Intros.
-Simpl; Right.
-Apply (H2 H1).
-Save.
+elim (H a).
+intros.
+simpl in |- *; right.
+apply (H2 H1).
+Qed.
 
 Add Morphism Add : Add_ext.
-Split; Apply add_aux.
-Assumption.
+split; apply add_aux.
+assumption.
 
-Rewrite H.
-Apply Seq_refl.
-Exact setoid_set.
-Save.
+rewrite H.
+reflexivity.
+Qed.
 
-Fixpoint remove [a:A; s:set] : set :=
-Cases s of
-|Empty => Empty
-|(Add b t) => Cases (eq_dec a b) of
-              |(left _) => (remove a t)
-              |(right _) => (Add b (remove a t))
-              end
-end.
+Fixpoint remove (a : A) (s : set) {struct s} : set :=
+  match s with
+  | Empty => Empty
+  | Add b t =>
+      match eq_dec a b with
+      | left _ => remove a t
+      | right _ => Add b (remove a t)
+      end
+  end.
 
-Lemma in_rem_not : (a:A)(s:set) ~(In a (remove a (Add a Empty))).
+Lemma in_rem_not : forall (a : A) (s : set), ~ In a (remove a (Add a Empty)).
 
-Intros.
-Setoid_replace (remove a (Add a Empty)) with Empty.
-Unfold same.
-Split.
-Simpl.
-Intro H; Elim H.
+intros.
+setoid_replace (remove a (Add a Empty)) with Empty.
 
-Simpl.
-Case (eq_dec a a).
-Intros e ff; Elim ff.
+auto.
 
-Intros; Absurd a=a; Trivial.
+unfold same in |- *.
+split.
+simpl in |- *.
+case (eq_dec a a).
+intros e ff; elim ff.
 
-Auto.
-Save.
+intros; absurd (a = a); trivial.
 
-Parameter P :set -> Prop.
-Parameter P_ext : (s,t:set) (same s t) -> (P s) -> (P t).
+simpl in |- *.
+intro H; elim H.
+Qed.
+
+Parameter P : set -> Prop.
+Parameter P_ext : forall s t : set, same s t -> P s -> P t.
 
 Add Morphism P : P_extt.
-Exact P_ext.
-Save.
+intros; split; apply P_ext; (assumption || apply (Seq_sym _ _ setoid_set); assumption).
+Qed.
 
-Lemma test_rewrite : (a:A)(s,t:set)(same s t) -> (P (Add a s)) -> (P (Add a t)).
-Intros.
-Rewrite <- H.
-Rewrite H.
-Setoid_rewrite <- H.
-Setoid_rewrite H.
-Setoid_rewrite <- H.
-Trivial.
-Save.
+Lemma test_rewrite :
+ forall (a : A) (s t : set), same s t -> P (Add a s) -> P (Add a t).
+intros.
+rewrite <- H.
+rewrite H.
+setoid_rewrite <- H.
+setoid_rewrite H.
+setoid_rewrite <- H.
+trivial.
+Qed.
 

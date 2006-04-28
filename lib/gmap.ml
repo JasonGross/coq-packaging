@@ -5,10 +5,10 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: gmap.ml,v 1.3.16.1 2004/07/16 19:30:29 herbelin Exp $ *)
+(* $Id: gmap.ml 7925 2006-01-24 23:20:39Z herbelin $ *)
 
 (* Maps using the generic comparison function of ocaml. Code borrowed from
-   the ocaml standard library. *)
+   the ocaml standard library (Copyright 1996, INRIA). *)
 
     type ('a,'b) t =
         Empty
@@ -57,7 +57,7 @@
     let rec add x data = function
         Empty ->
           Node(Empty, x, data, Empty, 1)
-      | Node(l, v, d, r, h) as t ->
+      | Node(l, v, d, r, h) ->
           let c = Pervasives.compare x v in
           if c = 0 then
             Node(l, x, data, r, h)
@@ -81,17 +81,28 @@
           let c = Pervasives.compare x v in
           c = 0 || mem x (if c < 0 then l else r)
 
-    let rec merge t1 t2 =
+    let rec min_binding = function
+        Empty -> raise Not_found
+      | Node(Empty, x, d, r, _) -> (x, d)
+      | Node(l, x, d, r, _) -> min_binding l
+
+    let rec remove_min_binding = function
+        Empty -> invalid_arg "Map.remove_min_elt"
+      | Node(Empty, x, d, r, _) -> r
+      | Node(l, x, d, r, _) -> bal (remove_min_binding l) x d r
+
+    let merge t1 t2 =
       match (t1, t2) with
         (Empty, t) -> t
       | (t, Empty) -> t
-      | (Node(l1, v1, d1, r1, h1), Node(l2, v2, d2, r2, h2)) ->
-          bal l1 v1 d1 (bal (merge r1 l2) v2 d2 r2)
+      | (_, _) ->
+          let (x, d) = min_binding t2 in
+          bal t1 x d (remove_min_binding t2)
 
     let rec remove x = function
         Empty ->
           Empty
-      | Node(l, v, d, r, h) as t ->
+      | Node(l, v, d, r, h) ->
           let c = Pervasives.compare x v in
           if c = 0 then
             merge l r
@@ -108,6 +119,9 @@
     let rec map f = function
         Empty               -> Empty
       | Node(l, v, d, r, h) -> Node(map f l, v, f d, map f r, h)
+
+    (* Maintien de fold_right par compatibilité (changé en fold_left dans
+       ocaml-3.09.0) *)
 
     let rec fold f m accu =
       match m with

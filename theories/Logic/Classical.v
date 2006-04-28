@@ -6,9 +6,10 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Classical.v,v 1.6.2.1 2004/07/16 19:31:06 herbelin Exp $ i*)
+(*i $Id: Classical.v 8642 2006-03-17 10:09:02Z notin $ i*)
 
 (** Classical Logic *)
 
 Require Export Classical_Prop.
 Require Export Classical_Pred_Type.
+

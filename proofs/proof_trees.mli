@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: proof_trees.mli,v 1.27.2.1 2004/07/16 19:30:49 herbelin Exp $ i*)
+(*i $Id: proof_trees.mli 7639 2005-12-02 10:01:15Z gregoire $ i*)
 
 (*i*)
 open Util
@@ -21,7 +21,7 @@ open Proof_type
 (* This module declares readable constraints, and a few utilities on
    constraints and proof trees *)
 
-val mk_goal : named_context -> constr -> goal
+val mk_goal : named_context_val -> constr -> goal
 
 val rule_of_proof     : proof_tree -> rule
 val ref_of_proof      : proof_tree -> (rule * proof_tree list)
@@ -33,16 +33,6 @@ val is_complete_proof : proof_tree -> bool
 val is_leaf_proof     : proof_tree -> bool
 val is_tactic_proof   : proof_tree -> bool
 
-(*s A readable constraint is a global constraint plus a focus set
-    of existential variables and a signature. *)
-
-val rc_of_gc  : evar_map -> goal -> named_context sigma
-val rc_add    : named_context sigma -> existential_key * goal -> 
-  named_context sigma
-val get_hyps  : named_context sigma -> named_context
-val get_env   : named_context sigma -> env
-val get_gc    : named_context sigma -> evar_map
-
 val pf_lookup_name_as_renamed  : env -> constr -> identifier -> int option
 val pf_lookup_index_as_renamed : env -> constr -> int -> int option
 
@@ -53,16 +43,4 @@ val pf_lookup_index_as_renamed : env -> constr -> int -> int option
 open Pp
 (*i*)
 
-val pr_goal      : goal -> std_ppcmds
-val pr_subgoals  : goal list -> std_ppcmds
-val pr_subgoal   : int -> goal list -> std_ppcmds
-
-val pr_decl      : goal -> std_ppcmds
-val pr_decls     : evar_map -> std_ppcmds
-val pr_evc       : named_context sigma -> std_ppcmds
-
-val prgl         : goal -> std_ppcmds
-val pr_seq       : goal -> std_ppcmds
-val pr_evars     : (existential_key * goal) list -> std_ppcmds
-val pr_evars_int : int -> (existential_key * goal) list -> std_ppcmds
-val pr_subgoals_existential : evar_map -> goal list -> std_ppcmds
+val db_pr_goal : goal -> std_ppcmds

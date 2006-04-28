@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: sequent.ml,v 1.17.2.1 2004/07/16 19:30:10 herbelin Exp $ *)
+(* $Id: sequent.ml 7925 2006-01-24 23:20:39Z herbelin $ *)
 
 open Term
 open Util
@@ -91,8 +91,8 @@ let compare_constr_int f t1 t2 =
     | Meta m1, Meta m2 -> m1 - m2
     | Var id1, Var id2 -> Pervasives.compare id1 id2
     | Sort s1, Sort s2 -> Pervasives.compare s1 s2
-    | Cast (c1,_), _ -> f c1 t2
-    | _, Cast (c2,_) -> f t1 c2
+    | Cast (c1,_,_), _ -> f c1 t2
+    | _, Cast (c2,_,_) -> f t1 c2
     | Prod (_,t1,c1), Prod (_,t2,c2) 
     | Lambda (_,t1,c1), Lambda (_,t2,c2) ->
 	(f =? f) t1 t2 c1 c2 
@@ -255,7 +255,7 @@ let empty_seq depth=
 
 let create_with_ref_list l depth gl=
   let f gr seq=
-    let c=constr_of_reference gr in    
+    let c=constr_of_global gr in    
     let typ=(pf_type_of gl c) in
       add_formula Hyp gr typ seq gl in
     List.fold_right f l (empty_seq depth)
@@ -269,7 +269,7 @@ let create_with_auto_hints l depth gl=
 	Res_pf (c,_) | Give_exact c
       | Res_pf_THEN_trivial_fail (c,_) ->
 	  (try 
-	     let gr=reference_of_constr c in 
+	     let gr=global_of_constr c in 
 	     let typ=(pf_type_of gl c) in
 	       seqref:=add_formula Hint gr typ !seqref gl
 	   with Not_found->())
@@ -278,7 +278,7 @@ let create_with_auto_hints l depth gl=
   let h dbname=
     let hdb=
       try
-	Util.Stringmap.find dbname !searchtable 
+	searchtable_map dbname
       with Not_found-> 
 	error ("Firstorder: "^dbname^" : No such Hint database") in
       Hint_db.iter g hdb in
@@ -289,9 +289,9 @@ let print_cmap map=
   let print_entry c l s=
     let xc=Constrextern.extern_constr false (Global.env ()) c in
       str "| " ++ 
-      Util.prlist (Ppconstr.pr_global Idset.empty) l ++ 
+      Util.prlist Printer.pr_global l ++ 
       str " : " ++
-      Ppconstr.pr_constr xc ++ 
+      Ppconstr.pr_constr_expr xc ++ 
       cut () ++ 
       s in
     msgnl (v 0 

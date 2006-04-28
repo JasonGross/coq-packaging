@@ -8,11 +8,11 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: g_quote.ml4,v 1.1.12.1 2004/07/16 19:30:13 herbelin Exp $ *)
+(* $Id: g_quote.ml4 7734 2005-12-26 14:06:51Z herbelin $ *)
 
 open Quote
 
-TACTIC EXTEND Quote
-  [ "Quote" ident(f) ] -> [ quote f [] ]
-| [ "Quote" ident(f) "[" ne_ident_list(lc) "]"] -> [ quote f lc ]
+TACTIC EXTEND quote
+  [ "quote" ident(f) ] -> [ quote f [] ]
+| [ "quote" ident(f) "[" ne_ident_list(lc) "]"] -> [ quote f lc ]
 END

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Zdiv.v,v 1.21.2.1 2004/07/16 19:31:21 herbelin Exp $ i*)
+(*i $Id: Zdiv.v 6295 2004-11-12 16:40:39Z gregoire $ i*)
 
 (* Contribution by Claude Marché and Xavier Urbain *)
 
@@ -36,7 +36,7 @@ Open Local Scope Z_scope.
   
 *)
 
-Fixpoint Zdiv_eucl_POS (a:positive) (b:Z) {struct a} : 
+Unboxed Fixpoint Zdiv_eucl_POS (a:positive) (b:Z) {struct a} : 
  Z * Z :=
   match a with
   | xH => if Zge_bool b 2 then (0, 1) else (1, 0)
