@@ -1,2 +1,2 @@
-version=2
+version=3
 ftp://ftp.inria.fr/INRIA/coq/current/coq-([0-9a-z\.]*)\.tar\.gz debian uupdate

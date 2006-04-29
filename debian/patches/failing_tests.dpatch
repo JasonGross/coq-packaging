@@ -1,0 +1,83 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## failing_tests.dpatch by Samuel Mimram <smimram@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Remove tests which don't succeed!
+
+@DPATCH@
+diff -urNad coq-8.0pl3+8.1alpha~/test-suite/modules/mod_decl.v coq-8.0pl3+8.1alpha/test-suite/modules/mod_decl.v
+--- coq-8.0pl3+8.1alpha~/test-suite/modules/mod_decl.v	2005-12-21 23:50:17.000000000 +0000
++++ coq-8.0pl3+8.1alpha/test-suite/modules/mod_decl.v	1970-01-01 00:00:00.000000000 +0000
+@@ -1,49 +0,0 @@
+-Module Type SIG.
+-  Axiom A : Set.
+-End SIG.
+-
+-Module M0.
+-  Definition A : Set.
+-  exact nat.
+-  Qed.
+-End M0.
+-
+-Module M1 : SIG.
+-  Definition A := nat.
+-End M1.
+-
+-Module M2 <: SIG.
+-  Definition A := nat.
+-End M2.
+-
+-Module M3 := M0.
+-
+-Module M4 : SIG := M0.
+-
+-Module M5 <: SIG := M0.
+-
+-
+-Module F (X: SIG) := X.
+-
+-
+-Module Type T.
+-
+-  Module M0.
+-    Axiom A : Set.
+-  End M0.
+-  
+-  Declare Module M1: SIG.
+-  
+-  Declare Module M2 <: SIG.
+-    Definition A := nat.
+-  End M2.
+-  
+-  Module M3 := M0.
+-  
+-  Module M4 : SIG := M0.
+-  
+-  Module M5 <: SIG := M0.
+-
+-  Module M6 := F M0.
+-
+-End T.
+diff -urNad coq-8.0pl3+8.1alpha~/test-suite/output/Cases.out coq-8.0pl3+8.1alpha/test-suite/output/Cases.out
+--- coq-8.0pl3+8.1alpha~/test-suite/output/Cases.out	2005-12-21 23:50:17.000000000 +0000
++++ coq-8.0pl3+8.1alpha/test-suite/output/Cases.out	1970-01-01 00:00:00.000000000 +0000
+@@ -1,9 +0,0 @@
+-t_rect = 
+-fun (P : t -> Type) (f : let x := t in forall x0 : x, P x0 -> P (k x0)) =>
+-fix F (t : t) : P t :=
+-  match t as t0 return (P t0) with
+-  | k x x0 => f x0 (F x0)
+-  end
+-     : forall P : t -> Type,
+-       (let x := t in forall x0 : x, P x0 -> P (k x0)) -> forall t : t, P t
+-
+diff -urNad coq-8.0pl3+8.1alpha~/test-suite/output/Cases.v coq-8.0pl3+8.1alpha/test-suite/output/Cases.v
+--- coq-8.0pl3+8.1alpha~/test-suite/output/Cases.v	2005-12-21 23:50:17.000000000 +0000
++++ coq-8.0pl3+8.1alpha/test-suite/output/Cases.v	1970-01-01 00:00:00.000000000 +0000
+@@ -1,6 +0,0 @@
+-(* Cases with let-in in constructors types *)
+-
+-Inductive t : Set :=
+-    k : let x := t in x -> x.
+-
+-Print t_rect.

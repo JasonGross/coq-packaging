@@ -1,0 +1,19 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## browser.dpatch by Samuel Mimram <smimram@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Use the default Debian browser for help.
+
+@DPATCH@
+diff -urNad coq-8.0pl3+8.1alpha~/lib/options.ml coq-8.0pl3+8.1alpha/lib/options.ml
+--- coq-8.0pl3+8.1alpha~/lib/options.ml	2005-12-26 20:07:21.000000000 +0000
++++ coq-8.0pl3+8.1alpha/lib/options.ml	2006-04-29 16:06:20.000000000 +0000
+@@ -117,7 +117,4 @@
+            "\" must contain exactly one placeholder \"%s\".")
+    else pre,post
+  with
+-  Not_found ->
+-   if Sys.os_type = "Win32"
+-   then "C:\\PROGRA~1\\INTERN~1\\IEXPLORE ", ""
+-   else "netscape -remote \"OpenURL(", ")\""
++  Not_found -> "/usr/bin/x-www-browser ", ""

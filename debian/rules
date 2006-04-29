@@ -29,8 +29,7 @@ configure-stamp:
 build: patch-stamp configure-stamp build-stamp
 build-stamp:
 	dh_testdir
-	$(MAKE) world
-#	if grep -q BEST=opt config/Makefile; \
+	if grep -q BEST=opt config/Makefile; \
 	then \
 		($(MAKE) check \
 		   && touch opt-stamp) \

@@ -1,9 +1,9 @@
 [Desktop Entry]
 Encoding=UTF-8
-Name=CoqIde
+Name=CoqIDE
 Comment=Graphical interface for the Coq proof assistant
 Exec=/usr/bin/coqide
 Type=Application
-Categories=GTK;Science;Math;
+Categories=Application;Development;Science;Math;IDE;GTK;
 Terminal=false
-Icon=/usr/share/pixmaps/coq.xpm
+Icon=coq.xpm

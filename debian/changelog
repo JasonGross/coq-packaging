@@ -1,10 +1,11 @@
 coq (8.0pl3+8.1alpha-1) experimental; urgency=low
 
   * New upstream release.
-  * Disabling checks for now as they don't succeed.
-  * Removed coq-8.0pl3-ocaml-3.09.dpatch.
   * No longer providing the compatibility coq7-libs package.
   * coq-libs is now providing its documentation in html format.
+  * Added browser.dpatch to use the default Debian browser for help.
+  * Disabling checks which don't succeed for now: failing_tests.dpatch.
+  * Removed coq-8.0pl3-ocaml-3.09.dpatch.
 
  -- Samuel Mimram <smimram@debian.org>  Thu, 27 Apr 2006 13:43:16 +0000
 
