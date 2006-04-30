@@ -1,3 +1,10 @@
+coq (8.0pl3+8.1alpha-2) UNRELEASED; urgency=low
+
+  * Added makefile.dpatch in order for ocamlopt not to be called when
+    compiling on non-native archs.
+
+ -- Samuel Mimram <smimram@debian.org>  Sun, 30 Apr 2006 11:51:57 +0000
+
 coq (8.0pl3+8.1alpha-1) experimental; urgency=low
 
   * New upstream release.
