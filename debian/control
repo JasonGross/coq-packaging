@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
 Uploaders: Ralf Treinen <treinen@debian.org>, Sven Luther <luther@debian.org>, Remi Vanicat <vanicat@debian.org>, Stefano Zacchiroli <zack@debian.org>, Samuel Mimram <smimram@debian.org>
 Standards-Version: 3.6.2
-Build-Depends: debhelper (>= 4.0.0), dpatch, ocaml-nox (>= 3.09.0), ocaml-best-compilers, liblablgtk2-ocaml-dev (>= 2.4.0), chrpath, tetex-bin
+Build-Depends: debhelper (>= 4.0.0), dpatch, ocaml-nox (>= 3.09.0), ocaml-best-compilers, liblablgtk2-ocaml-dev (>= 2.4.0), chrpath
 
 Package: coq
 Architecture: any

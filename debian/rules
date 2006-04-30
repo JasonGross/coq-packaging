@@ -44,7 +44,7 @@ build-stamp:
 	fi
 	$(MAKE) glob.dump
 	cp tools/coqdoc/coqdoc.sty doc/stdlib/
-	$(MAKE) -C doc stdlib
+	$(MAKE) -C doc stdlib/html/index.html
 	touch build-stamp
 
 clean: unpatch

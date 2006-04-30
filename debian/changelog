@@ -1,7 +1,9 @@
-coq (8.0pl3+8.1alpha-2) UNRELEASED; urgency=low
+coq (8.0pl3+8.1alpha-2) experimental; urgency=low
 
   * Added makefile.dpatch in order for ocamlopt not to be called when
     compiling on non-native archs.
+  * Do not build the pdf documentation for the library since we don't ship it.
+    This will avoid the FTBFS because of missing LaTeX fonts.
 
  -- Samuel Mimram <smimram@debian.org>  Sun, 30 Apr 2006 11:51:57 +0000
 
