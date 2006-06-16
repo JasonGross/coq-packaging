@@ -13,7 +13,7 @@ include /usr/share/dpatch/dpatch.make
 COQPREF := $(CURDIR)/debian/tmp
 ADDPREF := COQINSTALLPREFIX=$(COQPREF)
 
-CONFIGUREOPTS := --prefix /usr --mandir /usr/share/man --emacslib /usr/share/emacs/site-lisp/coq --reals all
+CONFIGUREOPTS := --prefix /usr --mandir /usr/share/man --emacslib /usr/share/emacs/site-lisp/coq --reals all --fsets all
 
 configure: configure-stamp
 configure-stamp:
@@ -78,11 +78,10 @@ install: build
 		echo "Stripping: $$i"; \
 		strip -R .note -R .comment $$i; \
 	done
-	-for i in $(COQPREF)/usr/bin/coqide.*; do \
-		echo "Rpath for `chrpath $$i`"; \
-		echo "Removing rpath: $$i"; \
-		chrpath -d $$i; \
-	done
+	if [ -e opt-stamp ]; then \
+		strip -R .note -R .comment $ $(COQPREF)/usr/bin/coqc; \
+		strip -R .note -R .comment $(COQPREF)/usr/bin/coqmktop; \
+	fi
 	cp debian/coq.xpm debian/coq/usr/share/pixmaps/coq.xpm
 	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
 	cp debian/coqide.desktop debian/coqide/usr/share/applications
