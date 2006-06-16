@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: notation.ml 7984 2006-02-04 20:14:55Z herbelin $ *)
+(* $Id: notation.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
 
 (*i*)
 open Util
@@ -234,12 +234,12 @@ let delay dir int loc x = (dir, (fun () -> int loc x))
 let declare_numeral_interpreter sc dir interp (patl,uninterp,inpat) =
   declare_prim_token_interpreter sc
     (fun cont loc -> function Numeral n-> delay dir interp loc n | p -> cont loc p)
-    (patl, (fun r -> option_app mkNumeral (uninterp r)), inpat)
+    (patl, (fun r -> option_map mkNumeral (uninterp r)), inpat)
 
 let declare_string_interpreter sc dir interp (patl,uninterp,inpat) =
   declare_prim_token_interpreter sc
     (fun cont loc -> function String s -> delay dir interp loc s | p -> cont loc p)
-    (patl, (fun r -> option_app mkString (uninterp r)), inpat)
+    (patl, (fun r -> option_map mkString (uninterp r)), inpat)
 
 let check_required_module loc sc (sp,d) =
   try let _ = Nametab.absolute_reference sp in ()
@@ -389,7 +389,7 @@ let uninterp_prim_token_cases_pattern c =
 
 let availability_of_prim_token printer_scope scopes =
   let f scope = Hashtbl.mem prim_token_interpreter_tab scope in
-  option_app snd (find_without_delimiters f (Some printer_scope,None) scopes)
+  option_map snd (find_without_delimiters f (Some printer_scope,None) scopes)
 
 (* Miscellaneous *)
 

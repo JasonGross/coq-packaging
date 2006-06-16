@@ -6,11 +6,16 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pp.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: pp.mli 8748 2006-04-27 16:01:26Z courtieu $ i*)
 
 (*i*)
 open Pp_control
 (*i*)
+
+(* Modify pretty printing functions behavior for emacs ouput (special
+   chars inserted at some places). This function should called once in
+   module [Options], that's all. *)
+val make_pp_emacs:unit -> unit
 
 (* Pretty-printers. *)
 

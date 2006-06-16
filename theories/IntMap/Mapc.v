@@ -5,15 +5,12 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i 	$Id: Mapc.v 5920 2004-07-16 20:01:26Z herbelin $	 i*)
+(*i 	$Id: Mapc.v 8733 2006-04-25 22:52:18Z letouzey $	 i*)
 
 Require Import Bool.
 Require Import Sumbool.
 Require Import Arith.
-Require Import ZArith.
-Require Import Addr.
-Require Import Adist.
-Require Import Addec.
+Require Import NArith.
 Require Import Map.
 Require Import Mapaxioms.
 Require Import Fset.

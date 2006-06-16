@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modops.mli 6616 2005-01-21 17:18:23Z herbelin $ i*)
+(*i $Id: modops.mli 8721 2006-04-15 15:30:04Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -74,7 +74,7 @@ val error_incompatible_labels : label -> label -> 'a
 
 val error_no_such_label : label -> 'a
 
-val error_result_must_be_signature : module_type_body -> 'a
+val error_result_must_be_signature : unit -> 'a
 
 val error_signature_expected : module_type_body -> 'a
 

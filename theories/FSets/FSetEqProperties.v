@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetEqProperties.v 8639 2006-03-16 19:21:55Z letouzey $ *)
+(* $Id: FSetEqProperties.v 8853 2006-05-23 18:17:38Z herbelin $ *)
 
 (** * Finite sets library *)
 
@@ -276,7 +276,7 @@ Lemma is_empty_cardinal: is_empty s = zerob (cardinal s).
 Proof.
 intros; apply bool_1; split; intros.
 rewrite cardinal_1; simpl; auto.
-assert (cardinal s = 0) by apply zerob_true_elim; auto.
+assert (cardinal s = 0) by (apply zerob_true_elim; auto).
 auto.
 Qed.
 
@@ -672,7 +672,7 @@ unfold Add, MP.Add; intros.
 repeat rewrite filter_iff; auto.
 rewrite H0; clear H0.
 assert (E.eq x y -> f y = true) by 
- intro H0; rewrite <- (Comp _ _ H0); auto.
+ (intro H0; rewrite <- (Comp _ _ H0); auto).
 tauto.
 Qed.
 
@@ -702,6 +702,11 @@ assert (f a || g a = true <-> f a = true \/ g a = true).
   split; auto with bool.
   intro H3; destruct (orb_prop _ _ H3); auto.
 tauto.
+Qed.
+
+Lemma filter_union: forall s s', filter f (union s s') [=] union (filter f s) (filter f s').
+Proof.
+unfold Equal; intros; set_iff; repeat rewrite filter_iff; auto; set_iff; tauto.
 Qed.
 
 (** Properties of [for_all] *)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: preferences.ml 7046 2005-05-20 07:38:25Z herbelin $ *)
+(* $Id: preferences.ml 8920 2006-06-08 09:12:48Z notin $ *)
 
 open Configwin
 open Printf
@@ -180,8 +180,7 @@ let save_pref () =
     add "encoding_use_utf8" [string_of_bool p.encoding_use_utf8] ++
     add "encoding_manual" [p.encoding_manual] ++
 
-    add "automatic_tactics" 
-      (List.rev p.automatic_tactics) ++
+    add "automatic_tactics" p.automatic_tactics ++
     add "cmd_print" [p.cmd_print] ++
     add "modifier_for_navigation" 
       (List.map mod_to_str p.modifier_for_navigation) ++

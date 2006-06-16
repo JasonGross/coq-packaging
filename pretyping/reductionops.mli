@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: reductionops.mli 8708 2006-04-14 08:13:02Z jforest $ i*)
+(*i $Id: reductionops.mli 8812 2006-05-13 11:46:02Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -20,6 +20,34 @@ open Closure
 (* Reduction Functions. *)
 
 exception Elimconst
+
+(************************************************************************)
+(*s A [stack] is a context of arguments, arguments are pushed by
+   [append_stack] one array at a time but popped with [decomp_stack]
+   one by one *)
+
+type 'a stack_member =
+  | Zapp of 'a list
+  | Zcase of case_info * 'a * 'a array
+  | Zfix of 'a * 'a stack
+  | Zshift of int
+  | Zupdate of 'a
+
+and 'a stack = 'a stack_member list
+
+val empty_stack : 'a stack
+val append_stack : 'a array -> 'a stack -> 'a stack
+
+val decomp_stack : 'a stack -> ('a * 'a stack) option
+val list_of_stack : 'a stack -> 'a list
+val array_of_stack : 'a stack -> 'a array
+val stack_assign : 'a stack -> int -> 'a -> 'a stack
+val stack_args_size : 'a stack -> int
+val app_stack : constr * constr stack -> constr
+val stack_tail : int -> 'a stack -> 'a stack
+val stack_nth : 'a stack -> int -> 'a
+
+(************************************************************************)
 
 type state = constr * constr stack
 
@@ -147,13 +175,6 @@ val reduce_mind_case : constr miota_args -> constr
 
 val find_conclusion : env -> evar_map -> constr -> (constr,constr) kind_of_term
 val is_arity : env ->  evar_map -> constr -> bool
-val is_info_type : env ->  evar_map -> unsafe_type_judgment -> bool
-val is_info_arity : env ->  evar_map -> constr -> bool
-(*i Pour l'extraction
-val is_type_arity : env -> 'a evar_map -> constr -> bool
-val is_info_cast_type : env -> 'a evar_map -> constr -> bool
-val contents_of_cast_type : env -> 'a evar_map -> constr -> contents
-i*)
 
 val whd_programs :  reduction_function
 

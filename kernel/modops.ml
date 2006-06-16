@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modops.ml 7639 2005-12-02 10:01:15Z gregoire $ i*)
+(*i $Id: modops.ml 8879 2006-05-30 21:32:10Z letouzey $ i*)
 
 (*i*)
 open Util
@@ -41,7 +41,7 @@ let error_incompatible_labels l l' =
   error ("Opening and closing labels are not the same: "
 	 ^string_of_label l^" <> "^string_of_label l'^" !")
 
-let error_result_must_be_signature mtb = 
+let error_result_must_be_signature () = 
   error "The result module type must be a signature"
 
 let error_signature_expected mtb =
@@ -190,35 +190,13 @@ and constants_of_modtype env mp modtype =
       (subst_signature_msid msid mp sign)
   | MTBfunsig _ -> []
 
-(* returns a resolver for kn that maps mbid to mp and then delta-expands
-   the obtained constants according to env *)
+(* returns a resolver for kn that maps mbid to mp *)
+(* Nota: Some delta-expansions used to happen here. 
+    Browse SVN if you want to know more. *)
 let resolver_of_environment mbid modtype mp env =
  let constants = constants_of_modtype env (MPbound mbid) modtype in
- let resolve =
-  List.map
-   (fun (con,expecteddef) ->
-     let con' = replace_mp_in_con (MPbound mbid) mp con in
-     let constr =
-      try
-       if expecteddef.Declarations.const_body <> None then
-        (* Do not expand constants that already have a body in the
-           expected type (i.e. only parameters/axioms in the module type
-           are expanded). In the few examples we have this seems to
-           be the more reasonable behaviour for the user. *)
-        None
-       else
-        let constant = lookup_constant con' env in
-         if constant.Declarations.const_opaque then
-          None
-         else
-          option_app Declarations.force
-           constant.Declarations.const_body
-      with Not_found -> error_no_such_label (con_label con')
-     in
-      con,constr
-   ) constants
- in
-  Mod_subst.make_resolver resolve
+ let resolve = List.map (fun (con,_) -> con,None) constants in 
+ Mod_subst.make_resolver resolve
 
 (* we assume that the substitution of "mp" into "msid" is already done
 (or unnecessary) *)

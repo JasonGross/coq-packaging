@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: system.ml 7603 2005-11-23 17:21:53Z barras $ *)
+(* $Id: system.ml 8877 2006-05-30 16:37:04Z notin $ *)
 
 open Pp
 open Util
@@ -59,6 +59,9 @@ let glob s = expand_macros s 0
 
 type physical_path = string
 type load_path = physical_path list
+
+let physical_path_of_string s = s
+let string_of_physical_path p = p
 
 (* All subdirectories, recursively *)
 

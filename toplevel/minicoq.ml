@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: minicoq.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id: minicoq.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
 
 open Pp
 open Util
@@ -54,7 +54,7 @@ let check c =
 
 let definition id ty c =
   let c = globalize [] c in
-  let ty = option_app (globalize []) ty in
+  let ty = option_map (globalize []) ty in
   let ce = { const_entry_body = c; const_entry_type = ty } in
   let sp = make_path [] id CCI in
   env := add_constant sp ce (locals()) !env;

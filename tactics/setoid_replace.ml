@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: setoid_replace.ml 8683 2006-04-05 15:47:39Z letouzey $ *)
+(* $Id: setoid_replace.ml 8900 2006-06-06 14:40:27Z letouzey $ *)
 
 open Tacmach
 open Proof_type
@@ -85,7 +85,7 @@ type morphism_class =
 let subst_mps_in_relation_class subst =
  function
     Relation  t -> Relation  (subst_mps subst t)
-  | Leibniz t -> Leibniz (option_app (subst_mps subst) t) 
+  | Leibniz t -> Leibniz (option_map (subst_mps subst) t) 
 
 let subst_mps_in_argument_class subst (variance,rel) =
  variance, subst_mps_in_relation_class subst rel
@@ -295,9 +295,9 @@ let relation_morphism_of_constr_morphism =
 let subst_relation subst relation = 
   let rel_a' = subst_mps subst relation.rel_a in
   let rel_aeq' = subst_mps subst relation.rel_aeq in
-  let rel_refl' = option_app (subst_mps subst) relation.rel_refl in
-  let rel_sym' = option_app (subst_mps subst) relation.rel_sym in
-  let rel_trans' = option_app (subst_mps subst) relation.rel_trans in
+  let rel_refl' = option_map (subst_mps subst) relation.rel_refl in
+  let rel_sym' = option_map (subst_mps subst) relation.rel_sym in
+  let rel_trans' = option_map (subst_mps subst) relation.rel_trans in
   let rel_X_relation_class' = subst_mps subst relation.rel_X_relation_class in
   let rel_Xreflexive_relation_class' =
    subst_mps subst relation.rel_Xreflexive_relation_class
@@ -638,9 +638,9 @@ let apply_to_relation subst rel =
    assert (new_quantifiers_no >= 0) ;
    { rel_a = mkApp (rel.rel_a, subst) ;
      rel_aeq = mkApp (rel.rel_aeq, subst) ;
-     rel_refl = option_app (fun c -> mkApp (c,subst)) rel.rel_refl ; 
-     rel_sym = option_app (fun c -> mkApp (c,subst)) rel.rel_sym;
-     rel_trans = option_app (fun c -> mkApp (c,subst)) rel.rel_trans;
+     rel_refl = option_map (fun c -> mkApp (c,subst)) rel.rel_refl ; 
+     rel_sym = option_map (fun c -> mkApp (c,subst)) rel.rel_sym;
+     rel_trans = option_map (fun c -> mkApp (c,subst)) rel.rel_trans;
      rel_quantifiers_no = new_quantifiers_no;
      rel_X_relation_class = mkApp (rel.rel_X_relation_class, subst);
      rel_Xreflexive_relation_class =
@@ -763,6 +763,8 @@ let unify_relation_class_carrier_with_type env rel t =
   | Leibniz None -> Leibniz (Some t)
   | Relation rel -> Relation (unify_relation_carrier_with_type env rel t)
 
+exception Impossible
+
 (* first order matching with a bit of conversion *)
 (* Note: the type checking operations performed by the function could  *)
 (* be done once and for all abstracting the morphism structure using   *)
@@ -772,27 +774,28 @@ let unify_relation_class_carrier_with_type env rel t =
 let unify_morphism_with_arguments gl (c,av)
      {args=args; output=output; lem=lem; morphism_theory=morphism_theory} t
 =
- let al = Array.to_list av in
+ let avlen = Array.length av in 
  let argsno = List.length args in
- let quantifiers,al' = Util.list_chop (List.length al - argsno) al in
+ if avlen < argsno then raise Impossible; (* partial application *)
+ let al = Array.to_list av in
+ let quantifiers,al' = Util.list_chop (avlen - argsno) al in
  let quantifiersv = Array.of_list quantifiers in
  let c' = mkApp (c,quantifiersv) in
- if dependent t c' then None else (
-  (* these are pf_type_of we could avoid *)
-  let al'_type = List.map (Tacmach.pf_type_of gl) al' in
-  let args' =
+ if dependent t c' then raise Impossible; 
+ (* these are pf_type_of we could avoid *)
+ let al'_type = List.map (Tacmach.pf_type_of gl) al' in
+ let args' =
    List.map2
-    (fun (var,rel) ty ->
-      var,unify_relation_class_carrier_with_type (pf_env gl) rel ty)
-    args al'_type in
-  (* this is another pf_type_of we could avoid *)
-  let ty = Tacmach.pf_type_of gl (mkApp (c,av)) in
-  let output' = unify_relation_class_carrier_with_type (pf_env gl) output ty in
-  let lem' = mkApp (lem,quantifiersv) in
-  let morphism_theory' = mkApp (morphism_theory,quantifiersv) in
-   Some
-    ({args=args'; output=output'; lem=lem'; morphism_theory=morphism_theory'},
-     c',Array.of_list al'))
+     (fun (var,rel) ty ->
+	var,unify_relation_class_carrier_with_type (pf_env gl) rel ty)
+     args al'_type in
+ (* this is another pf_type_of we could avoid *)
+ let ty = Tacmach.pf_type_of gl (mkApp (c,av)) in
+ let output' = unify_relation_class_carrier_with_type (pf_env gl) output ty in
+ let lem' = mkApp (lem,quantifiersv) in
+ let morphism_theory' = mkApp (morphism_theory,quantifiersv) in
+ ({args=args'; output=output'; lem=lem'; morphism_theory=morphism_theory'},
+  c',Array.of_list al')
 
 let new_morphism m signature id hook =
  if Nametab.exists_cci (Lib.make_path id) or is_section_variable id then
@@ -1078,9 +1081,9 @@ let int_add_relation id a aeq refl sym trans =
       let a_instance = apply_to_rels a a_quantifiers_rev in
       let aeq_instance = apply_to_rels aeq a_quantifiers_rev in
       let sym_instance =
-       option_app (fun x -> apply_to_rels x a_quantifiers_rev) sym in
+       option_map (fun x -> apply_to_rels x a_quantifiers_rev) sym in
       let refl_instance =
-       option_app (fun x -> apply_to_rels x a_quantifiers_rev) refl in
+       option_map (fun x -> apply_to_rels x a_quantifiers_rev) refl in
       let trans_instance = apply_to_rels trans a_quantifiers_rev in
       let aeq_rel_class_and_var1, aeq_rel_class_and_var2, lemma, output =
        match sym_instance, refl_instance with
@@ -1134,8 +1137,8 @@ let int_add_relation id a aeq refl sym trans =
 
 (* The vernac command "Add Relation ..." *)
 let add_relation id a aeq refl sym trans =
- int_add_relation id (constr_of a) (constr_of aeq) (option_app constr_of refl)
-  (option_app constr_of sym) (option_app constr_of trans)
+ int_add_relation id (constr_of a) (constr_of aeq) (option_map constr_of refl)
+  (option_map constr_of sym) (option_map constr_of trans)
 
 (************************ Add Setoid ******************************************)
 
@@ -1383,10 +1386,9 @@ let mark_occur gl ~new_goals t in_c input_relation input_direction =
           let mors_and_cs_and_als =
            List.fold_left
             (fun l (m,c,al) ->
-              match unify_morphism_with_arguments gl (c,al) m t with
-                 Some res -> res::l
-               | None -> l
-            ) [] mors_and_cs_and_als
+	       try (unify_morphism_with_arguments gl (c,al) m t) :: l
+	       with Impossible -> l
+	    ) [] mors_and_cs_and_als
           in
            List.filter
             (fun (mor,_,_) -> subrelation gl mor.output output_relation)
@@ -1817,12 +1819,20 @@ let relation_rewrite_in id c1 c2 (direction,eqclause) ~new_goals gl =
  (* since we will actually rewrite in the opposite direction, we also need
     to replace every occurrence of c2 (resp. c1) in hyp with something that
     is convertible but not syntactically equal. To this aim we introduce a
-    let-in and then we will use the intro tactic to get rid of it *)
- let let_in_abstract t in_t =
-  let t' = lift 1 t in
-  let in_t' = lift 1 in_t in
-   mkLetIn (Anonymous,t,pf_type_of gl t,subst_term t' in_t') in
- let mangled_new_hyp = Termops.replace_term c1 c2 (let_in_abstract c2 hyp) in
+    let-in and then we will use the intro tactic to get rid of it.
+    Quite tricky to do properly since c1 can occur in c2 or vice-versa ! *)
+ let mangled_new_hyp = 
+   let hyp = lift 2 hyp in 
+   (* first, we backup every occurences of c1 in newly allocated (Rel 1) *)
+   let hyp = Termops.replace_term (lift 2 c1) (mkRel 1) hyp in 
+   (* then, we factorize every occurences of c2 into (Rel 2) *)
+   let hyp = Termops.replace_term (lift 2 c2) (mkRel 2) hyp in 
+   (* Now we substitute (Rel 1) (i.e. c1) for c2 *)
+   let hyp = subst1 (lift 1 c2) hyp in 
+   (* Since subst1 has killed Rel 1 and decreased the other Rels, 
+      Rel 1 is now coding for c2, we can build the let-in factorizing c2 *)
+   mkLetIn (Anonymous,c2,pf_type_of gl c2,hyp) 
+ in 
  let new_hyp = Termops.replace_term c1 c2 hyp in 
  let oppdir = opposite_direction direction in 
  cut_replacing id new_hyp

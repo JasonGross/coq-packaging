@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pre_env.ml 7642 2005-12-06 08:56:29Z gregoire $ *)
+(* $Id: pre_env.ml 8810 2006-05-12 18:50:21Z barras $ *)
 
 open Util
 open Names
@@ -144,3 +144,8 @@ let lookup_constant kn env =
 (* Mutual Inductives *)
 let lookup_mind kn env =
   KNmap.find kn env.env_globals.env_inductives
+
+let rec scrape_mind env kn = 
+  match (lookup_mind kn env).mind_equiv with
+    | None -> kn
+    | Some kn' -> scrape_mind env kn'

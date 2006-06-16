@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: detyping.mli 7881 2006-01-16 14:03:05Z herbelin $ i*)
+(*i $Id: detyping.mli 8831 2006-05-19 09:29:54Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -38,6 +38,8 @@ val detype_case :
   identifier list -> inductive * case_style * int * int array * int ->
     'a option -> 'a -> 'a array -> rawconstr
 
+val detype_sort : sorts -> rawsort
+
 (* look for the index of a named var or a nondep var as it is renamed *)
 val lookup_name_as_renamed  : env -> constr -> identifier -> int option
 val lookup_index_as_renamed : env -> constr -> int -> int option
@@ -47,3 +49,12 @@ val force_wildcard : unit -> bool
 val synthetize_type : unit -> bool
 val force_if : case_info -> bool
 val force_let : case_info -> bool
+
+(* Utilities to transform kernel cases to simple pattern-matching problem *)
+
+val it_destRLambda_or_LetIn_names : int -> rawconstr -> name list * rawconstr
+val simple_cases_matrix_of_branches : 
+  inductive -> int list -> rawconstr list -> cases_clauses
+val return_type_of_predicate :
+  inductive -> int -> int -> rawconstr -> predicate_pattern * rawconstr option
+

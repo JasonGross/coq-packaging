@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: type_errors.ml 8673 2006-03-29 21:21:52Z herbelin $ *)
+(* $Id: type_errors.ml 8845 2006-05-23 07:41:58Z herbelin $ *)
 
 open Names
 open Term
@@ -45,8 +45,8 @@ type type_error =
   | NotAType of unsafe_judgment
   | BadAssumption of unsafe_judgment
   | ReferenceVariables of constr
-  | ElimArity of inductive * types list * constr * unsafe_judgment
-      * (constr * constr * arity_error) option
+  | ElimArity of inductive * sorts_family list * constr * unsafe_judgment
+      * (sorts_family * sorts_family * arity_error) option
   | CaseNotInductive of unsafe_judgment
   | WrongCaseInfo of inductive * case_info
   | NumberBranches of unsafe_judgment * int

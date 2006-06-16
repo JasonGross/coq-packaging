@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: ppconstr.mli 7907 2006-01-21 11:03:29Z herbelin $ i*)
+(*i $Id: ppconstr.mli 8878 2006-05-30 16:44:25Z herbelin $ i*)
 
 open Pp
 open Environ
@@ -53,17 +53,20 @@ val pr_id : identifier -> std_ppcmds
 val pr_name : name -> std_ppcmds
 val pr_qualid : qualid -> std_ppcmds
 
+val pr_with_occurrences :
+  ('a -> std_ppcmds) -> 'a with_occurrences -> std_ppcmds
 val pr_red_expr :
-  ('a -> std_ppcmds) * ('a -> std_ppcmds) *  ('b -> std_ppcmds) ->
+  ('a -> std_ppcmds) * ('a -> std_ppcmds) * ('b -> std_ppcmds) ->
     ('a,'b) red_expr_gen -> std_ppcmds
 val pr_may_eval :
-  ('a -> std_ppcmds) -> ('a -> std_ppcmds) -> ('b -> std_ppcmds) ->
+  ('a -> std_ppcmds) -> ('a -> std_ppcmds) -> ('b -> std_ppcmds) -> 
     ('a,'b) may_eval -> std_ppcmds
 
-val pr_sort : rawsort -> std_ppcmds
+val pr_rawsort : rawsort -> std_ppcmds
 
 val pr_binders : local_binder list -> std_ppcmds
 val pr_pattern_expr : Tacexpr.pattern_expr -> std_ppcmds
+val pr_lpattern_expr : Tacexpr.pattern_expr -> std_ppcmds
 val pr_constr_expr : constr_expr -> std_ppcmds
 val pr_lconstr_expr : constr_expr -> std_ppcmds
 val pr_cases_pattern_expr : cases_pattern_expr -> std_ppcmds

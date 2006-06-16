@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacentries.mli 6616 2005-01-21 17:18:23Z herbelin $ i*)
+(*i $Id: vernacentries.mli 8781 2006-05-03 10:15:05Z jforest $ i*)
 
 (*i*)
 open Names
@@ -52,3 +52,5 @@ val set_pcoq_hook : pcoq_hook -> unit
 val abort_refine : ('a -> unit) -> 'a -> unit;;
 
 val interp : Vernacexpr.vernac_expr -> unit
+
+val vernac_reset_name : identifier Util.located -> unit 

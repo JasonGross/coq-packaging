@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: retyping.mli 8673 2006-03-29 21:21:52Z herbelin $ i*)
+(*i $Id: retyping.mli 8871 2006-05-28 16:46:48Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -34,5 +34,5 @@ val get_assumption_of : env -> evar_map -> constr -> types
 (* Makes an unsafe judgment from a constr *)
 val get_judgment_of : env -> evar_map -> constr -> unsafe_judgment
 
-val type_of_applied_inductive : env -> evar_map -> inductive -> 
+val type_of_inductive_knowing_parameters : env -> evar_map -> inductive -> 
   constr array -> types

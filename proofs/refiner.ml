@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: refiner.ml 8708 2006-04-14 08:13:02Z jforest $ *)
+(* $Id: refiner.ml 8759 2006-04-28 12:24:14Z herbelin $ *)
 
 open Pp
 open Util
@@ -263,7 +263,7 @@ let extract_open_proof sigma pf =
     let meta_cnt = ref 0 in
     let rec f () =
       incr meta_cnt; 
-      if in_dom sigma (existential_of_int !meta_cnt) then f ()
+      if Evd.mem sigma (existential_of_int !meta_cnt) then f ()
       else !meta_cnt
     in f
   in

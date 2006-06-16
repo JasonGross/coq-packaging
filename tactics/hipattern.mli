@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: hipattern.mli 8652 2006-03-22 08:27:14Z herbelin $ i*)
+(*i $Id: hipattern.mli 8866 2006-05-28 16:21:04Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -101,7 +101,7 @@ open Coqlib
 val find_eq_data_decompose : constr -> 
   coq_leibniz_eq_data * (constr * constr * constr)
 
-(* Match a term of the form [(existS A P t p)] or [(existT A P t p)] *)
+(* Match a term of the form [(existT A P t p)] *)
 (* Returns associated lemmas and [A,P,t,p] *)
 val find_sigma_data_decompose : constr -> 
   coq_sigma_data * (constr * constr * constr * constr)

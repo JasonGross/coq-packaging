@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: environ.ml 7830 2006-01-10 22:45:28Z herbelin $ *)
+(* $Id: environ.ml 8810 2006-05-12 18:50:21Z barras $ *)
 
 open Util
 open Names
@@ -91,7 +91,7 @@ let named_context_of_val = fst
    *** /!\ ***   [f t] should be convertible with t *)  
 let map_named_val f (ctxt,ctxtv) = 
   let ctxt =
-    List.map (fun (id,body,typ) -> (id, option_app f body, f typ)) ctxt in
+    List.map (fun (id,body,typ) -> (id, option_map f body, f typ)) ctxt in
   (ctxt,ctxtv)
 
 let empty_named_context = empty_named_context 
@@ -186,6 +186,8 @@ let evaluable_constant cst env =
 
 (* Mutual Inductives *)
 let lookup_mind = lookup_mind
+let scrape_mind = scrape_mind
+
 
 let add_mind kn mib env =
   let new_inds = KNmap.add kn mib env.env_globals.env_inductives in

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacinterp.ml 8654 2006-03-22 15:36:58Z msozeau $ *)
+(* $Id: tacinterp.ml 8926 2006-06-08 20:23:17Z herbelin $ *)
 
 open Constrintern
 open Closure
@@ -46,6 +46,7 @@ open Inductiveops
 open Syntax_def
 open Pretyping
 open Pretyping.Default
+open Pcoq
 
 let error_syntactic_metavariables_not_allowed loc =
   user_err_loc 
@@ -514,7 +515,7 @@ let intern_redexp ist = function
   | Cbv f -> Cbv (intern_flag ist f)
   | Lazy f -> Lazy (intern_flag ist f)
   | Pattern l -> Pattern (List.map (intern_constr_occurrence ist) l)
-  | Simpl o -> Simpl (option_app (intern_constr_occurrence ist) o)
+  | Simpl o -> Simpl (option_map (intern_constr_occurrence ist) o)
   | (Red _ | Hnf | ExtraRedExpr _ | CbvVm as r ) -> r
   
 
@@ -523,14 +524,14 @@ let intern_inversion_strength lf ist = function
       NonDepInversion (k,List.map (intern_hyp_or_metaid ist) idl,
       intern_intro_pattern lf ist ids)
   | DepInversion (k,copt,ids) ->
-      DepInversion (k, option_app (intern_constr ist) copt,
+      DepInversion (k, option_map (intern_constr ist) copt,
       intern_intro_pattern lf ist ids)
   | InversionUsing (c,idl) ->
       InversionUsing (intern_constr ist c, List.map (intern_hyp_or_metaid ist) idl)
 
 (* Interprets an hypothesis name *)
-let intern_hyp_location ist (id,occs,hl) =
-  (intern_hyp ist (skip_metaid id), occs, hl)
+let intern_hyp_location ist ((occs,id),hl) =
+  ((List.map (intern_int_or_var ist) occs,intern_hyp ist (skip_metaid id)), hl)
 
 let interp_constrpattern_gen sigma env ltacvar c =
   let c = intern_gen false ~allow_soapp:true ~ltacvars:(ltacvar,[])
@@ -618,29 +619,29 @@ let rec intern_atomic lf ist x =
       TacIntroPattern (List.map (intern_intro_pattern lf ist) l)
   | TacIntrosUntil hyp -> TacIntrosUntil (intern_quantified_hypothesis ist hyp)
   | TacIntroMove (ido,ido') ->
-      TacIntroMove (option_app (intern_ident lf ist) ido,
-          option_app (intern_hyp ist) ido')
+      TacIntroMove (option_map (intern_ident lf ist) ido,
+          option_map (intern_hyp ist) ido')
   | TacAssumption -> TacAssumption
   | TacExact c -> TacExact (intern_constr ist c)
   | TacExactNoCheck c -> TacExactNoCheck (intern_constr ist c)
   | TacApply cb -> TacApply (intern_constr_with_bindings ist cb)
   | TacElim (cb,cbo) ->
       TacElim (intern_constr_with_bindings ist cb,
-               option_app (intern_constr_with_bindings ist) cbo)
+               option_map (intern_constr_with_bindings ist) cbo)
   | TacElimType c -> TacElimType (intern_type ist c)
   | TacCase cb -> TacCase (intern_constr_with_bindings ist cb)
   | TacCaseType c -> TacCaseType (intern_type ist c)
-  | TacFix (idopt,n) -> TacFix (option_app (intern_ident lf ist) idopt,n)
+  | TacFix (idopt,n) -> TacFix (option_map (intern_ident lf ist) idopt,n)
   | TacMutualFix (id,n,l) ->
       let f (id,n,c) = (intern_ident lf ist id,n,intern_type ist c) in
       TacMutualFix (intern_ident lf ist id, n, List.map f l)
-  | TacCofix idopt -> TacCofix (option_app (intern_ident lf ist) idopt)
+  | TacCofix idopt -> TacCofix (option_map (intern_ident lf ist) idopt)
   | TacMutualCofix (id,l) ->
       let f (id,c) = (intern_ident lf ist id,intern_type ist c) in
       TacMutualCofix (intern_ident lf ist id, List.map f l)
   | TacCut c -> TacCut (intern_type ist c)
   | TacAssert (otac,ipat,c) ->
-      TacAssert (option_app (intern_tactic ist) otac,
+      TacAssert (option_map (intern_tactic ist) otac,
                  intern_intro_pattern lf ist ipat,
                  intern_constr_gen (otac<>None) ist c)
   | TacGeneralize cl -> TacGeneralize (List.map (intern_constr ist) cl)
@@ -660,26 +661,26 @@ let rec intern_atomic lf ist x =
   (* Automation tactics *)
   | TacTrivial (lems,l) -> TacTrivial (List.map (intern_constr ist) lems,l)
   | TacAuto (n,lems,l) ->
-      TacAuto (option_app (intern_int_or_var ist) n,
+      TacAuto (option_map (intern_int_or_var ist) n,
         List.map (intern_constr ist) lems,l)
   | TacAutoTDB n -> TacAutoTDB n
   | TacDestructHyp (b,id) -> TacDestructHyp(b,intern_hyp ist id)
   | TacDestructConcl -> TacDestructConcl
   | TacSuperAuto (n,l,b1,b2) -> TacSuperAuto (n,l,b1,b2)
-  | TacDAuto (n,p) -> TacDAuto (option_app (intern_int_or_var ist) n,p)
+  | TacDAuto (n,p) -> TacDAuto (option_map (intern_int_or_var ist) n,p)
 
   (* Derived basic tactics *)
   | TacSimpleInduction h ->
       TacSimpleInduction (intern_quantified_hypothesis ist h)
   | TacNewInduction (lc,cbo,ids) ->
       TacNewInduction (List.map (intern_induction_arg ist) lc,
-               option_app (intern_constr_with_bindings ist) cbo,
+               option_map (intern_constr_with_bindings ist) cbo,
                (intern_intro_pattern lf ist ids))
   | TacSimpleDestruct h ->
       TacSimpleDestruct (intern_quantified_hypothesis ist h)
   | TacNewDestruct (c,cbo,ids) ->
       TacNewDestruct (List.map (intern_induction_arg ist) c,
-               option_app (intern_constr_with_bindings ist) cbo,
+               option_map (intern_constr_with_bindings ist) cbo,
 	       (intern_intro_pattern lf ist ids))
   | TacDoubleInduction (h1,h2) ->
       let h1 = intern_quantified_hypothesis ist h1 in
@@ -703,14 +704,14 @@ let rec intern_atomic lf ist x =
   | TacLeft bl -> TacLeft (intern_bindings ist bl)
   | TacRight bl -> TacRight (intern_bindings ist bl)
   | TacSplit (b,bl) -> TacSplit (b,intern_bindings ist bl)
-  | TacAnyConstructor t -> TacAnyConstructor (option_app (intern_tactic ist) t)
+  | TacAnyConstructor t -> TacAnyConstructor (option_map (intern_tactic ist) t)
   | TacConstructor (n,bl) -> TacConstructor (n, intern_bindings ist bl)
 
   (* Conversion *)
   | TacReduce (r,cl) ->
       TacReduce (intern_redexp ist r, clause_app (intern_hyp_location ist) cl)
   | TacChange (occl,c,cl) ->
-      TacChange (option_app (intern_constr_occurrence ist) occl,
+      TacChange (option_map (intern_constr_occurrence ist) occl,
         intern_constr ist c, clause_app (intern_hyp_location ist) cl)
 
   (* Equivalence relations *)
@@ -720,6 +721,9 @@ let rec intern_atomic lf ist x =
   | TacTransitivity c -> TacTransitivity (intern_constr ist c)
 
   (* Equality and inversion *)
+  | TacRewrite (b,c,cl) -> 
+      TacRewrite (b,intern_constr_with_bindings ist c,
+		  clause_app (intern_hyp_location ist) cl)
   | TacInversion (inv,hyp) ->
       TacInversion (intern_inversion_strength lf ist inv,
         intern_quantified_hypothesis ist hyp)
@@ -750,7 +754,7 @@ and intern_tactic_seq ist = function
   | TacLetIn (l,u) ->
       let l = List.map
         (fun (n,c,b) ->
-          (n,option_app (intern_tactic ist) c, intern_tacarg !strict_check ist b)) l in
+          (n,option_map (intern_tactic ist) c, intern_tacarg !strict_check ist b)) l in
       let (l1,l2) = ist.ltacvars in
       let ist' = { ist with ltacvars = ((extract_let_names l)@l1,l2) } in
       ist.ltacvars, TacLetIn (l,intern_tactic ist' u)
@@ -864,9 +868,6 @@ and intern_genarg ist x =
         (intern_quantified_hypothesis ist (out_gen rawwit_quant_hyp x))
   | RedExprArgType ->
       in_gen globwit_red_expr (intern_redexp ist (out_gen rawwit_red_expr x))
-  | TacticArgType n ->
-      in_gen (globwit_tactic n) (intern_tactic ist
-	(out_gen (rawwit_tactic n) x))
   | OpenConstrArgType b ->
       in_gen (globwit_open_constr_gen b)
         ((),intern_constr ist (snd (out_gen (rawwit_open_constr_gen b) x)))
@@ -880,7 +881,14 @@ and intern_genarg ist x =
   | List1ArgType _ -> app_list1 (intern_genarg ist) x
   | OptArgType _ -> app_opt (intern_genarg ist) x
   | PairArgType _ -> app_pair (intern_genarg ist) (intern_genarg ist) x
-  | ExtraArgType s -> lookup_genarg_glob s ist x
+  | ExtraArgType s ->
+      match tactic_genarg_level s with
+      | Some n -> 
+          (* Special treatment of tactic arguments *)
+          in_gen (globwit_tactic n) (intern_tactic ist
+	    (out_gen (rawwit_tactic n) x))
+      | None ->
+          lookup_genarg_glob s ist x
 
 (************* End globalization ************)
 
@@ -1121,10 +1129,12 @@ let interp_evaluable ist env = function
   | ArgVar (_,id) -> coerce_to_evaluable_ref env (List.assoc id ist.lfun)
 
 (* Interprets an hypothesis name *)
-let interp_hyp_location ist gl (id,occs,hl) = (interp_hyp ist gl id,occs,hl)
+let interp_hyp_location ist gl ((occs,id),hl) =
+  ((List.map (fun n -> ArgArg (interp_int_or_var ist n)) occs,
+    interp_hyp ist gl id),hl)
 
 let interp_clause ist gl { onhyps=ol; onconcl=b; concl_occs=occs } =
-  { onhyps=option_app(List.map (interp_hyp_location ist gl)) ol;
+  { onhyps=option_map(List.map (interp_hyp_location ist gl)) ol;
     onconcl=b;
     concl_occs=occs }
 
@@ -1194,11 +1204,11 @@ let solve_remaining_evars env initial_sigma evars c =
   let isevars = ref evars in
   let rec proc_rec c =
     match kind_of_term (Reductionops.whd_evar (evars_of !isevars) c) with
-      | Evar (ev,args as k) when not (Evd.in_dom initial_sigma ev) ->
+      | Evar (ev,args as k) when not (Evd.mem initial_sigma ev) ->
             let (loc,src) = evar_source ev !isevars in
 	    let sigma = evars_of !isevars in
 	    (try 
-	      let evi = Evd.map sigma ev in
+	      let evi = Evd.find sigma ev in
 	      let c = solvable_by_tactic env evi k src in
 	      isevars := Evd.evar_define ev c !isevars;
 	      c
@@ -1261,7 +1271,9 @@ let interp_unfold ist env (l,qid) =
 let interp_flag ist env red =
   { red with rConst = List.map (interp_evaluable ist env) red.rConst }
 
-let interp_pattern ist sigma env (l,c) = (l,interp_constr ist sigma env c)
+let interp_pattern ist sigma env (l,c) = 
+  (List.map (fun n -> ArgArg (interp_int_or_var ist n)) l,
+   interp_constr ist sigma env c)
 
 let pf_interp_pattern ist gl = interp_pattern ist (project gl) (pf_env gl)
 
@@ -1271,7 +1283,7 @@ let redexp_interp ist sigma env = function
   | Cbv f -> Cbv (interp_flag ist env f)
   | Lazy f -> Lazy (interp_flag ist env f)
   | Pattern l -> Pattern (List.map (interp_pattern ist sigma env) l)
-  | Simpl o -> Simpl (option_app (interp_pattern ist sigma env) o)
+  | Simpl o -> Simpl (option_map (interp_pattern ist sigma env) o)
   | (Red _ |  Hnf | ExtraRedExpr _ | CbvVm as r) -> r
 
 let pf_redexp_interp ist gl = redexp_interp ist (project gl) (pf_env gl)
@@ -1568,7 +1580,7 @@ and interp_match_context ist g lz lr lmr =
            db_matched_concl ist.debug (pf_env goal) concl;
            apply_hyps_context ist env lz goal mt [] lgoal mhyps hyps
         with e when is_match_catchable e ->
-          (match e with
+         (match e with
             | PatternMatchingFailure -> db_matching_failure ist.debug
             | Eval_fail s -> db_eval_failure ist.debug s
             | _ -> db_logic_failure ist.debug e);
@@ -1652,7 +1664,6 @@ and interp_genarg ist goal x =
           (out_gen globwit_quant_hyp x))
   | RedExprArgType ->
       in_gen wit_red_expr (pf_redexp_interp ist goal (out_gen globwit_red_expr x))
-  | TacticArgType n -> in_gen (wit_tactic n) (out_gen (globwit_tactic n) x)
   | OpenConstrArgType casted ->
       in_gen (wit_open_constr_gen casted) 
         (pf_interp_open_constr casted ist goal 
@@ -1667,7 +1678,13 @@ and interp_genarg ist goal x =
   | List1ArgType _ -> app_list1 (interp_genarg ist goal) x
   | OptArgType _ -> app_opt (interp_genarg ist goal) x
   | PairArgType _ -> app_pair (interp_genarg ist goal) (interp_genarg ist goal) x
-  | ExtraArgType s -> lookup_interp_genarg s ist goal x
+  | ExtraArgType s -> 
+      match tactic_genarg_level s with
+      | Some n -> 
+          (* Special treatment of tactic arguments *)
+          in_gen (wit_tactic n) (out_gen (globwit_tactic n) x)
+      | None -> 
+          lookup_interp_genarg s ist goal x
 
 (* Interprets the Match expressions *)
 and interp_match ist g lz constr lmr =
@@ -1719,23 +1736,23 @@ and interp_atomic ist gl = function
   | TacIntrosUntil hyp ->
       h_intros_until (interp_quantified_hypothesis ist hyp)
   | TacIntroMove (ido,ido') ->
-      h_intro_move (option_app (interp_ident ist) ido)
-      (option_app (interp_hyp ist gl) ido')
+      h_intro_move (option_map (interp_ident ist) ido)
+      (option_map (interp_hyp ist gl) ido')
   | TacAssumption -> h_assumption
   | TacExact c -> h_exact (pf_interp_casted_constr ist gl c)
   | TacExactNoCheck c -> h_exact_no_check (pf_interp_constr ist gl c)
   | TacApply cb -> h_apply (interp_constr_with_bindings ist gl cb)
   | TacElim (cb,cbo) ->
       h_elim (interp_constr_with_bindings ist gl cb)
-                (option_app (interp_constr_with_bindings ist gl) cbo)
+                (option_map (interp_constr_with_bindings ist gl) cbo)
   | TacElimType c -> h_elim_type (pf_interp_type ist gl c)
   | TacCase cb -> h_case (interp_constr_with_bindings ist gl cb)
   | TacCaseType c -> h_case_type (pf_interp_type ist gl c)
-  | TacFix (idopt,n) -> h_fix (option_app (interp_ident ist) idopt) n
+  | TacFix (idopt,n) -> h_fix (option_map (interp_ident ist) idopt) n
   | TacMutualFix (id,n,l) ->
       let f (id,n,c) = (interp_ident ist id,n,pf_interp_type ist gl c) in
       h_mutual_fix (interp_ident ist id) n (List.map f l)
-  | TacCofix idopt -> h_cofix (option_app (interp_ident ist) idopt)
+  | TacCofix idopt -> h_cofix (option_map (interp_ident ist) idopt)
   | TacMutualCofix (id,l) ->
       let f (id,c) = (interp_ident ist id,pf_interp_type ist gl c) in
       h_mutual_cofix (interp_ident ist id) (List.map f l)
@@ -1743,7 +1760,7 @@ and interp_atomic ist gl = function
   | TacAssert (t,ipat,c) ->
       let c = (if t=None then pf_interp_constr else pf_interp_type) ist gl c in
       abstract_tactic (TacAssert (t,ipat,c))
-        (Tactics.forward (option_app (interp_tactic ist) t)
+        (Tactics.forward (option_map (interp_tactic ist) t)
 	  (interp_intro_pattern ist ipat) c)
   | TacGeneralize cl -> h_generalize (List.map (pf_interp_constr ist gl) cl)
   | TacGeneralizeDep c -> h_generalize_dep (pf_interp_constr ist gl c)
@@ -1760,29 +1777,29 @@ and interp_atomic ist gl = function
   (* Automation tactics *)
   | TacTrivial (lems,l) -> 
       Auto.h_trivial (List.map (pf_interp_constr ist gl) lems)
-	(option_app (List.map (interp_hint_base ist)) l)
+	(option_map (List.map (interp_hint_base ist)) l)
   | TacAuto (n,lems,l) ->
-      Auto.h_auto (option_app (interp_int_or_var ist) n)
+      Auto.h_auto (option_map (interp_int_or_var ist) n)
       (List.map (pf_interp_constr ist gl) lems)
-      (option_app (List.map (interp_hint_base ist)) l)
+      (option_map (List.map (interp_hint_base ist)) l)
   | TacAutoTDB n -> Dhyp.h_auto_tdb n
   | TacDestructHyp (b,id) -> Dhyp.h_destructHyp b (interp_hyp ist gl id)
   | TacDestructConcl -> Dhyp.h_destructConcl
   | TacSuperAuto (n,l,b1,b2) -> Auto.h_superauto n l b1 b2
-  | TacDAuto (n,p) -> Auto.h_dauto (option_app (interp_int_or_var ist) n,p)
+  | TacDAuto (n,p) -> Auto.h_dauto (option_map (interp_int_or_var ist) n,p)
 
   (* Derived basic tactics *)
   | TacSimpleInduction h ->
       h_simple_induction (interp_quantified_hypothesis ist h)
   | TacNewInduction (lc,cbo,ids) ->
       h_new_induction (List.map (interp_induction_arg ist gl) lc)
-        (option_app (interp_constr_with_bindings ist gl) cbo)
+        (option_map (interp_constr_with_bindings ist gl) cbo)
         (interp_intro_pattern ist ids)
   | TacSimpleDestruct h ->
       h_simple_destruct (interp_quantified_hypothesis ist h)
   | TacNewDestruct (c,cbo,ids) -> 
       h_new_destruct (List.map (interp_induction_arg ist gl) c)
-        (option_app (interp_constr_with_bindings ist gl) cbo)
+        (option_map (interp_constr_with_bindings ist gl) cbo)
         (interp_intro_pattern ist ids)
   | TacDoubleInduction (h1,h2) ->
       let h1 = interp_quantified_hypothesis ist h1 in
@@ -1811,7 +1828,7 @@ and interp_atomic ist gl = function
   | TacSplit (_,bl) -> h_split (interp_bindings ist gl bl)
   | TacAnyConstructor t ->
       abstract_tactic (TacAnyConstructor t)
-        (Tactics.any_constructor (option_app (interp_tactic ist) t))
+        (Tactics.any_constructor (option_map (interp_tactic ist) t))
   | TacConstructor (n,bl) ->
       h_constructor (skip_metaid n) (interp_bindings ist gl bl)
 
@@ -1819,7 +1836,7 @@ and interp_atomic ist gl = function
   | TacReduce (r,cl) ->
       h_reduce (pf_redexp_interp ist gl r) (interp_clause ist gl cl)
   | TacChange (occl,c,cl) ->
-      h_change (option_app (pf_interp_pattern ist gl) occl)
+      h_change (option_map (pf_interp_pattern ist gl) occl)
         (pf_interp_constr ist gl c) (interp_clause ist gl cl)
 
   (* Equivalence relations *)
@@ -1828,8 +1845,12 @@ and interp_atomic ist gl = function
   | TacTransitivity c -> h_transitivity (pf_interp_constr ist gl c)
 
   (* Equality and inversion *)
+  | TacRewrite (b,c,cl) -> 
+      Equality.general_multi_rewrite b 
+	(interp_constr_with_bindings ist gl c) 
+	(interp_clause ist gl cl)
   | TacInversion (DepInversion (k,c,ids),hyp) ->
-      Inv.dinv k (option_app (pf_interp_constr ist gl) c)
+      Inv.dinv k (option_map (pf_interp_constr ist gl) c)
         (interp_intro_pattern ist ids)
         (interp_declared_or_quantified_hypothesis ist gl hyp)
   | TacInversion (NonDepInversion (k,idl,ids),hyp) ->
@@ -1868,13 +1889,17 @@ and interp_atomic ist gl = function
     | ConstrMayEvalArgType ->
 	VConstr
           (interp_constr_may_eval ist gl (out_gen globwit_constr_may_eval x))
-    | TacticArgType n -> 
-	val_interp ist gl (out_gen (globwit_tactic n) x)
+    | ExtraArgType s when tactic_genarg_level s <> None ->
+          (* Special treatment of tactic arguments *)
+	val_interp ist gl 
+          (out_gen (globwit_tactic (out_some (tactic_genarg_level s))) x)
     | StringArgType | BoolArgType
     | QuantHypArgType | RedExprArgType 
-    | OpenConstrArgType _ | ConstrWithBindingsArgType | BindingsArgType 
-    | ExtraArgType _ | List0ArgType _ | List1ArgType _ | OptArgType _ | PairArgType _ 
+    | OpenConstrArgType _ | ConstrWithBindingsArgType 
+    | ExtraArgType _ | BindingsArgType 
+    | List0ArgType _ | List1ArgType _ | OptArgType _ | PairArgType _ 
 	-> error "This generic type is not supported in alias"
+        
     in
     let lfun = (List.map (fun (x,c) -> (x,f c)) l)@ist.lfun in
     let v = locate_tactic_call loc (val_interp { ist with lfun=lfun } gl body)
@@ -1938,7 +1963,7 @@ let subst_and_short_name f (c,n) =
 
 let subst_or_var f =  function
   | ArgVar _ as x -> x
-  | ArgArg (x) -> ArgArg (f x)
+  | ArgArg x -> ArgArg (f x)
 
 let subst_located f (_loc,id) = (loc,f id)
 
@@ -1977,7 +2002,7 @@ let subst_redexp subst = function
   | Cbv f -> Cbv (subst_flag subst f)
   | Lazy f -> Lazy (subst_flag subst f)
   | Pattern l -> Pattern (List.map (subst_constr_occurrence subst) l)
-  | Simpl o -> Simpl (option_app (subst_constr_occurrence subst) o)
+  | Simpl o -> Simpl (option_map (subst_constr_occurrence subst) o)
   | (Red _ | Hnf | ExtraRedExpr _ | CbvVm as r) -> r
 
 let subst_raw_may_eval subst = function
@@ -2005,7 +2030,7 @@ let rec subst_atomic subst (t:glob_atomic_tactic_expr) = match t with
   | TacApply cb -> TacApply (subst_raw_with_bindings subst cb)
   | TacElim (cb,cbo) ->
       TacElim (subst_raw_with_bindings subst cb,
-               option_app (subst_raw_with_bindings subst) cbo)
+               option_map (subst_raw_with_bindings subst) cbo)
   | TacElimType c -> TacElimType (subst_rawconstr subst c)
   | TacCase cb -> TacCase (subst_raw_with_bindings subst cb)
   | TacCaseType c -> TacCaseType (subst_rawconstr subst c)
@@ -2035,11 +2060,11 @@ let rec subst_atomic subst (t:glob_atomic_tactic_expr) = match t with
   | TacSimpleInduction h as x -> x
   | TacNewInduction (lc,cbo,ids) -> (* Pierre C. est-ce correct? *)
       TacNewInduction (List.map (subst_induction_arg subst) lc,
-               option_app (subst_raw_with_bindings subst) cbo, ids)
+               option_map (subst_raw_with_bindings subst) cbo, ids)
   | TacSimpleDestruct h as x -> x
   | TacNewDestruct (c,cbo,ids) ->
       TacNewDestruct (List.map (subst_induction_arg subst) c,  (* Julien F. est-ce correct? *)
-               option_app (subst_raw_with_bindings subst) cbo, ids)
+               option_map (subst_raw_with_bindings subst) cbo, ids)
   | TacDoubleInduction (h1,h2) as x -> x
   | TacDecomposeAnd c -> TacDecomposeAnd (subst_rawconstr subst c)
   | TacDecomposeOr c -> TacDecomposeOr (subst_rawconstr subst c)
@@ -2059,13 +2084,13 @@ let rec subst_atomic subst (t:glob_atomic_tactic_expr) = match t with
   | TacLeft bl -> TacLeft (subst_bindings subst bl)
   | TacRight bl -> TacRight (subst_bindings subst bl)
   | TacSplit (b,bl) -> TacSplit (b,subst_bindings subst bl)
-  | TacAnyConstructor t -> TacAnyConstructor (option_app (subst_tactic subst) t)
+  | TacAnyConstructor t -> TacAnyConstructor (option_map (subst_tactic subst) t)
   | TacConstructor (n,bl) -> TacConstructor (n, subst_bindings subst bl)
 
   (* Conversion *)
   | TacReduce (r,cl) -> TacReduce (subst_redexp subst r, cl)
   | TacChange (occl,c,cl) ->
-      TacChange (option_app (subst_constr_occurrence subst) occl,
+      TacChange (option_map (subst_constr_occurrence subst) occl,
         subst_rawconstr subst c, cl)
 
   (* Equivalence relations *)
@@ -2073,8 +2098,9 @@ let rec subst_atomic subst (t:glob_atomic_tactic_expr) = match t with
   | TacTransitivity c -> TacTransitivity (subst_rawconstr subst c)
 
   (* Equality and inversion *)
+  | TacRewrite (b,c,cl) -> TacRewrite (b, subst_raw_with_bindings subst c,cl)
   | TacInversion (DepInversion (k,c,l),hyp) ->
-     TacInversion (DepInversion (k,option_app (subst_rawconstr subst) c,l),hyp)
+     TacInversion (DepInversion (k,option_map (subst_rawconstr subst) c,l),hyp)
   | TacInversion (NonDepInversion _,_) as x -> x
   | TacInversion (InversionUsing (c,cl),hyp) ->
       TacInversion (InversionUsing (subst_rawconstr subst c,cl),hyp)
@@ -2093,7 +2119,7 @@ and subst_tactic subst (t:glob_tactic_expr) = match t with
       let lrc = List.map (fun (n,b) -> (n,subst_tactic_fun subst b)) lrc in
       TacLetRecIn (lrc,(subst_tactic subst u:glob_tactic_expr))
   | TacLetIn (l,u) ->
-      let l = List.map (fun (n,c,b) -> (n,option_app (subst_tactic subst) c,subst_tacarg subst b)) l in
+      let l = List.map (fun (n,c,b) -> (n,option_map (subst_tactic subst) c,subst_tacarg subst b)) l in
       TacLetIn (l,subst_tactic subst u)
   | TacMatchContext (lz,lr,lmr) ->
       TacMatchContext(lz,lr, subst_match_rule subst lmr)
@@ -2172,9 +2198,6 @@ and subst_genarg subst (x:glob_generic_argument) =
           (out_gen globwit_quant_hyp x))
   | RedExprArgType ->
       in_gen globwit_red_expr (subst_redexp subst (out_gen globwit_red_expr x))
-  | TacticArgType n ->
-      in_gen (globwit_tactic n)
-        (subst_tactic subst (out_gen (globwit_tactic n) x))
   | OpenConstrArgType b ->
       in_gen (globwit_open_constr_gen b)
         ((),subst_rawconstr subst (snd (out_gen (globwit_open_constr_gen b) x)))
@@ -2188,7 +2211,14 @@ and subst_genarg subst (x:glob_generic_argument) =
   | List1ArgType _ -> app_list1 (subst_genarg subst) x
   | OptArgType _ -> app_opt (subst_genarg subst) x
   | PairArgType _ -> app_pair (subst_genarg subst) (subst_genarg subst) x
-  | ExtraArgType s -> lookup_genarg_subst s subst x
+  | ExtraArgType s ->
+      match tactic_genarg_level s with
+      | Some n -> 
+          (* Special treatment of tactic arguments *)
+          in_gen (globwit_tactic n)
+            (subst_tactic subst (out_gen (globwit_tactic n) x))
+      | None -> 
+          lookup_genarg_subst s subst x
 
 (***************************************************************************)
 (* Tactic registration *)

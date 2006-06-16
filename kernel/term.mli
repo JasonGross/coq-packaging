@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: term.mli 8049 2006-02-16 10:42:18Z coq $ i*)
+(*i $Id: term.mli 8850 2006-05-23 16:11:31Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -460,8 +460,12 @@ val substnl : constr list -> int -> constr -> constr
 val substl : constr list -> constr -> constr
 val subst1 : constr -> constr -> constr
 
-val substl_decl : constr list -> named_declaration -> named_declaration
-val subst1_decl : constr -> named_declaration -> named_declaration
+val substnl_decl : constr list -> int -> rel_declaration -> rel_declaration
+val substl_decl : constr list -> rel_declaration -> rel_declaration
+val subst1_decl : constr -> rel_declaration -> rel_declaration
+
+val subst1_named_decl : constr -> named_declaration -> named_declaration
+val substl_named_decl : constr list -> named_declaration -> named_declaration
 
 val replace_vars : (identifier * constr) list -> constr -> constr
 val subst_var : identifier -> constr -> constr

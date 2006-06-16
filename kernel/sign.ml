@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: sign.ml 7639 2005-12-02 10:01:15Z gregoire $ *)
+(* $Id: sign.ml 8845 2006-05-23 07:41:58Z herbelin $ *)
 
 open Names
 open Util
@@ -89,7 +89,7 @@ let push_named_to_rel_context hyps ctxt =
   let rec push = function
     | (id,b,t) :: l ->
 	let s, hyps = push l in
-	let d = (Name id, option_app (subst_vars s) b, type_app (subst_vars s) t) in
+	let d = (Name id, option_map (subst_vars s) b, type_app (subst_vars s) t) in
 	id::s, d::hyps
     | [] -> [],[] in
   let s, hyps = push hyps in
@@ -191,3 +191,4 @@ let decompose_lam_n_assum n =
     | c -> error "decompose_lam_n_assum: not enough abstractions"
   in 
   lamdec_rec empty_rel_context n 
+

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: DecidableType.v 8639 2006-03-16 19:21:55Z letouzey $ *)
+(* $Id: DecidableType.v 8933 2006-06-09 14:08:38Z herbelin $ *)
 
 Require Export SetoidList.
 Set Implicit Arguments.
@@ -31,8 +31,9 @@ Module Type DecidableType.
 
 End DecidableType. 
 
+(** * Additional notions about keys and datas used in FMap *)
 
-Module PairDecidableType(D:DecidableType).
+Module KeyDecidableType(D:DecidableType).
  Import D.
 
  Section Elt.
@@ -147,5 +148,9 @@ Module PairDecidableType(D:DecidableType).
  Hint Unfold MapsTo In.
  Hint Resolve In_inv_2 In_inv_3.
 
+End KeyDecidableType.
 
-End PairDecidableType.
+
+
+
+

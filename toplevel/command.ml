@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: command.ml 8689 2006-04-07 20:20:16Z herbelin $ *)
+(* $Id: command.ml 8875 2006-05-29 19:59:11Z msozeau $ *)
 
 open Pp
 open Util
@@ -112,7 +112,7 @@ let constant_entry_of_com (bl,com,comtypopt,opacity,boxed) =
     | Some comtyp ->
 	(* We use a cast to avoid troubles with evars in comtyp *)
 	(* that can only be resolved knowing com *)
-	let b = abstract_constr_expr (mkCastC (com,DEFAULTcast,comtyp)) bl in
+	let b = abstract_constr_expr (mkCastC (com, Rawterm.CastConv DEFAULTcast,comtyp)) bl in
 	let (body,typ) = destSubCast (interp_constr sigma env b) in
 	{ const_entry_body = body;
 	  const_entry_type = Some typ;
@@ -219,7 +219,7 @@ let declare_one_elimination ind =
   let elim_scheme = Indrec.build_indrec env sigma ind in
   let npars = mib.mind_nparams_rec in
   let make_elim s = Indrec.instantiate_indrec_scheme s npars elim_scheme in
-  let kelim = mip.mind_kelim in
+  let kelim = elim_sorts (mib,mip) in
   (* in case the inductive has a type elimination, generates only one
      induction scheme, the other ones share the same code with the
      apropriate type *)
@@ -457,7 +457,9 @@ let build_recursive (lnameargsardef:(fixpoint_expr *decl_notation) list)
   let lrecnames = List.map (fun ((f,_,_,_,_),_) -> f) lnameargsardef 
   and sigma = Evd.empty
   and env0 = Global.env()
-  and nv = Array.of_list (List.map (fun ((_,n,_,_,_),_) -> n) lnameargsardef) in
+  and nv = Array.of_list (List.map (fun ((_,n,_,_,_),_) -> n) lnameargsardef)
+  and bl = Array.of_list (List.map (fun ((_,_,bl,_,_),_) -> bl) lnameargsardef) 
+  in 
   (* Build the recursive context and notations for the recursive types *)
   let (rec_sign,rec_impls,arityl) = 
     List.fold_left 
@@ -502,9 +504,24 @@ let build_recursive (lnameargsardef:(fixpoint_expr *decl_notation) list)
   let recvec = 
     Array.map (subst_vars (List.rev (Array.to_list namerec))) defrec in
   let recdecls = (Array.map (fun id -> Name id) namerec, arrec, recvec) in
+  let nvrec = Array.mapi 
+    (fun i (n,_) -> match n with 
+       | Some n -> n 
+       | None -> 
+	   (* Recursive argument was not given by the user : 
+	      We check that there is only one inductive argument *)
+	   let ctx = snd (interp_context sigma env0 bl.(i)) in 
+	   let isIndApp t = isInd (fst (decompose_app (strip_head_cast t))) in 
+	   (* This could be more precise (e.g. do some delta) *)
+	   let lb = List.rev_map (fun (_,_,t) -> isIndApp t) ctx in
+	   try (list_unique_index true lb) - 1
+	   with Not_found -> 
+	     error "the recursive argument needs to be specified")
+    nvrec
+  in  
   let rec declare i fi =
     let ce = 
-      { const_entry_body = mkFix ((Array.map fst nvrec,i),recdecls); (* ignore rec order *)
+      { const_entry_body = mkFix ((nvrec,i),recdecls); (* ignore rec order *)
         const_entry_type = Some arrec.(i);
         const_entry_opaque = false;
         const_entry_boxed = boxed} in

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: declare.ml 7941 2006-01-28 23:07:59Z herbelin $ *)
+(* $Id: declare.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
 
 open Pp
 open Util
@@ -204,7 +204,7 @@ let hcons_constant_declaration = function
       let (hcons1_constr,_) = hcons_constr (hcons_names()) in
       DefinitionEntry
        { const_entry_body = hcons1_constr ce.const_entry_body;
-	 const_entry_type = option_app hcons1_constr ce.const_entry_type;
+	 const_entry_type = option_map hcons1_constr ce.const_entry_type;
          const_entry_opaque = ce.const_entry_opaque; 
          const_entry_boxed = ce.const_entry_boxed }
   | cd -> cd

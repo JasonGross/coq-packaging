@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: constrextern.mli 7837 2006-01-11 09:47:32Z herbelin $ i*)
+(*i $Id: constrextern.mli 8831 2006-05-19 09:29:54Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -41,6 +41,7 @@ val extern_constr : bool -> env -> constr -> constr_expr
 val extern_constr_in_scope : bool -> scope_name -> env -> constr -> constr_expr
 val extern_reference : loc -> Idset.t -> global_reference -> reference
 val extern_type : bool -> env -> types -> constr_expr
+val extern_sort : sorts -> rawsort
 
 (* Printing options *)
 val print_implicits : bool ref

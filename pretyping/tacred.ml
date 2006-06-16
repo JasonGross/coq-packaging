@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacred.ml 8003 2006-02-07 22:11:50Z herbelin $ *)
+(* $Id: tacred.ml 8793 2006-05-05 17:41:41Z barras $ *)
 
 open Pp
 open Util
@@ -18,8 +18,8 @@ open Termops
 open Declarations
 open Inductive
 open Environ
-open Reductionops
 open Closure
+open Reductionops
 open Cbv
 open Rawterm
 
@@ -80,7 +80,7 @@ let reference_opt_value sigma env = function
       v
   | EvalRel n ->
       let (_,v,_) = lookup_rel n env in
-      option_app (lift n) v
+      option_map (lift n) v
   | EvalEvar ev -> Evd.existential_opt_value sigma ev
 
 exception NotEvaluable

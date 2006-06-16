@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: term.ml 8049 2006-02-16 10:42:18Z coq $ *)
+(* $Id: term.ml 8850 2006-05-23 16:11:31Z herbelin $ *)
 
 (* This module instantiates the structure of generic deBruijn terms to Coq *)
 
@@ -643,7 +643,7 @@ let body_of_type ty = ty
 type named_declaration = identifier * constr option * types
 type rel_declaration = name * constr option * types
 
-let map_named_declaration f (id, v, ty) = (id, option_app f v, f ty)
+let map_named_declaration f (id, v, ty) = (id, option_map f v, f ty)
 let map_rel_declaration = map_named_declaration
 
 (****************************************************************************)
@@ -752,36 +752,34 @@ let rec lift_substituend depth s =
 
 let make_substituend c = { sinfo=Unknown; sit=c }
 
-let substn_many lamv n =
+let substn_many lamv n c =
   let lv = Array.length lamv in 
-  let rec substrec depth c = match kind_of_term c with
-    | Rel k     ->
-        if k<=depth then 
-	  c
-        else if k-depth <= lv then
-          lift_substituend depth lamv.(k-depth-1)
-        else 
-	  mkRel (k-lv)
-    | _ -> map_constr_with_binders succ substrec depth c
-  in 
-  substrec n
+  if lv = 0 then c
+  else 
+    let rec substrec depth c = match kind_of_term c with
+      | Rel k     ->
+          if k<=depth then c
+          else if k-depth <= lv then lift_substituend depth lamv.(k-depth-1)
+          else mkRel (k-lv)
+      | _ -> map_constr_with_binders succ substrec depth c in 
+    substrec n c
 
 (*
 let substkey = Profile.declare_profile "substn_many";;
 let substn_many lamv n c = Profile.profile3 substkey substn_many lamv n c;;
 *)
 
-let substnl laml k =
-  substn_many (Array.map make_substituend (Array.of_list laml)) k
-let substl laml =
-  substn_many (Array.map make_substituend (Array.of_list laml)) 0
+let substnl laml n =
+  substn_many (Array.map make_substituend (Array.of_list laml)) n
+let substl laml = substnl laml 0
 let subst1 lam = substl [lam]
 
-let substl_decl laml (id,bodyopt,typ) =
-  match bodyopt with
-    | None -> (id,None,substl laml typ)
-    | Some body -> (id, Some (substl laml body), type_app (substl laml) typ)
+let substnl_decl laml k (id,bodyopt,typ) =
+  (id,option_map (substnl laml k) bodyopt,substnl laml k typ)
+let substl_decl laml = substnl_decl laml 0
 let subst1_decl lam = substl_decl [lam]
+let subst1_named_decl = subst1_decl
+let substl_named_decl = substl_decl
 
 (* (thin_val sigma) removes identity substitutions from sigma *)
 

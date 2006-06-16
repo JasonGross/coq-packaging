@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: TheoryList.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id: TheoryList.v 8866 2006-05-28 16:21:04Z herbelin $ i*)
 
 (** Some programs and results about lists following CAML Manual *)
 
@@ -14,7 +14,7 @@ Require Export List.
 Set Implicit Arguments.
 Section Lists.
 
-Variable A : Set.
+Variable A : Type.
 
 (**********************)
 (** The null function *)
@@ -325,7 +325,7 @@ Realizer find.
 *)
 Qed.
 
-Variable B : Set.
+Variable B : Type.
 Variable T : A -> B -> Prop.
 
 Variable TS_dec : forall a:A, {c : B | T a c} + {P a}.
@@ -358,7 +358,7 @@ End Find_sec.
 
 Section Assoc_sec.
 
-Variable B : Set.
+Variable B : Type.
 Fixpoint assoc (a:A) (l:list (A * B)) {struct l} : 
  Exc B :=
   match l with

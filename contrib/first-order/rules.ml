@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: rules.ml 7909 2006-01-21 11:09:18Z herbelin $ *)
+(* $Id: rules.ml 8878 2006-05-30 16:44:25Z herbelin $ *)
 
 open Util
 open Names
@@ -211,6 +211,6 @@ let normalize_evaluables=
   onAllClauses
     (function 
 	 None->unfold_in_concl (Lazy.force defined_connectives)
-       | Some (id,_,_)-> 
+       | Some ((_,id),_)-> 
 	   unfold_in_hyp (Lazy.force defined_connectives) 
-	   (id,[],Tacexpr.InHypTypeOnly))
+	   (([],id),Tacexpr.InHypTypeOnly))

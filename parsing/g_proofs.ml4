@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_proofs.ml4 7936 2006-01-28 18:36:54Z herbelin $ *)
+(* $Id: g_proofs.ml4 8875 2006-05-29 19:59:11Z msozeau $ *)
 
 open Pcoq
 open Pp
@@ -117,6 +117,6 @@ GEXTEND Gram
     ;
   constr_body:
     [ [ ":="; c = lconstr -> c
-      | ":"; t = lconstr; ":="; c = lconstr -> CCast(loc,c,Term.DEFAULTcast,t) ] ]
+      | ":"; t = lconstr; ":="; c = lconstr -> CCast(loc,c, Rawterm.CastConv Term.DEFAULTcast,t) ] ]
   ;
 END

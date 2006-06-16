@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coq.mli 6621 2005-01-21 17:24:37Z herbelin $ i*)
+(*i $Id: coq.mli 8877 2006-05-30 16:37:04Z notin $ i*)
 
 open Names
 open Term
@@ -50,6 +50,7 @@ val concl_menu : concl -> (string * string) list
 
 val is_in_coq_lib : string -> bool
 val is_in_coq_path : string -> bool
+val is_in_loadpath : string -> bool
 
 val make_cases : string -> string list list
 

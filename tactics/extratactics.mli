@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extratactics.mli 8651 2006-03-21 21:54:43Z jforest $ i*)
+(*i $Id: extratactics.mli 8780 2006-05-02 21:58:58Z letouzey $ i*)
 
 open Names
 open Term
@@ -15,7 +15,6 @@ open Rawterm
 
 val h_discrHyp : quantified_hypothesis -> tactic
 val h_injHyp : quantified_hypothesis -> tactic
-val h_rewriteLR : constr -> tactic
 
 val refine_tac : Genarg.open_constr -> tactic
 

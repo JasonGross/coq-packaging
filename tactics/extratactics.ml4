@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extratactics.ml4 8651 2006-03-21 21:54:43Z jforest $ *)
+(* $Id: extratactics.ml4 8926 2006-06-08 20:23:17Z herbelin $ *)
 
 open Pp
 open Pcoq
@@ -20,6 +20,9 @@ open Names
 (* Equality *)
 open Equality
 
+(* Pierre L: for an easy implementation of "rewrite ... in <clause>", rewrite
+  has moved to g_tactics.ml4
+
 TACTIC EXTEND rewrite
 | [ "rewrite" orient(b) constr_with_bindings(c) ] ->
     [general_rewrite_bindings b c]
@@ -30,57 +33,45 @@ TACTIC EXTEND rewrite_in
     [general_rewrite_bindings_in b h c]
 END
 
-let h_rewriteLR x = h_rewrite true (x,Rawterm.NoBindings)
+let h_rewriteLR x = h_rewrite true (x,Rawterm.NoBindings) 
+*)
 
 (* Julien: Mise en commun des differentes version de replace with in by 
-   TODO: améliorer l'affichage et deplacer dans extraargs
+   TODO: deplacer dans extraargs
 
 *)
 
-
-let pr_by_arg_tac prc _ _ opt_c = 
+let pr_by_arg_tac _prc _prlc prtac opt_c = 
   match opt_c with 
     | None -> mt ()
-    | Some c -> spc () ++ hov 2 (str "by" ++ spc ()  )
+    | Some t -> spc () ++ hov 2 (str "by" ++ spc () ++ prtac (3,Ppextend.E) t)
 
 (* Julien Forest: on voudrait pouvoir passer la loc mais je 
 n'ai pas reussi 
 *)
 
-let pr_in_arg_hyp  = 
-fun prc _ _ opt_c->
+let pr_in_arg_hyp _prc _prlc _prtac opt_c =
   match opt_c with 
     | None -> mt ()
-    | Some c -> 
-	spc () ++ hov 2 (str "by" ++ spc () ++ 
-			   Pptactic.pr_or_var (fun _ -> mt ()) 
-			   (ArgVar(Util.dummy_loc,c))
-			)
-
-
-
+    | Some id -> spc () ++ hov 2 (str "by" ++ spc () ++ Nameops.pr_id id)
 
 ARGUMENT EXTEND by_arg_tac
   TYPED AS tactic_opt
   PRINTED BY pr_by_arg_tac
-| [ "by" tactic(c) ] -> [ Some c ]
+| [ "by" tactic3(c) ] -> [ Some c ]
 | [ ] -> [ None ]
 END
  
 ARGUMENT EXTEND in_arg_hyp
   TYPED AS ident_opt
   PRINTED BY pr_in_arg_hyp
-| [ "in" int_or_var(c) ] -> 
-    [ match c with
-	| ArgVar(_,c) ->  Some (c)
-	| _ -> Util.error "in must be used with an identifier" 
-    ]
+| [ "in" ident(c) ] -> [ Some (c) ]
 | [ ] -> [ None ]
 END
 
 TACTIC EXTEND replace 
-| ["replace" constr(c1) "with" constr(c2) in_arg_hyp(in_hyp)  by_arg_tac(tac)  ] ->
-    [ new_replace c1 c2 in_hyp (Util.option_app Tacinterp.eval_tactic tac)  ]
+   ["replace" constr(c1) "with" constr(c2) in_arg_hyp(in_hyp) by_arg_tac(tac) ]
+-> [ new_replace c1 c2 in_hyp (Util.option_map Tacinterp.eval_tactic tac) ]
 END
 
 (* Julien:

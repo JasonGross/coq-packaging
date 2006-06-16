@@ -47,9 +47,9 @@ let subst_evars evs n t =
     | Evar (k, args) ->
 	(try 
 	   let index, hyps = evar_info k in
-	     trace (str "Evar " ++ int k ++ str " found, applied to " ++ int (Array.length args) ++ str "arguments," ++
-		    int (List.length hyps) ++ str " hypotheses");
-
+	     (try trace (str "Evar " ++ int k ++ str " found, applied to " ++ int (Array.length args) ++ str "arguments," ++
+			 int (List.length hyps) ++ str " hypotheses"); 	      with _ -> () );
+		
 	   let ex = mkRel (index + depth) in
 	     (* Evar arguments are created in inverse order, 
 		and we must not apply to defined ones (i.e. LetIn's)
@@ -128,7 +128,7 @@ let eterm_term evm t tycon =
   let anon_evar_bl = List.map (fun (_, x, y) -> (Anonymous, x, y)) evar_bl in
     (* Generalize over the existential variables *)
   let t'' = Termops.it_mkLambda_or_LetIn t' evar_bl 
-  and tycon = option_app 
+  and tycon = option_map 
 		(fun typ -> Termops.it_mkProd_wo_LetIn typ anon_evar_bl) tycon
   in
   let _declare_evar (id, c) =
@@ -140,15 +140,17 @@ let eterm_term evm t tycon =
     let id = id_of_string ("Evar" ^ string_of_int id) in
       tclTHEN acc (Tactics.assert_tac false (Name id) c)
   in
-    trace (str "Term given to eterm" ++ spc () ++
-	   Termops.print_constr_env (Global.env ()) t);
-    trace (str "Term constructed in eterm" ++ spc () ++
-	   Termops.print_constr_env (Global.env ()) t'');
-    ignore(option_app 
-	     (fun typ ->
-		trace (str "Type :" ++ spc () ++
-		       Termops.print_constr_env (Global.env ()) typ))
-	     tycon);
+    (try 
+       trace (str "Term given to eterm" ++ spc () ++
+	      Termops.print_constr_env (Global.env ()) t);
+       trace (str "Term constructed in eterm" ++ spc () ++
+	      Termops.print_constr_env (Global.env ()) t'');
+       ignore(option_map 
+		(fun typ ->
+		   trace (str "Type :" ++ spc () ++
+			  Termops.print_constr_env (Global.env ()) typ))
+		tycon);
+     with _ -> ());
     t'', tycon, evar_names
 
 let mkMetas n = 

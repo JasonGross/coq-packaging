@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cooking.ml 6748 2005-02-18 22:17:50Z herbelin $ i*)
+(*i $Id: cooking.ml 8752 2006-04-27 19:37:33Z herbelin $ i*)
 
 open Pp
 open Util
@@ -113,7 +113,7 @@ type recipe = {
   d_modlist : work_list }
 
 let on_body f = 
-  option_app (fun c -> Declarations.from_val (f (Declarations.force c)))
+  option_map (fun c -> Declarations.from_val (f (Declarations.force c)))
 
 let cook_constant env r =
   let cb = r.d_from in

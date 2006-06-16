@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: type_errors.mli 6019 2004-08-06 18:15:24Z herbelin $ i*)
+(*i $Id: type_errors.mli 8845 2006-05-23 07:41:58Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -47,8 +47,8 @@ type type_error =
   | NotAType of unsafe_judgment
   | BadAssumption of unsafe_judgment
   | ReferenceVariables of constr
-  | ElimArity of inductive * types list * constr * unsafe_judgment
-      * (constr * constr * arity_error) option
+  | ElimArity of inductive * sorts_family list * constr * unsafe_judgment
+      * (sorts_family * sorts_family * arity_error) option
   | CaseNotInductive of unsafe_judgment
   | WrongCaseInfo of inductive * case_info
   | NumberBranches of unsafe_judgment * int
@@ -75,8 +75,8 @@ val error_assumption : env -> unsafe_judgment -> 'a
 val error_reference_variables : env -> constr -> 'a
 
 val error_elim_arity : 
-  env -> inductive -> types list -> constr 
-    -> unsafe_judgment -> (constr * constr * arity_error) option -> 'a
+  env -> inductive -> sorts_family list -> constr -> unsafe_judgment -> 
+      (sorts_family * sorts_family * arity_error) option -> 'a
 
 val error_case_not_inductive : env -> unsafe_judgment -> 'a
 

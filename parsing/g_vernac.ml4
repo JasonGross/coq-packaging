@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_vernac.ml4 8624 2006-03-13 17:38:17Z msozeau $ *)
+(* $Id: g_vernac.ml4 8929 2006-06-08 22:35:58Z herbelin $ *)
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
 open Pp
@@ -218,16 +218,15 @@ GEXTEND Gram
           let ni =
             match fst annot with
                 Some id ->
-                  (try list_index (Name id) names - 1
-                  with Not_found ->  Util.user_err_loc
-                      (loc,"Fixpoint",
-                       Pp.str "No argument named " ++ Nameops.pr_id id))
+                  (try Some (list_index (Name id) names - 1)
+                   with Not_found ->  Util.user_err_loc
+                     (loc,"Fixpoint",
+                      Pp.str "No argument named " ++ Nameops.pr_id id))
               | None -> 
-                  if List.length names > 1 then
-                    Util.user_err_loc
-                      (loc,"Fixpoint",
-                       Pp.str "the recursive argument needs to be specified");
-                  0 in
+		  (* If there is only one argument, it is the recursive one, 
+		     otherwise, we search the recursive index later *)
+		  if List.length names = 1 then Some 0 else None	  
+	  in 
 	  ((id, (ni, snd annot), bl, type_, def),ntn) ] ]
   ;
   corec_definition:
@@ -320,8 +319,8 @@ GEXTEND Gram
 	  VernacDeclareModuleType (id, bl, mty_o)
 	  
       | IDENT "Declare"; IDENT "Module"; export = export_token; id = identref; 
-	bl = LIST0 module_binder; mty_o = of_module_type ->
-	  VernacDeclareModule (export, id, bl, mty_o)
+	bl = LIST0 module_binder; ":"; mty = module_type ->
+	  VernacDeclareModule (export, id, bl, (mty,true))
       (* Section beginning *)
       | IDENT "Section"; id = identref -> VernacBeginSection id
       | IDENT "Chapter"; id = identref -> VernacBeginSection id
@@ -430,7 +429,7 @@ GEXTEND Gram
       (* Implicit *)
       | IDENT "Implicit"; IDENT "Arguments"; qid = global; 
          pos = OPT [ "["; l = LIST0 ident; "]" -> l ] ->
-	   let pos = option_app (List.map (fun id -> ExplByName id)) pos in
+	   let pos = option_map (List.map (fun id -> ExplByName id)) pos in
 	   VernacDeclareImplicits (qid,pos)
 
       | IDENT "Implicit"; ["Type" | IDENT "Types"];

@@ -10,7 +10,7 @@
   Syntax for the subtac terms and types.
   Elaborated from correctness/psyntax.ml4 by Jean-Christophe Filliâtre *)
 
-(* $Id: g_subtac.ml4 8688 2006-04-07 15:08:12Z msozeau $ *)
+(* $Id: g_subtac.ml4 8917 2006-06-07 16:59:05Z herbelin $ *)
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
@@ -49,11 +49,11 @@ GEXTEND Gram
     ;
   END
 
-type gallina_loc_argtype = (Vernacexpr.vernac_expr located, constr_expr, Tacexpr.raw_tactic_expr) Genarg.abstract_argument_type
+type ('a,'b) gallina_loc_argtype = (Vernacexpr.vernac_expr located, 'a, 'b) Genarg.abstract_argument_type
 
-let (wit_subtac_gallina_loc : gallina_loc_argtype),
-  (globwit_subtac_gallina_loc : gallina_loc_argtype),
-  (rawwit_subtac_gallina_loc : gallina_loc_argtype) =
+let (wit_subtac_gallina_loc : (Genarg.tlevel, Proof_type.tactic) gallina_loc_argtype),
+  (globwit_subtac_gallina_loc : (Genarg.glevel, Tacexpr.glob_tactic_expr) gallina_loc_argtype),
+  (rawwit_subtac_gallina_loc : (Genarg.rlevel, Tacexpr.raw_tactic_expr) gallina_loc_argtype) =
   Genarg.create_arg "subtac_gallina_loc"
 
 VERNAC COMMAND EXTEND Subtac

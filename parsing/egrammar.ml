@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: egrammar.ml 7762 2005-12-30 10:55:33Z herbelin $ *)
+(* $Id: egrammar.ml 8926 2006-06-08 20:23:17Z herbelin $ *)
 
 open Pp
 open Util
@@ -160,7 +160,7 @@ type grammar_tactic_production =
 
 let make_prod_item = function
   | TacTerm s -> (Gramext.Stoken (Lexer.terminal s), None)
-  | TacNonTerm (_,(nont,t), po) -> (nont, option_app (fun p -> (p,t)) po)
+  | TacNonTerm (_,(nont,t), po) -> (nont, option_map (fun p -> (p,t)) po)
 
 (* Tactic grammar extensions *)
 
@@ -210,7 +210,7 @@ let rec interp_entry_name up_level u s =
   else
     try 
       let i = find_index "tactic" s in
-      TacticArgType i, 
+      ExtraArgType s, 
       if i=up_level then Gramext.Sself else
       if i=up_level-1 then Gramext.Snext else
       Gramext.Snterml(Pcoq.Gram.Entry.obj Tactic.tactic_expr,string_of_int i)
@@ -232,7 +232,7 @@ let make_vprod_item n univ = function
   | VTerm s -> (Gramext.Stoken (Lexer.terminal s), None)
   | VNonTerm (loc, nt, po) ->
       let (etyp, e) = interp_entry_name n univ nt in
-      e, option_app (fun p -> (p,etyp)) po
+      e, option_map (fun p -> (p,etyp)) po
 
 let get_tactic_entry n =
   if n = 0 then

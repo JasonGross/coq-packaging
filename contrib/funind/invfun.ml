@@ -88,18 +88,9 @@ let gen_fargs fargs : tactic =
       g 
       
 
-let invfun (hypname:identifier) (fid:identifier) : tactic=
+let invfun (hypname:identifier) fname princ : tactic=
   fun g -> 
     let nprod_goal = nb_prod (pf_concl g) in
-    let f_ind_id =  
-      (
-	Indrec.make_elimination_ident
-	  fid 
-	  (Tacticals.elimination_sort_of_goal g)
-      )
-    in
-    let fname = const_of_id fid in
-    let princ = const_of_id f_ind_id in
     let princ_info = 
       let princ_type = 
 	(try (match (Global.lookup_constant princ) with
@@ -114,7 +105,7 @@ let invfun (hypname:identifier) (fid:identifier) : tactic=
       let frealargs = (snd (array_chop (List.length princ_info.params) fargs))  
       in
       let pat_args = 
-	(List.map (fun e -> ([-1],e)) (Array.to_list frealargs)) @ [[],appf] 
+	(List.map (fun e -> ([Rawterm.ArgArg (-1)],e)) (Array.to_list frealargs)) @ [[],appf] 
       in
       tclTHENSEQ 
 	[

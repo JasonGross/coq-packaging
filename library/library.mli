@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: library.mli 6748 2005-02-18 22:17:50Z herbelin $ i*)
+(*i $Id: library.mli 8877 2006-05-30 16:37:04Z notin $ i*)
 
 (*i*)
 open Util
@@ -64,6 +64,7 @@ val get_full_load_paths : unit -> (System.physical_path * dir_path) list
 val add_load_path : System.physical_path * dir_path -> unit
 val remove_load_path : System.physical_path -> unit
 val find_logical_path : System.physical_path -> dir_path
+val is_in_load_paths : System.physical_path -> bool
 val load_paths_of_dir_path : dir_path -> System.physical_path list
 
 (*s Locate a library in the load paths *)

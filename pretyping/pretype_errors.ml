@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pretype_errors.ml 8688 2006-04-07 15:08:12Z msozeau $ *)
+(* $Id: pretype_errors.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
 
 open Util
 open Stdpp
@@ -59,7 +59,7 @@ let env_ise sigma env =
   Sign.fold_rel_context
     (fun (na,b,ty) e ->
       push_rel
-        (na, option_app (nf_evar sigma) b, nf_evar sigma ty)
+        (na, option_map (nf_evar sigma) b, nf_evar sigma ty)
         e)
     ctxt
     ~init:env0
@@ -75,7 +75,7 @@ let contract env lc =
 	  env
       | _ -> 
 	  let t' = substl !l t in
-	  let c' = option_app (substl !l) c in
+	  let c' = option_map (substl !l) c in
 	  let na' = named_hd env t' na in
 	  l := (mkRel 1) :: List.map (lift 1) !l;
 	  push_rel (na',c',t') env in

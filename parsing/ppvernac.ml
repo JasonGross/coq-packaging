@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppvernac.ml 8624 2006-03-13 17:38:17Z msozeau $ *)  
+(* $Id: ppvernac.ml 8831 2006-05-19 09:29:54Z herbelin $ *)  
 
 open Pp
 open Names
@@ -277,7 +277,7 @@ let pr_onescheme (id,dep,ind,s) =
   hov 0 (pr_lident id ++ str" :=") ++ spc() ++
   hov 0 ((if dep then str"Induction for" else str"Minimality for")
   ++ spc() ++ pr_reference ind) ++ spc() ++ 
-  hov 0 (str"Sort" ++ spc() ++ pr_sort s)
+  hov 0 (str"Sort" ++ spc() ++ pr_rawsort s)
 
 let begin_of_inductive = function
     [] -> 0
@@ -555,18 +555,23 @@ let rec pr_vernac = function
               else ([],def,type_) in
             let bl = bl @ bl' in
             let ids = List.flatten (List.map name_of_binder bl) in
-            let name =
-              try snd (List.nth ids n)
-              with Failure _ ->
-                warn (str "non-printable fixpoint \""++pr_id id++str"\"");
-                Anonymous in
             let annot =
-	      match (ro : Topconstr.recursion_order_expr) with
-		  CStructRec -> 
-		    if List.length ids > 1 then 
-                      spc() ++ str "{struct " ++ pr_name name ++ str"}"
-		    else mt()
-		| CWfRec c -> spc() ++ str "{wf " ++ pr_name name ++ spc() ++ pr_lconstr_expr c ++ str"}"
+	      match n with 
+		| None -> mt () 
+		| Some n -> 
+		    let name =
+		      try snd (List.nth ids n)
+		      with Failure _ ->
+			warn (str "non-printable fixpoint \""++pr_id id++str"\"");
+			Anonymous in
+		    match (ro : Topconstr.recursion_order_expr) with
+			CStructRec -> 
+			  if List.length ids > 1 then 
+			    spc() ++ str "{struct " ++ pr_name name ++ str"}"
+			  else mt()
+		      | CWfRec c -> 
+			  spc() ++ str "{wf " ++ pr_name name ++ spc() ++ 
+			    pr_lconstr_expr c ++ str"}"
 	    in
             pr_id id ++ pr_binders_arg bl ++ annot ++ spc()
             ++ pr_type_option (fun c -> spc() ++ pr_lconstr_expr c) type_
@@ -823,6 +828,13 @@ and pr_extend s cl =
   try
     let rls = List.assoc s (Egrammar.get_extend_vernac_grammars()) in
     let rl = match_vernac_rule (List.map Genarg.genarg_tag cl) rls in
+    let start,rl,cl =
+      match rl with
+	| Egrammar.TacTerm s :: rl -> str s, rl, cl
+	| Egrammar.TacNonTerm _ :: rl ->
+	    (* Will put an unnecessary extra space in front *)
+	    pr_gen (Global.env()) (List.hd cl), rl, List.tl cl 
+	| [] -> anomaly "Empty entry" in
     let (pp,_) =
       List.fold_left
         (fun (strm,args) pi ->
@@ -831,7 +843,7 @@ and pr_extend s cl =
                 (strm ++ pr_gen (Global.env()) (List.hd args),
                 List.tl args)
             | Egrammar.TacTerm s -> (strm ++ spc() ++ str s, args))
-        (mt(),cl) rl in
+        (start,cl) rl in
     hov 1 pp
   with Not_found ->
     hov 1 (str ("TODO("^s) ++ prlist_with_sep sep pr_arg cl ++ str ")")

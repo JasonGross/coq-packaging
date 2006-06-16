@@ -851,7 +851,8 @@ The type {\tt nat} is defined as the least \verb:Set: containing {\tt
   O} and closed by the {\tt S} constructor. The constants {\tt nat},
 {\tt O} and {\tt S} are added to the environment.
 
-Now let us have a look at the elimination principles. They are three :
+Now let us have a look at the elimination principles. They are three
+of them:
 {\tt nat\_ind}, {\tt nat\_rec} and {\tt nat\_rect}.  The type of {\tt
   nat\_ind} is:
 \begin{coq_example}
@@ -880,8 +881,9 @@ Reset Initial.
 Inductive nat : Set := O | S (_:nat).
 \end{coq_example*}
 In the case where inductive types have no annotations (next section
-gives an example of such annotations), the positivity condition
-implies that a constructor can be defined by only giving the type of
+gives an example of such annotations), 
+%the positivity condition implies that 
+a constructor can be defined by only giving the type of
 its arguments.
 \end{Variants}
 
@@ -910,13 +912,13 @@ Check even_ind.
 \end{coq_example}
 
 From a mathematical point of view it asserts that the natural numbers
-satisfying the predicate {\tt even} are exactly the naturals satisfying
-the clauses {\tt even\_0} or {\tt even\_SS}. This is why, when we want
-to prove any predicate {\tt P} over elements of {\tt even}, it is
-enough to prove it for {\tt O} and to prove that if any natural number
-{\tt n} satisfies {\tt P} its double successor {\tt (S (S n))}
-satisfies also {\tt P}. This is indeed analogous to the structural
-induction principle we got for {\tt nat}.
+satisfying the predicate {\tt even} are exactly in the smallest set of
+naturals satisfying the clauses {\tt even\_0} or {\tt even\_SS}. This
+is why, when we want to prove any predicate {\tt P} over elements of
+{\tt even}, it is enough to prove it for {\tt O} and to prove that if
+any natural number {\tt n} satisfies {\tt P} its double successor {\tt
+  (S (S n))} satisfies also {\tt P}. This is indeed analogous to the
+structural induction principle we got for {\tt nat}.
 
 \begin{ErrMsgs}
 \item \errindex{Non strictly positive occurrence of {\ident} in {\type}}
@@ -925,11 +927,17 @@ built from {\ident}}
 \end{ErrMsgs}
 
 \subsubsection{Parameterized inductive types}
+In the previous example, each constructor introduces a
+different instance of the predicate {\tt even}. In some cases, 
+all the constructors introduces the same generic instance of the
+inductive definition, in which case, instead of an annotation, we use
+a context of parameters which are binders shared by all the
+constructors of the definition.
 
-Inductive types may be parameterized. Parameters differ from inductive
-type annotations in the fact that recursive invokations of inductive
-types must always be done with the same values of parameters as its
-specification.
+% Inductive types may be parameterized. Parameters differ from inductive
+% type annotations in the fact that recursive invokations of inductive
+% types must always be done with the same values of parameters as its
+% specification.
 
 The general scheme is:
 \begin{center}
@@ -937,6 +945,11 @@ The general scheme is:
     {\ident$_1$}: {\term$_1$} | {\ldots} | {\ident$_n$}: \term$_n$
 {\tt .}
 \end{center}
+Parameters differ from inductive type annotations in the fact that the
+conclusion of each type of constructor {\term$_i$} invoke the inductive
+type with the same values of parameters as its specification.
+
+
 
 A typical example is the definition of polymorphic lists:
 \begin{coq_example*}
@@ -972,7 +985,39 @@ arguments of the constructors rather than their full type.
 \item \errindex{The {\num}th argument of {\ident} must be {\ident'} in {\type}}
 \end{ErrMsgs}
 
-\SeeAlso Sections~\ref{Cic-inductive-definitions} and~\ref{elim}.
+\paragraph{New from \Coq{} V8.1} The condition on parameters for
+inductive definitions has been relaxed since \Coq{} V8.1. It is now
+possible in the type of a constructor, to invoke recursively the
+inductive definition on an argument which is not the parameter itself.
+
+One can define~:
+\begin{coq_example}
+Inductive list2 (A:Set) : Set :=
+  | nil2 : list2 A
+  | cons2 : A -> list2 (A*A) -> list2 A.
+\end{coq_example}
+\begin{coq_eval}
+Reset list2.
+\end{coq_eval}
+that can also be written by specifying only the type of the arguments:
+\begin{coq_example*}
+Inductive list2 (A:Set) : Set := nil2 | cons2 (_:A) (_:list2 (A*A)).
+\end{coq_example*}
+But the following definition will give an error:
+\begin{coq_example}
+Inductive listw (A:Set) : Set :=
+  | nilw : listw (A*A)
+  | consw : A -> listw (A*A) -> listw (A*A).
+\end{coq_example}
+Because the conclusion of the type of constructors should be {\tt
+  listw A} in both cases. 
+
+A parameterized inductive definition can be defined using
+annotations instead of parameters but it will sometimes give a
+different (bigger) sort for the inductive definition and will produce
+a less convenient rule for case elimination.
+
+\SeeAlso Sections~\ref{Cic-inductive-definitions} and~\ref{Tac-induction}.
 
 
 \subsubsection{Mutually defined inductive types
@@ -1091,7 +1136,7 @@ definition.
 
 The objects of an inductive type are well-founded with respect to the
 constructors of the type. In other words, such objects contain only a
-{\it finite} number constructors. Co-inductive types arise from
+{\it finite} number of constructors. Co-inductive types arise from
 relaxing this condition, and admitting types whose objects contain an
 infinity of constructors. Infinite objects are introduced by a
 non-ending (but effective) process of construction, defined in terms
@@ -1130,7 +1175,7 @@ CoInductive EqSt : Stream -> Stream -> Prop :=
 \end{coq_example}
 
 In order to prove the extensionally equality of two streams $s_1$ and
-$s_2$ we have to construct and infinite proof of equality, that is,
+$s_2$ we have to construct an infinite proof of equality, that is,
 an infinite object of type $(\texttt{EqSt}\;s_1\;s_2)$. We will see
 how to introduce infinite objects in Section~\ref{CoFixpoint}.
 
@@ -1146,8 +1191,9 @@ how to introduce infinite objects in Section~\ref{CoFixpoint}.
 
 This command allows to define inductive objects using a fixed point
 construction. The meaning of this declaration is to define {\it ident}
-a recursive function with arguments specified by
-{\binder$_1$}\ldots{\binder$_n$} such that {\it ident} applied to
+a recursive function with arguments specified by the binders in
+\params{} % {\binder$_1$}\ldots{\binder$_n$} 
+such that {\it ident} applied to
 arguments corresponding to these binders has type \type$_0$, and is
 equivalent to the expression \term$_0$. The type of the {\ident} is
 consequently {\tt forall {\params} {\tt,} \type$_0$}
@@ -1276,6 +1322,196 @@ Fixpoint tree_size (t:tree) : nat :=
 \end{coq_example*}
 A generic command {\tt Scheme} is useful to build automatically various
 mutual induction principles. It is described in Section~\ref{Scheme}.
+
+\subsubsection{\tt Function {\ident} {\binder$_1$}\ldots{\binder$_n$}
+ {\tt \{}decrease\_annot{\tt\}} : type$_0$ := \term$_0$.
+}
+\comindex{Function}
+\label{Function}
+
+This \emph{experimental} command can be seen as a generalization of
+{\tt Fixpoint}.  It is actually a wrapper for several ways of defining
+a function \emph{and other useful related objects}, namely: an
+induction principle that reflects the recursive structure of the
+function (see \ref{FunInduction}), and its fixpoint equality (not
+always, see below).  The meaning of this declaration is to define a
+function {\it ident}, similarly to {\tt Fixpoint}. Like in {\tt
+Fixpoint}, the decreasing argument must be given (unless the function
+is not recursive), but it must not necessary be \emph{structurally}
+decreasing. The point of the {\tt
+\{\}} annotation is to name the decreasing argument \emph{and} to
+describe which kind of decreasing criteria must be used to ensure
+termination of recursive calls.
+
+The {\tt Function} construction enjoys also the {\tt with} extension
+to define mutually recursive definitions. However, this feature does
+not work for non structural recursive functions. % VRAI??
+
+See the documentation of {\tt functional induction} (section
+\ref{FunInduction}) and {\tt Functional Scheme} (section
+\ref{FunScheme} and \ref{FunScheme-examples}) for how to use the 
+induction principle to easily reason about the function.
+
+\noindent {\bf Remark: } To obtain the right principle, it is better
+to put rigid parameters of the function as first arguments. For
+example it is better to define plus like this:
+
+\begin{coq_example*}
+Function plus (m n : nat) {struct n} : nat :=
+  match n with
+  | 0 => m
+  | S p => S (plus m p)
+  end.
+\end{coq_example*}
+\noindent than like this:
+\begin{coq_eval}
+Reset plus.
+\end{coq_eval}
+\begin{coq_example*}
+Function plus (n m : nat) {struct n} : nat :=
+  match n with
+  | 0 => m
+  | S p => S (plus p m)
+  end.
+\end{coq_example*}
+
+\paragraph{Limitations}
+\label{sec:Function-limitations}
+\term$_0$ must be build as a \emph{pure pattern-matching tree}
+(\texttt{match...with}) with $\lambda$-abstractions and applications only
+\emph{at the end} of each branch.  For now dependent cases are not
+treated.
+
+\paragraph{Difference with \texttt{Functional Scheme}} 
+There is a difference between obtaining an induction scheme for a
+function by using \texttt{Function} (section~\ref{Function}) and
+by using \texttt{Functional Scheme} after a usual definition using
+\texttt{Fixpoint} or \texttt{Definition}. Indeed \texttt{Function}
+generally produces smaller principles, closer to the definition
+written by the user. This is because \texttt{Functional Scheme} works
+by analyzing the term \texttt{div2} after the compilation of pattern
+matching into exhaustive expanded ones, whereas \texttt{Function}
+analyzes the pseudo-term \emph{before} pattern matching expansion.
+
+
+\ErrMsg 
+
+\errindex{while trying to define Inductive R\_\ident ...}
+
+The generation of the graph relation \texttt{(R\_\ident)} used to
+compute the induction scheme of \ident\ raised a typing error, the
+definition of \ident\ was aborted. You can use \texttt{Fixpoint}
+instead of \texttt{Function}, but the scheme will not be generated.
+
+This error happens generally when: 
+
+\begin{itemize}
+\item the definition uses pattern matching on dependent types, which
+  \texttt{Function} cannot deal with yet.
+\item the definition is not a \emph{pattern-matching tree} as
+  explained above.
+\end{itemize}
+
+
+
+\SeeAlso{\ref{FunScheme},\ref{FunScheme-examples},\ref{FunInduction}}
+
+Depending on the {\tt \{\}} annotation, different definition
+mechanisms are used by {\tt Function}. More precise description
+given below.
+
+
+
+\subsubsection{\tt Function {\ident} {\binder$_1$}\ldots{\binder$_n$}
+ : type$_0$ := \term$_0$.
+\comindex{Function}
+}
+
+Defines the not recursive function \ident\ as if declared with
+\texttt{Definition}.  Three elimination schemes {\tt\ident\_rect},
+{\tt\ident\_rec} and {\tt\ident\_ind} are generated (see the
+documentation of {\tt Inductive} \ref{Inductive}), which reflect the
+pattern matching structure of \term$_0$.
+
+
+\subsubsection{\tt Function {\ident} {\binder$_1$}\ldots{\binder$_n$}
+ {\tt \{}{\tt struct} \ident$_0${\tt\}} : type$_0$ := \term$_0$.
+\comindex{Function}
+}
+
+Defines the structural recursive  function \ident\ as if declared with
+\texttt{Fixpoint}   .  Three   induction   schemes  {\tt\ident\_rect},
+{\tt\ident\_rec}   and  {\tt\ident\_ind}   are   generated  (see   the
+documentation of {\tt  Inductive} \ref{Inductive}), which reflect the
+recursive structure  of \term$_0$. When  there is only  one parameter,
+{\tt \{struct} \ident$_0${\tt\}} can be omitted.
+
+\subsubsection{\tt Function {\ident} {\binder$_1$}\ldots{\binder$_n$}
+ {\tt \{}{\tt measure \term$_1$} \ident$_0${\tt\}} : type$_0$ := \term$_0$.
+\comindex{Function}}
+
+\subsubsection{\tt Function {\ident} {\binder$_1$}\ldots{\binder$_n$}
+ {\tt \{}{\tt wf \term$_1$} \ident$_0${\tt\}} : type$_0$ := \term$_0$.
+\comindex{Function}}
+
+Defines a recursive function by well founded recursion. \textbf{The
+module \texttt{Recdef} of the standard library must be loaded for this
+feature}. The {\tt \{\}} annotation is mandatory and must be one of
+the following:
+\begin{itemize}
+\item {\tt \{measure} \term$_1$ \ident$_0${\tt\}} with \ident$_0$
+      being the decreasing argument and \term$_1$ being a function
+      from type of \ident$_0$ to \texttt{nat} for which value on the
+      decreasing argument decreases (for the {\tt lt} order on {\tt
+      nat}) at each recursive call of \term$_0$, parameters of the
+      function are bound in  \term$_0$;
+\item {\tt \{wf} \term$_1$ \ident$_0${\tt\}} with \ident$_0$ being
+      the decreasing argument and \term$_1$ an ordering relation on
+      the type of \ident$_0$ (i.e. of type T$_{\ident_0}$
+      $\to$ T$_{\ident_0}$ $\to$ {\tt Prop}) for which
+      the decreasing argument decreases at each recursive call of
+      \term$_0$. The order must be well founded. parameters of the
+      function are bound in  \term$_0$.
+\end{itemize} 
+
+Depending on the annotation, the user is left with some proof
+obligations that will be used to define the function. These proofs
+are: proofs that each recursive call is actually decreasing with
+respect to the given criteria, and (if the criteria is \texttt{wf}) a
+proof that the ordering relation is well founded.
+
+%Completer sur measure et wf
+
+The fixpoint equality  \texttt{\ident\_equation}, which is not trivial
+to prove in this case, is automatically generated and proved, together
+with three  induction schemes {\tt\ident\_rect},  {\tt\ident\_rec} and
+{\tt\ident\_ind} as explained above  (see  the   documentation  of  {\tt
+  Inductive} \ref{Inductive}), which  reflect the recursive structure
+of \term$_0$.
+
+
+
+%Complete!!
+The way this recursive function is defined is the subject of several
+papers by Yves Bertot, Julien Forest, David Pichardie.
+
+%Exemples ok ici
+
+\bigskip
+
+\noindent {\bf Remark: } Proof obligations are presented as several
+subgoals belonging to a Lemma {\ident}{\tt\_tcc}. % These subgoals are independent which means that in order to
+% abort them you will have to abort each separately.
+
+
+
+%The decreasing argument cannot be dependent of another??
+
+%Exemples faux ici
+
+
+
+
 
 \subsubsection{\tt CoFixpoint {\ident} : \type$_0$ := \term$_0$.
 \comindex{CoFixpoint}
@@ -1448,4 +1684,4 @@ To be able to unfold a proof, you should end the proof by {\tt Defined}
 % TeX-master: "Reference-Manual"
 % End: 
 
-% $Id: RefMan-gal.tex 8606 2006-02-23 13:58:10Z herbelin $ 
+% $Id: RefMan-gal.tex 8915 2006-06-07 15:17:13Z courtieu $ 

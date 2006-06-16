@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: setoid_replace.mli 6621 2005-01-21 17:24:37Z herbelin $ i*)
+(*i $Id: setoid_replace.mli 8779 2006-05-02 20:59:21Z letouzey $ i*)
 
 open Term
 open Proof_type
@@ -75,3 +75,6 @@ val add_setoid :
 
 val new_named_morphism :
  Names.identifier -> constr_expr -> morphism_signature option -> unit
+
+val relation_table_find : constr -> relation
+val relation_table_mem : constr -> bool

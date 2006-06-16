@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: names.ml 7834 2006-01-11 00:15:01Z herbelin $ *)
+(* $Id: names.ml 8852 2006-05-23 17:52:43Z notin $ *)
 
 open Pp
 open Util
@@ -197,6 +197,10 @@ let string_of_con = string_of_kn
 let con_label = label
 let pr_con = pr_kn
 let con_modpath = modpath
+
+let mind_modpath = modpath
+let ind_modpath ind = mind_modpath (fst ind)
+let constr_modpath c = ind_modpath (fst c)
 
 let ith_mutual_inductive (kn,_) i = (kn,i)
 let ith_constructor_of_inductive ind i = (ind,i)

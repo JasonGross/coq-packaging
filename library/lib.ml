@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: lib.ml 7710 2005-12-23 10:16:42Z herbelin $ *)
+(* $Id: lib.ml 8852 2006-05-23 17:52:43Z notin $ *)
 
 open Pp
 open Util
@@ -460,7 +460,7 @@ let open_section id =
 
 let discharge_item = function
   | ((sp,_ as oname),Leaf lobj) ->
-      option_app (fun o -> (basename sp,o)) (discharge_object (oname,lobj))
+      option_map (fun o -> (basename sp,o)) (discharge_object (oname,lobj))
   | _ ->
       None
 
@@ -624,12 +624,30 @@ let reset_initial () =
 
 (* Misc *)
 
+let mp_of_global ref = 
+  match ref with
+    | VarRef id -> fst (current_prefix ())
+    | ConstRef cst -> con_modpath cst
+    | IndRef ind -> ind_modpath ind
+    | ConstructRef constr -> constr_modpath constr
+
+let rec dp_of_mp modp =
+  match modp with
+    | MPfile dp -> dp
+    | MPbound _ | MPself _ -> library_dp ()
+    | MPdot (mp,_) -> dp_of_mp mp
+
 let library_part ref =
+  match ref with 
+    | VarRef id -> library_dp ()
+    | _ -> dp_of_mp (mp_of_global ref)
+
+let remove_section_part ref =
   let sp = Nametab.sp_of_global ref in
   let dir,_ = repr_path sp in
   match ref with
   | VarRef id -> 
-      anomaly "library_part not supported on local variables"
+      anomaly "remove_section_part not supported on local variables"
   | _ ->
       if is_dirpath_prefix_of dir (cwd ()) then
         (* Not yet (fully) discharged *)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_constr.ml4 8624 2006-03-13 17:38:17Z msozeau $ *)
+(* $Id: g_constr.ml4 8875 2006-05-29 19:59:11Z msozeau $ *)
 
 open Pcoq
 open Constr
@@ -28,7 +28,7 @@ let _ = List.iter (fun s -> Lexer.add_token("",s)) constr_kw
 
 let mk_cast = function
     (c,(_,None)) -> c
-  | (c,(_,Some ty)) -> CCast(join_loc (constr_loc c) (constr_loc ty), c, DEFAULTcast,ty)
+  | (c,(_,Some ty)) -> CCast(join_loc (constr_loc c) (constr_loc ty), c, CastConv DEFAULTcast, ty)
 
 let mk_lam = function
     ([],c) -> c
@@ -59,14 +59,13 @@ let rec mkCLambdaN loc bll c =
 
 let rec index_and_rec_order_of_annot loc bl ann =
   match names_of_local_assums bl,ann with
-    | [_], (None, r) -> 0, r
+    | [_], (None, r) -> Some 0, r
     | lids, (Some x, ro) ->
         let ids = List.map snd lids in
-        (try list_index (snd x) ids - 1, ro
+        (try Some (list_index (snd x) ids - 1), ro
         with Not_found ->
           user_err_loc(fst x,"index_of_annot", Pp.str"no such fix variable"))
-    | _ -> user_err_loc(loc,"index_of_annot",
-      Pp.str "cannot guess decreasing argument of fix")
+    | _, (None, r) -> None, r
 
 let mk_fixb (id,bl,ann,body,(loc,tyc)) =
   let n,ro = index_and_rec_order_of_annot (fst id) bl ann in
@@ -76,7 +75,7 @@ let mk_fixb (id,bl,ann,body,(loc,tyc)) =
   (snd id,(n,ro),bl,ty,body)
 
 let mk_cofixb (id,bl,ann,body,(loc,tyc)) =
-  let _ = option_app (fun (aloc,_) ->
+  let _ = option_map (fun (aloc,_) ->
     Util.user_err_loc
       (aloc,"Constr:mk_cofixb",
        Pp.str"Annotation forbidden in cofix expression")) (fst ann) in
@@ -156,8 +155,8 @@ GEXTEND Gram
     [ "200" RIGHTA
       [ c = binder_constr -> c ]
     | "100" RIGHTA
-      [ c1 = operconstr; ":"; c2 = binder_constr -> CCast(loc,c1,DEFAULTcast,c2)
-      | c1 = operconstr; ":"; c2 = SELF -> CCast(loc,c1,DEFAULTcast,c2) ]
+      [ c1 = operconstr; ":"; c2 = binder_constr -> CCast(loc,c1, CastConv DEFAULTcast,c2)
+      | c1 = operconstr; ":"; c2 = SELF -> CCast(loc,c1,CastConv DEFAULTcast,c2) ]
     | "99" RIGHTA [ ]
     | "90" RIGHTA
       [ c1 = operconstr; "->"; c2 = binder_constr -> CArrow(loc,c1,c2)
@@ -321,7 +320,7 @@ GEXTEND Gram
       | "("; id=name; ":="; c=lconstr; ")" ->
           LocalRawDef (id,c)
       | "("; id=name; ":"; t=lconstr; ":="; c=lconstr; ")" -> 
-          LocalRawDef (id,CCast (join_loc (constr_loc t) loc,c,DEFAULTcast,t))
+          LocalRawDef (id,CCast (join_loc (constr_loc t) loc,c, CastConv DEFAULTcast,t))
     ] ]
   ;
   binder:

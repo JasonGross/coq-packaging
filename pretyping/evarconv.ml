@@ -6,14 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evarconv.ml 8111 2006-03-02 17:23:41Z herbelin $ *)
+(* $Id: evarconv.ml 8793 2006-05-05 17:41:41Z barras $ *)
 
 open Util
 open Names
 open Term
+open Closure
 open Reduction
 open Reductionops
-open Closure
 open Environ
 open Typing
 open Classops
@@ -41,7 +41,7 @@ let eval_flexible_term env c =
   match kind_of_term c with
   | Const c -> constant_opt_value env c
   | Rel n ->
-      (try let (_,v,_) = lookup_rel n env in option_app (lift n) v
+      (try let (_,v,_) = lookup_rel n env in option_map (lift n) v
       with Not_found -> None)
   | Var id ->
       (try let (_,v,_) = lookup_named id env in v with Not_found -> None)

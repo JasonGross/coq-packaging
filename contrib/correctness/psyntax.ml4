@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: psyntax.ml4 7740 2005-12-26 20:07:21Z herbelin $ *)
+(* $Id: psyntax.ml4 8752 2006-04-27 19:37:33Z herbelin $ *)
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
@@ -786,7 +786,7 @@ END
 
 VERNAC COMMAND EXTEND Correctness
   [ "Correctness" preident(str) program(pgm) then_tac(tac) ]
-   -> [ Ptactic.correctness str pgm (option_app Tacinterp.interp tac) ]
+   -> [ Ptactic.correctness str pgm (option_map Tacinterp.interp tac) ]
 END
 
 (* Show Programs *)

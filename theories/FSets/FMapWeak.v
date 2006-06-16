@@ -6,7 +6,10 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FMapWeak.v 8639 2006-03-16 19:21:55Z letouzey $ *)
+(* $Id: FMapWeak.v 8844 2006-05-22 17:22:36Z letouzey $ *)
 
+Require Export DecidableType.
+Require Export DecidableTypeEx.
 Require Export FMapWeakInterface.
 Require Export FMapWeakList.
+Require Export FMapWeakFacts.

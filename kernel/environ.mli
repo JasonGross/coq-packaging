@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: environ.mli 7640 2005-12-05 10:16:24Z gregoire $ i*)
+(*i $Id: environ.mli 8810 2006-05-12 18:50:21Z barras $ i*)
 
 (*i*)
 open Names
@@ -139,6 +139,9 @@ val add_mind : mutual_inductive -> mutual_inductive_body -> env -> env
 (* Looks up in the context of global inductive names *)
 (* raises [Not_found] if the required path is not found *)
 val lookup_mind : mutual_inductive -> env -> mutual_inductive_body
+
+(* Find the ultimate inductive in the [mind_equiv] chain *)
+val scrape_mind : env -> mutual_inductive -> mutual_inductive
 
 (************************************************************************)
 (*s Modules *)

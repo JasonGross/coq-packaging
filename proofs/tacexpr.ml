@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacexpr.ml 8651 2006-03-21 21:54:43Z jforest $ i*)
+(*i $Id: tacexpr.ml 8917 2006-06-07 16:59:05Z herbelin $ i*)
 
 open Names
 open Topconstr
@@ -56,7 +56,7 @@ type hyp_location_flag = (* To distinguish body and type of local defs *)
   | InHypTypeOnly
   | InHypValueOnly
 
-type 'a raw_hyp_location = 'a * int list * hyp_location_flag
+type 'a raw_hyp_location = 'a with_occurrences * hyp_location_flag
 
 type 'a induction_arg =
   | ElimOnConstr of 'a
@@ -80,6 +80,7 @@ type 'id message_token =
   | MsgInt of int
   | MsgIdent of 'id
 
+
 type 'id gsimple_clause = ('id raw_hyp_location) option
 (* onhyps:
      [None] means *on every hypothesis*
@@ -87,7 +88,7 @@ type 'id gsimple_clause = ('id raw_hyp_location) option
 type 'id gclause =
   { onhyps : 'id raw_hyp_location list option;
     onconcl : bool;
-    concl_occs :int list }
+    concl_occs : int or_var list }
 
 let nowhere = {onhyps=Some[]; onconcl=false; concl_occs=[]}
 
@@ -175,8 +176,7 @@ type ('constr,'pat,'cst,'ind,'ref,'id,'tac) gen_atomic_tactic_expr =
 
   (* Conversion *)
   | TacReduce of ('constr,'cst) red_expr_gen * 'id gclause
-  | TacChange of
-      'constr occurrences option * 'constr * 'id gclause
+  | TacChange of 'constr with_occurrences option * 'constr * 'id gclause
 
   (* Equivalence relations *)
   | TacReflexivity
@@ -184,6 +184,7 @@ type ('constr,'pat,'cst,'ind,'ref,'id,'tac) gen_atomic_tactic_expr =
   | TacTransitivity of 'constr 
 
   (* Equality and inversion *)
+  | TacRewrite of bool * 'constr with_bindings * 'id gclause
   | TacInversion of ('constr,'id) inversion_strength * quantified_hypothesis
       
   (* For ML extensions *)
@@ -306,10 +307,10 @@ type closed_raw_generic_argument =
     (constr_expr,raw_tactic_expr) generic_argument
 
 type 'a raw_abstract_argument_type =
-    ('a,constr_expr,raw_tactic_expr) abstract_argument_type
+    ('a,rlevel,raw_tactic_expr) abstract_argument_type
 
 type 'a glob_abstract_argument_type =
-    ('a,rawconstr_and_expr,glob_tactic_expr) abstract_argument_type
+    ('a,glevel,glob_tactic_expr) abstract_argument_type
 
 type open_generic_argument =
     (Term.constr,glob_tactic_expr) generic_argument
