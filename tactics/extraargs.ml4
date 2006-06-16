@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extraargs.ml4 7841 2006-01-11 11:24:54Z herbelin $ *)
+(* $Id: extraargs.ml4 8739 2006-04-26 22:23:37Z herbelin $ *)
 
 open Pp
 open Pcoq
@@ -34,7 +34,8 @@ ARGUMENT EXTEND orient TYPED AS bool PRINTED BY pr_orient
 END
 
 (* For Setoid rewrite *)
-let pr_morphism_signature _ _ _ = Setoid_replace.pr_morphism_signature
+let pr_morphism_signature _ _ _ s =
+  spc () ++ Setoid_replace.pr_morphism_signature s
 
 ARGUMENT EXTEND morphism_signature
  TYPED AS morphism_signature

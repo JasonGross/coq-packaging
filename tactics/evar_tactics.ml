@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evar_tactics.ml 7875 2006-01-16 09:55:24Z herbelin $ *)
+(* $Id: evar_tactics.ml 8759 2006-04-28 12:24:14Z herbelin $ *)
 
 open Term
 open Util
@@ -23,7 +23,7 @@ open Termops
 let evar_list evc c = 
   let rec evrec acc c =
     match kind_of_term c with
-    | Evar (n, _) when Evd.in_dom evc n -> c :: acc
+    | Evar (n, _) when Evd.mem evc n -> c :: acc
     | _ -> fold_constr evrec acc c
   in 
     evrec [] c

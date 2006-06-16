@@ -68,7 +68,10 @@ let rec raw_make_or_list = function
   | e::l -> raw_make_or e (raw_make_or_list l)
 
   
-
+let remove_name_from_mapping mapping na = 
+  match na with 
+    | Anonymous -> mapping 
+    | Name id -> Idmap.remove id mapping
 
 let change_vars = 
   let rec change_vars mapping rt = 
@@ -88,34 +91,31 @@ let change_vars =
 	       change_vars mapping rt',
 	       List.map (change_vars mapping) rtl
 	      )
-      | RLambda(_,Name id,_,_) when Idmap.mem id mapping -> rt
       | RLambda(loc,name,t,b) -> 
 	  RLambda(loc,
 		  name,
 		  change_vars mapping t,
-		  change_vars mapping b
+		  change_vars (remove_name_from_mapping mapping name) b
 		 )
-      | RProd(_,Name id,_,_) when Idmap.mem id mapping -> rt
       | RProd(loc,name,t,b) -> 
 	  RProd(loc,
 		  name,
 		  change_vars mapping t,
-		  change_vars mapping b
+		  change_vars (remove_name_from_mapping mapping name) b
 		 )
-      | RLetIn(_,Name id,_,_) when Idmap.mem id mapping -> rt
       | RLetIn(loc,name,def,b) -> 
 	  RLetIn(loc,
 		 name,
 		 change_vars mapping def,
-		 change_vars mapping b
+		 change_vars (remove_name_from_mapping mapping name) b
 		)
-      | RLetTuple(_,nal,(na,_),_,_) when List.exists (function Name id -> Idmap.mem id mapping | _ -> false) (na::nal) -> rt 
       | RLetTuple(loc,nal,(na,rto),b,e) -> 
+	  let new_mapping = List.fold_left remove_name_from_mapping mapping nal in 
 	  RLetTuple(loc,
-		    nal, 
-		    (na, option_app (change_vars mapping) rto), 
-		    change_vars mapping b,
-		    change_vars mapping e
+		    nal,
+		    (na, option_map (change_vars mapping) rto), 
+		    change_vars mapping b, 
+		    change_vars new_mapping e
 		   )
       | RCases(loc,infos,el,brl) -> 
 	  RCases(loc,
@@ -123,8 +123,14 @@ let change_vars =
 		 List.map (fun (e,x) -> (change_vars mapping e,x)) el, 
 		 List.map (change_vars_br mapping) brl
 		)
-      | RIf _ -> error "Not handled RIf"
-      | RRec _ -> error "Not handled RRec"
+      | RIf(loc,b,(na,e_option),lhs,rhs) -> 
+	  RIf(loc,
+	      change_vars mapping b,
+	      (na,option_map (change_vars mapping) e_option),
+	      change_vars mapping lhs,
+	      change_vars mapping rhs
+	     )
+      | RRec _ -> error "Local (co)fixes are not supported"
       | RSort _ -> rt 
       | RHole _ -> rt 
       | RCast(loc,b,k,t) -> 
@@ -230,7 +236,7 @@ let rec alpha_rt excluded rt =
 	  then t,b
 	  else 
 	    let replace = change_vars (Idmap.add id new_id Idmap.empty) in 
-	    (replace t,replace b)
+	    (t,replace b)
 	in
 	let new_excluded = new_id::excluded in 
 	let new_t = alpha_rt new_excluded t in 
@@ -244,7 +250,7 @@ let rec alpha_rt excluded rt =
 	  then t,b
 	  else 
 	    let replace = change_vars (Idmap.add id new_id Idmap.empty) in 
-	    (replace t,replace b)
+	    (t,replace b)
 	in
 	let new_t = alpha_rt new_excluded t in 
 	let new_b = alpha_rt new_excluded b in 
@@ -256,7 +262,7 @@ let rec alpha_rt excluded rt =
 	  then t,b
 	  else 
 	    let replace = change_vars (Idmap.add id new_id Idmap.empty) in 
-	    (replace t,replace b)
+	    (t,replace b)
 	in
 	let new_excluded = new_id::excluded in 
 	let new_t = alpha_rt new_excluded t in 
@@ -286,18 +292,23 @@ let rec alpha_rt excluded rt =
 	  if idmap_is_empty mapping
 	  then rto,t,b
 	  else let replace = change_vars mapping in 
-	  (option_app replace rto,replace t,replace b)
+	  (option_map replace rto, t,replace b)
 	in
 	let new_t = alpha_rt new_excluded new_t in 
 	let new_b = alpha_rt new_excluded new_b in 
-	let new_rto = option_app (alpha_rt new_excluded) new_rto  in
+	let new_rto = option_map (alpha_rt new_excluded) new_rto  in
 	RLetTuple(loc,new_nal,(na,new_rto),new_t,new_b)
     | RCases(loc,infos,el,brl) -> 
 	let new_el = 
 	  List.map (function (rt,i) -> alpha_rt excluded rt, i) el 
 	in 
 	RCases(loc,infos,new_el,List.map (alpha_br excluded) brl) 
-    | RIf _ -> error "Not handled RIf"
+    | RIf(loc,b,(na,e_o),lhs,rhs) -> 
+	RIf(loc,alpha_rt excluded b,
+	    (na,option_map (alpha_rt excluded) e_o),
+	    alpha_rt excluded lhs,
+	    alpha_rt excluded rhs
+	   )
     | RRec _ -> error "Not handled RRec"
     | RSort _ -> rt 
     | RHole _ -> rt 
@@ -439,7 +450,7 @@ let replace_var_by_term x_id term =
       | RLetTuple(loc,nal,(na,rto),def,b) -> 
 	  RLetTuple(loc,
 		    nal,
-		    (na,option_app replace_var_by_pattern rto),
+		    (na,option_map replace_var_by_pattern rto),
 		    replace_var_by_pattern def,
 		    replace_var_by_pattern b
 		   )
@@ -449,7 +460,12 @@ let replace_var_by_term x_id term =
 		 List.map (fun (e,x) -> (replace_var_by_pattern e,x)) el, 
 		 List.map replace_var_by_pattern_br brl
 		)
-      | RIf _ -> raise (UserError("",str "Not handled RIf"))
+      | RIf(loc,b,(na,e_option),lhs,rhs) -> 
+	  RIf(loc, replace_var_by_pattern b,
+	      (na,option_map replace_var_by_pattern e_option),
+	      replace_var_by_pattern lhs,
+	      replace_var_by_pattern rhs
+	     )
       | RRec _ -> raise (UserError("",str "Not handled RRec"))
       | RSort _ -> rt 
       | RHole _ -> rt 

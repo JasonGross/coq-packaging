@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: eauto.ml4 7991 2006-02-05 22:56:16Z herbelin $ *)
+(* $Id: eauto.ml4 8878 2006-05-30 16:44:25Z herbelin $ *)
 
 open Pp
 open Util
@@ -107,7 +107,7 @@ let e_split = e_constructor_tac (Some 1) 1
 TACTIC EXTEND econstructor
   [ "econstructor" integer(n) "with" bindings(c) ] -> [ e_constructor_tac None n c ]
 | [ "econstructor" integer(n) ] -> [ e_constructor_tac None n NoBindings ]
-| [ "econstructor" tactic_opt(t) ] -> [ e_any_constructor (option_app Tacinterp.eval_tactic t) ] 
+| [ "econstructor" tactic_opt(t) ] -> [ e_any_constructor (option_map Tacinterp.eval_tactic t) ] 
       END
 
 TACTIC EXTEND eleft
@@ -149,7 +149,7 @@ let rec prolog l n gl =
 let prolog_tac l n gl =
   let n =
     match n with
-      |  Genarg.ArgArg n -> n
+      |  ArgArg n -> n
       | _ -> error "Prolog called with a non closed argument"
   in
   try (prolog l n gl)
@@ -383,12 +383,12 @@ let gen_eauto d np lems = function
 
 let make_depth = function
   | None -> !default_search_depth 
-  | Some (Genarg.ArgArg d) -> d
+  | Some (ArgArg d) -> d
   | _ -> error "EAuto called with a non closed argument"
 
 let make_dimension n = function
   | None -> (true,make_depth n)
-  | Some (Genarg.ArgArg d) -> (false,d)
+  | Some (ArgArg d) -> (false,d)
   | _ -> error "EAuto called with a non closed argument"
 
 open Genarg

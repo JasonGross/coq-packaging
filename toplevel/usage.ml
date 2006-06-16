@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: usage.ml 6053 2004-09-03 14:33:35Z herbelin $ *)
+(* $Id: usage.ml 8932 2006-06-09 09:29:03Z notin $ *)
 
 let version () =
   Printf.printf "The Coq Proof Assistant, version %s (%s)\n"
@@ -54,6 +54,7 @@ let print_usage_channel co command =
   -boot                  boot mode (implies -q and -batch)
   -emacs                 tells Coq it is executed under Emacs
   -dump-glob f           dump globalizations in file f (to be used by coqdoc)
+  -with-geoproof (yes|no) to (de)activate special functions for Geoproof within Coqide (default is yes)
   -impredicative-set     set sort Set impredicative
   -dont-load-proofs      don't load opaque proofs in memory
   -xml                   export XML files either to the hierarchy rooted in

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: typeops.mli 8673 2006-03-29 21:21:52Z herbelin $ i*)
+(*i $Id: typeops.mli 8871 2006-05-28 16:46:48Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -77,6 +77,9 @@ val judge_of_cast :
 (*s Inductive types. *)
 
 val judge_of_inductive : env -> inductive -> unsafe_judgment
+
+val judge_of_inductive_knowing_parameters : 
+  env -> inductive -> unsafe_judgment array -> unsafe_judgment
 
 val judge_of_constructor : env -> constructor -> unsafe_judgment
 

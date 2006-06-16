@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: constrextern.ml 8675 2006-03-31 18:21:20Z herbelin $ *)
+(* $Id: constrextern.ml 8831 2006-05-19 09:29:54Z herbelin $ *)
 
 (*i*)
 open Pp
@@ -27,6 +27,7 @@ open Pattern
 open Nametab
 open Notation
 open Reserve
+open Detyping
 (*i*)
 
 (* Translation from rawconstr to front constr *)
@@ -259,7 +260,7 @@ let rec same_raw c d =
         (fun (t1,(al1,oind1)) (t2,(al2,oind2)) ->
           same_raw t1 t2;
           if al1 <> al2 then failwith "RCases";
-          option_iter2(fun (_,i1,nl1) (_,i2,nl2) ->
+          option_iter2(fun (_,i1,_,nl1) (_,i2,_,nl2) ->
             if i1<>i2 || nl1 <> nl2 then failwith "RCases") oind1 oind2) c1 c2;
       List.iter2 (fun (_,_,pl1,b1) (_,_,pl2,b2) ->
         List.iter2 same_patt pl1 pl2;
@@ -622,6 +623,11 @@ let extern_optimal_prim_token scopes r r' =
 (**********************************************************************)
 (* mapping rawterms to constr_expr                                    *)
 
+let extern_rawsort = function
+  | RProp _ as s -> s
+  | RType (Some _) as s when !print_universes -> s
+  | RType _ -> RType None
+
 let rec extern inctx scopes vars r =
   let r' = remove_coercions inctx r in
   try 
@@ -679,7 +685,7 @@ let rec extern inctx scopes vars r =
       let vars' = 
 	List.fold_right (name_fold Idset.add)
 	  (cases_predicate_names tml) vars in
-      let rtntypopt' = option_app (extern_typ scopes vars') rtntypopt in
+      let rtntypopt' = option_map (extern_typ scopes vars') rtntypopt in
       let tml = List.map (fun (tm,(na,x)) ->
         let na' = match na,tm with
             Anonymous, RVar (_,id) when 
@@ -689,26 +695,28 @@ let rec extern inctx scopes vars r =
           | Name id, RVar (_,id') when id=id' -> None
           | Name _, _ -> Some na in
 	(sub_extern false scopes vars tm,
-	(na',option_app (fun (loc,ind,nal) ->
+	(na',option_map (fun (loc,ind,n,nal) ->
+	  let params = list_tabulate
+	    (fun _ -> RHole (dummy_loc,Evd.InternalHole)) n in
 	  let args = List.map (function
 	    | Anonymous -> RHole (dummy_loc,Evd.InternalHole) 
 	    | Name id -> RVar (dummy_loc,id)) nal in
-	  let t = RApp (dummy_loc,RRef (dummy_loc,IndRef ind),args) in
+	  let t = RApp (dummy_loc,RRef (dummy_loc,IndRef ind),params@args) in
 	  (extern_typ scopes vars t)) x))) tml in
       let eqns = List.map (extern_eqn (rtntypopt<>None) scopes vars) eqns in 
       CCases (loc,rtntypopt',tml,eqns)
 
   | RLetTuple (loc,nal,(na,typopt),tm,b) ->
       CLetTuple (loc,nal,
-        (option_app (fun _ -> na) typopt,
-         option_app (extern_typ scopes (add_vname vars na)) typopt),
+        (option_map (fun _ -> na) typopt,
+         option_map (extern_typ scopes (add_vname vars na)) typopt),
         sub_extern false scopes vars tm,
         extern false scopes (List.fold_left add_vname vars nal) b)
 
   | RIf (loc,c,(na,typopt),b1,b2) ->
       CIf (loc,sub_extern false scopes vars c,
-        (option_app (fun _ -> na) typopt,
-         option_app (extern_typ scopes (add_vname vars na)) typopt),
+        (option_map (fun _ -> na) typopt,
+         option_map (extern_typ scopes (add_vname vars na)) typopt),
         sub_extern false scopes vars b1, sub_extern false scopes vars b2)
 
   | RRec (loc,fk,idv,blv,tyv,bv) ->
@@ -737,12 +745,7 @@ let rec extern inctx scopes vars r =
 	     in
 	     CCoFix (loc,(loc,idv.(n)),Array.to_list listdecl))
 
-  | RSort (loc,s) ->
-      let s = match s with
-	 | RProp _ -> s
-	 | RType (Some _) when !print_universes -> s
-	 | RType _ -> RType None in
-      CSort (loc,s)
+  | RSort (loc,s) -> CSort (loc,extern_rawsort s)
 
   | RHole (loc,e) -> CHole loc
 
@@ -870,8 +873,17 @@ let extern_type at_top env t =
   let r = Detyping.detype at_top avoid (names_of_rel_context env) t in
   extern_rawtype (vars_of_env env) r
 
+let extern_sort s = extern_rawsort (detype_sort s)
+
 (******************************************************************)
 (* Main translation function from pattern -> constr_expr *)
+
+let it_destPLambda n c =
+  let rec aux n nal c =
+    if n=0 then (nal,c) else match c with
+      | PLambda (na,_,c) -> aux (n-1) (na::nal) c
+      | _ -> anomaly "it_destPLambda" in
+  aux n [] c
 
 let rec raw_of_pat env = function
   | PRef ref -> RRef (loc,ref)
@@ -897,20 +909,24 @@ let rec raw_of_pat env = function
       RLetIn (loc,na,raw_of_pat env t, raw_of_pat (na::env) c)
   | PLambda (na,t,c) ->
       RLambda (loc,na,raw_of_pat env t, raw_of_pat (na::env) c)
-  | PCase ((_,cs),typopt,tm,[||]) ->
-      if typopt <> None then failwith "TODO: PCase to RCases";
-      RCases (loc,(*(option_app (raw_of_pat env) typopt,*)None,
-         [raw_of_pat env tm,(Anonymous,None)],[])
-  | PCase ((Some ind,cs),typopt,tm,bv) ->
-      let avoid = List.fold_right (name_fold (fun x l -> x::l)) env [] in
-      let mib,mip = lookup_mind_specif (Global.env()) ind in
-      let k = mip.Declarations.mind_nrealargs in
-      let nparams = mib.Declarations.mind_nparams in
-      let cstrnargs = mip.Declarations.mind_consnrealdecls in
-      Detyping.detype_case false (raw_of_pat env) (raw_of_eqns env)
-	(fun _ _ -> false (* lazy: don't try to display pattern with "if" *))
-	avoid (ind,cs,nparams,cstrnargs,k) typopt tm bv
-  | PCase _ -> error "Unsupported case-analysis while printing pattern"
+  | PIf (c,b1,b2) ->
+      RIf (loc, raw_of_pat env c, (Anonymous,None), 
+           raw_of_pat env b1, raw_of_pat env b2)
+  | PCase ((LetStyle,[|n|],ind,None),PMeta None,tm,[|b|]) ->
+      let nal,b = it_destRLambda_or_LetIn_names n (raw_of_pat env b) in
+      RLetTuple (loc,nal,(Anonymous,None),raw_of_pat env tm,b)
+  | PCase ((_,cstr_nargs,indo,ind_nargs),p,tm,bv) ->
+      let brs = Array.to_list (Array.map (raw_of_pat env) bv) in
+      let brns = Array.to_list cstr_nargs in
+        (* ind is None only if no branch and no return type *)
+      let ind = out_some indo in
+      let mat = simple_cases_matrix_of_branches ind brns brs in
+      let indnames,rtn =
+	if p = PMeta None then (Anonymous,None),None
+	else 
+	  let nparams,n = out_some ind_nargs in
+	  return_type_of_predicate ind nparams n (raw_of_pat env p) in
+      RCases (loc,rtn,[raw_of_pat env tm,indnames],mat)
   | PFix f -> Detyping.detype false [] env (mkFix f)
   | PCoFix c -> Detyping.detype false [] env (mkCoFix c)
   | PSort s -> RSort (loc,s)

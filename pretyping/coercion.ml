@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: coercion.ml 8695 2006-04-10 16:33:52Z msozeau $ *)
+(* $Id: coercion.ml 8875 2006-05-29 19:59:11Z msozeau $ *)
 
 open Util
 open Names
@@ -35,6 +35,12 @@ module type S = sig
      type a sort; it fails if no coercion is applicable *)
   val inh_coerce_to_sort : loc ->
     env -> evar_defs -> unsafe_judgment -> evar_defs * unsafe_type_judgment
+
+  (* [inh_coerce_to_base env isevars j] coerces [j] to its base type; i.e. it
+     inserts a coercion into [j], if needed, in such a way it gets as
+     type its base type (the notion depends on the coercion system) *)
+  val inh_coerce_to_base : loc ->
+    env -> evar_defs -> unsafe_judgment -> evar_defs * unsafe_judgment
     
   (* [inh_conv_coerce_to loc env isevars j t] coerces [j] to an object of type 
      [t]; i.e. it inserts a coercion into [j], if needed, in such a way [t] and
@@ -143,6 +149,8 @@ module Default = struct
 	| _ ->
 	    inh_tosort_force loc env isevars j
 
+  let inh_coerce_to_base loc env isevars j = (isevars, j)
+
   let inh_coerce_to_fail env isevars c1 v t =
     let v', t' =
       try 
@@ -168,7 +176,7 @@ module Default = struct
 	   (match kind_of_term (whd_betadeltaiota env (evars_of isevars) t),
 	      kind_of_term (whd_betadeltaiota env (evars_of isevars) c1) with
 		| Prod (_,t1,t2), Prod (name,u1,u2) -> 
-		    let v' = option_app (whd_betadeltaiota env (evars_of isevars)) v in
+		    let v' = option_map (whd_betadeltaiota env (evars_of isevars)) v in
 		    let (evd',b) =
 		      match v' with 
 			  Some v' ->
@@ -184,7 +192,7 @@ module Default = struct
 			     let env1 = push_rel (x,None,v1) env in
 			     let (evd'', v2', t2') = inh_conv_coerce_to_fail loc env1 evd'
 						       (Some v2) t2 u2 in
-			       (evd'', option_app (fun v2' -> mkLambda (x, v1, v2')) v2', 
+			       (evd'', option_map (fun v2' -> mkLambda (x, v1, v2')) v2', 
 				mkProd (x, v1, t2'))
 			 | None ->
 			     (* Mismatch on t1 and u1 or not a lambda: we eta-expand *)
@@ -201,7 +209,7 @@ module Default = struct
 			     let (evd'', v2', t2') = 
 			       let v2 =
 				 match v with 
-				     Some v -> option_app (fun v1' -> mkApp (lift 1 v, [|v1'|])) v1'
+				     Some v -> option_map (fun v1' -> mkApp (lift 1 v, [|v1'|])) v1'
 				   | None -> None
 			       and evd', t2 =
 				 match v1' with 
@@ -212,7 +220,7 @@ module Default = struct
 			       in
 				 inh_conv_coerce_to_fail loc env1 evd' v2 t2 u2
 			     in
-			       (evd'', option_app (fun v2' -> mkLambda (name, u1, v2')) v2',
+			       (evd'', option_map (fun v2' -> mkLambda (name, u1, v2')) v2',
 				mkProd (name, u1, t2')))
 		| _ -> raise NoCoercion))
 	

@@ -14,7 +14,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: eqdecide.ml4 8652 2006-03-22 08:27:14Z herbelin $ *)
+(* $Id: eqdecide.ml4 8780 2006-05-02 21:58:58Z letouzey $ *)
 
 open Util
 open Names
@@ -103,7 +103,7 @@ let mkGenDecideEqGoal rectype g =
 
 let eqCase tac = 
   (tclTHEN intro  
-  (tclTHEN (tclLAST_HYP Extratactics.h_rewriteLR)
+  (tclTHEN (tclLAST_HYP Equality.rewriteLR)
   (tclTHEN clear_last 
   tac)))
 

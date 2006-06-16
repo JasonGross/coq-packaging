@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqdep.ml 8642 2006-03-17 10:09:02Z notin $ *)
+(* $Id: coqdep.ml 8923 2006-06-08 16:39:58Z herbelin $ *)
 
 open Printf
 open Coqdep_lexer
@@ -162,8 +162,12 @@ let sort () =
       try
 	while true do
 	  match coq_action lb with
-	    | Require (_, s) ->
-		(try loop (List.assoc s !vKnown) with Not_found -> ())
+	    | Require (_, sl) ->
+		List.iter 
+		  (fun s -> 
+		    try loop (List.assoc s !vKnown) 
+		    with Not_found -> ())
+		sl
 	    | RequireString (_, s) -> loop s
 	    | _ -> ()
 	done
@@ -184,17 +188,18 @@ let traite_fichier_Coq verbose f =
       while true do
       	let tok = coq_action buf in
 	match tok with
-	  | Require (spec,str) ->
-	      if not (List.mem str !deja_vu_v) then begin
-	        addQueue deja_vu_v str;
-                try
-                  let file_str = safe_assoc verbose f str in
-                  printf " %s%s" (canonize file_str)
-                    (if spec then !suffixe_spec else !suffixe)
-                with Not_found -> 
-		  if verbose && not (List.mem_assoc str !coqlibKnown) then
-                    warning_module_notfound f str
-       	      end
+	  | Require (spec,strl) ->
+	      List.iter (fun str ->
+		if not (List.mem str !deja_vu_v) then begin
+	          addQueue deja_vu_v str;
+                  try
+                    let file_str = safe_assoc verbose f str in
+                    printf " %s%s" (canonize file_str)
+                      (if spec then !suffixe_spec else !suffixe)
+                  with Not_found -> 
+		    if verbose && not (List.mem_assoc str !coqlibKnown) then
+                      warning_module_notfound f str
+       		end) strl
 	  | RequireString (spec,s) -> 
 	      let str = Filename.basename s in
 	      if not (List.mem [str] !deja_vu_v) then begin
@@ -332,7 +337,7 @@ let mL_dependencies () =
        flush stdout)
     (List.rev !mlAccu);
   List.iter
-    (fun ((name,ext,dirname) as pairname) ->
+    (fun ((name,ext,dirname)) ->
        let fullname = file_name ([name],dirname) in
        let (dep,_) = traite_fichier_ML fullname ext in
        printf "%s.cmi: %s%s" fullname fullname ext;

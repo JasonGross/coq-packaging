@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Notations.v 6410 2004-12-06 11:34:35Z herbelin $ i*)
+(*i $Id: Notations.v 8866 2006-05-28 16:21:04Z herbelin $ i*)
 
 (** These are the notations whose level and associativity are imposed by Coq *)
 
@@ -61,6 +61,9 @@ Reserved Notation "( x , y , .. , z )" (at level 0).
 Reserved Notation "{ x }" (at level 0, x at level 99).
 
 (** Notations for sigma-types or subsets *)
+
+Reserved Notation "{ x  |  P }" (at level 0, x at level 99).
+Reserved Notation "{ x  |  P  &  Q }" (at level 0, x at level 99).
 
 Reserved Notation "{ x : A  |  P }" (at level 0, x at level 99).
 Reserved Notation "{ x : A  |  P  &  Q }" (at level 0, x at level 99).

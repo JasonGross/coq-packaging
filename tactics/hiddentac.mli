@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: hiddentac.mli 8651 2006-03-21 21:54:43Z jforest $ i*)
+(*i $Id: hiddentac.mli 8878 2006-05-30 16:44:25Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -89,7 +89,7 @@ val h_simplest_right  : tactic
 (* Conversion *)
 val h_reduce          : Redexpr.red_expr -> Tacticals.clause -> tactic
 val h_change          :
-  constr occurrences option -> constr -> Tacticals.clause -> tactic
+  constr with_occurrences option -> constr -> Tacticals.clause -> tactic
 
 (* Equivalence relations *)
 val h_reflexivity     : tactic

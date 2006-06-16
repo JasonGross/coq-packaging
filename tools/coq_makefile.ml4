@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq_makefile.ml4 7994 2006-02-06 08:48:37Z herbelin $ *)
+(* $Id: coq_makefile.ml4 8840 2006-05-22 13:51:14Z notin $ *)
 
 (* créer un Makefile pour un développement Coq automatiquement *)
 
@@ -197,7 +197,7 @@ let variables l =
   print "COQFLAGS=-q $(OPT) $(COQLIBS) $(OTHERFLAGS) $(COQ_XML)\n";
   print "COQC=$(COQBIN)coqc\n";
   print "GALLINA=gallina\n";
-  print "COQDOC=coqdoc\n";
+  print "COQDOC=$(COQBIN)coqdoc\n";
   print "CAMLC=ocamlc -c\n";
   print "CAMLOPTC=ocamlopt -c\n";
   print "CAMLLINK=ocamlc\n";

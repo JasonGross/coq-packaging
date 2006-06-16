@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma"  i*)
 
-(* $Id: g_ground.ml4 7909 2006-01-21 11:09:18Z herbelin $ *)
+(* $Id: g_ground.ml4 8752 2006-04-27 19:37:33Z herbelin $ *)
 
 open Formula
 open Sequent
@@ -83,14 +83,14 @@ let normalize_evaluables=
 
 TACTIC EXTEND firstorder
     [ "firstorder" tactic_opt(t) "with" ne_reference_list(l) ] -> 
-      [ gen_ground_tac true (option_app eval_tactic t) (Ids l) ]
+      [ gen_ground_tac true (option_map eval_tactic t) (Ids l) ]
 |   [ "firstorder" tactic_opt(t) "using" ne_preident_list(l) ] -> 
-      [ gen_ground_tac true (option_app eval_tactic t) (Bases l) ]
+      [ gen_ground_tac true (option_map eval_tactic t) (Bases l) ]
 |   [ "firstorder" tactic_opt(t) ] -> 
-      [ gen_ground_tac true (option_app eval_tactic t) Void ]
+      [ gen_ground_tac true (option_map eval_tactic t) Void ]
 END
 
 TACTIC EXTEND gintuition
   [ "gintuition" tactic_opt(t) ] ->
-     [ gen_ground_tac false (option_app eval_tactic t) Void ]
+     [ gen_ground_tac false (option_map eval_tactic t) Void ]
 END

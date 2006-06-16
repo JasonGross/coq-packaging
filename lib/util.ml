@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: util.ml 8672 2006-03-29 21:06:33Z herbelin $ *)
+(* $Id: util.ml 8867 2006-05-28 16:21:41Z herbelin $ *)
 
 open Pp
 
@@ -214,6 +214,16 @@ let list_index x =
   in 
   index_x 1
 
+let list_unique_index x = 
+  let rec index_x n = function
+    | y::l -> 
+	if x = y then 
+	  if List.mem x l then raise Not_found
+	  else n 
+	else index_x (succ n) l
+    | [] -> raise Not_found 
+  in index_x 1
+
 let list_fold_left_i f = 
   let rec it_list_f i a = function
     | [] -> a 
@@ -353,7 +363,19 @@ let list_prefix_of prefl l =
     | ([], _) -> true
     | (_, _) -> false
   in 
-  prefrec (prefl,l)
+    prefrec (prefl,l)
+
+let list_drop_prefix p l =
+(* if l=p++t then return t else l *)
+  let rec list_drop_prefix_rec = function
+    | ([], tl) -> Some tl
+    | (_, []) -> None
+    | (h1::tp, h2::tl) -> 
+	if h1 = h2 then list_drop_prefix_rec (tp,tl) else None
+  in
+    match list_drop_prefix_rec (p,l) with
+      | Some r -> r
+      | None -> l
 
 let list_map_append f l = List.flatten (List.map f l)
 
@@ -620,6 +642,13 @@ else
   let v' = Array.map (fun x -> let (y,e) = f x !e' in e' := e; y) v in
   (v',!e')
 
+let array_fold_map2' f v1 v2 e =
+  let e' = ref e in
+  let v' = 
+    array_map2 (fun x1 x2 -> let (y,e) = f x1 x2 !e' in e' := e; y) v1 v2 
+  in
+  (v',!e')
+
 (* Matrices *)
 
 let matrix_transpose mat =
@@ -672,7 +701,7 @@ let out_some = function
   | Some x -> x
   | None -> failwith "out_some"
 
-let option_app f = function
+let option_map f = function
   | None -> None
   | Some x -> Some (f x)
 

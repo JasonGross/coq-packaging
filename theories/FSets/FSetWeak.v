@@ -6,9 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetWeak.v 8641 2006-03-17 09:56:54Z letouzey $ *)
+(* $Id: FSetWeak.v 8819 2006-05-15 09:52:36Z letouzey $ *)
 
 Require Export DecidableType.
+Require Export DecidableTypeEx.
 Require Export FSetWeakInterface.
 Require Export FSetFacts.
+Require Export FSetProperties.
 Require Export FSetWeakList.

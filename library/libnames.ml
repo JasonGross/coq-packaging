@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libnames.ml 7052 2005-05-20 15:54:50Z herbelin $ i*)
+(*i $Id: libnames.ml 8768 2006-04-28 14:25:31Z notin $ i*)
 
 open Pp
 open Util
@@ -77,6 +77,14 @@ let dirpath_prefix p = match repr_dirpath p with
 
 let is_dirpath_prefix_of d1 d2 =
   list_prefix_of (List.rev (repr_dirpath d1)) (List.rev (repr_dirpath d2))
+
+let chop_dirpath n d =
+  let d1,d2 = list_chop n (List.rev (repr_dirpath d)) in
+    make_dirpath (List.rev d1), make_dirpath (List.rev d2)
+
+let drop_dirpath_prefix d1 d2 =
+  let d = Util.list_drop_prefix (List.rev (repr_dirpath d1)) (List.rev (repr_dirpath d2)) in
+    make_dirpath (List.rev d)
 
 (* To know how qualified a name should be to be understood in the current env*)
 let add_dirpath_prefix id d = make_dirpath (repr_dirpath d @ [id])

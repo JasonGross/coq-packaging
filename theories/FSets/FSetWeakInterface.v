@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetWeakInterface.v 8641 2006-03-17 09:56:54Z letouzey $ *)
+(* $Id: FSetWeakInterface.v 8820 2006-05-15 11:44:05Z letouzey $ *)
 
 (** * Finite sets library *)
 
@@ -132,8 +132,8 @@ Module Type S.
 
   Section Spec. 
 
-  Variable s s' s'' : t.
-  Variable x y z : elt.
+  Variable s s' : t.
+  Variable x y : elt.
 
   (** Specification of [In] *)
   Parameter In_1 : E.eq x y -> In x s -> In y s.
@@ -226,15 +226,17 @@ Module Type S.
       compat_bool E.eq f ->
       Equal (snd (partition f s)) (filter (fun x => negb (f x)) s).
 
+  End Filter.
+
   (** Specification of [elements] *)
   Parameter elements_1 : In x s -> InA E.eq x (elements s).
   Parameter elements_2 : InA E.eq x (elements s) -> In x s.
+  Parameter elements_3 : NoDupA E.eq (elements s).
 
   (** Specification of [choose] *)
   Parameter choose_1 : choose s = Some x -> In x s.
   Parameter choose_2 : choose s = None -> Empty s.
 
-  End Filter.
   End Spec.
 
   Hint Immediate In_1.
@@ -243,6 +245,7 @@ Module Type S.
     is_empty_1 is_empty_2 choose_1 choose_2 add_1 add_2 add_3 remove_1
     remove_2 remove_3 singleton_1 singleton_2 union_1 union_2 union_3 inter_1
     inter_2 inter_3 diff_1 diff_2 diff_3 filter_1 filter_2 filter_3 for_all_1
-    for_all_2 exists_1 exists_2 partition_1 partition_2 elements_1 elements_2.
+    for_all_2 exists_1 exists_2 partition_1 partition_2 elements_1 elements_2
+    elements_3.
 
 End S.

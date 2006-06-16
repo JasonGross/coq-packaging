@@ -13,37 +13,72 @@ open Topconstr
 open Indfun_common 
 open Indfun
 open Genarg
+open Pcoq
+
+let pr_binding prc = function
+  | loc, Rawterm.NamedHyp id, c -> hov 1 (Ppconstr.pr_id id ++ str " := " ++ cut () ++ prc c)
+  | loc, Rawterm.AnonHyp n, c -> hov 1 (int n ++ str " := " ++ cut () ++ prc c)
+
+let pr_bindings prc prlc = function
+  | Rawterm.ImplicitBindings l ->
+      brk (1,1) ++ str "with" ++ brk (1,1) ++
+      Util.prlist_with_sep spc prc l
+  | Rawterm.ExplicitBindings l ->
+      brk (1,1) ++ str "with" ++ brk (1,1) ++ 
+        Util.prlist_with_sep spc (fun b -> str"(" ++ pr_binding prlc b ++ str")") l
+  | Rawterm.NoBindings -> mt ()
+
+
+let pr_with_bindings prc prlc (c,bl) =
+  prc c ++ hv 0 (pr_bindings prc prlc bl)
+
+
+let pr_fun_ind_using  prc prlc _ opt_c = 
+  match opt_c with
+    | None -> mt ()
+    | Some c -> spc () ++ hov 2 (str "using" ++ spc () ++ pr_with_bindings prc prlc c)
+
+ARGUMENT EXTEND fun_ind_using
+  TYPED AS constr_with_bindings_opt
+  PRINTED BY pr_fun_ind_using
+| [ "using" constr_with_bindings(c) ] -> [ Some c ]
+| [ ] -> [ None ]
+END
+
 
 TACTIC EXTEND newfuninv
-   [ "functional" "inversion" ident(hyp) ident(fname) ] -> 
+   [ "functional" "inversion" ident(hyp) ident(fname) fun_ind_using(princl)] -> 
      [
-       Invfun.invfun hyp fname
+       fun g -> 
+	 let fconst = const_of_id fname in
+	 let princ = 
+	   match princl with 
+	     | None -> 
+		 let f_ind_id =  
+		   (
+		     Indrec.make_elimination_ident
+		       fname 
+		       (Tacticals.elimination_sort_of_goal g)
+		   )
+	       in
+		 let princ = const_of_id f_ind_id in
+		 princ
+	     | Some princ -> destConst (fst princ)
+	 in       
+	 Invfun.invfun hyp fconst princ g
      ]
 END
 
 
-let pr_fun_ind_using  prc _ _ opt_c = 
-  match opt_c with 
-    | None -> mt ()
-    | Some c -> spc () ++ hov 2 (str "using" ++ spc () ++ prc c)
-
-ARGUMENT EXTEND fun_ind_using
-  TYPED AS constr_opt
-  PRINTED BY pr_fun_ind_using
-| [ "using" constr(c) ] -> [ Some c ]
-| [ ] -> [ None ]
-END
-
 let pr_intro_as_pat prc _ _ pat = 
-  str "as" ++ spc () ++ pr_intro_pattern pat
+  match pat with 
+    | Some pat -> spc () ++ str "as" ++ spc () ++ pr_intro_pattern pat
+    | None -> mt ()
 
 
-
-
-
-ARGUMENT EXTEND with_names TYPED AS intro_pattern PRINTED BY pr_intro_as_pat
-|   [ "as"  simple_intropattern(ipat) ] -> [ ipat ] 
-| []  ->[ IntroAnonymous ] 
+ARGUMENT EXTEND with_names TYPED AS intro_pattern_opt PRINTED BY pr_intro_as_pat
+|   [ "as"  simple_intropattern(ipat) ] -> [ Some ipat ] 
+| []  ->[ None ] 
 END
 
 
@@ -61,16 +96,25 @@ let is_rec scheme_info =
 let choose_dest_or_ind scheme_info =
     if is_rec scheme_info
     then Tactics.new_induct
-    else
-      Tactics.new_destruct
+    else Tactics.new_destruct
 
 
 TACTIC EXTEND newfunind
-   ["new" "functional" "induction" constr(c) fun_ind_using(princl) with_names(pat)] -> 
+   ["functional" "induction" ne_constr_list(cl) fun_ind_using(princl) with_names(pat)] -> 
      [
+       let pat = 
+	 match pat with 
+	   | None -> IntroAnonymous
+	   | Some pat -> pat
+       in
+       let c = match cl with 
+	 | [] -> assert false
+	 | [c] -> c 
+	 | c::cl -> applist(c,cl)
+       in 
        let f,args = decompose_app c in 
        fun g -> 
-	 let princ = 
+	 let princ,bindings = 
 	   match princl with 
 	     | None -> (* No principle is given let's find the good one *)
 		 let fname = 
@@ -86,7 +130,7 @@ TACTIC EXTEND newfunind
 		       (Tacticals.elimination_sort_of_goal g)
 		   )
 		 in
-		 mkConst(const_of_id princ_name )
+		 mkConst(const_of_id princ_name ),Rawterm.NoBindings
 	     | Some princ -> princ 
 	 in
 	 let princ_type = Tacmach.pf_type_of g princ in 
@@ -98,12 +142,46 @@ TACTIC EXTEND newfunind
 	   in
 	   List.map (fun c -> Tacexpr.ElimOnConstr c) (args@c_list) 
 	 in 
-	 let princ' = Some (princ,Rawterm.NoBindings) in 
-	 choose_dest_or_ind 
+	 let princ' = Some (princ,bindings) in 
+	 let princ_vars = 
+	   List.fold_right 
+	     (fun a acc -> 
+		try Idset.add (destVar a) acc
+		with _ -> acc
+	     )
+	     args
+	     Idset.empty
+	 in
+	 let old_idl = List.fold_right Idset.add (Tacmach.pf_ids_of_hyps g) Idset.empty in 
+	 let old_idl = Idset.diff old_idl princ_vars in 
+	 let subst_and_reduce g = 
+	   let idl = 
+	     Util.map_succeed 
+	       (fun id -> 
+		  if Idset.mem id old_idl then failwith "";
+		  id 
+	       )
+	       (Tacmach.pf_ids_of_hyps g)
+	   in 
+	   let flag = 
+	     Rawterm.Cbv
+	       {Rawterm.all_flags 
+		with Rawterm.rDelta = false; 		 
+	       }
+	   in
+	   Tacticals.tclTHEN
+	     (Tacticals.tclMAP (fun id -> Tacticals.tclTRY (Equality.subst [id])) idl )
+	     (Hiddentac.h_reduce flag Tacticals.allClauses)
+	     g
+	 in
+	 Tacticals.tclTHEN
+	   (choose_dest_or_ind 
 	   princ_infos
 	   args_as_induction_constr
 	   princ'
-	   pat g
+	   pat)
+	   subst_and_reduce
+	   g
      ]
 END
 
@@ -111,7 +189,7 @@ END
 VERNAC ARGUMENT EXTEND rec_annotation2
   [ "{"  "struct" ident(id)  "}"] -> [ Struct id ]
 | [ "{" "wf" constr(r) ident_opt(id) "}" ] -> [ Wf(r,id) ]
-| [ "{" "mes" constr(r) ident_opt(id) "}" ] -> [ Mes(r,id) ] 
+| [ "{" "measure" constr(r) ident_opt(id) "}" ] -> [ Mes(r,id) ] 
 END
 
 
@@ -130,7 +208,7 @@ VERNAC ARGUMENT EXTEND rec_definition2
      let check_one_name () =
        if List.length names > 1 then
          Util.user_err_loc
-           (Util.dummy_loc,"GenFixpoint",
+           (Util.dummy_loc,"Function",
             Pp.str "the recursive argument needs to be specified");
      in
      let check_exists_args an =
@@ -138,7 +216,7 @@ VERNAC ARGUMENT EXTEND rec_definition2
 	 let id = match an with Struct id -> id | Wf(_,Some id) -> id | Mes(_,Some id) -> id | Wf(_,None) | Mes(_,None) -> failwith "check_exists_args" in 
 	 (try ignore(Util.list_index (Name id) names - 1); annot
 	  with Not_found ->  Util.user_err_loc
-            (Util.dummy_loc,"GenFixpoint",
+            (Util.dummy_loc,"Function",
              Pp.str "No argument named " ++ Nameops.pr_id id)
 	 )
        with Failure "check_exists_args" ->  check_one_name ();annot
@@ -160,14 +238,9 @@ VERNAC ARGUMENT EXTEND rec_definitions2
 END
 
 
-VERNAC COMMAND EXTEND GenFixpoint
-   ["GenFixpoint" rec_definitions2(recsl)] ->
+VERNAC COMMAND EXTEND Function
+   ["Function" rec_definitions2(recsl)] ->
 	[ do_generate_principle false  recsl]
-END
-
-VERNAC COMMAND EXTEND IGenFixpoint
-   ["IGenFixpoint" rec_definitions2(recsl)] ->
-	[ do_generate_principle true  recsl]
 END
 
 
@@ -181,17 +254,28 @@ VERNAC ARGUMENT EXTEND fun_scheme_args
 END 
 
 VERNAC COMMAND EXTEND NewFunctionalScheme
-   ["New" "Functional" "Scheme" fun_scheme_args(fas) ] ->
+   ["Functional" "Scheme" fun_scheme_args(fas) ] ->
     [
-      New_arg_principle.make_scheme fas
+      try 
+	Functional_principles_types.make_scheme fas
+      with Functional_principles_types.No_graph_found -> 
+	match fas with 
+	  | (_,fun_name,_)::_ -> 
+	      begin
+		make_graph fun_name;
+		try Functional_principles_types.make_scheme fas
+		with Functional_principles_types.No_graph_found -> 
+		  Util.error ("Cannot generate induction principle(s)")
+	      end
+	  | _ -> assert false (* we can only have non empty  list *)
     ]
 END
 
 
 VERNAC COMMAND EXTEND NewFunctionalCase
-   ["New" "Functional" "Case" fun_scheme_arg(fas) ] ->
+   ["Functional" "Case" fun_scheme_arg(fas) ] ->
     [
-      New_arg_principle.make_case_scheme fas
+      Functional_principles_types.make_case_scheme fas
     ]
 END
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: options.ml 7740 2005-12-26 20:07:21Z herbelin $ *)
+(* $Id: options.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
 
 open Util
 
@@ -70,10 +70,10 @@ let print_hyps_limit () = !print_hyps_limit
 
 (* A list of the areas of the system where "unsafe" operation
  * has been requested *)
+
 let unsafe_set = ref Stringset.empty
 let add_unsafe s = unsafe_set := Stringset.add s !unsafe_set
 let is_unsafe s = Stringset.mem s !unsafe_set
-
 
 (* Dump of globalization (to be used by coqdoc) *)
 

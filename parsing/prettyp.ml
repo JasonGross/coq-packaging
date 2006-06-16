@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: prettyp.ml 7938 2006-01-28 22:03:33Z herbelin $ *)
+(* $Id: prettyp.ml 8845 2006-05-23 07:41:58Z herbelin $ *)
 
 open Pp
 open Util
@@ -278,11 +278,11 @@ let print_constructors envpar names types =
   hv 0 (str "  " ++ pc)
 
 let build_inductive sp tyi =
-  let (mib,mip) = Global.lookup_inductive (sp,tyi) in
+  let (mib,mip as specif) = Global.lookup_inductive (sp,tyi) in
   let params = mib.mind_params_ctxt in
   let args = extended_rel_list 0 params in
   let env = Global.env() in
-  let arity = hnf_prod_applist env mip.mind_user_arity args in
+  let arity = hnf_prod_applist env (Inductive.type_of_inductive specif) args in
   let cstrtypes = arities_of_constructors env (sp,tyi) in
   let cstrtypes =
     Array.map (fun c -> hnf_prod_applist env c args) cstrtypes in
@@ -401,7 +401,7 @@ let print_context with_values =
     | h::rest when n = None or out_some n > 0 -> 
 	(match print_library_entry with_values h with
 	  | None -> prec n rest
-	  | Some pp -> prec (option_app ((+) (-1)) n) rest ++ pp ++ fnl ())
+	  | Some pp -> prec (option_map ((+) (-1)) n) rest ++ pp ++ fnl ())
     | _ -> mt ()
   in 
   prec

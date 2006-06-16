@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: libobject.ml 6748 2005-02-18 22:17:50Z herbelin $ *)
+(* $Id: libobject.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
 
 open Util
 open Names
@@ -109,12 +109,12 @@ let declare_object odecl =
       anomaly "somehow we got the wrong dynamic object in the classifyfun"
   and discharge (oname,lobj) = 
     if Dyn.tag lobj = na then 
-      option_app infun (odecl.discharge_function (oname,outfun lobj))
+      option_map infun (odecl.discharge_function (oname,outfun lobj))
     else 
       anomaly "somehow we got the wrong dynamic object in the dischargefun"
   and exporter lobj = 
     if Dyn.tag lobj = na then 
-      option_app infun (odecl.export_function (outfun lobj))
+      option_map infun (odecl.export_function (outfun lobj))
     else 
       anomaly "somehow we got the wrong dynamic object in the exportfun"
 

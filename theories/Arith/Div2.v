@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Div2.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: Div2.v 8733 2006-04-25 22:52:18Z letouzey $ i*)
 
 Require Import Lt.
 Require Import Plus.
@@ -172,4 +172,26 @@ Qed.
 Lemma odd_S2n : forall n, odd n -> {p : nat | n = S (double p)}.
 Proof.
 intros n H. exists (div2 n). auto with arith.
+Qed.
+
+(** Doubling before dividing by two brings back to the initial number. *)
+
+Lemma div2_double : forall n:nat, div2 (2*n) = n.
+Proof.
+ induction n.
+ simpl; auto.
+ simpl.
+ replace (n+S(n+0)) with (S (2*n)).
+ f_equal; auto.
+ simpl; auto with arith.
+Qed.
+
+Lemma div2_double_plus_one : forall n:nat, div2 (S (2*n)) = n.
+Proof.
+ induction n.
+ simpl; auto.
+ simpl.
+ replace (n+S(n+0)) with (S (2*n)).
+ f_equal; auto.
+ simpl; auto with arith.
 Qed.

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: redexpr.mli 7639 2005-12-02 10:01:15Z gregoire $ i*)
+(*i $Id: redexpr.mli 8878 2006-05-30 16:44:25Z herbelin $ i*)
 
 open Names
 open Term
@@ -16,6 +16,8 @@ open Reductionops
 
 
 type red_expr = (constr, evaluable_global_reference) red_expr_gen
+
+val out_with_occurrences : 'a with_occurrences -> int list * 'a
 
 val reduction_of_red_expr : red_expr -> reduction_function * cast_kind
 (* [true] if we should use the vm to verify the reduction *)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: lib.mli 6758 2005-02-20 18:13:28Z herbelin $ i*)
+(*i $Id: lib.mli 8852 2006-05-23 17:52:43Z notin $ i*)
 
 (*i*)
 open Util
@@ -122,7 +122,8 @@ val end_compilation : dir_path -> object_prefix * library_segment
 val library_dp : unit -> dir_path
 
 (* Extract the library part of a name even if in a section *)
-val library_part : global_reference -> dir_path
+val library_part :  global_reference -> dir_path
+val remove_section_part : global_reference -> dir_path
 
 (*s Sections *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pre_env.mli 7642 2005-12-06 08:56:29Z gregoire $ *)
+(* $Id: pre_env.mli 8810 2006-05-12 18:50:21Z barras $ *)
 
 open Util
 open Names
@@ -82,5 +82,8 @@ val lookup_constant : constant -> env -> constant_body
 
 (* Mutual Inductives *)
 val lookup_mind : mutual_inductive -> env -> mutual_inductive_body
+
+(* Find the ultimate inductive in the [mind_equiv] chain *)
+val scrape_mind : env -> mutual_inductive -> mutual_inductive
 
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: topconstr.mli 8624 2006-03-13 17:38:17Z msozeau $ i*)
+(*i $Id: topconstr.mli 8875 2006-05-29 19:59:11Z msozeau $ i*)
 
 (*i*)
 open Pp
@@ -34,14 +34,14 @@ type aconstr =
   | AProd of name * aconstr * aconstr
   | ALetIn of name * aconstr * aconstr
   | ACases of aconstr option *
-      (aconstr * (name * (inductive * name list) option)) list *
+      (aconstr * (name * (inductive * int * name list) option)) list *
       (identifier list * cases_pattern list * aconstr) list
   | ALetTuple of name list * (name * aconstr option) * aconstr * aconstr
   | AIf of aconstr * (name * aconstr option) * aconstr * aconstr
   | ASort of rawsort
   | AHole of Evd.hole_kind
   | APatVar of patvar
-  | ACast of aconstr * cast_kind * aconstr
+  | ACast of aconstr * cast_type * aconstr
 
 val rawconstr_of_aconstr_with_binders : loc -> 
   (identifier -> 'a -> identifier * 'a) ->
@@ -107,14 +107,14 @@ type constr_expr =
   | CPatVar of loc * (bool * patvar)
   | CEvar of loc * existential_key
   | CSort of loc * rawsort
-  | CCast of loc * constr_expr * cast_kind * constr_expr
+  | CCast of loc * constr_expr * cast_type * constr_expr
   | CNotation of loc * notation * constr_expr list
   | CPrim of loc * prim_token
   | CDelimiters of loc * string * constr_expr
   | CDynamic of loc * Dyn.t
 
 and fixpoint_expr =
-    identifier * (int * recursion_order_expr) * local_binder list * constr_expr * constr_expr
+    identifier * (int option * recursion_order_expr) * local_binder list * constr_expr * constr_expr
 
 and cofixpoint_expr =
     identifier * local_binder list * constr_expr * constr_expr
@@ -143,7 +143,7 @@ val names_of_cases_indtype : constr_expr -> identifier list
 val mkIdentC : identifier -> constr_expr
 val mkRefC : reference -> constr_expr
 val mkAppC : constr_expr * constr_expr list -> constr_expr
-val mkCastC : constr_expr * cast_kind * constr_expr -> constr_expr
+val mkCastC : constr_expr * cast_type * constr_expr -> constr_expr
 val mkLambdaC : name located list * constr_expr * constr_expr -> constr_expr
 val mkLetInC : name located * constr_expr * constr_expr -> constr_expr
 val mkProdC : name located list * constr_expr * constr_expr -> constr_expr

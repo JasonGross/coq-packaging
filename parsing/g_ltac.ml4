@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_ltac.ml4 8129 2006-03-05 09:05:12Z herbelin $ *)
+(* $Id: g_ltac.ml4 8878 2006-05-30 16:44:25Z herbelin $ *)
 
 open Pp
 open Util
@@ -23,7 +23,7 @@ type let_clause_kind =
   | LETCLAUSE of
       (Names.identifier Util.located * raw_tactic_expr option * raw_tactic_arg)
 
-let fail_default_value = Genarg.ArgArg 0
+let fail_default_value = ArgArg 0
 
 let out_letin_clause loc = function
   | LETTOPCLAUSE _ -> user_err_loc (loc, "", (str "Syntax Error"))

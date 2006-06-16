@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: global.mli 7899 2006-01-20 16:35:03Z barras $ i*)
+(*i $Id: global.mli 8723 2006-04-16 15:51:02Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -63,20 +63,13 @@ val set_engagement : engagement -> unit
 (* [start_*] functions return the [module_path] valid for components
    of the started module / module type *)
 
-val start_module : 
-  identifier -> (mod_bound_id * module_type_entry) list 
-    -> module_type_entry option 
-      -> module_path
+val start_module : identifier -> module_path
+val end_module : identifier -> module_type_entry option -> module_path
 
-val end_module :
-  identifier -> module_path
+val add_module_parameter : mod_bound_id -> module_type_entry -> unit
 
-val start_modtype :
-  identifier -> (mod_bound_id * module_type_entry) list
-    -> module_path
-
-val end_modtype :
-  identifier -> kernel_name
+val start_modtype : identifier -> module_path
+val end_modtype : identifier -> kernel_name
 
 
 (* Queries *)

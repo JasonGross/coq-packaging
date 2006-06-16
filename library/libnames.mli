@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libnames.mli 7052 2005-05-20 15:54:50Z herbelin $ i*)
+(*i $Id: libnames.mli 8768 2006-04-28 14:25:31Z notin $ i*)
 
 (*i*)
 open Pp
@@ -53,6 +53,8 @@ val split_dirpath : dir_path -> dir_path * identifier
 val extend_dirpath : dir_path -> module_ident -> dir_path
 val add_dirpath_prefix : module_ident -> dir_path -> dir_path
 
+val chop_dirpath : int -> dir_path -> dir_path * dir_path
+val drop_dirpath_prefix : dir_path -> dir_path -> dir_path
 val extract_dirpath_prefix : int -> dir_path -> dir_path
 val is_dirpath_prefix_of : dir_path -> dir_path -> bool
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: OrderedType.v 8667 2006-03-28 11:59:44Z letouzey $ *)
+(* $Id: OrderedType.v 8834 2006-05-20 00:41:35Z letouzey $ *)
 
 Require Export SetoidList.
 Set Implicit Arguments.
@@ -313,6 +313,8 @@ Ltac false_order := elimtype False; order.
 
 (* Specialization of resuts about lists modulo. *)
 
+Section ForNotations.
+
 Notation In:=(InA eq).
 Notation Inf:=(lelistA lt).
 Notation Sort:=(sort lt).
@@ -346,12 +348,14 @@ Proof. exact (InfA_alt eq_refl eq_sym lt_trans lt_eq eq_lt). Qed.
 Lemma Sort_NoDup : forall l, Sort l -> NoDup l.
 Proof. exact (SortA_NoDupA eq_refl eq_sym lt_trans lt_not_eq lt_eq eq_lt) . Qed.
 
+End ForNotations.
+
 Hint Resolve ListIn_In Sort_NoDup Inf_lt. 
 Hint Immediate In_eq Inf_lt. 
 
 End OrderedTypeFacts.
 
-Module PairOrderedType(O:OrderedType).
+Module KeyOrderedType(O:OrderedType).
  Import O.
  Module MO:=OrderedTypeFacts(O).
  Import MO.
@@ -561,6 +565,6 @@ Module PairOrderedType(O:OrderedType).
  Hint Resolve Sort_Inf_NotIn.
  Hint Resolve In_inv_2 In_inv_3.
 
-End PairOrderedType.
+End KeyOrderedType.
 
 

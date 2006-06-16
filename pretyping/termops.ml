@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: termops.ml 8003 2006-02-07 22:11:50Z herbelin $ *)
+(* $Id: termops.ml 8845 2006-05-23 07:41:58Z herbelin $ *)
 
 open Pp
 open Util
@@ -25,7 +25,7 @@ let print_sort = function
   | Prop Null -> (str "Prop")
   | Type u -> (str "Type(" ++ Univ.pr_uni u ++ str ")")
 
-let print_sort_family = function
+let pr_sort_family = function
   | InSet -> (str "Set")
   | InProp -> (str "Prop")
   | InType -> (str "Type")
@@ -961,7 +961,7 @@ let assums_of_rel_context sign =
 let lift_rel_context n sign =
   let rec liftrec k = function
     | (na,c,t)::sign ->
-	(na,option_app (liftn n k) c,type_app (liftn n k) t)
+	(na,option_map (liftn n k) c,type_app (liftn n k) t)
 	::(liftrec (k-1) sign)
     | [] -> []
   in

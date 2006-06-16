@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: nameops.ml 6205 2004-10-12 10:13:15Z herbelin $ *)
+(* $Id: nameops.ml 8727 2006-04-24 09:48:06Z herbelin $ *)
 
 open Pp
 open Util
@@ -138,7 +138,7 @@ let next_ident_away_from id avoid =
 
 let out_name = function
   | Name id -> id
-  | Anonymous -> anomaly "out_name: expects a defined name"
+  | Anonymous -> failwith "out_name: expects a defined name"
 
 let name_fold f na a =
   match na with

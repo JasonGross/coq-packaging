@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: SetoidList.v 8686 2006-04-06 13:25:10Z letouzey $ *)
+(* $Id: SetoidList.v 8853 2006-05-23 18:17:38Z herbelin $ *)
 
 Require Export List.
 Require Export Sorting.
@@ -80,6 +80,17 @@ Proof.
 Qed.
 Hint Resolve In_InA.
 
+Lemma InA_split : forall l x, InA x l -> 
+ exists l1, exists y, exists l2, 
+ eqA x y /\ l = l1++y::l2.
+Proof.
+induction l; inversion_clear 1.
+exists (@nil A); exists a; exists l; auto.
+destruct (IHl x H0) as (l1,(y,(l2,(H1,H2)))).
+exists (a::l1); exists y; exists l2; auto.
+split; simpl; f_equal; auto.
+Qed.
+
 (** Results concerning lists modulo [eqA] and [ltA] *)
 
 Variable ltA : A -> A -> Prop.
@@ -149,7 +160,7 @@ Proof.
  inversion_clear H0.
  constructor; auto.  
  intro.
- assert (ltA x x) by eapply SortA_InfA_InA; eauto.
+ assert (ltA x x) by (eapply SortA_InfA_InA; eauto).
  elim (ltA_not_eqA H3); auto.
 Qed.
 
@@ -228,6 +239,18 @@ Section Remove.
 
 Hypothesis eqA_dec : forall x y : A, {eqA x y}+{~(eqA x y)}.
 
+Lemma InA_dec : forall x l, { InA x l } + { ~ InA x l }.
+Proof.
+induction l.
+right; auto.
+red; inversion 1.
+destruct (eqA_dec x a).
+left; auto.
+destruct IHl.
+left; auto.
+right; red; inversion_clear 1; tauto.
+Qed.
+
 Fixpoint removeA (x : A) (l : list A){struct l} : list A :=
   match l with
     | nil => nil
@@ -290,6 +313,149 @@ inversion_clear H1; auto.
 elim H2; auto.
 Qed.
 
+Let addlistA x l l' := forall y, InA y l' <-> eqA x y \/ InA y l.
+
+Lemma removeA_add :
+  forall s s' x x', NoDupA s -> NoDupA (x' :: s') ->
+  ~ eqA x x' -> ~ InA x s -> 
+  addlistA x s (x' :: s') -> addlistA x (removeA x' s) s'.
+Proof.
+unfold addlistA; intros.
+inversion_clear H0.
+rewrite removeA_InA; auto.
+split; intros.
+destruct (eqA_dec x y); auto; intros.
+right; split; auto.
+destruct (H3 y); clear H3.
+destruct H6; intuition.
+swap H4; apply InA_eqA with y; auto.
+destruct H0.
+assert (InA y (x' :: s')) by (rewrite H3; auto).
+inversion_clear H6; auto.
+elim H1; apply eqA_trans with y; auto.
+destruct H0.
+assert (InA y (x' :: s')) by (rewrite H3; auto).
+inversion_clear H7; auto.
+elim H6; auto.
+Qed.
+
+Section Fold.
+
+Variable B:Set.
+Variable eqB:B->B->Prop.
+
+(** Two-argument functions that allow to reorder its arguments. *)
+Definition transpose (f : A -> B -> B) :=
+  forall (x y : A) (z : B), eqB (f x (f y z)) (f y (f x z)). 
+
+(** Compatibility of a two-argument function with respect to two equalities. *)
+Definition compat_op (f : A -> B -> B) :=
+  forall (x x' : A) (y y' : B), eqA x x' -> eqB y y' -> eqB (f x y) (f x' y').
+
+(** Compatibility of a function upon natural numbers. *)
+Definition compat_nat (f : A -> nat) :=
+  forall x x' : A, eqA x x' -> f x = f x'.
+
+Variable st:Setoid_Theory _ eqB.
+Variable f:A->B->B.
+Variable Comp:compat_op f.
+Variable Ass:transpose f.
+Variable i:B.
+
+Lemma removeA_fold_right_0 :
+  forall s x, ~InA x s ->
+  eqB (fold_right f i s) (fold_right f i (removeA x s)).
+Proof.
+ simple induction s; simpl; intros.
+ refl_st.
+ destruct (eqA_dec x a); simpl; intros.
+ absurd_hyp e; auto.
+ apply Comp; auto. 
+Qed.   
+
+Lemma removeA_fold_right :
+  forall s x, NoDupA s -> InA x s ->
+  eqB (fold_right f i s) (f x (fold_right f i (removeA x s))).
+Proof.
+ simple induction s; simpl.  
+ inversion_clear 2.
+ intros.
+ inversion_clear H0.
+ destruct (eqA_dec x a); simpl; intros.
+ apply Comp; auto. 
+ apply removeA_fold_right_0; auto.
+ swap H2; apply InA_eqA with x; auto.
+ inversion_clear H1. 
+ destruct n; auto.
+ trans_st (f a (f x (fold_right f i (removeA x l)))).
+Qed.   
+
+Lemma fold_right_equal :
+  forall s s', NoDupA s -> NoDupA s' ->
+  eqlistA s s' -> eqB (fold_right f i s) (fold_right f i s').
+Proof.
+ simple induction s.
+ destruct s'; simpl.
+ intros; refl_st; auto.
+ unfold eqlistA; intros.
+ destruct (H1 a).
+ assert (X : InA a nil); auto; inversion X.
+ intros x l Hrec s' N N' E; simpl in *.
+ trans_st (f x (fold_right f i (removeA x s'))).
+ apply Comp; auto.
+ apply Hrec; auto.
+ inversion N; auto.
+ apply removeA_NoDupA; auto; apply eqA_trans.
+ apply removeA_eqlistA; auto.
+ inversion_clear N; auto.
+ sym_st.
+ apply removeA_fold_right; auto.
+ unfold eqlistA in E.
+ rewrite <- E; auto.
+Qed.
+
+Lemma fold_right_add :
+  forall s' s x, NoDupA s -> NoDupA s' -> ~ InA x s ->
+  addlistA x s s' -> eqB (fold_right f i s') (f x (fold_right f i s)).
+Proof.   
+ simple induction s'.
+ unfold addlistA; intros.
+ destruct (H2 x); clear H2.
+ assert (X : InA x nil); auto; inversion X.
+ intros x' l' Hrec s x N N' IN EQ; simpl.
+ (* if x=x' *)
+ destruct (eqA_dec x x').
+ apply Comp; auto.
+ apply fold_right_equal; auto.
+ inversion_clear N'; trivial.
+ unfold eqlistA; unfold addlistA in EQ; intros.
+ destruct (EQ x0); clear EQ.
+ split; intros.
+ destruct H; auto.
+ inversion_clear N'.
+ destruct H2; apply InA_eqA with x0; auto.
+ apply eqA_trans with x; auto.
+ assert (X:InA x0 (x' :: l')); auto; inversion_clear X; auto.
+ destruct IN; apply InA_eqA with x0; auto.
+ apply eqA_trans with x'; auto.
+ (* else x<>x' *)   
+ trans_st (f x' (f x (fold_right f i (removeA x' s)))).
+ apply Comp; auto.
+ apply Hrec; auto.
+ apply removeA_NoDupA; auto; apply eqA_trans.
+ inversion_clear N'; auto.
+ rewrite removeA_InA; intuition.
+ apply removeA_add; auto.
+ trans_st (f x (f x' (fold_right f i (removeA x' s)))).
+ apply Comp; auto.
+ sym_st.
+ apply removeA_fold_right; auto.
+ destruct (EQ x'). 
+ destruct H; auto; destruct n; auto.
+Qed.
+
+End Fold.
+
 End Remove.
 
 End Type_with_equality.
@@ -298,3 +464,52 @@ Hint Constructors InA.
 Hint Constructors NoDupA. 
 Hint Constructors sort.
 Hint Constructors lelistA.
+
+Section Find. 
+Variable A B : Set. 
+Variable eqA : A -> A -> Prop. 
+Hypothesis eqA_sym : forall x y, eqA x y -> eqA y x.
+Hypothesis eqA_trans : forall x y z, eqA x y -> eqA y z -> eqA x z.
+Hypothesis eqA_dec : forall x y : A, {eqA x y}+{~(eqA x y)}.
+
+Fixpoint findA (f : A -> bool) (l:list (A*B)) : option B := 
+ match l with  
+  | nil => None 
+  | (a,b)::l => if f a then Some b else findA f l
+ end.
+
+Lemma findA_NoDupA : 
+ forall l a b, 
+ NoDupA (fun p p' => eqA (fst p) (fst p')) l -> 
+ (InA (fun p p' => eqA (fst p) (fst p') /\ snd p = snd p') (a,b) l <->
+  findA (fun a' => if eqA_dec a a' then true else false) l = Some b).
+Proof.
+induction l; simpl; intros.
+split; intros; try discriminate.
+inversion H0.
+destruct a as (a',b'); rename a0 into a.
+inversion_clear H.
+split; intros.
+inversion_clear H.
+simpl in *; destruct H2; subst b'.
+destruct (eqA_dec a a'); intuition.
+destruct (eqA_dec a a'); simpl.
+destruct H0.
+generalize e H2 eqA_trans eqA_sym; clear.
+induction l.
+inversion 2.
+inversion_clear 2; intros; auto.
+destruct a0.
+compute in H; destruct H.
+subst b.
+constructor 1; auto.
+simpl.
+apply eqA_trans with a; auto.
+rewrite <- IHl; auto.
+destruct (eqA_dec a a'); simpl in *.
+inversion H; clear H; intros; subst b'; auto.
+constructor 2.
+rewrite IHl; auto.
+Qed.
+
+End Find. 

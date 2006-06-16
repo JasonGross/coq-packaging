@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cases.mli 8654 2006-03-22 15:36:58Z msozeau $ i*)
+(*i $Id: cases.mli 8741 2006-04-26 22:30:32Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -41,13 +41,9 @@ val error_wrong_numarg_inductive_loc : loc -> env -> inductive -> int -> 'a
 module type S = sig
   val compile_cases :
     loc ->
-    (type_constraint -> env -> rawconstr -> unsafe_judgment) *    
-      evar_defs ref ->
+    (type_constraint -> env -> rawconstr -> unsafe_judgment) * evar_defs ref ->
     type_constraint -> 
-    env ->
-    rawconstr option *
-      (rawconstr * (name * (loc * inductive * name list) option)) list *
-      (loc * identifier list * cases_pattern list * rawconstr) list ->
+    env -> rawconstr option * tomatch_tuple * cases_clauses ->
     unsafe_judgment
 end
 

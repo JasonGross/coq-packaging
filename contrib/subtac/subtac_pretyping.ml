@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: subtac_pretyping.ml 8688 2006-04-07 15:08:12Z msozeau $ *)
+(* $Id: subtac_pretyping.ml 8889 2006-06-01 20:23:56Z msozeau $ *)
 
 open Global
 open Pp
@@ -39,7 +39,7 @@ open Subtac_errors
 open Context
 open Eterm
 
-module Pretyping = Pretyping.Pretyping_F(Subtac_coercion.Coercion)
+module Pretyping = Subtac_pretyping_F.SubtacPretyping_F(Subtac_coercion.Coercion)
 
 open Pretyping
 
@@ -116,24 +116,26 @@ let subtac_process env isevars id l c tycon =
   let evars () = evars_of !isevars in
   let _ = trace (str "Creating env with binders") in
   let env_binders, binders_rel = env_with_binders env isevars l in
-  let _ = trace (str "New env created:" ++ my_print_context env_binders) in
+  let _ = try (trace (str "New env created:" ++ my_print_context env_binders)) with _ -> () in
   let tycon = 
     match tycon with
 	None -> empty_tycon
       | Some t -> 
 	  let t = coqintern !isevars env_binders t in
-	  let _ = trace (str "Internalized specification: " ++ my_print_rawconstr env_binders t) in
+	  let _ = try trace (str "Internalized specification: " ++ my_print_rawconstr env_binders t) with _ -> () in
 	  let coqt, ttyp = interp env_binders isevars t empty_tycon in
-	  let _ = trace (str "Interpreted type: " ++ my_print_constr env_binders coqt) in
+	  let _ = try trace (str "Interpreted type: " ++ my_print_constr env_binders coqt) with _ -> () in
 	    mk_tycon coqt
   in    
   let c = coqintern !isevars env_binders c in
-  let _ = trace (str "Internalized term: " ++ my_print_rawconstr env c) in
+  let c = Subtac_utils.rewrite_cases env c in
+  let _ = try trace (str "Internalized term: " ++ my_print_rawconstr env c)  with _ -> () in
   let coqc, ctyp = interp env_binders isevars c tycon in
-  let _ = trace (str "Interpreted term: " ++ my_print_constr env_binders coqc ++ spc () ++
+  let _ = try trace (str "Interpreted term: " ++ my_print_constr env_binders coqc ++ spc () ++
 		 str "Coq type: " ++ my_print_constr env_binders ctyp)
+  with _ -> () 
   in
-  let _ = trace (str "Original evar map: " ++ Evd.pr_evar_map (evars ())) in
+  let _ = try trace (str "Original evar map: " ++ Evd.pr_evar_map (evars ()))  with _ -> () in
     
   let fullcoqc = it_mkLambda_or_LetIn coqc binders_rel 
   and fullctyp = it_mkProd_or_LetIn ctyp binders_rel
@@ -141,10 +143,11 @@ let subtac_process env isevars id l c tycon =
   let fullcoqc = Evarutil.nf_evar (evars_of !isevars) fullcoqc in
   let fullctyp = Evarutil.nf_evar (evars_of !isevars) fullctyp in
 
-  let _ = trace (str "After evar normalization: " ++ spc () ++
+  let _ = try trace (str "After evar normalization: " ++ spc () ++
 		 str "Coq term: " ++ my_print_constr env fullcoqc ++ spc ()
 		 ++ str "Coq type: " ++ my_print_constr env fullctyp) 
+     with _ -> () 
   in
   let evm = non_instanciated_map env isevars in
-  let _ = trace (str "Non instanciated evars map: " ++ Evd.pr_evar_map evm) in
+  let _ = try trace (str "Non instanciated evars map: " ++ Evd.pr_evar_map evm)  with _ -> () in
     evm, fullcoqc, fullctyp

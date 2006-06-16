@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: discharge.ml 7493 2005-11-02 22:12:16Z mohring $ *)
+(* $Id: discharge.ml 8845 2006-05-23 07:41:58Z herbelin $ *)
 
 open Names
 open Util
@@ -73,7 +73,7 @@ let process_inductive sechyps modlist mib =
   let inds = 
     array_map_to_list
       (fun mip ->
-	 let arity = expmod_constr modlist mip.mind_user_arity in
+	 let arity = expmod_constr modlist (Termops.refresh_universes (Inductive.type_of_inductive (mib,mip))) in
 	 let lc = Array.map (expmod_constr modlist) mip.mind_user_lc in
 	 (mip.mind_typename,
 	  arity,

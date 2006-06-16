@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: printer.ml 7855 2006-01-12 08:21:57Z herbelin $ *)
+(* $Id: printer.ml 8831 2006-05-19 09:29:54Z herbelin $ *)
 
 open Pp
 open Util
@@ -77,10 +77,17 @@ let pr_rawconstr c =
 let pr_cases_pattern t =
   pr_cases_pattern_expr (extern_cases_pattern Idset.empty t)
 
+let pr_lconstr_pattern_env env c =
+  pr_lconstr_expr (extern_constr_pattern (names_of_rel_context env) c)
 let pr_constr_pattern_env env c =
   pr_constr_expr (extern_constr_pattern (names_of_rel_context env) c)
+
+let pr_lconstr_pattern t =
+  pr_lconstr_expr (extern_constr_pattern empty_names_context t)
 let pr_constr_pattern t =
   pr_constr_expr (extern_constr_pattern empty_names_context t)
+
+let pr_sort s = pr_rawsort (extern_sort s)
 
 let _ = Termops.set_print_constr pr_lconstr_env
 

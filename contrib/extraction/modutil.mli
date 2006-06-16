@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modutil.mli 7632 2005-12-01 14:35:21Z letouzey $ i*)
+(*i $Id: modutil.mli 8724 2006-04-20 09:57:01Z letouzey $ i*)
 
 open Names
 open Declarations
@@ -44,7 +44,7 @@ val add_labels_mp : module_path -> label list -> module_path
 (*s Functions upon ML modules. *)
 
 val struct_ast_search : (ml_ast -> bool) -> ml_structure -> bool
-val struct_type_search : ml_type -> ml_structure -> bool
+val struct_type_search : (ml_type -> bool) -> ml_structure -> bool
 
 type do_ref = global_reference -> unit 
 

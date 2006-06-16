@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: topconstr.ml 8624 2006-03-13 17:38:17Z msozeau $ *)
+(* $Id: topconstr.ml 8875 2006-05-29 19:59:11Z msozeau $ *)
 
 (*i*)
 open Pp
@@ -38,14 +38,14 @@ type aconstr =
   | AProd of name * aconstr * aconstr
   | ALetIn of name * aconstr * aconstr
   | ACases of aconstr option *
-      (aconstr * (name * (inductive * name list) option)) list *
+      (aconstr * (name * (inductive * int * name list) option)) list *
       (identifier list * cases_pattern list * aconstr) list
   | ALetTuple of name list * (name * aconstr option) * aconstr * aconstr
   | AIf of aconstr * (name * aconstr option) * aconstr * aconstr
   | ASort of rawsort
   | AHole of Evd.hole_kind
   | APatVar of patvar
-  | ACast of aconstr * cast_kind * aconstr
+  | ACast of aconstr * cast_type * aconstr
   
 let name_app f e = function
   | Name id -> let (id, e) = f id e in (e, Name id)
@@ -76,25 +76,25 @@ let rawconstr_of_aconstr_with_binders loc g f e = function
       let e',tml' = List.fold_right (fun (tm,(na,t)) (e',tml') ->
 	let e',t' = match t with
 	| None -> e',None
-	| Some (ind,nal) -> 
+	| Some (ind,npar,nal) -> 
 	  let e',nal' = List.fold_right (fun na (e',nal) -> 
 	      let e',na' = name_app g e' na in e',na'::nal) nal (e',[]) in
-	  e',Some (loc,ind,nal') in
+	  e',Some (loc,ind,npar,nal') in
 	let e',na' = name_app g e' na in
 	(e',(f e tm,(na',t'))::tml')) tml (e,[]) in
       let fold id (idl,e) = let (id,e) = g id e in (id::idl,e) in
       let eqnl' = List.map (fun (idl,pat,rhs) ->
         let (idl,e) = List.fold_right fold idl ([],e) in
 	(loc,idl,pat,f e rhs)) eqnl in
-      RCases (loc,option_app (f e') rtntypopt,tml',eqnl')
+      RCases (loc,option_map (f e') rtntypopt,tml',eqnl')
   | ALetTuple (nal,(na,po),b,c) ->
       let e,nal = list_fold_map (name_app g) e nal in 
       let e,na = name_app g e na in
-      RLetTuple (loc,nal,(na,option_app (f e) po),f e b,f e c)
+      RLetTuple (loc,nal,(na,option_map (f e) po),f e b,f e c)
   | AIf (c,(na,po),b1,b2) ->
       let e,na = name_app g e na in
-      RIf (loc,f e c,(na,option_app (f e) po),f e b1,f e b2)
-  | ACast (c,k,t) -> RCast (loc,f e c,k,f e t)
+      RIf (loc,f e c,(na,option_map (f e) po),f e b1,f e b2)
+  | ACast (c,k,t) -> RCast (loc,f e c, k,f e t)
   | ASort x -> RSort (loc,x)
   | AHole x  -> RHole (loc,x)
   | APatVar n -> RPatVar (loc,(false,n))
@@ -182,20 +182,20 @@ let aconstr_and_vars_of_rawconstr a =
       let f (_,idl,pat,rhs) =
         found := idl@(!found);
         (idl,pat,aux rhs) in
-      ACases (option_app aux rtntypopt,
+      ACases (option_map aux rtntypopt,
         List.map (fun (tm,(na,x)) ->
 	  add_name found na;
 	  option_iter
-	    (fun (_,_,nl) -> List.iter (add_name found) nl) x;
-          (aux tm,(na,option_app (fun (_,ind,nal) -> (ind,nal)) x))) tml,
+	    (fun (_,_,_,nl) -> List.iter (add_name found) nl) x;
+          (aux tm,(na,option_map (fun (_,ind,n,nal) -> (ind,n,nal)) x))) tml,
         List.map f eqnl)
   | RLetTuple (loc,nal,(na,po),b,c) ->
       add_name found na;
       List.iter (add_name found) nal;
-      ALetTuple (nal,(na,option_app aux po),aux b,aux c)
+      ALetTuple (nal,(na,option_map aux po),aux b,aux c)
   | RIf (loc,c,(na,po),b1,b2) ->
       add_name found na;
-      AIf (aux c,(na,option_app aux po),aux b1,aux b2)
+      AIf (aux c,(na,option_map aux po),aux b1,aux b2)
   | RCast (_,c,k,t) -> ACast (aux c,k,aux t)
   | RSort (_,s) -> ASort s
   | RHole (_,w) -> AHole w
@@ -289,9 +289,9 @@ let rec subst_aconstr subst bound raw =
       and rl' = list_smartmap
         (fun (a,(n,signopt) as x) -> 
 	  let a' = subst_aconstr subst bound a in
-	  let signopt' = option_app (fun ((indkn,i),nal as z) ->
+	  let signopt' = option_map (fun ((indkn,i),n,nal as z) ->
 	    let indkn' = subst_kn subst indkn in
-	    if indkn == indkn' then z else ((indkn',i),nal)) signopt in
+	    if indkn == indkn' then z else ((indkn',i),n,nal)) signopt in
 	  if a' == a && signopt' == signopt then x else (a',(n,signopt')))
         rl
       and branches' = list_smartmap 
@@ -341,7 +341,7 @@ let encode_list_value l = RApp (dummy_loc,RVar (dummy_loc,ldots_var),l)
 (* Pattern-matching rawconstr and aconstr *)
 
 let abstract_return_type_context pi mklam tml rtno =
-  option_app (fun rtn ->
+  option_map (fun rtn ->
     let nal =
       List.flatten (List.map (fun (_,(na,t)) ->
 	match t with Some x -> (pi x)@[na] | None -> [na]) tml) in
@@ -349,11 +349,11 @@ let abstract_return_type_context pi mklam tml rtno =
     rtno
 
 let abstract_return_type_context_rawconstr =
-  abstract_return_type_context pi3
+  abstract_return_type_context (fun (_,_,_,nal) -> nal)
     (fun na c -> RLambda(dummy_loc,na,RHole(dummy_loc,Evd.InternalHole),c))
 
 let abstract_return_type_context_aconstr =
-  abstract_return_type_context snd
+  abstract_return_type_context pi3
     (fun na c -> ALambda(na,AHole Evd.InternalHole,c))
 
 let rec adjust_scopes = function
@@ -524,7 +524,7 @@ type constr_expr =
   | CPatVar of loc * (bool * patvar)
   | CEvar of loc * existential_key
   | CSort of loc * rawsort
-  | CCast of loc * constr_expr * cast_kind * constr_expr
+  | CCast of loc * constr_expr * cast_type * constr_expr
   | CNotation of loc * notation * constr_expr list
   | CPrim of loc * prim_token
   | CDelimiters of loc * string * constr_expr
@@ -532,7 +532,7 @@ type constr_expr =
 
 
 and fixpoint_expr =
-    identifier * (int * recursion_order_expr) * local_binder list * constr_expr * constr_expr
+    identifier * (int option * recursion_order_expr) * local_binder list * constr_expr * constr_expr
 
 and local_binder =
   | LocalRawDef of name located * constr_expr
@@ -718,15 +718,15 @@ let map_constr_expr_with_binders f g e = function
             indnal (option_fold_right (name_fold g) na e))
 	  a e
       in
-      CCases (loc,option_app (f e') rtnpo,
+      CCases (loc,option_map (f e') rtnpo,
          List.map (fun (tm,x) -> (f e tm,x)) a,bl)
   | CLetTuple (loc,nal,(ona,po),b,c) ->
       let e' = List.fold_right (name_fold g) nal e in
       let e'' = option_fold_right (name_fold g) ona e in
-      CLetTuple (loc,nal,(ona,option_app (f e'') po),f e b,f e' c)
+      CLetTuple (loc,nal,(ona,option_map (f e'') po),f e b,f e' c)
   | CIf (loc,c,(ona,po),b1,b2) ->
       let e' = option_fold_right (name_fold g) ona e in
-      CIf (loc,f e c,(ona,option_app (f e') po),f e b1,f e b2)
+      CIf (loc,f e c,(ona,option_map (f e') po),f e b1,f e b2)
   | CFix (loc,id,dl) ->
       CFix (loc,id,List.map (fun (id,n,bl,t,d) -> 
         let (e',bl') = map_local_binders f g e bl in

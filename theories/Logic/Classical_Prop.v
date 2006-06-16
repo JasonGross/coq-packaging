@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Classical_Prop.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id: Classical_Prop.v 8892 2006-06-04 17:59:53Z herbelin $ i*)
 
 (** Classical Propositional Logic *)
 
@@ -20,6 +20,15 @@ Lemma NNPP : forall p:Prop, ~ ~ p -> p.
 Proof.
 unfold not in |- *; intros; elim (classic p); auto.
 intro NP; elim (H NP).
+Qed.
+
+(** Peirce's law states [forall P Q:Prop, ((P -> Q) -> P) -> P]. 
+    Thanks to [forall P, False -> P], it is equivalent to the
+    following form *)
+
+Lemma Peirce : forall P:Prop, ((P -> False) -> P) -> P.
+Proof.
+intros P H; destruct (classic P); auto.
 Qed.
 
 Lemma not_imply_elim : forall P Q:Prop, ~ (P -> Q) -> P.

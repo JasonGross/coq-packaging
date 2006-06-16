@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: auto.ml 7937 2006-01-28 19:58:11Z herbelin $ *)
+(* $Id: auto.ml 8878 2006-05-30 16:44:25Z herbelin $ *)
 
 open Pp
 open Util
@@ -778,7 +778,7 @@ let gen_auto n lems dbnames =
   | None -> full_auto n lems
   | Some l -> auto n lems l
 
-let inj_or_var = option_app (fun n -> Genarg.ArgArg n)
+let inj_or_var = option_map (fun n -> ArgArg n)
 
 let h_auto n lems l =
   Refiner.abstract_tactic (TacAuto (inj_or_var n,lems,l)) (gen_auto n lems l)
@@ -849,7 +849,7 @@ let compileAutoArg contac = function
       (tclTHEN  
          (Tacticals.tryAllClauses 
             (function 
-               | Some (id,_,_) -> Dhyp.h_destructHyp false id
+               | Some ((_,id),_) -> Dhyp.h_destructHyp false id
                | None          -> Dhyp.h_destructConcl))
          contac)
 

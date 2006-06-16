@@ -5,17 +5,12 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i 	$Id: Allmaps.v 5920 2004-07-16 20:01:26Z herbelin $	 i*)
+(*i 	$Id: Allmaps.v 8733 2006-04-25 22:52:18Z letouzey $	 i*)
 
-Require Export Addr.
-Require Export Adist.
-Require Export Addec.
 Require Export Map.
-
 Require Export Fset.
 Require Export Mapaxioms.
 Require Export Mapiter.
-
 Require Export Mapsubset.
 Require Export Lsort.
 Require Export Mapfold.

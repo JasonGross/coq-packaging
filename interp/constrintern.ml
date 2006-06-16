@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: constrintern.ml 8654 2006-03-22 15:36:58Z msozeau $ *)
+(* $Id: constrintern.ml 8924 2006-06-08 17:49:01Z notin $ *)
 
 open Pp
 open Util
@@ -22,6 +22,7 @@ open Cases
 open Topconstr
 open Nametab
 open Notation
+open Inductiveops
 
 (* To interpret implicits and arg scopes of recursive variables in
    inductive types and recursive definitions *)
@@ -38,8 +39,8 @@ let interning_grammar = ref false
 let for_grammar f x =
   interning_grammar := true;
   let a = f x in
-  interning_grammar := false;
-  a
+    interning_grammar := false;
+    a
 
 let variables_bind = ref false
 
@@ -128,9 +129,9 @@ type coqdoc_state = Lexer.location_table * int * int
 let coqdoc_freeze () =
   let lt = Lexer.location_table() in
   let state = (lt,!token_number,!last_pos) in
-  token_number := 0;
-  last_pos := 0;
-  state
+    token_number := 0;
+    last_pos := 0;
+    state
 
 let coqdoc_unfreeze (lt,tn,lp) =
   Lexer.restore_location_table lt;
@@ -138,21 +139,13 @@ let coqdoc_unfreeze (lt,tn,lp) =
   last_pos := lp
 
 let add_glob loc ref = 
-(*i
-  let sp = Nametab.sp_of_global (Global.env ()) ref in
-  let dir,_ = repr_path sp in
-  let rec find_module d = 
-    try 
-      let qid = let dir,id = split_dirpath d in make_qualid dir id in
-      let _ = Nametab.locate_loaded_library qid in d
-    with Not_found -> find_module (dirpath_prefix d) 
-  in
-  let s = string_of_dirpath (find_module dir) in
-  i*)
   let sp = Nametab.sp_of_global ref in
-  let id = let _,id = repr_path sp in string_of_id id in
-  let dp = string_of_dirpath (Lib.library_part ref) in
-  dump_string (Printf.sprintf "R%d %s.%s\n" (fst (unloc loc)) dp id)
+  let lib_dp = Lib.library_part ref in
+  let mod_dp,id = repr_path sp in
+  let mod_dp_trunc =  drop_dirpath_prefix lib_dp mod_dp in
+  let filepath = string_of_dirpath lib_dp in
+  let fullname = string_of_qualid (make_qualid mod_dp_trunc id) in
+    dump_string (Printf.sprintf "R%d %s %s\n" (fst (unloc loc)) filepath fullname)
 
 let loc_of_notation f loc args ntn =
   if args=[] or ntn.[0] <> '_' then fst (unloc loc)
@@ -165,15 +158,15 @@ let dump_notation_location pos ((path,df),sc) =
   let rec next growing =
     let loc = Lexer.location_function !token_number in
     let (bp,_) = unloc loc in
-    if growing then if bp >= pos then loc else (incr token_number;next true)
-    else if bp = pos then loc
-    else if bp > pos then (decr token_number;next false)
-    else (incr token_number;next true) in
+      if growing then if bp >= pos then loc else (incr token_number;next true)
+      else if bp = pos then loc
+      else if bp > pos then (decr token_number;next false)
+      else (incr token_number;next true) in
   let loc = next (pos >= !last_pos) in
-  last_pos := pos;
-  let path = string_of_dirpath path in
-  let sc = match sc with Some sc -> " "^sc | None -> "" in
-  dump_string (Printf.sprintf "R%d %s \"%s\"%s\n" (fst (unloc loc)) path df sc)
+    last_pos := pos;
+    let path = string_of_dirpath path in
+    let sc = match sc with Some sc -> " "^sc | None -> "" in
+      dump_string (Printf.sprintf "R%d %s \"%s\"%s\n" (fst (unloc loc)) path df sc)
 
 (**********************************************************************)
 (* Contracting "{ _ }" in notations *)
@@ -390,11 +383,6 @@ let check_constructor_length env loc cstr pl pl0 =
   if n <> nargs && n <> nhyps (* i.e. with let's *) then
     error_wrong_numarg_constructor_loc loc env cstr nargs
 
-let check_inductive_length env (loc,ind,nal) =
-  let n = Inductiveops.inductive_nargs env ind in
-  if n <> List.length nal then
-    error_wrong_numarg_inductive_loc loc env ind n
-
 (* Manage multiple aliases *)
 
   (* [merge_aliases] returns the sets of all aliases encountered at this
@@ -506,20 +494,20 @@ let find_constructor ref =
     try extended_locate qid
     with Not_found ->
       raise (InternalisationError (loc,NotAConstructor ref)) in
-  match gref with
-    | SyntacticDef sp ->
-        let sdef = Syntax_def.search_syntactic_definition loc sp in
-        patt_of_rawterm loc sdef
-    | TrueGlobal r ->
-        let rec unf = function
-          | ConstRef cst ->
-	      let v = Environ.constant_value (Global.env()) cst in
-              unf (global_of_constr v)
-          | ConstructRef c -> 
-	      if !dump then add_glob loc r; 
-	      c, []
-          | _ -> raise Not_found
-        in unf r
+    match gref with
+      | SyntacticDef sp ->
+          let sdef = Syntax_def.search_syntactic_definition loc sp in
+            patt_of_rawterm loc sdef
+      | TrueGlobal r ->
+          let rec unf = function
+            | ConstRef cst ->
+		let v = Environ.constant_value (Global.env()) cst in
+		  unf (global_of_constr v)
+            | ConstructRef c -> 
+		if !dump then add_glob loc r; 
+		c, []
+            | _ -> raise Not_found
+          in unf r
 
 let find_pattern_variable = function
   | Ident (loc,id) -> id
@@ -793,7 +781,7 @@ let internalise sigma globalenv env allow_soapp lvar c =
 		     RStructRec,
 		     List.fold_left intern_local_binder (env,[]) bl
 		 | CWfRec c -> 
-		     let before, after = list_chop (succ n) bl in
+		     let before, after = list_chop (succ (out_some n)) bl in
 		     let ((ids',_,_),rafter) =
 		       List.fold_left intern_local_binder (env,[]) after in
 		     let ro = RWfRec (intern (ids', tmp_scope, scopes) c) in
@@ -887,21 +875,21 @@ let internalise sigma globalenv env allow_soapp lvar c =
 	    let (tm,ind),nal = intern_case_item env citm in
 	    (tm,ind)::inds,List.fold_left (push_name_env lvar) env nal)
 	  tms ([],env) in
-        let rtnpo = option_app (intern_type env') rtnpo in
+        let rtnpo = option_map (intern_type env') rtnpo in
         let eqns' = List.map (intern_eqn (List.length tms) env) eqns in
 	RCases (loc, rtnpo, tms, List.flatten eqns')
     | CLetTuple (loc, nal, (na,po), b, c) ->
 	let env' = reset_tmp_scope env in
         let ((b',(na',_)),ids) = intern_case_item env' (b,(na,None)) in
         let env'' = List.fold_left (push_name_env lvar) env ids in
-        let p' = option_app (intern_type env'') po in
+        let p' = option_map (intern_type env'') po in
         RLetTuple (loc, nal, (na', p'), b',
                    intern (List.fold_left (push_name_env lvar) env nal) c)
     | CIf (loc, c, (na,po), b1, b2) ->
 	let env' = reset_tmp_scope env in
         let ((c',(na',_)),ids) = intern_case_item env' (c,(na,None)) in
         let env'' = List.fold_left (push_name_env lvar) env ids in
-        let p' = option_app (intern_type env'') po in
+        let p' = option_map (intern_type env'') po in
         RIf (loc, c', (na', p'), intern env b1, intern env b2)
     | CHole loc -> 
 	RHole (loc, Evd.QuestionMark)
@@ -958,18 +946,25 @@ let internalise sigma globalenv env allow_soapp lvar c =
 	let tids = names_of_cases_indtype t in
 	let tids = List.fold_right Idset.add tids Idset.empty in
 	let t = intern_type (tids,None,scopes) t in
-	let (_,_,nal as indsign) =
+	let (_,_,_,nal as indsign) =
 	  match t with
-	  | RRef (loc,IndRef ind) -> (loc,ind,[])
+	  | RRef (loc,IndRef ind) -> (loc,ind,0,[])
 	  | RApp (loc,RRef (_,IndRef ind),l) ->
+	      let nparams, nrealargs = inductive_nargs globalenv ind in
+	      let nindargs = nparams + nrealargs in
+	      if List.length l <> nindargs then
+		error_wrong_numarg_inductive_loc loc globalenv ind nindargs;
 	      let nal = List.map (function
 		| RHole _ -> Anonymous
 		| RVar (_,id) -> Name id
 		| c ->
 		    user_err_loc (loc_of_rawconstr c,"",str "Not a name")) l in
-	      (loc,ind,nal)
+	      let parnal,realnal = list_chop nparams nal in
+	      if List.exists ((<>) Anonymous) parnal then
+		user_err_loc (loc,"",
+		  str "The parameters of inductive type must be implicit");
+	      (loc,ind,nparams,realnal)
 	  | _ -> error_bad_inductive_type (loc_of_rawconstr t) in
-	check_inductive_length globalenv indsign;
 	nal, Some indsign
     | None -> 
 	[], None in

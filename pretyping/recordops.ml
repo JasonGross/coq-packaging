@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: recordops.ml 8642 2006-03-17 10:09:02Z notin $ *)
+(* $Id: recordops.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
 
 open Util
 open Pp
@@ -67,7 +67,7 @@ let subst_structure (_,subst,((kn,i),id,kl,projs as obj)) =
 
 let discharge_structure (_,(ind,id,kl,projs)) =
   Some (Lib.discharge_inductive ind, id, kl,
-        List.map (option_app Lib.discharge_con) projs)
+        List.map (option_map Lib.discharge_con) projs)
 
 let (inStruc,outStruc) =
   declare_object {(default_object "STRUCTURE") with 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pretyping.ml 8695 2006-04-10 16:33:52Z msozeau $ *)
+(* $Id: pretyping.ml 8875 2006-05-29 19:59:11Z msozeau $ *)
 
 open Pp
 open Util
@@ -273,7 +273,7 @@ module Pretyping_F (Coercion : Coercion.S) = struct
     | REvar (loc, ev, instopt) ->
 	(* Ne faudrait-il pas s'assurer que hyps est bien un
 	   sous-contexte du contexte courant, et qu'il n'y a pas de Rel "caché" *)
-	let hyps = evar_context (Evd.map (evars_of !isevars) ev) in
+	let hyps = evar_context (Evd.find (evars_of !isevars) ev) in
 	let args = match instopt with
           | None -> instance_from_named_context hyps
           | Some inst -> failwith "Evar subtitutions not implemented" in
@@ -329,34 +329,43 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 		 { uj_val = it_mkLambda_or_LetIn j.uj_val ctxt;
 		   uj_type = it_mkProd_or_LetIn j.uj_type ctxt })
             ctxtv vdef in
-	  evar_type_fixpoint loc env isevars names ftys vdefj;
-	  let fixj =
-	    match fixkind with
-	      | RFix (vn,i) ->
-		  let fix = ((Array.map fst vn, i),(names,ftys,Array.map j_val vdefj)) in
-		    (try check_fix env fix with e -> Stdpp.raise_with_loc loc e);
-		    make_judge (mkFix fix) ftys.(i)
-	      | RCoFix i -> 
-		  let cofix = (i,(names,ftys,Array.map j_val vdefj)) in
-		    (try check_cofix env cofix with e -> Stdpp.raise_with_loc loc e);
-		    make_judge (mkCoFix cofix) ftys.(i) in
-	    inh_conv_coerce_to_tycon loc env isevars fixj tycon
+	evar_type_fixpoint loc env isevars names ftys vdefj;
+	let fixj = match fixkind with
+	  | RFix (vn,i) ->
+	      let guard_indexes = Array.mapi 
+		(fun i (n,_) -> match n with 
+		   | Some n -> n 
+		   | None -> 
+		       (* Recursive argument was not given by the user : We
+			  check that there is only one inductive argument *)
+		       let ctx = ctxtv.(i) in 
+		       let isIndApp t = 
+			 isInd (fst (decompose_app (strip_head_cast t))) in
+			 (* This could be more precise (e.g. do some delta) *)
+		       let lb = List.rev_map (fun (_,_,t) -> isIndApp t) ctx in
+		       try (list_unique_index true lb) - 1
+		       with Not_found -> 
+			 Util.user_err_loc
+			   (loc,"pretype",
+			    Pp.str "cannot guess decreasing argument of fix"))
+		vn 
+	      in
+	      let fix = ((guard_indexes, i),(names,ftys,Array.map j_val vdefj)) in
+	      (try check_fix env fix with e -> Stdpp.raise_with_loc loc e);
+	      make_judge (mkFix fix) ftys.(i)
+	  | RCoFix i -> 
+	      let cofix = (i,(names,ftys,Array.map j_val vdefj)) in
+	      (try check_cofix env cofix with e -> Stdpp.raise_with_loc loc e);
+	      make_judge (mkCoFix cofix) ftys.(i) in
+	inh_conv_coerce_to_tycon loc env isevars fixj tycon
 
     | RSort (loc,s) ->
 	inh_conv_coerce_to_tycon loc env isevars (pretype_sort s) tycon
 
     | RApp (loc,f,args) -> 
-	let length = List.length args in	 
-	let ftycon = 
-	  match tycon with
-	      None -> None
-	    | Some (None, ty) -> mk_abstr_tycon length ty
-	    | Some (Some (init, cur), ty) ->
-		Some (Some (length + init, length + cur), ty)
-	in
 	let fj = pretype empty_tycon env isevars lvar f in
  	let floc = loc_of_rawconstr f in
-	let rec apply_rec env n resj tycon = function
+	let rec apply_rec env n resj = function
 	  | [] -> resj
 	  | c::rest ->
 	      let argloc = loc_of_rawconstr c in
@@ -367,38 +376,22 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 		      let hj = pretype (mk_tycon c1) env isevars lvar c in
 		      let value, typ = applist (j_val resj, [j_val hj]), subst1 hj.uj_val c2 in
 		      let typ' = nf_isevar !isevars typ in
-		      let tycon = 
-			option_app 
-			  (fun (abs, ty) ->
-			     match abs with
-				 None ->
-				   isevars := Coercion.inh_conv_coerces_to loc env !isevars typ'
-				     (abs, ty);
-				   (abs, ty)
-			       | Some (init, cur) ->
-				   isevars := Coercion.inh_conv_coerces_to loc env !isevars typ' 
-				     (abs, ty);
-				   (Some (init, pred cur), ty))
-			  tycon
-		      in 
 			apply_rec env (n+1) 
 			  { uj_val = nf_isevar !isevars value;
-			    uj_type = nf_isevar !isevars typ' }
-			  (option_app (fun (abs, c) -> abs, nf_isevar !isevars c) tycon) rest
-
+			    uj_type = typ' }
+			  rest
 		  | _ ->
 		      let hj = pretype empty_tycon env isevars lvar c in
 			error_cant_apply_not_functional_loc 
 			  (join_loc floc argloc) env (evars_of !isevars)
 	      		  resj [hj]
 	in
-	let ftycon = option_app (lift_abstr_tycon_type (-1)) ftycon in
-	let resj = j_nf_evar (evars_of !isevars) (apply_rec env 1 fj ftycon args) in
+	let resj = j_nf_evar (evars_of !isevars) (apply_rec env 1 fj args) in
 	let resj =
 	  match kind_of_term resj.uj_val with
 	  | App (f,args) when isInd f ->
 	      let sigma = evars_of !isevars in
-	      let t = Retyping.type_of_applied_inductive env sigma (destInd f) args in
+	      let t = Retyping.type_of_inductive_knowing_parameters env sigma (destInd f) args in
 	      let s = snd (splay_arity env sigma t) in
 	      on_judgment_type (set_inductive_level env s) resj
 		(* Rem: no need to send sigma: no head evar, it's an arity *)
@@ -573,12 +566,19 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 	  tycon env (* loc *) (po,tml,eqns)
 
     | RCast(loc,c,k,t) ->
-	let tj = pretype_type empty_valcon env isevars lvar t in
-	let cj = pretype (mk_tycon tj.utj_val) env isevars lvar c in
-	  (* User Casts are for helping pretyping, experimentally not to be kept*)
-	  (* ... except for Correctness *)
-	let v = mkCast (cj.uj_val, k, tj.utj_val) in
-	let cj = { uj_val = v; uj_type = tj.utj_val } in
+	let cj =
+	  match k with
+	      CastCoerce ->
+		let cj = pretype empty_tycon env isevars lvar c in
+		  evd_comb1 (Coercion.inh_coerce_to_base loc env) isevars cj
+	    | CastConv k ->
+		let tj = pretype_type empty_valcon env isevars lvar t in
+		let cj = pretype (mk_tycon tj.utj_val) env isevars lvar c in
+		  (* User Casts are for helping pretyping, experimentally not to be kept*)
+		  (* ... except for Correctness *)
+		let v = mkCast (cj.uj_val, k, tj.utj_val) in
+		  { uj_val = v; uj_type = tj.utj_val }
+	in
 	  inh_conv_coerce_to_tycon loc env isevars cj tycon
 
     | RDynamic (loc,d) ->
@@ -640,8 +640,8 @@ module Pretyping_F (Coercion : Coercion.S) = struct
     let rec proc_rec c =
       match kind_of_term c with
 	| Evar (ev,args) ->
-            assert (Evd.in_dom sigma ev);
-	    if not (Evd.in_dom initial_sigma ev) then
+            assert (Evd.mem sigma ev);
+	    if not (Evd.mem initial_sigma ev) then
               let (loc,k) = evar_source ev !isevars in
 		error_unsolvable_implicit loc env sigma k
 	| _ -> iter_constr proc_rec c

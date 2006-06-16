@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id: util.mli 8672 2006-03-29 21:06:33Z herbelin $ i*)
+(*i $Id: util.mli 8867 2006-05-28 16:21:41Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -100,6 +100,8 @@ val list_map2_i :
 val list_map3 :
   ('a -> 'b -> 'c -> 'd) -> 'a list -> 'b list -> 'c list -> 'd list
 val list_index : 'a -> 'a list -> int
+(* [list_unique_index x l] returns [Not_found] if [x] doesn't occur exactly once *)
+val list_unique_index : 'a -> 'a list -> int 
 val list_iter_i :  (int -> 'a -> unit) -> 'a list -> unit
 val list_fold_left_i :  (int -> 'a -> 'b -> 'a) -> int -> 'a -> 'b list -> 'a
 val list_fold_right_and_left :
@@ -121,6 +123,7 @@ val list_last : 'a list -> 'a
 val list_lastn : int -> 'a list -> 'a list
 val list_skipn : int -> 'a list -> 'a list 
 val list_prefix_of : 'a list -> 'a list -> bool
+val list_drop_prefix : 'a list -> 'a list -> 'a list
 (* [map_append f [x1; ...; xn]] returns [(f x1)@(f x2)@...@(f xn)] *)
 val list_map_append : ('a -> 'b list) -> 'a list -> 'b list
 (* raises [Invalid_argument] if the two lists don't have the same length *)
@@ -170,6 +173,8 @@ val array_map_left : ('a -> 'b) -> 'a array -> 'b array
 val array_map_left_pair : ('a -> 'b) -> 'a array -> ('c -> 'd) -> 'c array ->
   'b array * 'd array
 val array_fold_map' : ('a -> 'c -> 'b * 'c) -> 'a array -> 'c -> 'b array * 'c
+val array_fold_map2' :
+  ('a -> 'b -> 'c -> 'd * 'c) -> 'a array -> 'b array -> 'c -> 'd array * 'c
 
 (*s Matrices *)
 
@@ -199,7 +204,7 @@ val interval : int -> int -> int list
 
 val in_some : 'a -> 'a option
 val out_some : 'a option -> 'a
-val option_app : ('a -> 'b) -> 'a option -> 'b option
+val option_map : ('a -> 'b) -> 'a option -> 'b option
 val option_cons : 'a option -> 'a list -> 'a list
 val option_fold_right : ('a -> 'b -> 'b) -> 'a option -> 'b -> 'b
 val option_fold_left2 : ('a -> 'b -> 'c -> 'a) -> 'a -> 'b option ->

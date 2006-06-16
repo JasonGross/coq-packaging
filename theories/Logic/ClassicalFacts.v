@@ -1,3 +1,4 @@
+(* -*- coding: utf-8 -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -6,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalFacts.v 8136 2006-03-05 21:57:47Z herbelin $ i*)
+(*i $Id: ClassicalFacts.v 8892 2006-06-04 17:59:53Z herbelin $ i*)
 
 (** ** Some facts and definitions about classical logic
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqtop.ml 7740 2005-12-26 20:07:21Z herbelin $ *)
+(* $Id: coqtop.ml 8932 2006-06-09 09:29:03Z notin $ *)
 
 open Pp
 open Util
@@ -108,14 +108,16 @@ let add_compile verbose s =
   compile_list := (verbose,s) :: !compile_list
 let compile_files () =
   let init_state = States.freeze() in
-  List.iter
-    (fun (v,f) ->
-      States.unfreeze init_state;
-      if Options.do_translate () then
-	with_option translate_file (Vernac.compile v) f
-      else
-	Vernac.compile v f)
-    (List.rev !compile_list)
+  let coqdoc_init_state = Constrintern.coqdoc_freeze () in
+    List.iter
+      (fun (v,f) ->
+	 States.unfreeze init_state;
+	 Constrintern.coqdoc_unfreeze coqdoc_init_state;
+	 if Options.do_translate () then
+	   with_option translate_file (Vernac.compile v) f
+	 else
+	   Vernac.compile v f)
+      (List.rev !compile_list)
 
 let re_exec_version = ref ""
 let set_byte () = re_exec_version := "byte"
@@ -172,7 +174,11 @@ let ide_args = ref []
 let parse_args is_ide =
   let rec parse = function
     | [] -> ()
-
+    | "-with-geoproof" :: s :: rem -> 
+	if s = "yes" then Coq_config.with_geoproof := true
+	else if s = "no" then Coq_config.with_geoproof := false
+	else usage ();
+	parse rem
     | "-impredicative-set" :: rem -> 
         set_engagement Declarations.ImpredicativeSet; parse rem
 
@@ -242,9 +248,9 @@ let parse_args is_ide =
     | "-debug" :: rem -> set_debug (); parse rem
 
     | "-vm" :: rem -> use_vm := true; parse rem
-    | "-emacs" :: rem -> Options.print_emacs := true; parse rem
+    | "-emacs" :: rem -> Options.print_emacs := true; Pp.make_pp_emacs(); parse rem
 	  
-    | "-where" :: _ -> print_endline Coq_config.coqlib; exit 0
+    | "-where" :: _ -> print_endline (getenv_else "COQLIB" Coq_config.coqlib); exit 0
 
     | ("-quiet"|"-silent") :: rem -> Options.make_silent true; parse rem
 

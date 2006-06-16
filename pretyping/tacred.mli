@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacred.mli 8003 2006-02-07 22:11:50Z herbelin $ i*)
+(*i $Id: tacred.mli 8878 2006-05-30 16:44:25Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -77,5 +77,5 @@ val reduce_to_quantified_ref :
 val reduce_to_atomic_ref :
   env ->  evar_map -> Libnames.global_reference -> types -> types
 
-val contextually : bool -> constr occurrences -> reduction_function
+val contextually : bool -> int list * constr -> reduction_function
   -> reduction_function

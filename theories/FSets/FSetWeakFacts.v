@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetWeakFacts.v 8681 2006-04-05 11:56:14Z letouzey $ *)
+(* $Id: FSetWeakFacts.v 8882 2006-05-31 21:55:30Z letouzey $ *)
 
 (** * Finite sets library *)
 
@@ -157,6 +157,12 @@ Proof.
 intros.
 generalize (mem_iff s x) (mem_iff s y)(In_eq_iff s H).
 destruct (mem x s); destruct (mem y s); intuition.
+Qed.
+
+Lemma empty_b : mem y empty = false.
+Proof.
+generalize (empty_iff y)(mem_iff empty y).
+destruct (mem y empty); intuition.
 Qed.
 
 Lemma add_b : mem y (add x s) = eqb x y || mem y s.

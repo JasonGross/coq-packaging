@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: logic.ml 8696 2006-04-11 07:05:50Z herbelin $ *)
+(* $Id: logic.ml 8871 2006-05-28 16:46:48Z herbelin $ *)
 
 open Pp
 open Util
@@ -285,7 +285,7 @@ let rec mk_refgoals sigma goal goalacc conclty trm =
     | App (f,l) ->
 	let (acc',hdty) =
 	  if isInd f & not (array_exists occur_meta l) (* we could be finer *)
-	  then (goalacc,type_of_applied_inductive env sigma (destInd f) l)
+	  then (goalacc,type_of_inductive_knowing_parameters env sigma (destInd f) l)
 	  else mk_hdgoals sigma goal goalacc f
 	in
 	let (acc'',conclty') =
@@ -327,7 +327,7 @@ and mk_hdgoals sigma goal goalacc trm =
     | App (f,l) ->
 	let (acc',hdty) = 
 	  if isInd f & not (array_exists occur_meta l) (* we could be finer *)
-	  then (goalacc,type_of_applied_inductive env sigma (destInd f) l)
+	  then (goalacc,type_of_inductive_knowing_parameters env sigma (destInd f) l)
 	  else mk_hdgoals sigma goal goalacc f
 	in
 	mk_arggoals sigma goal acc' hdty (Array.to_list l)

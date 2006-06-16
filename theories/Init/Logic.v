@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Logic.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id: Logic.v 8936 2006-06-09 15:43:33Z herbelin $ i*)
 
 Set Implicit Arguments.
 
@@ -280,13 +280,36 @@ Qed.
 
 Hint Immediate sym_eq sym_not_eq: core v62.
 
-(** Other notations *)
+(** Basic definitions about relations and properties *)
 
-Notation "'exists' ! x , P" := 
-  (exists x',  (fun x => P) x' /\ forall x'', (fun x => P) x'' -> x' = x'')
+Definition subrelation (A B : Type) (R R' : A->B->Prop) :=
+  forall x y, R x y -> R' x y.
+
+Definition unique (A : Type) (P : A->Prop) (x:A) :=
+  P x /\ forall (x':A), P x' -> x=x'.
+
+Definition uniqueness (A:Type) (P:A->Prop) := forall x y, P x -> P y -> x = y.
+
+(** Unique existence *)
+
+Notation "'exists' ! x , P" := (ex (unique (fun x => P)))
   (at level 200, x ident, right associativity,
    format "'[' 'exists' !  '/  ' x ,  '/  ' P ']'") : type_scope.
 Notation "'exists' ! x : A , P" := 
-  (exists x' : A,  (fun x => P) x' /\ forall x'':A, (fun x => P) x'' -> x' = x'')
+  (ex (unique (fun x:A => P)))
   (at level 200, x ident, right associativity,
    format "'[' 'exists' !  '/  ' x  :  A ,  '/  ' P ']'") : type_scope.
+
+Lemma unique_existence : forall (A:Type) (P:A->Prop),
+  ((exists x, P x) /\ uniqueness P) <-> (exists! x, P x).
+Proof.
+intros A P; split.
+  intros ((x,Hx),Huni); exists x; red; auto.
+  intros (x,(Hx,Huni)); split. 
+    exists x; assumption.
+    intros x' x'' Hx' Hx''; transitivity x.
+      symmetry; auto.
+      auto.
+Qed.
+
+

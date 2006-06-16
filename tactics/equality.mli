@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: equality.mli 8651 2006-03-21 21:54:43Z jforest $ i*)
+(*i $Id: equality.mli 8780 2006-05-02 21:58:58Z letouzey $ i*)
 
 (*i*)
 open Names
@@ -42,6 +42,9 @@ val general_rewrite_bindings_in :
   bool -> identifier -> constr with_bindings -> tactic
 val general_rewrite_in          :
   bool -> identifier -> constr -> tactic
+
+val general_multi_rewrite : 
+  bool -> constr with_bindings -> clause -> tactic
 
 val conditional_rewrite : bool -> tactic -> constr with_bindings -> tactic
 val conditional_rewrite_in :

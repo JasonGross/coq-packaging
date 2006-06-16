@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coq_config.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: coq_config.mli 8932 2006-06-09 09:29:03Z notin $ i*)
 
 val local : bool        (* local use (no installation) *)
 
@@ -34,3 +34,4 @@ val theories_dirs : string list
 val contrib_dirs : string list
 
 val exec_extension : string (* "" under Unix, ".exe" under MS-windows *)
+val with_geoproof : bool ref (* to (de)activate functions specific to Geoproof with Coqide *)

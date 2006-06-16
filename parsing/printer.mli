@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: printer.mli 7855 2006-01-12 08:21:57Z herbelin $ i*)
+(*i $Id: printer.mli 8831 2006-05-19 09:29:54Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -50,10 +50,15 @@ val pr_lrawconstr          : rawconstr -> std_ppcmds
 val pr_rawconstr_env       : env -> rawconstr -> std_ppcmds
 val pr_rawconstr           : rawconstr -> std_ppcmds
 
+val pr_lconstr_pattern_env : env -> constr_pattern -> std_ppcmds
+val pr_lconstr_pattern     : constr_pattern -> std_ppcmds
+
 val pr_constr_pattern_env  : env -> constr_pattern -> std_ppcmds
 val pr_constr_pattern      : constr_pattern -> std_ppcmds
 
 val pr_cases_pattern       : cases_pattern -> std_ppcmds
+
+val pr_sort                : sorts -> std_ppcmds
 
 (* Printing global references using names as short as possible *)
 

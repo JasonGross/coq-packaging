@@ -60,6 +60,9 @@ CAMLMKTOP=ocamlmktop
 # Compilation debug flag
 CAMLDEBUG=COQDEBUGFLAG
 
+# User compilation flag
+USERFLAGS=
+
 # Compilation profile flag
 CAMLTIMEPROF=COQPROFILEFLAG
 
@@ -100,6 +103,9 @@ COQDOCDIR=COQDOCDIRECTORY
 # Unix systems and no profiling: strip
 # Win32 systems: true (actually strip is bogus)
 STRIP=STRIPCOMMAND
+
+# Options for fsets (all/basic)
+FSETS=FSETSOPT
 
 # Options for reals (all/basic)
 REALS=REALSOPT

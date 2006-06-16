@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Setoid.v 6306 2004-11-16 16:11:10Z sacerdot $: i*)
+(*i $Id: Setoid.v 8866 2006-05-28 16:21:04Z herbelin $: i*)
 
 Require Export Relation_Definitions.
 
@@ -339,7 +339,7 @@ with Morphism_Context_List_rect2 := Induction for Morphism_Context_List Sort Typ
 Definition product_of_arguments : Arguments -> Type.
  induction 1.
    exact (carrier_of_relation_class a).
-   exact (prodT (carrier_of_relation_class a) IHX).
+   exact (prod (carrier_of_relation_class a) IHX).
 Defined.
 
 Definition get_rewrite_direction: rewrite_direction -> Argument_Class -> rewrite_direction.
@@ -662,3 +662,26 @@ Implicit Arguments Setoid_Theory [].
 Implicit Arguments Seq_refl [].
 Implicit Arguments Seq_sym [].
 Implicit Arguments Seq_trans [].
+
+
+(* Some tactics for manipulating Setoid Theory not officially 
+   declared as Setoid. *)
+
+Ltac trans_st x := match goal with 
+  | H : Setoid_Theory _ ?eqA |- ?eqA _ _ => 
+     apply (Seq_trans _ _ H) with x; auto
+ end.
+
+Ltac sym_st := match goal with 
+  | H : Setoid_Theory _ ?eqA |- ?eqA _ _ => 
+     apply (Seq_sym _ _ H); auto
+ end.
+
+Ltac refl_st := match goal with 
+  | H : Setoid_Theory _ ?eqA |- ?eqA _ _ => 
+     apply (Seq_refl _ _ H); auto
+ end.
+
+Definition gen_st : forall A : Set, Setoid_Theory _ (@eq A).
+Proof. constructor; congruence. Qed.
+

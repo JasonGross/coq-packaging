@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: names.mli 6736 2005-02-18 20:49:04Z herbelin $ i*)
+(*i $Id: names.mli 8852 2006-05-23 17:52:43Z notin $ i*)
 
 (*s Identifiers *)
 
@@ -133,6 +133,10 @@ val string_of_con : constant -> string
 val con_label : constant -> label
 val con_modpath : constant -> module_path
 val pr_con : constant -> Pp.std_ppcmds
+
+val mind_modpath : mutual_inductive -> module_path
+val ind_modpath : inductive -> module_path
+val constr_modpath : constructor -> module_path
 
 val ith_mutual_inductive : inductive -> int -> inductive
 val ith_constructor_of_inductive : inductive -> int -> constructor

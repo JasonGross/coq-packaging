@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: subtac_coercion.ml 8695 2006-04-10 16:33:52Z msozeau $ *)
+(* $Id: subtac_coercion.ml 8889 2006-06-01 20:23:56Z msozeau $ *)
 
 open Util
 open Names
@@ -53,7 +53,8 @@ module Coercion = struct
       | _ -> None
 	  
   and disc_exist env x =
-    trace (str "Disc_exist: " ++ my_print_constr env x);
+    (try trace (str "Disc_exist: " ++ my_print_constr env x)
+     with _ -> ());
     match kind_of_term x with
       | App (c, l) ->
 	  (match kind_of_term c with
@@ -66,7 +67,8 @@ module Coercion = struct
 
 
   let disc_proj_exist env x =
-    trace (str "disc_proj_exist: " ++ my_print_constr env x);
+    (try trace (str "disc_proj_exist: " ++ my_print_constr env x);
+     with _ -> ());
     match kind_of_term x with
       | App (c, l) ->
 	  (if Term.eq_constr c (Lazy.force sig_).proj1 
@@ -97,30 +99,34 @@ module Coercion = struct
 		       app_opt f (mkApp ((Lazy.force sig_).proj1, 
 					 [| u; p; x |]))),
 	       ct)
-	| None -> (None, t)
+	| None -> (None, v)
     in aux t
 
   and coerce loc env isevars (x : Term.constr) (y : Term.constr) 
       : (Term.constr -> Term.constr) option 
       =
     let x = nf_evar (evars_of !isevars) x and y = nf_evar (evars_of !isevars) y in
-      trace (str "Coerce called for " ++ (my_print_constr env x) ++ 
-	     str " and "++ my_print_constr env y ++ 
-	     str " with evars: " ++ spc () ++
-	     my_print_evardefs !isevars);
+      (try trace (str "Coerce called for " ++ (my_print_constr env x) ++ 
+		  str " and "++ my_print_constr env y ++ 
+		  str " with evars: " ++ spc () ++
+		  my_print_evardefs !isevars);
+       with _ -> ());
     let rec coerce_unify env x y =
-      trace (str "coerce_unify from " ++ (my_print_constr env x) ++ 
-	     str " to "++ my_print_constr env y);
+      (try trace (str "coerce_unify from " ++ (my_print_constr env x) ++ 
+		  str " to "++ my_print_constr env y)
+       with _ -> ());
       try 
 	isevars := the_conv_x_leq env x y !isevars;
-	trace (str "Unified " ++ (my_print_constr env x) ++ 
-	       str " and "++ my_print_constr env y);
+	(try (trace (str "Unified " ++ (my_print_constr env x) ++ 
+		     str " and "++ my_print_constr env y));
+	 with _ -> ());
 	None
       with Reduction.NotConvertible -> coerce' env (hnf env isevars x) (hnf env isevars y)
     and coerce' env x y : (Term.constr -> Term.constr) option =
       let subco () = subset_coerce env isevars x y in
-	trace (str "coerce' from " ++ (my_print_constr env x) ++ 
-		 str " to "++ my_print_constr env y);
+	(try trace (str "coerce' from " ++ (my_print_constr env x) ++ 
+		    str " to "++ my_print_constr env y);
+	 with _ -> ());
 	match (kind_of_term x, kind_of_term y) with
 	  | Sort s, Sort s' -> 
 	      (match s, s' with
@@ -153,7 +159,7 @@ module Coercion = struct
 			 if i = Term.destInd existS.typ 
 			 then
 			   begin 
-			     debug 1 (str "In coerce sigma types");
+			     trace (str "In coerce sigma types");
 			     let (a, pb), (a', pb') = 
 			       pair_of_array l, pair_of_array l' 
 			     in
@@ -244,7 +250,7 @@ module Coercion = struct
   let coerce_itf loc env isevars v t c1 =
     let evars = ref isevars in
     let coercion = coerce loc env evars t c1 in
-      !evars, option_app (app_opt coercion) v, t
+      !evars, option_map (app_opt coercion) v, t
 	
   (* Taken from pretyping/coercion.ml *)
 
@@ -339,6 +345,13 @@ module Coercion = struct
 	| _ ->
 	    inh_tosort_force loc env isevars j
 
+  let inh_coerce_to_base loc env isevars j =
+    let typ = whd_betadeltaiota env (evars_of isevars) j.uj_type in
+    let ct, typ' = mu env isevars typ in
+      isevars, { uj_val = app_opt ct j.uj_val; 
+		 uj_type = typ' }
+
+
   let inh_coerce_to_fail env isevars c1 v t =
     let v', t' =
       try 
@@ -371,7 +384,7 @@ module Coercion = struct
 	   (match kind_of_term (whd_betadeltaiota env (evars_of isevars) t),
 	      kind_of_term (whd_betadeltaiota env (evars_of isevars) c1) with
 		| Prod (_,t1,t2), Prod (name,u1,u2) -> 
-		    let v' = option_app (whd_betadeltaiota env (evars_of isevars)) v in
+		    let v' = option_map (whd_betadeltaiota env (evars_of isevars)) v in
 		    let (evd',b) =
 		      match v' with 
 			  Some v' ->
@@ -387,7 +400,7 @@ module Coercion = struct
 			     let env1 = push_rel (x,None,v1) env in
 			     let (evd'', v2', t2') = inh_conv_coerce_to_fail loc env1 evd'
 						       (Some v2) t2 u2 in
-			       (evd'', option_app (fun v2' -> mkLambda (x, v1, v2')) v2', 
+			       (evd'', option_map (fun v2' -> mkLambda (x, v1, v2')) v2', 
 				mkProd (x, v1, t2'))
 			 | None ->
 			     (* Mismatch on t1 and u1 or not a lambda: we eta-expand *)
@@ -404,7 +417,7 @@ module Coercion = struct
 			     let (evd'', v2', t2') = 
 			       let v2 =
 				 match v with 
-				     Some v -> option_app (fun v1' -> mkApp (lift 1 v, [|v1'|])) v1'
+				     Some v -> option_map (fun v1' -> mkApp (lift 1 v, [|v1'|])) v1'
 				   | None -> None
 			       and evd', t2 =
 				 match v1' with 
@@ -415,7 +428,7 @@ module Coercion = struct
 			       in
 				 inh_conv_coerce_to_fail loc env1 evd' v2 t2 u2
 			     in
-			       (evd'', option_app (fun v2' -> mkLambda (name, u1, v2')) v2',
+			       (evd'', option_map (fun v2' -> mkLambda (name, u1, v2')) v2',
 				mkProd (name, u1, t2')))
 		| _ -> raise NoCoercion))
 

@@ -8,7 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: pmisc.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id: pmisc.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
 
 open Pp
 open Util
@@ -216,7 +216,7 @@ let rec type_v_knsubst s = function
 and type_c_knsubst s ((id,v),e,pl,q) =
   ((id, type_v_knsubst s v), e, 
    List.map (fun p -> { p with p_value = subst_mps s p.p_value }) pl,
-   option_app (fun q -> { q with a_value = subst_mps s q.a_value }) q)
+   option_map (fun q -> { q with a_value = subst_mps s q.a_value }) q)
 
 and binder_knsubst s (id,b) = 
   (id, match b with BindType v -> BindType (type_v_knsubst s v) | _ -> b)

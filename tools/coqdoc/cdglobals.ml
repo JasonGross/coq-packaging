@@ -44,6 +44,7 @@ let page_title = ref ""
 let title = ref ""
 let externals = ref true
 let coqlib = ref "http://coq.inria.fr/library/"
+let coqlib_path = ref Coq_config.coqlib
 let raw_comments = ref false
 
 let charset = ref "iso-8859-1"
@@ -69,4 +70,3 @@ type file =
   | Vernac_file of string * coq_module
   | Latex_file of string
       
-

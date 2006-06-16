@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ideutils.ml 7609 2005-11-25 17:14:39Z barras $ *)
+(* $Id: ideutils.ml 8912 2006-06-07 11:20:58Z notin $ *)
 
 
 open Preferences
@@ -314,8 +314,8 @@ let same_file f1 f2 =
     let s1 = Unix.stat f1
     and s2 = Unix.stat f2 
     in
-    (s1.Unix.st_dev = s2.Unix.st_dev) &&
-    (s1.Unix.st_ino = s2.Unix.st_ino) 
+      (s1.Unix.st_dev = s2.Unix.st_dev) &&
+	(s1.Unix.st_ino = s2.Unix.st_ino) 
   with
       Unix.Unix_error _ -> false
 

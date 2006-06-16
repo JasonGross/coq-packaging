@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: equality.ml 8677 2006-04-02 17:05:59Z herbelin $ *)
+(* $Id: equality.ml 8878 2006-05-30 16:44:25Z herbelin $ *)
 
 open Pp
 open Util
@@ -69,27 +69,47 @@ let elimination_sort_of_clause = function
   | None -> elimination_sort_of_goal
   | Some id -> elimination_sort_of_hyp id
 
+(* The next function decides in particular whether to try a regular 
+  rewrite or a setoid rewrite. 
+
+  Old approach was: 
+   break everything, if [eq] appears in head position 
+   then regular rewrite else try setoid rewrite
+ 
+  New approach is: 
+   if head position is a known setoid relation then setoid rewrite
+   else back to the old approach
+*)
+
 let general_rewrite_bindings_clause cls lft2rgt (c,l) gl =
   let ctype = pf_type_of gl c in 
-  let env = pf_env gl in
-  let sigma = project gl in 
-  let _,t = splay_prod env sigma ctype in
-  match match_with_equation t with
-    | None -> 
-	if l = NoBindings
-	then general_s_rewrite_clause cls lft2rgt c [] gl
-	else error "The term provided does not end with an equation" 
-    | Some (hdcncl,_) -> 
-        let hdcncls = string_of_inductive hdcncl in 
-	let suffix = elimination_suffix (elimination_sort_of_clause cls gl) in
-        let dir = if cls=None then lft2rgt else not lft2rgt in
-        let rwr_thm = if dir then hdcncls^suffix^"_r" else hdcncls^suffix in
-        let elim =
-	  try pf_global gl (id_of_string rwr_thm)
-          with Not_found ->
-            error ("Cannot find rewrite principle "^rwr_thm)
-        in 
-	general_elim_clause cls (c,l) (elim,NoBindings) gl
+  (* A delta-reduction would be here too strong, since it would 
+     break search for a defined setoid relation in head position. *)
+  let t = snd (decompose_prod (whd_betaiotazeta ctype)) in 
+  let head = if isApp t then fst (destApp t) else t in 
+  if relation_table_mem head && l = NoBindings then 
+    general_s_rewrite_clause cls lft2rgt c [] gl
+  else 
+    (* Original code. In particular, [splay_prod] performs delta-reduction. *)
+    let env = pf_env gl in
+    let sigma = project gl in 
+    let _,t = splay_prod env sigma t in
+    match match_with_equation t with
+      | None -> 
+	  if l = NoBindings
+	  then general_s_rewrite_clause cls lft2rgt c [] gl
+	  else error "The term provided does not end with an equation" 
+      | Some (hdcncl,_) -> 
+          let hdcncls = string_of_inductive hdcncl in 
+	  let suffix = elimination_suffix (elimination_sort_of_clause cls gl) in
+          let dir = if cls=None then lft2rgt else not lft2rgt in
+          let rwr_thm = if dir then hdcncls^suffix^"_r" else hdcncls^suffix in
+          let elim =
+	    try pf_global gl (id_of_string rwr_thm)
+            with Not_found ->
+              error ("Cannot find rewrite principle "^rwr_thm)
+          in 
+	  general_elim_clause cls (c,l) (elim,NoBindings) gl
 
 let general_rewrite_bindings = general_rewrite_bindings_clause None
 let general_rewrite l2r c = general_rewrite_bindings l2r (c,NoBindings)
@@ -98,6 +118,37 @@ let general_rewrite_bindings_in l2r id =
   general_rewrite_bindings_clause (Some id) l2r
 let general_rewrite_in l2r id c = 
   general_rewrite_bindings_clause (Some id) l2r (c,NoBindings)
+
+
+let general_multi_rewrite l2r c cl = 
+  let rec do_hyps = function 
+    | [] -> tclIDTAC
+    | ((_,id),_) :: l -> 
+	tclTHENFIRST (general_rewrite_bindings_in l2r id c) (do_hyps l)
+  in 
+  let rec try_do_hyps = function 
+    | [] -> tclIDTAC 
+    | id :: l -> 
+	tclTHENFIRST 
+	  (tclTRY (general_rewrite_bindings_in l2r id c)) 
+	  (try_do_hyps l)
+  in 
+  if cl.concl_occs <> [] then 
+    error "The \"at\" syntax isn't available yet for the rewrite tactic"
+  else 
+    tclTHENFIRST 
+      (if cl.onconcl then general_rewrite_bindings l2r c else tclIDTAC)
+      (match cl.onhyps with 
+	 | Some l -> do_hyps l
+	 | None -> 
+	     fun gl -> 
+	       (* try to rewrite in all hypothesis 
+		  (except maybe the rewritten one) *)
+	       let ids = match kind_of_term (fst c) with 
+		 | Var id -> list_remove id (pf_ids_of_hyps gl)
+		 | _ -> pf_ids_of_hyps gl
+	       in try_do_hyps ids gl)
+
 
 (* Conditional rewriting, the success of a rewriting is related 
    to the resolution of the conditions by a given tactic *)
@@ -472,7 +523,7 @@ let onNegatedEquality tac gls =
 
 let discrSimpleClause = function
   | None -> onNegatedEquality discrEq
-  | Some (id,_,_) -> onEquality discrEq id
+  | Some ((_,id),_) -> onEquality discrEq id
 
 let discr = onEquality discrEq
 
@@ -496,8 +547,7 @@ let discrHyp id gls = discrClause (onHyp id) gls
 
 let find_sigma_data s =
   match s with  
-    | Prop Pos  -> build_sigma_set ()                    (* Set *) 
-    | Type _    -> build_sigma_type ()                   (* Type *)
+    | Prop Pos  | Type _    -> build_sigma_type ()          (* Set/Type *)
     | Prop Null -> error "find_sigma_data"
 
 (* [make_tuple env sigma (rterm,rty) lind] assumes [lind] is the lesser
@@ -505,7 +555,7 @@ let find_sigma_data s =
 
    Then we build the term
 
-     [(existS A P (mkRel lind) rterm)] of type [(sigS A P)]
+     [(existT A P (mkRel lind) rterm)] of type [(sigS A P)]
 
    where [A] is the type of [mkRel lind] and [P] is [\na:A.rty{1/lind}]
  *)
@@ -636,7 +686,7 @@ let sig_clausal_form env sigma sort_of_ty siglen ty dflt =
    [make_iterated_tuple sigma env (term,typ) (z,zty)] is to build the
    tuple
 
-   [existS [xn]Pn Rel(in) .. (existS [x2]P2 Rel(i2) (existS [x1]P1 Rel(i1) z))]
+   [existT [xn]Pn Rel(in) .. (existT [x2]P2 Rel(i2) (existT [x1]P1 Rel(i1) z))]
 
    where P1 is zty[i1/x1], P2 is {x1 | P1[i2/x2]} etc.
 
@@ -651,7 +701,7 @@ let sig_clausal_form env sigma sort_of_ty siglen ty dflt =
    need also to construct a default value for the other branches of
    the destructor. As default value, we take a tuple of the form
 
-    [existS [xn]Pn ?n (... existS [x2]P2 ?2 (existS [x1]P1 ?1 term))]
+    [existT [xn]Pn ?n (... existT [x2]P2 ?2 (existT [x1]P1 ?1 term))]
 
    but for this we have to solve the following unification problem:
 
@@ -866,7 +916,7 @@ let bareRevSubstInConcl lbeq body (t,e1,e2) gls =
 
    Given that dep_pair looks like:
 
-   (existS e1 (existS e2 ... (existS en en+1) ... ))
+   (existT e1 (existT e2 ... (existT en en+1) ... ))
 
    and B might contain instances of the ei, we will return the term:
 
@@ -1010,7 +1060,7 @@ let unfold_body x gl =
       | _ -> errorlabstrm "unfold_body"
           (pr_id x ++ str" is not a defined hypothesis") in
   let aft = afterHyp x gl in
-  let hl = List.fold_right (fun (y,yval,_) cl -> (y,[],InHyp) :: cl) aft [] in
+  let hl = List.fold_right (fun (y,yval,_) cl -> (([],y),InHyp) :: cl) aft [] in
   let xvar = mkVar x in
   let rfun _ _ c = replace_term xvar xval c in
   tclTHENLIST
@@ -1089,6 +1139,8 @@ let subst_all gl =
   let test (_,c) =
     try
       let (_,x,y) = snd (find_eq_data_decompose c) in
+      (* J.F.: added to prevent failure on goal containing x=x as an hyp *)
+      if eq_constr x y then failwith "caught";
       match kind_of_term x with Var x -> x | _ -> 
       match kind_of_term y with Var y -> y | _ -> failwith "caught"
     with PatternMatchingFailure -> failwith "caught"
