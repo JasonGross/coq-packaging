@@ -1,0 +1,19 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## assert.dpatch by Samuel Mimram <smimram@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Check assertions in native mode too.
+
+@DPATCH@
+diff -urNad coq-8.0pl3+8.1beta.2~/Makefile coq-8.0pl3+8.1beta.2/Makefile
+--- coq-8.0pl3+8.1beta.2~/Makefile	2006-06-25 22:17:49.000000000 +0000
++++ coq-8.0pl3+8.1beta.2/Makefile	2006-07-13 16:27:10.000000000 +0000
+@@ -74,7 +74,7 @@
+ MLINCLUDES=$(LOCALINCLUDES) -I $(MYCAMLP4LIB)
+ 
+ BYTEFLAGS=$(MLINCLUDES) $(CAMLDEBUG) $(USERFLAGS)
+-OPTFLAGS=$(MLINCLUDES) $(CAMLTIMEPROF) $(USERFLAGS) -noassert
++OPTFLAGS=$(MLINCLUDES) $(CAMLTIMEPROF) $(USERFLAGS)
+ OCAMLDEP=ocamldep
+ DEPFLAGS=$(LOCALINCLUDES)
+ 

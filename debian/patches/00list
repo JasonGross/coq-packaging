@@ -1,3 +1,4 @@
 coqdoc_stdlib
 browser
 makefile
+assert
