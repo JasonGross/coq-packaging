@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacexpr.ml 7936 2006-01-28 18:36:54Z herbelin $ i*)
+(*i $Id: vernacexpr.ml 9017 2006-07-05 17:27:34Z herbelin $ i*)
 
 open Util
 open Names
@@ -281,7 +281,6 @@ type vernac_expr =
   | VernacGo of goable
   | VernacShow of showable
   | VernacCheckGuard
-  | VernacDebug of bool
   | VernacProof of raw_tactic_expr
   (* Toplevel control *)
   | VernacToplevelControl of exn

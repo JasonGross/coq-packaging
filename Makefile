@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile 8933 2006-06-09 14:08:38Z herbelin $ 
+# $Id: Makefile 8989 2006-06-25 22:17:49Z letouzey $ 
 
 
 # Makefile for Coq
@@ -874,7 +874,7 @@ ZARITHVO=\
 QARITHVO=\
  theories/QArith/QArith_base.vo theories/QArith/Qreduction.vo \
  theories/QArith/Qring.vo       theories/QArith/Qreals.vo \
- theories/QArith/QArith.vo
+ theories/QArith/QArith.vo	theories/QArith/Qcanon.vo 
 
 LISTSVO=\
  theories/Lists/MonoList.vo \

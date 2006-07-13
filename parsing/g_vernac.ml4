@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_vernac.ml4 8929 2006-06-08 22:35:58Z herbelin $ *)
+(* $Id: g_vernac.ml4 9017 2006-07-05 17:27:34Z herbelin $ *)
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
 open Pp
@@ -237,6 +237,7 @@ GEXTEND Gram
   rec_annotation:
     [ [ "{"; IDENT "struct"; id=IDENT; "}" -> (Some (id_of_string id), CStructRec)
       | "{"; IDENT "wf"; id=IDENT; rel=lconstr; "}" -> (Some (id_of_string id), CWfRec rel) 
+      | "{"; IDENT "measure"; id=IDENT; rel=lconstr; "}" -> (Some (id_of_string id), CMeasureRec rel) 
       | ->  (None, CStructRec)
       ] ]
   ;
@@ -651,8 +652,11 @@ GEXTEND Gram
 	  VernacBacktrack (n,m,p)
 
 (* Tactic Debugger *)
-      |	IDENT "Debug"; IDENT "On" -> VernacDebug true
-      |	IDENT "Debug"; IDENT "Off" -> VernacDebug false
+      |	IDENT "Debug"; IDENT "On" -> 
+          VernacSetOption (SecondaryTable ("Ltac","Debug"), BoolValue true)
+
+      |	IDENT "Debug"; IDENT "Off" ->
+          VernacSetOption (SecondaryTable ("Ltac","Debug"), BoolValue false)
 
  ] ];
     END

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: rawterm.ml 8878 2006-05-30 16:44:25Z herbelin $ *)
+(* $Id: rawterm.ml 8969 2006-06-22 12:51:04Z msozeau $ *)
 
 (*i*)
 open Util
@@ -73,7 +73,7 @@ type rawconstr =
 
 and rawdecl = name * rawconstr option * rawconstr
 
-and fix_recursion_order = RStructRec | RWfRec of rawconstr
+and fix_recursion_order = RStructRec | RWfRec of rawconstr | RMeasureRec of rawconstr
 
 and fix_kind =
   | RFix of ((int option * fix_recursion_order) array * int)

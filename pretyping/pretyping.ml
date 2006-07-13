@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pretyping.ml 8875 2006-05-29 19:59:11Z msozeau $ *)
+(* $Id: pretyping.ml 8992 2006-06-27 21:29:18Z herbelin $ *)
 
 open Pp
 open Util
@@ -482,6 +482,7 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 		       else
 			 error_cant_find_case_type_loc loc env (evars_of !isevars) 
 			   cj.uj_val in
+		     let ccl = refresh_universes ccl in
 		     let p = it_mkLambda_or_LetIn (lift (nar+1) ccl) psign in
 		     let v =
 		       let mis,_ = dest_ind_family indf in

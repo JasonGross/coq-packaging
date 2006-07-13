@@ -86,6 +86,7 @@ you move the \Coq\ binaries and library after installation.
 
 \section{Options}
 \index{Options of the command line}
+\label{vmoption}
 
 The following command-line options are recognized by the commands {\tt
   coqc} and {\tt coqtop}, unless stated otherwise:
@@ -239,6 +240,11 @@ The following command-line options are recognized by the commands {\tt
   resulting in a smaller memory requirement and faster compilation;
   warning: this invalidates some features such as the extraction tool.
 
+\item[{\tt -vm}]\ 
+
+  This activates the use of the bytecode-based conversion algorithm
+  for the current session (see section~\ref{SetVirtualMachine}).
+
 \item[{\tt -image} {\em file}]\ 
 
   This option sets the binary image to be used to be {\em file}
@@ -272,7 +278,7 @@ The following command-line options are recognized by the commands {\tt
 %   (see section~\ref{coqsearchisos}, page~\pageref{coqsearchisos}).
 % \end{description}
 
-% $Id: RefMan-com.tex 8609 2006-02-24 13:32:57Z notin,no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty $ 
+% $Id: RefMan-com.tex 9044 2006-07-12 13:22:17Z herbelin $ 
 
 %%% Local Variables: 
 %%% mode: latex

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppvernac.ml 8831 2006-05-19 09:29:54Z herbelin $ *)  
+(* $Id: ppvernac.ml 9020 2006-07-05 17:35:23Z herbelin $ *)  
 
 open Pp
 open Names
@@ -414,7 +414,6 @@ let rec pr_vernac = function
 	| ExplainTree l -> str"Explain Proof Tree" ++ spc() ++ prlist_with_sep sep int l 
       in pr_showable s
   | VernacCheckGuard -> str"Guarded"
-  | VernacDebug b -> pr_topcmd b
 
   (* Resetting *)
   | VernacResetName id -> str"Reset" ++ spc() ++ pr_lident id
@@ -571,6 +570,9 @@ let rec pr_vernac = function
 			  else mt()
 		      | CWfRec c -> 
 			  spc() ++ str "{wf " ++ pr_name name ++ spc() ++ 
+			    pr_lconstr_expr c ++ str"}"
+		      | CMeasureRec c -> 
+			  spc() ++ str "{measure " ++ pr_name name ++ spc() ++ 
 			    pr_lconstr_expr c ++ str"}"
 	    in
             pr_id id ++ pr_binders_arg bl ++ annot ++ spc()

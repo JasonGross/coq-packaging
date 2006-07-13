@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalUniqueChoice.v 8893 2006-06-04 18:04:53Z herbelin $ i*)
+(*i $Id: ClassicalUniqueChoice.v 9026 2006-07-06 15:16:20Z herbelin $ i*)
 
 (** This file provides classical logic and unique choice *)
 
@@ -15,7 +15,7 @@
     excluded-middle in [Set], hence it implies a strongly classical
     world. Especially it conflicts with the impredicativity of [Set].
 
-    [ChicliPottierSimpson02] Laurent Chicli, LoÃ¯c Pottier, Carlos
+    [ChicliPottierSimpson02] Laurent Chicli, Loïc Pottier, Carlos
     Simpson, Mathematical Quotients and Quotient Types in Coq,
     Proceedings of TYPES 2002, Lecture Notes in Computer Science 2646,
     Springer Verlag.  *)
@@ -39,7 +39,7 @@ intros A B.
 apply (dependent_unique_choice A (fun _ => B)).
 Qed.
 
-(** The followig proof comes from [ChicliPottierSimpson02] *)
+(** The following proof comes from [ChicliPottierSimpson02] *)
 
 Require Import Setoid.
 

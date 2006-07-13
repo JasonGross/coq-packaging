@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pattern.mli 8755 2006-04-27 22:22:15Z herbelin $ i*)
+(*i $Id: pattern.mli 8963 2006-06-19 18:54:49Z barras $ i*)
 
 (*i*)
 open Pp
@@ -76,6 +76,6 @@ val pattern_of_rawconstr : rawconstr ->
       patvar list * constr_pattern
 
 val instantiate_pattern :
-  (identifier * constr_pattern) list -> constr_pattern -> constr_pattern
+  (identifier * constr_pattern Lazy.t) list -> constr_pattern -> constr_pattern
 
 val lift_pattern : int -> constr_pattern -> constr_pattern

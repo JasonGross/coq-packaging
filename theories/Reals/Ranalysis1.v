@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Ranalysis1.v 8670 2006-03-28 22:16:14Z herbelin $ i*)
+(*i $Id: Ranalysis1.v 9042 2006-07-11 22:06:48Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -27,6 +27,18 @@ Definition div_real_fct (a:R) f (x:R) : R := a / f x.
 Definition comp f1 f2 (x:R) : R := f1 (f2 x).
 Definition inv_fct f (x:R) : R := / f x.
 
+Delimit Scope Rfun_scope with F.
+
+Arguments Scope plus_fct [Rfun_scope Rfun_scope R_scope].
+Arguments Scope mult_fct [Rfun_scope Rfun_scope R_scope].
+Arguments Scope minus_fct [Rfun_scope Rfun_scope R_scope].
+Arguments Scope div_fct [Rfun_scope Rfun_scope R_scope].
+Arguments Scope inv_fct [Rfun_scope R_scope].
+Arguments Scope opp_fct [Rfun_scope R_scope].
+Arguments Scope mult_real_fct [R_scope Rfun_scope R_scope].
+Arguments Scope div_real_fct [R_scope Rfun_scope R_scope].
+Arguments Scope comp [Rfun_scope Rfun_scope R_scope].
+
 Infix "+" := plus_fct : Rfun_scope.
 Notation "- x" := (opp_fct x) : Rfun_scope.
 Infix "*" := mult_fct : Rfun_scope.
@@ -35,8 +47,6 @@ Infix "/" := div_fct : Rfun_scope.
 Notation Local "f1 'o' f2" := (comp f1 f2)
   (at level 20, right associativity) : Rfun_scope.
 Notation "/ x" := (inv_fct x) : Rfun_scope.
-
-Delimit Scope Rfun_scope with F.
 
 Definition fct_cte (a x:R) : R := a.
 Definition id (x:R) := x.

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_ltac.ml4 8878 2006-05-30 16:44:25Z herbelin $ *)
+(* $Id: g_ltac.ml4 9037 2006-07-11 12:43:50Z herbelin $ *)
 
 open Pp
 open Util
@@ -134,7 +134,7 @@ GEXTEND Gram
       | "()" -> TacVoid ] ]
   ;
   match_key:
-    [ [ "match" -> false ] ]
+    [ [ "match" -> false | "lazymatch" -> true ] ]
   ;
   input_fun:
     [ [ "_" -> None 

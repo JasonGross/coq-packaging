@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: q_util.ml4 7732 2005-12-26 13:51:24Z herbelin $ *)
+(* $Id: q_util.ml4 8982 2006-06-23 13:17:49Z herbelin $ *)
 
 (* This file defines standard combinators to build ml expressions *)
 
@@ -84,21 +84,27 @@ let rec interp_entry_name loc s =
     OptArgType t, <:expr< Gramext.Sopt $g$ >>
   else
     let s = if s = "hyp" then "var" else s in
-    let t, se =
+    let t, se, lev =
+      match tactic_genarg_level s with
+	| Some n -> Some (ExtraArgType s), <:expr< Tactic. tactic_expr >>, Some n
+	| None ->
       match Pcoq.entry_type (Pcoq.get_univ "prim") s with
-	| Some _ as x -> x, <:expr< Prim. $lid:s$ >>
+	| Some _ as x -> x, <:expr< Prim. $lid:s$ >>, None
 	| None -> 
       match Pcoq.entry_type (Pcoq.get_univ "constr") s with
-	| Some _ as x -> x, <:expr< Constr. $lid:s$ >>
+	| Some _ as x -> x, <:expr< Constr. $lid:s$ >>, None
 	| None -> 
       match Pcoq.entry_type (Pcoq.get_univ "tactic") s with
-	| Some _ as x -> x, <:expr< Tactic. $lid:s$ >>
-	| None -> None, <:expr< $lid:s$ >> in
+	| Some _ as x -> x, <:expr< Tactic. $lid:s$ >>, None
+	| None -> None, <:expr< $lid:s$ >>, None in
     let t =
       match t with
 	| Some t -> t
-	| None ->
-(*	    Pp.warning_with Pp_control.err_ft
-            ("Unknown primitive grammar entry: "^s);*)
-	    ExtraArgType s
-    in t, <:expr< Gramext.Snterm (Pcoq.Gram.Entry.obj $se$) >>
+	| None -> ExtraArgType s in
+    let entry = match lev with
+      | Some n ->
+	  let s = string_of_int n in
+	  <:expr< Gramext.Snterml (Pcoq.Gram.Entry.obj $se$, $str:s$) >>
+      | None -> 
+	  <:expr< Gramext.Snterm (Pcoq.Gram.Entry.obj $se$) >>
+    in t, entry
