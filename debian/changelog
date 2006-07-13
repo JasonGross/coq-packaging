@@ -1,3 +1,9 @@
+coq (8.0pl3+8.1beta.2-1) experimental; urgency=low
+
+  * New upstream beta release.
+
+ -- Samuel Mimram <smimram@debian.org>  Thu, 13 Jul 2006 14:27:55 +0000
+
 coq (8.0pl3+8.1beta-1) experimental; urgency=low
 
   * New upstream release.
