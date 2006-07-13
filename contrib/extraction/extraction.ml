@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extraction.ml 8931 2006-06-09 07:43:37Z letouzey $ i*)
+(*i $Id: extraction.ml 9032 2006-07-07 16:30:34Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -406,7 +406,7 @@ and extract_ind env kn = (* kn is supposed to be in long form *)
 	  List.iter 
 	    (option_iter 
 	       (fun kn -> if Cset.mem kn !projs then add_projection n kn))
-	    (lookup_structure ip).s_PROJ 
+	    (lookup_projections ip)
 	with Not_found -> ()
 	end; 
 	Record field_glob

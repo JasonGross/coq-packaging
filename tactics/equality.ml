@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: equality.ml 8878 2006-05-30 16:44:25Z herbelin $ *)
+(* $Id: equality.ml 9010 2006-07-05 07:17:41Z jforest $ *)
 
 open Pp
 open Util
@@ -201,7 +201,7 @@ let abstract_replace clause c2 c1 unsafe tac gl =
 	 ]
       ] gl
   else
-    error "terms does not have convertible types"
+    error "terms do not have convertible types"
 
 
 let replace c2 c1 gl = abstract_replace None c2 c1 false tclIDTAC gl
@@ -544,11 +544,9 @@ let discrHyp id gls = discrClause (onHyp id) gls
 
 (* returns the sigma type (sigS, sigT) with the respective
     constructor depending on the sort *)
-
-let find_sigma_data s =
-  match s with  
-    | Prop Pos  | Type _    -> build_sigma_type ()          (* Set/Type *)
-    | Prop Null -> error "find_sigma_data"
+(* J.F.: correction du bug #1167 en accord avec Hugo. *) 
+   
+let find_sigma_data s = build_sigma_type ()
 
 (* [make_tuple env sigma (rterm,rty) lind] assumes [lind] is the lesser
    index bound in [rty]

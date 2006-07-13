@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Wf.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id: Wf.v 8988 2006-06-25 22:15:32Z letouzey $ i*)
 
 (** This module proves the validity of
     - well-founded recursion (also called course of values)
@@ -146,6 +146,8 @@ Section Well_founded_2.
   Variable R : A * B -> A * B -> Prop.
 
   Variable P : A -> B -> Type. 
+
+  Section Acc_iter_2.
   Variable
     F :
       forall (x:A) (x':B),
@@ -156,6 +158,7 @@ Section Well_founded_2.
     F
       (fun (y:A) (y':B) (h:R (y, y') (x, x')) =>
          Acc_iter_2 (x:=y) (x':=y') (Acc_inv a (y, y') h)).
+  End Acc_iter_2.
 
   Hypothesis Rwf : well_founded R.
 

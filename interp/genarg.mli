@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: genarg.mli 8926 2006-06-08 20:23:17Z herbelin $ i*)
+(*i $Id: genarg.mli 8983 2006-06-23 13:21:49Z herbelin $ i*)
 
 open Util
 open Names
@@ -60,20 +60,21 @@ Transformation for each type :
 \begin{verbatim}
 tag                            raw open type            cooked closed type
 
-BoolArgType                    bool                     bool
-IntArgType                     int                      int
-IntOrVarArgType                int or_var               int
-StringArgType                  string (parsed w/ "")    string
-PreIdentArgType                string (parsed w/o "")   (vernac only)
-IdentArgType                   identifier               identifier
-IntroPatternArgType            intro_pattern_expr       intro_pattern_expr
-VarArgType                     identifier               constr
-RefArgType                     reference                global_reference
-ConstrArgType                  constr_expr              constr
-ConstrMayEvalArgType           constr_expr may_eval     constr
-QuantHypArgType                quantified_hypothesis    quantified_hypothesis
-OpenConstrArgType              constr_expr              open_constr
-ConstrBindingsArgType      constr_expr with_bindings constr with_bindings
+BoolArgType                    bool                      bool
+IntArgType                     int                       int
+IntOrVarArgType                int or_var                int
+StringArgType                  string (parsed w/ "")     string
+PreIdentArgType                string (parsed w/o "")    (vernac only)
+IdentArgType                   identifier                identifier
+IntroPatternArgType            intro_pattern_expr        intro_pattern_expr
+VarArgType                     identifier located        identifier
+RefArgType                     reference                 global_reference
+QuantHypArgType                quantified_hypothesis     quantified_hypothesis
+ConstrArgType                  constr_expr               constr
+ConstrMayEvalArgType           constr_expr may_eval      constr
+OpenConstrArgType              open_constr_expr          open_constr
+ConstrWithBindingsArgType      constr_expr with_bindings constr with_bindings
+BindingsArgType                constr_expr bindings      constr bindings
 List0ArgType of argument_type
 List1ArgType of argument_type
 OptArgType of argument_type

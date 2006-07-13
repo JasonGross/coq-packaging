@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pcoq.ml4 8926 2006-06-08 20:23:17Z herbelin $ i*)
+(*i $Id: pcoq.ml4 9043 2006-07-12 10:06:40Z herbelin $ i*)
 
 open Pp
 open Util
@@ -484,7 +484,11 @@ let default_levels =
    0,Gramext.RightA]
 
 let default_pattern_levels =
-  [10,Gramext.LeftA;
+  [200,Gramext.RightA;
+   100,Gramext.RightA;
+   99,Gramext.RightA;
+   10,Gramext.LeftA;
+   1,Gramext.LeftA;
    0,Gramext.RightA]
 
 let level_stack = 

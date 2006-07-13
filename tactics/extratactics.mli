@@ -6,12 +6,16 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extratactics.mli 8780 2006-05-02 21:58:58Z letouzey $ i*)
+(*i $Id: extratactics.mli 8977 2006-06-23 10:09:59Z herbelin $ i*)
 
+open Util
 open Names
 open Term
 open Proof_type
 open Rawterm
+open Tacexpr
+open Topconstr
+open Genarg
 
 val h_discrHyp : quantified_hypothesis -> tactic
 val h_injHyp : quantified_hypothesis -> tactic
@@ -26,14 +30,13 @@ val refine_tac : Genarg.open_constr -> tactic
 *)
 
 
-val rawwit_in_arg_hyp:  identifier option Tacexpr.raw_abstract_argument_type
-val in_arg_hyp: identifier option Pcoq.Gram.Entry.e
+val rawwit_in_arg_hyp: identifier located option raw_abstract_argument_type
+
+val in_arg_hyp: identifier located option Pcoq.Gram.Entry.e
 
 
 
 val rawwit_by_arg_tac :
-  (Tacexpr.raw_tactic_expr option, Topconstr.constr_expr,
-   Tacexpr.raw_tactic_expr)
-  Genarg.abstract_argument_type
+  (raw_tactic_expr option, constr_expr, raw_tactic_expr) abstract_argument_type
   
 val by_arg_tac : Tacexpr.raw_tactic_expr option Pcoq.Gram.Entry.e
