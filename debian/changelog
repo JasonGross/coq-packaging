@@ -1,3 +1,9 @@
+coq (8.0pl3+8.1beta.2-2) UNRELEASED; urgency=low
+
+  * Minor improvements of the coqide.desktop file, closes: #383310.
+
+ -- Samuel Mimram <smimram@debian.org>  Wed, 16 Aug 2006 16:00:27 +0200
+
 coq (8.0pl3+8.1beta.2-1) experimental; urgency=low
 
   * New upstream beta release.
