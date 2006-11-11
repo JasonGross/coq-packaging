@@ -4,11 +4,11 @@ Priority: optional
 Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
 Uploaders: Ralf Treinen <treinen@debian.org>, Sven Luther <luther@debian.org>, Remi Vanicat <vanicat@debian.org>, Stefano Zacchiroli <zack@debian.org>, Samuel Mimram <smimram@debian.org>
 Standards-Version: 3.7.2
-Build-Depends: debhelper (>= 4.0.0), dpatch, ocaml-nox (>= 3.09.0), ocaml-best-compilers, liblablgtk2-ocaml-dev (>= 2.4.0), tetex-extra, hevea
+Build-Depends: debhelper (>= 4.0.0), dpkg-dev (>= 1.13.19), dpatch, ocaml-nox (>= 3.09.0), ocaml-best-compilers, liblablgtk2-ocaml-dev (>= 2.4.0), tetex-extra, hevea
 
 Package: coq
 Architecture: any
-Depends: ${shlibs:Depends}, coq-libs (= ${Source-Version})
+Depends: ${shlibs:Depends}, coq-libs (= ${source:Version})
 Recommends: coqide | proofgeneral-coq
 Suggests: ocaml-nox (>= 3.08), proofgeneral-coq, ledit, cle, coq-doc
 Description: proof assistant for higher-order logic (toplevel and compiler)
