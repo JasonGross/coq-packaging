@@ -54,7 +54,7 @@ clean: unpatch
 
 	-$(MAKE) clean
 	-$(MAKE) archclean
-	rm -f bin/parser.opt
+	rm -f bin/*
 	rm -f tools/coqdoc/*.cm[oi]
 	rm -f config/coq_config.ml config/Makefile test-suite/check.log
 	rm -f dev/ocamldebug-v7
