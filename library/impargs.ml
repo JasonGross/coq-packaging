@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: impargs.ml 8845 2006-05-23 07:41:58Z herbelin $ *)
+(* $Id: impargs.ml 9310 2006-10-28 19:35:09Z herbelin $ *)
 
 open Util
 open Names
@@ -259,10 +259,9 @@ let list_of_implicits = function
 
 let constants_table = ref Cmap.empty
 
-let compute_constant_implicits kn =
+let compute_constant_implicits cst =
   let env = Global.env () in
-  let cb = lookup_constant kn env in
-  auto_implicits env (body_of_type cb.const_type)
+  auto_implicits env (Typeops.type_of_constant env cst)
 
 let constant_implicits sp =
   try Cmap.find sp !constants_table with Not_found -> No_impl
@@ -282,12 +281,13 @@ let compute_mib_implicits kn =
   let ar =
     Array.to_list
       (Array.map  (* No need to lift, arities contain no de Bruijn *)
-        (fun mip -> (Name mip.mind_typename, None, type_of_inductive (mib,mip)))
+        (fun mip ->
+	  (Name mip.mind_typename, None, type_of_inductive env (mib,mip)))
         mib.mind_packets) in
   let env_ar = push_rel_context ar env in
   let imps_one_inductive i mip =
     let ind = (kn,i) in
-    let ar = type_of_inductive (mib,mip) in
+    let ar = type_of_inductive env (mib,mip) in
     ((IndRef ind,auto_implicits env ar),
      Array.mapi (fun j c -> (ConstructRef (ind,j+1),auto_implicits env_ar c))
        mip.mind_nf_lc)

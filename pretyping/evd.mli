@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evd.mli 8759 2006-04-28 12:24:14Z herbelin $ i*)
+(*i $Id: evd.mli 9154 2006-09-20 17:18:18Z corbinea $ i*)
 
 (*i*)
 open Util
@@ -32,7 +32,8 @@ type evar_body =
 type evar_info = {
   evar_concl : constr;
   evar_hyps : Environ.named_context_val;
-  evar_body : evar_body}
+  evar_body : evar_body;
+  evar_extra : Dyn.t option}
 
 val eq_evar_info : evar_info -> evar_info -> bool
 val evar_context : evar_info -> named_context
@@ -94,6 +95,7 @@ type 'a freelisted = {
   rebus : 'a;
   freemetas : Metaset.t }
 
+val metavars_of : constr -> Metaset.t
 val mk_freelisted : constr -> constr freelisted
 val map_fl : ('a -> 'b) -> 'a freelisted -> 'b freelisted
 

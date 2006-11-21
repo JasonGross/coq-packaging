@@ -6,10 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Field.v 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id:$ *)
 
-Require Export Field_Compl.
-Require Export Field_Theory.
-Require Export Field_Tactic.
+open Tacinterp
+open Decl_expr
+open Mod_subst
 
-(* Command declarations are moved to the ML side *)
+
+val intern_proof_instr : glob_sign -> raw_proof_instr -> glob_proof_instr
+val interp_proof_instr : Decl_mode.pm_info ->
+  Evd.evar_map -> Environ.env -> glob_proof_instr -> proof_instr

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: recordops.mli 9032 2006-07-07 16:30:34Z herbelin $ i*)
+(*i $Id: recordops.mli 9082 2006-08-24 17:03:28Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -22,7 +22,7 @@ open Library
    constructor (the name of which defaults to Build_S) *)
 
 val declare_structure : 
-  inductive * identifier * int * bool list * constant option list -> unit
+  inductive * identifier * bool list * constant option list -> unit
 
 (* [lookup_projections isp] returns the projections associated to the
    inductive path [isp] if it corresponds to a structure, otherwise

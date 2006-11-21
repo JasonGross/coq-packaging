@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: redexpr.ml 8878 2006-05-30 16:44:25Z herbelin $ *)
+(* $Id: redexpr.ml 9058 2006-07-22 17:42:45Z bgregoir $ *)
 
 open Pp
 open Util
@@ -24,7 +24,7 @@ open RedFlags
 (* call by value normalisation function using the virtual machine *)
 let cbv_vm env _ c =
   let ctyp = (fst (Typeops.infer env c)).Environ.uj_type in
-  Vconv.cbv_vm env c ctyp
+  Vnorm.cbv_vm env c ctyp
 
 
 let set_opaque_const sp = 

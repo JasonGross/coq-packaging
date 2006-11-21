@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: term.ml 8850 2006-05-23 16:11:31Z herbelin $ *)
+(* $Id: term.ml 9303 2006-10-27 21:50:17Z herbelin $ *)
 
 (* This module instantiates the structure of generic deBruijn terms to Coq *)
 
@@ -646,6 +646,9 @@ type rel_declaration = name * constr option * types
 let map_named_declaration f (id, v, ty) = (id, option_map f v, f ty)
 let map_rel_declaration = map_named_declaration
 
+let fold_named_declaration f (_, v, ty) a = f ty (option_fold_right f v a)
+let fold_rel_declaration = fold_named_declaration
+
 (****************************************************************************)
 (*              Functions for dealing with constr terms                     *)
 (****************************************************************************)
@@ -659,17 +662,16 @@ exception LocalOccur
 (* (closedn n M) raises FreeVar if a variable of height greater than n
    occurs in M, returns () otherwise *)
 
-let closedn = 
+let closedn n c = 
   let rec closed_rec n c = match kind_of_term c with
     | Rel m -> if m>n then raise LocalOccur
     | _ -> iter_constr_with_binders succ closed_rec n c
   in 
-  closed_rec
+  try closed_rec n c; true with LocalOccur -> false
 
 (* [closed0 M] is true iff [M] is a (deBruijn) closed term *)
 
-let closed0 term =
-  try closedn 0 term; true with LocalOccur -> false
+let closed0 = closedn 0
 
 (* (noccurn n M) returns true iff (Rel n) does NOT occur in term M  *)
 

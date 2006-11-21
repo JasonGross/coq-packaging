@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacticals.mli 7909 2006-01-21 11:09:18Z herbelin $ i*)
+(*i $Id: tacticals.mli 9211 2006-10-05 12:38:33Z letouzey $ i*)
 
 (*i*)
 open Pp
@@ -64,7 +64,7 @@ val tclIFTHENELSE    : tactic -> tactic -> tactic -> tactic
 val tclIFTHENSELSE   : tactic -> tactic list -> tactic -> tactic
 val tclIFTHENSVELSE  : tactic -> tactic array -> tactic -> tactic
 
-
+val tclIFTHENTRYELSEMUST : tactic -> tactic -> tactic
 
 val unTAC            : tactic -> goal sigma -> proof_tree sigma
 

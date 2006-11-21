@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: global.ml 8723 2006-04-16 15:51:02Z herbelin $ *)
+(* $Id: global.ml 9310 2006-10-28 19:35:09Z herbelin $ *)
 
 open Util
 open Names
@@ -141,10 +141,10 @@ open Libnames
 
 let type_of_reference env = function
   | VarRef id -> Environ.named_type id env 
-  | ConstRef c -> Environ.constant_type env c
+  | ConstRef c -> Typeops.type_of_constant env c
   | IndRef ind ->
      let specif = Inductive.lookup_mind_specif env ind in
-      Inductive.type_of_inductive specif
+      Inductive.type_of_inductive env specif
   | ConstructRef cstr ->
      let specif =
       Inductive.lookup_mind_specif env (inductive_of_constructor cstr) in

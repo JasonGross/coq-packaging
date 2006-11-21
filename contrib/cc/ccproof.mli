@@ -6,14 +6,15 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ccproof.mli 7298 2005-08-17 12:56:38Z corbinea $ *)
+(* $Id: ccproof.mli 9151 2006-09-19 13:32:22Z corbinea $ *)
 
 open Ccalgo
 open Names
+open Term
 
 type proof =
-    Ax of identifier
-  | SymAx of identifier
+    Ax of constr
+  | SymAx of constr
   | Refl of term
   | Trans of proof * proof
   | Congr of proof * proof
@@ -25,6 +26,6 @@ val build_proof :
   | `Prove of int * int ] -> proof
 
 val type_proof :
-  (identifier, (term * term)) Hashtbl.t -> proof -> term * term
+  (constr, (term * term)) Hashtbl.t -> proof -> term * term
 
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Tactics.v 8100 2006-02-27 12:10:03Z letouzey $ i*)
+(*i $Id: Tactics.v 9268 2006-10-24 12:56:16Z herbelin $ i*)
 
 Require Import Notations.
 Require Import Logic.
@@ -15,7 +15,7 @@ Require Import Logic.
 
 (* A shorter name for generalize + clear, can be seen as an anti-intro *)
 
-Ltac revert H := generalize H; clear H.
+Tactic Notation "revert" ne_hyp_list(l) := generalize l; clear l.
 
 (* to contradict an hypothesis without copying its type. *)
 
@@ -49,24 +49,16 @@ Ltac f_equal :=
    | _ => idtac
   end.
 
-(* Rewriting in all hypothesis. *)
+(* Rewriting in all hypothesis several times everywhere *)
 
-Ltac rewrite_all Eq := match type of Eq with
-  ?a = ?b =>
-     generalize Eq; clear Eq;
-     match goal with
-    | H : context [a] |- _ => intro Eq; rewrite Eq in H; rewrite_all Eq
-    | _ => intro Eq; try rewrite Eq
-    end
- end.
+Tactic Notation "rewrite_all" constr(eq) := repeat rewrite eq in *.
+Tactic Notation "rewrite_all" "<-" constr(eq) := repeat rewrite <- eq in *.
 
-Ltac rewrite_all_rev Eq := match type of Eq with
-  ?a = ?b =>
-     generalize Eq; clear Eq;
-     match goal with
-    | H : context [b] |- _ => intro Eq; rewrite <- Eq in H; rewrite_all_rev Eq
-    | _ => intro Eq; try rewrite <- Eq
-    end
- end.
+(* Keeping a copy of an expression *)
 
-Tactic Notation "rewrite_all" "<-" constr(H) := rewrite_all_rev H.
+Ltac remembertac x a :=
+  let x := fresh x in
+  let H := fresh "Heq" x in
+  (set (x:=a) in *; assert (H: x=a) by reflexivity; clearbody x).
+
+Tactic Notation "remember" constr(c) "as" ident(x) := remembertac x c.

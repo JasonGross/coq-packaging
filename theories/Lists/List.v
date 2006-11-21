@@ -6,7 +6,7 @@
   (*         *       GNU Lesser General Public License Version 2.1        *)
   (************************************************************************)
 
-  (*i $Id: List.v 9035 2006-07-09 15:42:09Z herbelin $ i*)
+  (*i $Id: List.v 9290 2006-10-26 19:20:42Z herbelin $ i*)
 
 Require Import Le Gt Minus Min Bool.
 Require Import Setoid.
@@ -38,6 +38,12 @@ Section Lists.
       | nil => error
       | x :: _ => value x
     end.
+
+ Definition hd (default:A) (l:list) :=
+   match l with
+     | nil => default
+     | x :: _ => x
+   end. 
 
   Definition tail (l:list) : list :=
     match l with
@@ -670,21 +676,27 @@ Section ListOps.
 
   (**  An alternative tail-recursive definition for reverse *) 
 
-  Fixpoint rev_acc (l l': list A) {struct l} : list A := 
+  Fixpoint rev_append (l l': list A) {struct l} : list A := 
     match l with 
       | nil => l' 
-      | a::l => rev_acc l (a::l')
+      | a::l => rev_append l (a::l')
     end.
 
-  Lemma rev_acc_rev : forall l l', rev_acc l l' = rev l ++ l'.
+  Definition rev' l : list A := rev_append l nil.
+
+  Notation rev_acc := rev_append (only parsing).
+
+  Lemma rev_append_rev : forall l l', rev_acc l l' = rev l ++ l'.
   Proof.
     induction l; simpl; auto; intros.
     rewrite <- ass_app; firstorder.
   Qed.
 
-  Lemma rev_alt : forall l, rev l = rev_acc l nil.
+  Notation rev_acc_rev := rev_append_rev (only parsing).
+
+  Lemma rev_alt : forall l, rev l = rev_append l nil.
   Proof.
-    intros; rewrite rev_acc_rev.
+    intros; rewrite rev_append_rev.
     apply app_nil_end.
   Qed.
 
@@ -1336,14 +1348,14 @@ End Fold_Right_Recursor.
       rewrite IHl; simpl; auto.
     Qed.
 
-    Lemma split_lenght_l : forall (l:list (A*B)),
+    Lemma split_length_l : forall (l:list (A*B)),
       length (fst (split l)) = length l. 
     Proof.
       induction l; simpl; auto.
       destruct a; destruct (split l); simpl; auto.
     Qed.
 
-    Lemma split_lenght_r : forall (l:list (A*B)),
+    Lemma split_length_r : forall (l:list (A*B)),
       length (snd (split l)) = length l. 
     Proof.
       induction l; simpl; auto.

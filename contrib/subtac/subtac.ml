@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: subtac.ml 8964 2006-06-20 13:52:21Z msozeau $ *)
+(* $Id: subtac.ml 9284 2006-10-26 12:06:57Z msozeau $ *)
 
 open Global
 open Pp
@@ -156,19 +156,19 @@ let subtac (loc, command) =
     match command with
 	VernacDefinition (defkind, (locid, id), expr, hook) -> 
 	    (match expr with
-		 ProveBody (bl, c) -> 
-		   let evm, c, ctyp = Subtac_pretyping.subtac_process env isevars id bl c None in
-		     trace (str "Starting proof");
-		     Command.start_proof id goal_kind c hook;
-		     trace (str "Started proof");	     
+		 ProveBody (bl, c) -> Subtac_pretyping.subtac_proof env isevars id bl c None
+(* 		   let evm, c, ctyp =  in *)
+(* 		     trace (str "Starting proof"); *)
+(* 		     Command.start_proof id goal_kind c hook; *)
+(* 		     trace (str "Started proof");	      *)
 		     
 	       | DefineBody (bl, _, c, tycon) -> 
-		   let evm, c, ctyp = Subtac_pretyping.subtac_process env isevars id bl c tycon in
-		   let tac = Eterm.etermtac (evm, c) in 
-		     trace (str "Starting proof");
-		     Command.start_proof id goal_kind ctyp hook;
-		     trace (str "Started proof");
-		     Pfedit.by tac)
+		   Subtac_pretyping.subtac_proof env isevars id bl c tycon
+		     (* let tac = Eterm.etermtac (evm, c) in  *)
+		     (* 		     trace (str "Starting proof"); *)
+		     (* 		     Command.start_proof id goal_kind ctyp hook; *)
+		     (* 		     trace (str "Started proof"); *)
+		     (* 		     Pfedit.by tac) *))
       | VernacFixpoint (l, b) -> 
 	  let _ = trace (str "Building fixpoint") in
 	    ignore(Subtac_command.build_recursive l b)
@@ -223,24 +223,30 @@ let subtac (loc, command) =
 		++ x ++ spc () ++ str "and" ++ spc () ++ y
 	in msg_warning cmds
     
-    | Type_errors.TypeError (env, e) ->
-	debug 2 (Himsg.explain_type_error env e)
+    | Type_errors.TypeError (env, exn) as e ->
+	debug 2 (Himsg.explain_type_error env exn);
+	raise e
 	  
-    | Pretype_errors.PretypeError (env, e) ->
-	debug 2 (Himsg.explain_pretype_error env e)
+    | Pretype_errors.PretypeError (env, exn) as e ->
+	debug 2 (Himsg.explain_pretype_error env exn);
+	raise e
 	  
-    | Stdpp.Exc_located (loc, e) ->
+    | (Stdpp.Exc_located (loc, e')) as e ->
 	debug 2 (str "Parsing exception: ");
-	(match e with
-	   | Type_errors.TypeError (env, e) ->
-	       debug 2 (Himsg.explain_type_error env e)
+	(match e' with
+	   | Type_errors.TypeError (env, exn) ->
+	       debug 2 (Himsg.explain_type_error env exn);
+	       raise e
 		 
-	   | Pretype_errors.PretypeError (env, e) ->
-	       debug 2 (Himsg.explain_pretype_error env e)
+	   | Pretype_errors.PretypeError (env, exn) ->
+	       debug 2 (Himsg.explain_pretype_error env exn);
+	       raise e
 
-	   | e -> msg_warning (str "Unexplained exception: " ++ Cerrors.explain_exn e))
+	   | e'' -> msg_warning (str "Unexpected exception: " ++ Cerrors.explain_exn e'');
+	       raise e)
   
     | e -> 
-	msg_warning (str "Uncatched exception: " ++ Cerrors.explain_exn e)
+	msg_warning (str "Uncatched exception: " ++ Cerrors.explain_exn e);
+	raise e
 
 

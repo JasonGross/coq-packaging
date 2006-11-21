@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: output.ml 8863 2006-05-26 10:33:21Z notin $ i*)
+(*i $Id: output.ml 9245 2006-10-17 12:53:34Z notin $ i*)
 
 open Cdglobals
 open Index
@@ -118,7 +118,7 @@ module Latex = struct
 
   let header () =
     if !header_trailer then begin
-      printf "\\documentclass[12pt]{article}\n";
+      printf "\\documentclass[12pt]{report}\n";
       if !inputenc != "" then printf "\\usepackage[%s]{inputenc}\n" !inputenc;
       printf "\\usepackage[T1]{fontenc}\n";
       printf "\\usepackage{fullpage}\n";

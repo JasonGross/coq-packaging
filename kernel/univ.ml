@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: univ.ml 8845 2006-05-23 07:41:58Z herbelin $ *)
+(* $Id: univ.ml 9314 2006-10-29 20:11:08Z herbelin $ *)
 
 (* Initial Caml version originates from CoC 4.8 [Dec 1988] *)
 (* Extension with algebraic universes by HH [Sep 2001] *)
@@ -63,8 +63,8 @@ let pr_uni_level u = str (string_of_univ_level u)
 let pr_uni = function
   | Atom u -> 
       pr_uni_level u
-  | Max ([],[Base]) ->
-      int 1
+  | Max ([],[u]) ->
+      str "(" ++ pr_uni_level u ++ str ")+1"
   | Max (gel,gtl) ->
       str "max(" ++ hov 0
        (prlist_with_sep pr_coma pr_uni_level gel ++

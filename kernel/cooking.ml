@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cooking.ml 8752 2006-04-27 19:37:33Z herbelin $ i*)
+(*i $Id: cooking.ml 9320 2006-10-30 16:53:43Z barras $ i*)
 
 open Pp
 open Util
@@ -122,7 +122,13 @@ let cook_constant env r =
     on_body (fun c ->
       abstract_constant_body (expmod_constr r.d_modlist c) hyps) 
       cb.const_body in
-  let typ =
-    abstract_constant_type (expmod_constr r.d_modlist cb.const_type) hyps in
+  let typ = match cb.const_type with
+    | NonPolymorphicType t ->
+	let typ = abstract_constant_type (expmod_constr r.d_modlist t) hyps in
+	NonPolymorphicType typ
+    | PolymorphicArity (ctx,s) ->
+	let t = mkArity (ctx,Type s.poly_level) in
+	let typ = abstract_constant_type (expmod_constr r.d_modlist t) hyps in
+	Typeops.make_polymorphic_if_arity env typ in
   let boxed = Cemitcodes.is_boxed cb.const_body_code in
   (body, typ, cb.const_constraints, cb.const_opaque, boxed)

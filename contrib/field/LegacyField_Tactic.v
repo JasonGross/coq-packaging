@@ -6,12 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Field_Tactic.v 8866 2006-05-28 16:21:04Z herbelin $ *)
+(* $Id: LegacyField_Tactic.v 9319 2006-10-30 12:41:21Z barras $ *)
 
 Require Import List.
-Require Import Ring.
-Require Export Field_Compl.
-Require Export Field_Theory.
+Require Import LegacyRing.
+Require Export LegacyField_Compl.
+Require Export LegacyField_Theory.
 
 (**** Interpretation A --> ExprA ****)
 
@@ -184,15 +184,15 @@ Ltac multiply mul :=
   match goal with
   |  |- (interp_ExprA ?FT ?X2 ?X3 = interp_ExprA ?FT ?X2 ?X4) =>
       let AzeroT := get_component Azero FT in
-      (cut (interp_ExprA FT X2 mul <> AzeroT);
-        [ intro; let id := grep_mult in apply (mult_eq FT X3 X4 mul X2 id)
-        | weak_reduce;
-           let AoneT := get_component Aone ltac:(body_of FT)
+      cut (interp_ExprA FT X2 mul <> AzeroT);
+       [ intro; (let id := grep_mult in apply (mult_eq FT X3 X4 mul X2 id))
+       | weak_reduce;
+          (let AoneT := get_component Aone ltac:(body_of FT)
            with AmultT := get_component Amult ltac:(body_of FT) in
-           (try
+           try
              match goal with
              |  |- context [(AmultT _ AoneT)] => rewrite (AmultT_1r FT)
-             end; clear FT X2) ])
+             end; clear FT X2) ]
   end.
 
 Ltac apply_multiply FT lvar trm :=
@@ -279,7 +279,7 @@ Ltac field_gen_aux FT :=
       let lvar := build_varlist FT (AplusT X1 X2) in
       let trm1 := interp_A FT lvar X1 with trm2 := interp_A FT lvar X2 in
       let mul := give_mult (EAplus trm1 trm2) in
-      (cut
+      cut
         (let ft := FT in
          let vm := lvar in interp_ExprA ft vm trm1 = interp_ExprA ft vm trm2);
         [ compute in |- *; auto
@@ -287,13 +287,14 @@ Ltac field_gen_aux FT :=
            apply_simplif apply_assoc; multiply mul;
            [ apply_simplif apply_multiply;
               apply_simplif ltac:(apply_inverse mul);
-              let id := grep_mult in
-              clear id; weak_reduce; clear ft vm; first
-              [ inverse_test FT; ring | field_gen_aux FT ]
-           | idtac ] ])
+              (let id := grep_mult in
+               clear id; weak_reduce; clear ft vm; first
+              [ inverse_test FT; legacy ring | field_gen_aux FT ])
+           | idtac ] ]
   end.
 
-Ltac field_gen FT := unfolds FT; (inverse_test FT; ring) || field_gen_aux FT.
+Ltac field_gen FT :=
+  unfolds FT; (inverse_test FT; legacy ring) || field_gen_aux FT.
 
 (*****************************)
 (*    Term Simplification    *)
@@ -429,4 +430,4 @@ Ltac field_term FT exp :=
    simpl_all_monomials
     ltac:(assoc_distrib ltac:(simpl_all_monomials ltac:(simpl_inv tma))) in
   let trep := eval_weak_reduce (interp_ExprA FT lvar tsmp) in
-  (replace exp with trep; [ ring trep | field_gen FT ]).
+  (replace exp with trep; [ legacy ring trep | field_gen FT ]).

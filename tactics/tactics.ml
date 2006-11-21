@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tactics.ml 8878 2006-05-30 16:44:25Z herbelin $ *)
+(* $Id: tactics.ml 9281 2006-10-26 07:52:31Z herbelin $ *)
 
 open Pp
 open Util
@@ -245,20 +245,22 @@ let unfold_constr = function
 (*         Introduction tactics            *)
 (*******************************************)
 
+let fresh_id_avoid avoid id =
+  next_global_ident_away true id avoid
+
 let fresh_id avoid id gl =
-  next_global_ident_away true id (avoid@(pf_ids_of_hyps gl))
+  fresh_id_avoid (avoid@(pf_ids_of_hyps gl)) id
 
 let id_of_name_with_default s = function
   | Anonymous -> id_of_string s
   | Name id   -> id
 
-let default_id gl = function
+let default_id env sigma = function
   | (name,None,t) ->
-      (match kind_of_term (pf_whd_betadeltaiota gl (pf_type_of gl t)) with
-	| Sort (Prop _) -> (id_of_name_with_default "H" name)
-	| Sort (Type _) -> (id_of_name_with_default "X" name)
-	| _                   -> anomaly "Wrong sort")
-  | (name,Some b,_) -> id_of_name_using_hdchar (pf_env gl) b name
+      (match Typing.sort_of env sigma t with
+	| Prop _ -> (id_of_name_with_default "H" name)
+	| Type _ -> (id_of_name_with_default "X" name))
+  | (name,Some b,_) -> id_of_name_using_hdchar env b name
 
 (* Non primitive introduction tactics are treated by central_intro
    There is possibly renaming, with possibly names to avoid and 
@@ -270,13 +272,31 @@ type intro_name_flag =
   | IntroMustBe of identifier
 
 let find_name decl gl = function
-  | IntroAvoid idl        -> 
-      let id = fresh_id idl (default_id gl decl) gl in id
+  | IntroAvoid idl -> 
+      (* this case must be compatible with [find_intro_names] below. *)
+      let id = fresh_id idl (default_id (pf_env gl) gl.sigma decl) gl in id
   | IntroBasedOn (id,idl) -> fresh_id idl id gl
   | IntroMustBe id        -> 
       let id' = fresh_id [] id gl in
       if id' <> id then error ((string_of_id id)^" is already used");
       id'
+
+(* Returns the names that would be created by intros, without doing
+   intros.  This function is supposed to be compatible with an
+   iteration of [find_name] above. As [default_id] checks the sort of
+   the type to build hyp names, we maintain an environment to be able
+   to type dependent hyps. *)
+let find_intro_names ctxt gl = 
+  let _, res = List.fold_right 
+    (fun decl acc -> 
+      let wantedname,x,typdecl = decl in
+      let env,idl = acc in
+      let name = fresh_id idl (default_id env gl.sigma decl) gl in
+      let newenv = push_rel (wantedname,x,typdecl) env in
+      (newenv,(name::idl)))
+    ctxt (pf_env gl , []) in
+  List.rev res 
+
 
 let build_intro_tac id = function
   | None      -> introduction id
@@ -427,12 +447,9 @@ let rec intros_rmove = function
  		    move_to_rhyp destopt;
 		    intros_rmove rest ]
 
-(****************************************************)
-(*            Resolution tactics                    *)
-(****************************************************)
-
-(*  Refinement tactic: unification with the head of the head normal form
- *  of the type of a term. *)
+(**************************)
+(*  Refinement tactics    *)
+(**************************)
 
 let apply_type hdcty argl gl =
   refine (applist (mkCast (Evarutil.mk_new_meta(),DEFAULTcast, hdcty),argl)) gl
@@ -448,6 +465,48 @@ let bring_hyps hyps =
       let f = mkCast (Evarutil.mk_new_meta(),DEFAULTcast, newcl) in
       refine_no_check (mkApp (f, instance_from_named_context hyps)) gl)
 
+(**************************)
+(*     Cut tactics        *)
+(**************************)
+
+let cut c gl =
+  match kind_of_term (hnf_type_of gl c) with
+    | Sort _ ->
+        let id=next_name_away_with_default "H" Anonymous (pf_ids_of_hyps gl) in
+        let t = mkProd (Anonymous, c, pf_concl gl) in
+          tclTHENFIRST
+            (internal_cut_rev id c)
+            (tclTHEN (apply_type t [mkVar id]) (thin [id]))
+            gl
+    | _  -> error "Not a proposition or a type"
+
+let cut_intro t = tclTHENFIRST (cut t) intro
+
+(* let cut_replacing id t tac = 
+  tclTHENS (cut t)
+    [tclORELSE
+	(intro_replacing id) 
+	(tclORELSE (intro_erasing id) (intro_using id));
+     tac (refine_no_check (mkVar id)) ] *)
+
+(* cut_replacing échoue si l'hypothèse à remplacer apparaît dans le
+   but, ou dans une autre hypothèse *)
+let cut_replacing id t tac = 
+  tclTHENS (cut t) [
+      tclORELSE (intro_replacing id) (intro_erasing id); 
+      tac (refine_no_check (mkVar id)) ]
+
+let cut_in_parallel l = 
+  let rec prec = function
+    | [] -> tclIDTAC 
+    | h::t -> tclTHENFIRST (cut h) (prec t)
+  in 
+    prec (List.rev l)
+
+(****************************************************)
+(*            Resolution tactics                    *)
+(****************************************************)
+
 (* Resolution with missing arguments *)
 
 let apply_with_bindings (c,lbind) gl = 
@@ -459,7 +518,7 @@ let apply_with_bindings (c,lbind) gl =
     try
       let n = nb_prod thm_ty - nb_prod (pf_concl gl) in
       if n<0 then error "Apply: theorem has not enough premisses.";
-      let clause = make_clenv_binding_apply gl n (c,thm_ty) lbind in
+      let clause = make_clenv_binding_apply gl (Some n) (c,thm_ty) lbind in
       Clenvtac.res_pf clause gl
     with (Pretype_errors.PretypeError _|RefinerError _|UserError _|Failure _) as exn ->
       let red_thm =
@@ -470,7 +529,7 @@ let apply_with_bindings (c,lbind) gl =
   with (Pretype_errors.PretypeError _|RefinerError _|UserError _|Failure _) ->
     (* Last chance: if the head is a variable, apply may try
        second order unification *)
-    let clause = make_clenv_binding_apply gl (-1) (c,thm_ty0) lbind in 
+    let clause = make_clenv_binding_apply gl None (c,thm_ty0) lbind in 
     Clenvtac.res_pf clause gl
 
 let apply c = apply_with_bindings (c,NoBindings)
@@ -484,6 +543,44 @@ let apply_list = function
 let apply_without_reduce c gl = 
   let clause = mk_clenv_type_of gl c in 
   res_pf clause gl
+
+(* [apply_in hyp c] replaces
+
+   hyp : forall y1, ti -> t             hyp : rho(u)
+   ========================    with     ============  and the =======
+   goal                                 goal                  rho(ti)
+
+   assuming that [c] has type [forall x1..xn -> t' -> u] for some [t]
+   unifiable with [t'] with unifier [rho]
+*)
+
+let find_matching_clause unifier clause =
+  let rec find clause =
+    try unifier clause
+    with exn when catchable_exception exn ->
+    try find (clenv_push_prod clause)
+    with NotExtensibleClause -> failwith "Cannot apply"
+  in find clause
+
+let apply_in_once gls innerclause (d,lbind) =
+  let thm = nf_betaiota (pf_type_of gls d) in
+  let clause = make_clenv_binding gls (d,thm) lbind in
+  let ordered_metas = List.rev (clenv_independent clause) in
+  if ordered_metas = [] then error "Statement without assumptions";
+  let f mv = find_matching_clause (clenv_fchain mv clause) innerclause in
+  try list_try_find f ordered_metas
+  with Failure _ -> error "Unable to unify"
+
+let apply_in id lemmas gls =
+  let t' = pf_get_hyp_typ gls id in
+  let innermostclause = mk_clenv_from_n gls (Some 0) (mkVar id,t') in
+  let clause = List.fold_left (apply_in_once gls) innermostclause lemmas in
+  let new_hyp_prf  = clenv_value clause in
+  let new_hyp_typ  = clenv_type clause in
+  tclTHEN
+    (tclEVARS (evars_of clause.env))
+    (cut_replacing id new_hyp_typ
+      (fun x gls -> refine_no_check new_hyp_prf gls)) gls
 
 (* A useful resolution tactic which, if c:A->B, transforms |- C into
    |- B -> C and |- A
@@ -502,45 +599,14 @@ let apply_without_reduce c gl =
   end.
 *)
 
-(**************************)
-(*     Cut tactics        *)
-(**************************)
-
 let cut_and_apply c gl =
   let goal_constr = pf_concl gl in 
-  match kind_of_term (pf_hnf_constr gl (pf_type_of gl c)) with
-    | Prod (_,c1,c2) when not (dependent (mkRel 1) c2) ->
-	tclTHENLAST
-	  (apply_type (mkProd (Anonymous,c2,goal_constr)) [mkMeta(new_meta())])
-	  (apply_term c [mkMeta (new_meta())]) gl
-    | _ -> error "Imp_elim needs a non-dependent product"
-
-let cut c gl =
-  match kind_of_term (hnf_type_of gl c) with
-    | Sort _ ->
-        let id=next_name_away_with_default "H" Anonymous (pf_ids_of_hyps gl) in
-        let t = mkProd (Anonymous, c, pf_concl gl) in
-        tclTHENFIRST
-          (internal_cut_rev id c)
-          (tclTHEN (apply_type t [mkVar id]) (thin [id]))
-          gl
-    | _  -> error "Not a proposition or a type"
-
-let cut_intro t = tclTHENFIRST (cut t) intro
-
-let cut_replacing id t tac = 
-  tclTHENS (cut t)
-    [tclORELSE
-      (intro_replacing id) 
-      (tclORELSE (intro_erasing id) (intro_using id));
-     tac (refine_no_check (mkVar id)) ]
-
-let cut_in_parallel l = 
-  let rec prec = function
-    | [] -> tclIDTAC 
-    | h::t -> tclTHENFIRST (cut h) (prec t)
-  in 
-  prec (List.rev l)
+    match kind_of_term (pf_hnf_constr gl (pf_type_of gl c)) with
+      | Prod (_,c1,c2) when not (dependent (mkRel 1) c2) ->
+	  tclTHENLAST
+	    (apply_type (mkProd (Anonymous,c2,goal_constr)) [mkMeta(new_meta())])
+	    (apply_term c [mkMeta (new_meta())]) gl
+      | _ -> error "Imp_elim needs a non-dependent product"
 
 (********************************************************************)
 (*               Exact tactics                                      *)
@@ -717,7 +783,7 @@ let general_elim_clause elimtac (c,lbindc) (elimc,lbindelimc) gl =
   let indclause  = make_clenv_binding gl (c,t) lbindc  in
   let elimt      = pf_type_of gl elimc in
   let elimclause = make_clenv_binding gl (elimc,elimt) lbindelimc in 
-  elimtac elimclause indclause gl
+    elimtac elimclause indclause gl
 
 let general_elim c e ?(allow_K=true) =
   general_elim_clause (elimination_clause_scheme allow_K) c e
@@ -747,6 +813,14 @@ let elim (c,lbindc as cx) elim =
 let simplest_elim c = default_elim (c,NoBindings)
 
 (* Elimination in hypothesis *)
+(* Typically, elimclause := (eq_ind ?x ?P ?H ?y ?Heq : ?P ?y)
+              indclause : forall ..., hyps -> a=b    (to take place of ?Heq)
+              id : phi(a)                            (to take place of ?H)
+      and the result is to overwrite id with the proof of phi(b)
+
+   but this generalizes to any elimination scheme with one constructor
+   (e.g. it could replace id:A->B->C by id:C, knowing A/\B)
+*)
 
 let elimination_in_clause_scheme id elimclause indclause gl =
   let (hypmv,indmv) = 
@@ -757,8 +831,7 @@ let elimination_in_clause_scheme id elimclause indclause gl =
   let elimclause'  = clenv_fchain indmv elimclause indclause in 
   let hyp = mkVar id in
   let hyp_typ = pf_type_of gl hyp in
-  let hypclause =
-    mk_clenv_from_n gl (Some 0) (hyp, hyp_typ) in
+  let hypclause = mk_clenv_from_n gl (Some 0) (hyp, hyp_typ) in
   let elimclause'' = clenv_fchain hypmv elimclause' hypclause in  
   let new_hyp_prf  = clenv_value elimclause'' in
   let new_hyp_typ  = clenv_type elimclause'' in
@@ -1145,13 +1218,18 @@ let consume_pattern avoid id gl = function
       (IntroIdentifier (fresh_id avoid id gl), names)
   | pat::names -> (pat,names)
 
+let re_intro_dependent_hypotheses tophyp (lstatus,rstatus) =
+  let newlstatus = (* if some IH has taken place at the top of hyps *)
+    List.map (function (hyp,None) -> (hyp,tophyp) | x -> x) lstatus in
+  tclTHEN
+    (intros_rmove rstatus)
+    (intros_move newlstatus)
+
 type elim_arg_kind = RecArg | IndArg | OtherArg
 
 let induct_discharge statuslists destopt avoid' (avoid,ra) names gl =
   let avoid = avoid @ avoid' in
-  let (lstatus,rstatus) = statuslists in
-  let tophyp = ref None in
-  let rec peel_tac ra names gl = match ra with
+  let rec peel_tac ra names tophyp gl = match ra with
     | (RecArg,recvarname) ::
         (IndArg,hyprecname) :: ra' ->
         let recpat,names = match names with
@@ -1160,36 +1238,35 @@ let induct_discharge statuslists destopt avoid' (avoid,ra) names gl =
 	      (pat, [IntroIdentifier id])
           | _ -> consume_pattern avoid recvarname gl names in
         let hyprec,names = consume_pattern avoid hyprecname gl names in
-	(* This is buggy for intro-or-patterns with different first hypnames *)
-	if !tophyp=None then tophyp := first_name_buggy hyprec;
+        (* IH stays at top: we need to update tophyp *)
+        (* This is buggy for intro-or-patterns with different first hypnames *)
+        (* Would need to pass peel_tac as a continuation of intros_patterns *)
+        (* (or to have hypotheses classified by blocks...) *)
+        let tophyp = if tophyp=None then first_name_buggy hyprec else tophyp in
         tclTHENLIST
 	  [ intros_patterns avoid [] destopt [recpat];
 	    intros_patterns avoid [] None [hyprec];
-	    peel_tac ra' names ] gl
+	    peel_tac ra' names tophyp] gl
     | (IndArg,hyprecname) :: ra' ->
 	(* Rem: does not happen in Coq schemes, only in user-defined schemes *)
         let pat,names = consume_pattern avoid hyprecname gl names in
-	tclTHEN (intros_patterns avoid [] destopt [pat]) (peel_tac ra' names) gl
+	tclTHEN (intros_patterns avoid [] destopt [pat])
+          (peel_tac ra' names tophyp) gl
     | (RecArg,recvarname) :: ra' ->
         let pat,names = consume_pattern avoid recvarname gl names in
-	tclTHEN (intros_patterns avoid [] destopt [pat]) (peel_tac ra' names) gl
+	tclTHEN (intros_patterns avoid [] destopt [pat]) 
+          (peel_tac ra' names tophyp) gl
     | (OtherArg,_) :: ra' ->
         let pat,names = match names with
           | [] -> IntroAnonymous, []
           | pat::names -> pat,names in
-	tclTHEN (intros_patterns avoid [] destopt [pat]) (peel_tac ra' names) gl
+	tclTHEN (intros_patterns avoid [] destopt [pat])
+          (peel_tac ra' names tophyp) gl
     | [] ->
         check_unused_names names;
-        tclIDTAC gl
+        re_intro_dependent_hypotheses tophyp statuslists gl
   in
-  let intros_move lstatus =
-    let newlstatus = (* if some IH has taken place at the top of hyps *)
-      List.map (function (hyp,None) -> (hyp,!tophyp) | x -> x) lstatus in
-    intros_move newlstatus
-  in 
-  tclTHENLIST [ peel_tac ra names;
-		intros_rmove rstatus;
-		intros_move lstatus ] gl
+  peel_tac ra names None gl
 
 (* - le recalcul de indtyp à chaque itération de atomize_one est pour ne pas
      s'embêter à regarder si un letin_tac ne fait pas des
@@ -1648,8 +1725,13 @@ let compute_elim_sig ?elimc elimt =
 	| hiname,Some _,hi -> error "cannot recognize an induction schema"
 	| hiname,None,hi -> 
 	    let hi_ind, hi_args = decompose_app hi in
-	    let hi_is_ind = (* hi est d'un type inductif *)
-	      match kind_of_term hi_ind with | Ind (mind,_)  -> true | _ -> false in
+	    let hi_is_ind = (* hi est d'un type globalisable *)
+	      match kind_of_term hi_ind with
+		| Ind (mind,_)  -> true 
+		| Var _ -> true 
+		| Const _ -> true 
+		| Construct _ -> true 
+		| _ -> false in
 	    let hi_args_enough = (* hi a le bon nbre d'arguments *)
 	      List.length hi_args = List.length params + !res.nargs -1 in
 	    (* FIXME: Ces deux tests ne sont pas suffisants. *)
@@ -1827,6 +1909,7 @@ let recolle_clenv scheme lid elimclause gl =
     elimclause
 
 
+
 (* Unification of the goal and the principle applied to meta variables:
    (elimc ?i ?j ?k...?l). This solves partly meta variables (and may
     produce new ones). Then refine with the resulting term with holes.
@@ -1858,7 +1941,7 @@ let induction_from_context_l isrec elim_info lid names gl =
     + (if scheme.indarg <> None then 1 else 0) in
   (* Number of given induction args must be exact. *)
   if List.length lid <> nargs_indarg_farg + scheme.nparams then 
-    error "not the right number of arguments given to induction scheme";  
+      error "not the right number of arguments given to induction scheme";  
   let env = pf_env gl in
   (* hyp0 is used for re-introducing hyps at the right place afterward.
      We chose the first element of the list of variables on which to

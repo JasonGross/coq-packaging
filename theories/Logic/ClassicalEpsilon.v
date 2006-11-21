@@ -6,9 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalEpsilon.v 8933 2006-06-09 14:08:38Z herbelin $ i*)
+(*i $Id: ClassicalEpsilon.v 9245 2006-10-17 12:53:34Z notin $ i*)
 
-(** *** This file provides classical logic and indefinite description
+(** This file provides classical logic and indefinite description
     (Hilbert's epsilon operator) *)
 
 (** Classical epsilon's operator (i.e. indefinite description) implies
@@ -21,37 +21,39 @@ Require Import ChoiceFacts.
 
 Set Implicit Arguments.
 
-Notation Local "'inhabited' A" := A (at level 200, only parsing).
-
 Axiom constructive_indefinite_description :
   forall (A : Type) (P : A->Prop), 
-  (ex P) -> { x : A | P x }.
+    (exists x, P x) -> { x : A | P x }.
 
 Lemma constructive_definite_description :
   forall (A : Type) (P : A->Prop), 
-  (exists! x : A, P x) -> { x : A | P x }.
+    (exists! x, P x) -> { x : A | P x }.
 Proof.
-intros; apply constructive_indefinite_description; firstorder.
+  intros; apply constructive_indefinite_description; firstorder.
 Qed.
 
 Theorem excluded_middle_informative : forall P:Prop, {P} + {~ P}.
 Proof.
-apply 
-  (constructive_definite_descr_excluded_middle 
-   constructive_definite_description classic).
+  apply 
+    (constructive_definite_descr_excluded_middle 
+      constructive_definite_description classic).
 Qed.
 
 Theorem classical_indefinite_description : 
   forall (A : Type) (P : A->Prop), inhabited A ->
-  { x : A | ex P -> P x }.
+    { x : A | (exists x, P x) -> P x }.
 Proof.
-intros A P i.
-destruct (excluded_middle_informative (exists x, P x)) as [Hex|HnonP].
-  apply constructive_indefinite_description with (P:= fun x => ex P -> P x).
+  intros A P i.
+  destruct (excluded_middle_informative (exists x, P x)) as [Hex|HnonP].
+  apply constructive_indefinite_description 
+    with (P:= fun x => (exists x, P x) -> P x).
   destruct Hex as (x,Hx).
     exists x; intros _; exact Hx.
-    firstorder.
-Qed.
+  assert {x : A | True} as (a,_).
+    apply constructive_indefinite_description with (P := fun _ : A => True).
+    destruct i as (a); firstorder.
+  firstorder.
+Defined.
 
 (** Hilbert's epsilon operator *)
 
@@ -59,10 +61,8 @@ Definition epsilon (A : Type) (i:inhabited A) (P : A->Prop) : A
   := proj1_sig (classical_indefinite_description P i).
 
 Definition epsilon_spec (A : Type) (i:inhabited A) (P : A->Prop) : 
-  (ex P) -> P (epsilon i P)
+  (exists x, P x) -> P (epsilon i P)
   := proj2_sig (classical_indefinite_description P i).
-
-Opaque epsilon.
 
 (** Open question: is classical_indefinite_description constructively
     provable from [relational_choice] and
@@ -72,19 +72,31 @@ Opaque epsilon.
     [classical_indefinite_description] is provable (see
     [relative_non_contradiction_of_indefinite_desc]). *)
 
-(** Remark: we use [ex P] rather than [exists x, P x] (which is [ex
-    (fun x => P x)] to ease unification *)
+(** A proof that if [P] is inhabited, [epsilon a P] does not depend on
+    the actual proof that the domain of [P] is inhabited
+    (proof idea kindly provided by Pierre Castéran) *)
+
+Lemma epsilon_inh_irrelevance : 
+   forall (A:Type) (i j : inhabited A) (P:A->Prop),
+   (exists x, P x) -> epsilon i P = epsilon j P.
+Proof.
+ intros.
+ unfold epsilon, classical_indefinite_description.
+ destruct (excluded_middle_informative (exists x : A, P x)) as [|[]]; trivial.
+Qed.
+
+Opaque epsilon.
 
 (** *** Weaker lemmas (compatibility lemmas) *)
 
 Theorem choice :
- forall (A B : Type) (R : A->B->Prop),
-   (forall x : A, exists y : B, R x y) ->
-   (exists f : A->B, forall x : A, R x (f x)).
+  forall (A B : Type) (R : A->B->Prop),
+    (forall x : A, exists y : B, R x y) ->
+    (exists f : A->B, forall x : A, R x (f x)).
 Proof.
-intros A B R H.
-exists (fun x => proj1_sig (constructive_indefinite_description (H x))).
-intro x.
-apply (proj2_sig (constructive_indefinite_description  (H x))).
+  intros A B R H.
+  exists (fun x => proj1_sig (constructive_indefinite_description _ (H x))).
+  intro x.
+  apply (proj2_sig (constructive_indefinite_description _ (H x))).
 Qed.
 

@@ -1,7 +1,15 @@
+(************************************************************************)
+(*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
+(* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
+(*   \VV/  **************************************************************)
+(*    //   *      This file is distributed under the terms of the       *)
+(*         *       GNU Lesser General Public License Version 2.1        *)
+(************************************************************************)
+
 Require Import Setoid.
- Set Implicit Arguments.
+Set Implicit Arguments.
 
-
+Module RingSyntax.
 Reserved Notation "x ?=! y" (at level 70, no associativity).
 Reserved Notation "x +! y " (at level 50, left associativity).
 Reserved Notation "x -! y" (at level 50, left associativity).
@@ -11,14 +19,13 @@ Reserved Notation "-! x" (at level 35, right associativity).
 Reserved Notation "[ x ]" (at level 1, no associativity).
 
 Reserved Notation "x ?== y" (at level 70, no associativity).
-Reserved Notation "x ++ y " (at level 50, left associativity).
 Reserved Notation "x -- y" (at level 50, left associativity).
 Reserved Notation "x ** y" (at level 40, left associativity).
 Reserved Notation "-- x" (at level 35, right associativity).
 
 Reserved Notation "x == y" (at level 70, no associativity).
-
-
+End RingSyntax.
+Import RingSyntax.
 
 Section DEFINITIONS.
  Variable R : Type.
@@ -32,24 +39,24 @@ Section DEFINITIONS.
  (** Semi Ring *)
  Record semi_ring_theory : Prop := mk_srt {
     SRadd_0_l   : forall n, 0 + n == n;
-    SRadd_sym   : forall n m, n + m == m + n ;
+    SRadd_comm   : forall n m, n + m == m + n ;
     SRadd_assoc : forall n m p, n + (m + p) == (n + m) + p;
     SRmul_1_l   : forall n, 1*n == n;
     SRmul_0_l   : forall n, 0*n == 0; 
-    SRmul_sym   : forall n m, n*m == m*n;
+    SRmul_comm   : forall n m, n*m == m*n;
     SRmul_assoc : forall n m p, n*(m*p) == (n*m)*p;
     SRdistr_l   : forall n m p, (n + m)*p == n*p + m*p
   }.
   
  (** Almost Ring *)
-(*Almost ring are no ring : Ropp_def is missi**)
+(*Almost ring are no ring : Ropp_def is missing **)
  Record almost_ring_theory : Prop := mk_art {
     ARadd_0_l   : forall x, 0 + x == x;
-    ARadd_sym   : forall x y, x + y == y + x;
+    ARadd_comm   : forall x y, x + y == y + x;
     ARadd_assoc : forall x y z, x + (y + z) == (x + y) + z;
     ARmul_1_l   : forall x, 1 * x == x;
     ARmul_0_l   : forall x, 0 * x == 0;
-    ARmul_sym   : forall x y, x * y == y * x;
+    ARmul_comm   : forall x y, x * y == y * x;
     ARmul_assoc : forall x y z, x * (y * z) == (x * y) * z;
     ARdistr_l   : forall x y z, (x + y) * z == (x * z) + (y * z);
     ARopp_mul_l : forall x y, -(x * y) == -x * y;
@@ -60,10 +67,10 @@ Section DEFINITIONS.
  (** Ring *)
  Record ring_theory : Prop := mk_rt {
     Radd_0_l    : forall x, 0 + x == x;
-    Radd_sym    : forall x y, x + y == y + x;
+    Radd_comm    : forall x y, x + y == y + x;
     Radd_assoc  : forall x y z, x + (y + z) == (x + y) + z;
     Rmul_1_l    : forall x, 1 * x == x;
-    Rmul_sym    : forall x y, x * y == y * x;
+    Rmul_comm    : forall x y, x * y == y * x;
     Rmul_assoc  : forall x y z, x * (y * z) == (x * y) * z;
     Rdistr_l    : forall x y z, (x + y) * z == (x * z) + (y * z);
     Rsub_def    : forall x y, x - y == x + -y;
@@ -193,9 +200,9 @@ Section ALMOST_RING.
 
  Lemma SRth_ARth : almost_ring_theory 0 1 radd rmul SRsub SRopp req.
  Proof (mk_art 0 1 radd rmul SRsub SRopp req
-    (SRadd_0_l SRth) (SRadd_sym SRth) (SRadd_assoc SRth)
+    (SRadd_0_l SRth) (SRadd_comm SRth) (SRadd_assoc SRth)
     (SRmul_1_l SRth) (SRmul_0_l SRth)
-    (SRmul_sym SRth) (SRmul_assoc SRth) (SRdistr_l SRth)
+    (SRmul_comm SRth) (SRmul_assoc SRth) (SRdistr_l SRth)
     SRopp_mul_l SRopp_add SRsub_def).
  
  (** Identity morphism for semi-ring equipped with their almost-ring structure*)
@@ -246,17 +253,17 @@ Section ALMOST_RING.
 
   rewrite (Rdistr_l Rth);rewrite (Rmul_1_l Rth).
   rewrite <- (Radd_assoc Rth); rewrite (Ropp_def Rth).
-  rewrite (Radd_sym Rth); rewrite (Radd_0_l Rth);sreflexivity.
+  rewrite (Radd_comm Rth); rewrite (Radd_0_l Rth);sreflexivity.
  Qed.
 
  Lemma Ropp_mul_l : forall x y, -(x * y) == -x * y.
  Proof.
   intros x y;rewrite <-(Radd_0_l Rth (- x * y)).
-  rewrite (Radd_sym Rth).
+  rewrite (Radd_comm Rth).
   rewrite <-(Ropp_def Rth (x*y)).
   rewrite (Radd_assoc Rth).
   rewrite <- (Rdistr_l Rth).
-  rewrite (Rth.(Radd_sym) (-x));rewrite (Ropp_def Rth).
+  rewrite (Rth.(Radd_comm) (-x));rewrite (Ropp_def Rth).
   rewrite Rmul_0_l;rewrite (Radd_0_l Rth);sreflexivity.
  Qed.
  
@@ -266,17 +273,17 @@ Section ALMOST_RING.
   rewrite <- ((Ropp_def Rth) x).
   rewrite <- ((Radd_0_l Rth) (x + - x + - (x + y))).
   rewrite <- ((Ropp_def Rth) y).
-  rewrite ((Radd_sym Rth) x).
-  rewrite ((Radd_sym Rth) y).
+  rewrite ((Radd_comm Rth) x).
+  rewrite ((Radd_comm Rth) y).
   rewrite <- ((Radd_assoc Rth) (-y)).
   rewrite <- ((Radd_assoc Rth) (- x)).
   rewrite ((Radd_assoc Rth)  y).
-  rewrite ((Radd_sym Rth) y).
+  rewrite ((Radd_comm Rth) y).
   rewrite <- ((Radd_assoc Rth)  (- x)).
   rewrite ((Radd_assoc Rth) y).
-  rewrite ((Radd_sym Rth) y);rewrite (Ropp_def Rth).
-  rewrite ((Radd_sym Rth) (-x) 0);rewrite (Radd_0_l Rth).
-  apply (Radd_sym Rth).
+  rewrite ((Radd_comm Rth) y);rewrite (Ropp_def Rth).
+  rewrite ((Radd_comm Rth) (-x) 0);rewrite (Radd_0_l Rth).
+  apply (Radd_comm Rth).
  Qed.
  
  Lemma Ropp_opp : forall x, - -x == x.
@@ -284,13 +291,13 @@ Section ALMOST_RING.
   intros x; rewrite <- (Radd_0_l Rth (- -x)).
   rewrite <- (Ropp_def Rth x).
   rewrite <- (Radd_assoc Rth); rewrite (Ropp_def Rth).
-  rewrite ((Radd_sym Rth) x);apply (Radd_0_l Rth).
+  rewrite ((Radd_comm Rth) x);apply (Radd_0_l Rth).
  Qed.
 
  Lemma  Rth_ARth : almost_ring_theory 0 1 radd rmul rsub ropp req.
  Proof
-  (mk_art 0 1 radd rmul rsub ropp req (Radd_0_l Rth) (Radd_sym Rth) (Radd_assoc Rth)
-    (Rmul_1_l Rth) Rmul_0_l (Rmul_sym Rth) (Rmul_assoc Rth) (Rdistr_l Rth)
+  (mk_art 0 1 radd rmul rsub ropp req (Radd_0_l Rth) (Radd_comm Rth) (Radd_assoc Rth)
+    (Rmul_1_l Rth) Rmul_0_l (Rmul_comm Rth) (Rmul_assoc Rth) (Rdistr_l Rth)
     Ropp_mul_l Ropp_add (Rsub_def Rth)).
 
  (** Every semi morphism between two rings is a morphism*) 
@@ -315,12 +322,12 @@ Section ALMOST_RING.
  Proof.
   intros x;rewrite <-  (Rth.(Radd_0_l) [-!x]).
   rewrite <- ((Ropp_def Rth) [x]).
-  rewrite ((Radd_sym Rth) [x]).
+  rewrite ((Radd_comm Rth) [x]).
   rewrite <- (Radd_assoc Rth).
   rewrite <- (Smorph_add Smorph).
   rewrite (Ropp_def Cth).
   rewrite (Smorph0 Smorph).
-  rewrite (Radd_sym Rth (-[x])).
+  rewrite (Radd_comm Rth (-[x])).
   apply (Radd_0_l Rth);sreflexivity.
  Qed. 
 
@@ -343,6 +350,12 @@ Section ALMOST_RING.
  (** Usefull lemmas on almost ring *)
  Variable ARth : almost_ring_theory 0 1 radd rmul rsub ropp req.
 
+ Lemma ARth_SRth : semi_ring_theory 0 1 radd rmul req.
+Proof.
+elim ARth; intros.
+constructor; trivial.
+Qed.
+
  Lemma ARsub_ext :
       forall x1 x2, x1 == x2 -> forall y1 y2, y1 == y2 -> x1 - y1 == x2 - y2.
  Proof.
@@ -358,15 +371,15 @@ Section ALMOST_RING.
  Ltac mrewrite :=
    repeat first
      [ rewrite (ARadd_0_l ARth)
-     | rewrite <- ((ARadd_sym ARth) 0)
+     | rewrite <- ((ARadd_comm ARth) 0)
      | rewrite (ARmul_1_l ARth)
-     | rewrite <- ((ARmul_sym ARth) 1)
+     | rewrite <- ((ARmul_comm ARth) 1)
      | rewrite (ARmul_0_l ARth)
-     | rewrite <- ((ARmul_sym ARth) 0)
+     | rewrite <- ((ARmul_comm ARth) 0)
      | rewrite (ARdistr_l ARth)
      | sreflexivity
      | match goal with
-       | |- context [?z * (?x + ?y)] => rewrite ((ARmul_sym ARth) z (x+y))
+       | |- context [?z * (?x + ?y)] => rewrite ((ARmul_comm ARth) z (x+y))
        end].
  
  Lemma ARadd_0_r : forall x, (x + 0) == x.
@@ -381,37 +394,37 @@ Section ALMOST_RING.
  Lemma ARdistr_r : forall x y z, z * (x + y) == z*x + z*y.
  Proof. 
   intros;mrewrite. 
-  repeat rewrite (ARth.(ARmul_sym) z);sreflexivity.
+  repeat rewrite (ARth.(ARmul_comm) z);sreflexivity.
  Qed.
 
  Lemma ARadd_assoc1 : forall x y z, (x + y) + z == (y + z) + x.
  Proof.
   intros;rewrite <-(ARth.(ARadd_assoc) x).
-  rewrite (ARth.(ARadd_sym) x);sreflexivity.
+  rewrite (ARth.(ARadd_comm) x);sreflexivity.
  Qed.
 
  Lemma ARadd_assoc2 : forall x y z, (y + x) + z == (y + z) + x.
  Proof.
   intros; repeat rewrite <- (ARadd_assoc ARth);
-   rewrite ((ARadd_sym ARth) x); sreflexivity.
+   rewrite ((ARadd_comm ARth) x); sreflexivity.
  Qed.
 
  Lemma ARmul_assoc1 : forall x y z, (x * y) * z == (y * z) * x.
  Proof.
   intros;rewrite <-((ARmul_assoc ARth) x).
-  rewrite ((ARmul_sym ARth) x);sreflexivity.
+  rewrite ((ARmul_comm ARth) x);sreflexivity.
  Qed.
  
  Lemma ARmul_assoc2 : forall x y z, (y * x) * z == (y * z) * x.
  Proof.
   intros; repeat rewrite <- (ARmul_assoc ARth);
-   rewrite ((ARmul_sym ARth) x); sreflexivity.
+   rewrite ((ARmul_comm ARth) x); sreflexivity.
  Qed.
 
  Lemma ARopp_mul_r : forall x y,  - (x * y) == x * -y.
  Proof.
-  intros;rewrite ((ARmul_sym ARth) x y);
-   rewrite (ARopp_mul_l ARth); apply (ARmul_sym ARth).
+  intros;rewrite ((ARmul_comm ARth) x y);
+   rewrite (ARopp_mul_l ARth); apply (ARmul_comm ARth).
  Qed.
 
  Lemma ARopp_zero : -0 == 0.
@@ -420,7 +433,36 @@ Section ALMOST_RING.
   repeat rewrite ARmul_0_r; sreflexivity.
  Qed.
 
+
+
 End ALMOST_RING.
+
+Section AddRing.
+
+ Variable R : Type.
+ Variable (rO rI : R) (radd rmul rsub: R->R->R) (ropp : R -> R).
+ Variable req : R -> R -> Prop.
+
+Inductive ring_kind : Type :=
+| Abstract
+| Computational
+    (R:Type)
+    (req : R -> R -> Prop)
+    (reqb : R -> R -> bool)
+    (_ : forall x y, (reqb x y) = true -> req x y)
+| Morphism
+    (R : Type)
+    (rO rI : R) (radd rmul rsub: R->R->R) (ropp : R -> R)
+    (req : R -> R -> Prop)
+    (C : Type)
+    (cO cI : C) (cadd cmul csub : C->C->C) (copp : C->C)
+    (ceqb : C->C->bool)
+    phi
+    (_ : ring_morph rO rI radd rmul rsub ropp req
+                    cO cI cadd cmul csub copp ceqb phi).
+
+End AddRing.
+
 
 (** Some simplification tactics*)
 Ltac gen_reflexivity Rsth := apply (Seq_refl _ _ Rsth).

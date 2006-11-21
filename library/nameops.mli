@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: nameops.mli 6616 2005-01-21 17:18:23Z herbelin $ i*)
+(*i $Id: nameops.mli 9225 2006-10-09 15:59:23Z herbelin $ i*)
 
 open Names
 
@@ -38,6 +38,8 @@ val out_name : name -> identifier
 val name_fold : (identifier -> 'a -> 'a) -> name -> 'a -> 'a
 val name_cons : name -> identifier list -> identifier list
 val name_app : (identifier -> identifier) -> name -> name
+val name_fold_map : ('a -> identifier -> 'a * identifier) -> 'a -> name -> 'a * name
+
 
 val pr_lab : label -> Pp.std_ppcmds
 

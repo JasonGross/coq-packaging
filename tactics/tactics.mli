@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tactics.mli 8878 2006-05-30 16:44:25Z herbelin $ i*)
+(*i $Id: tactics.mli 9266 2006-10-24 09:03:15Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -58,6 +58,7 @@ val cofix           : identifier option -> tactic
 (*s Introduction tactics. *)
 
 val fresh_id : identifier list -> identifier -> goal sigma -> identifier
+val find_intro_names : rel_context -> goal sigma -> identifier list
 
 val intro                : tactic
 val introf               : tactic
@@ -167,6 +168,8 @@ val apply_list            : constr list -> tactic
 val apply_with_bindings   : constr with_bindings -> tactic
 
 val cut_and_apply         : constr -> tactic
+
+val apply_in              : identifier -> constr with_bindings list -> tactic
 
 (*s Elimination tactics. *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacticals.ml 8878 2006-05-30 16:44:25Z herbelin $ *)
+(* $Id: tacticals.ml 9211 2006-10-05 12:38:33Z letouzey $ *)
 
 open Pp
 open Util
@@ -68,6 +68,7 @@ let tclTHENTRY       = tclTHENTRY
 let tclIFTHENELSE    = tclIFTHENELSE
 let tclIFTHENSELSE   = tclIFTHENSELSE
 let tclIFTHENSVELSE   = tclIFTHENSVELSE
+let tclIFTHENTRYELSEMUST = tclIFTHENTRYELSEMUST
 
 let unTAC            = unTAC
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: preferences.mli 6621 2005-01-21 17:24:37Z herbelin $ i*)
+(*i $Id: preferences.mli 9240 2006-10-13 17:51:11Z notin $ i*)
 
 type pref =
     {
@@ -52,6 +52,8 @@ type pref =
       mutable use_utf8_notation : bool;
 *)
       mutable auto_complete : bool;
+      mutable stop_before : bool;
+      mutable lax_syntax : bool;
     }
 
 val save_pref : unit -> unit

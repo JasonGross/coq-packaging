@@ -44,25 +44,6 @@ let pr_with_bindings prc prlc (c,bl) =
 let pr_constr_with_binding prc (c,bl) :  Pp.std_ppcmds = 
   pr_with_bindings prc prc  (c,bl)
 
-let pr_elim_scheme el = 
-  let env = Global.env () in 
-  let msg = str "params := " ++ Printer.pr_rel_context env el.params in 
-  let env = Environ.push_rel_context el.params env in 
-  let msg = msg ++ fnl () ++ str "predicates := "++ Printer.pr_rel_context env el.predicates in 
-  let env = Environ.push_rel_context el.predicates env in 
-  let msg = msg ++ fnl () ++ str "branches := " ++ Printer.pr_rel_context env el.branches in 
-  let env = Environ.push_rel_context el.branches env in 
-  let msg = msg ++ fnl () ++ str "args := " ++ Printer.pr_rel_context env el.args in 
-  let env = Environ.push_rel_context el.args env in 
-  let msg = 
-    Util.option_fold_right
-      (fun o msg -> msg ++ fnl () ++ str "indarg := " ++ Printer.pr_rel_context env [o]) 
-      el.indarg
-      msg
-  in 
-  let env = Util.option_fold_right (fun o env -> Environ.push_rel_context [o] env) el.indarg env in 
-  msg ++ fnl () ++ str "concl := " ++ Printer.pr_lconstr_env env el.concl
-
 (* The local debuging mechanism *)
 let msgnl = Pp.msgnl
 
@@ -120,7 +101,7 @@ let id_to_constr id =
 
 let generate_type g_to_f f graph i = 
   (*i we deduce the number of arguments of the function and its returned type from the graph i*)
-  let graph_arity = Inductive.type_of_inductive (Global.lookup_inductive (destInd graph))  in 
+  let graph_arity = Inductive.type_of_inductive (Global.env()) (Global.lookup_inductive (destInd graph))  in 
   let ctxt,_ = decompose_prod_assum graph_arity in 
   let fun_ctxt,res_type = 
     match ctxt with 
@@ -443,17 +424,17 @@ let prove_fun_correct functional_induction funs_constr graphs_constr schemes lem
       let params_bindings,avoid =
 	List.fold_left2
 	  (fun (bindings,avoid) (x,_,_) p ->
-	     let id = Termops.next_global_ident_away false (Nameops.out_name x) avoid in
+	     let id = Nameops.next_ident_away (Nameops.out_name x) avoid in
 	     (dummy_loc,Rawterm.NamedHyp id,p)::bindings,id::avoid
 	  )
-	  ([],[])
+	  ([],pf_ids_of_hyps g)
 	  princ_infos.params
 	  (List.rev params)
       in
       let lemmas_bindings =
 	List.rev (fst  (List.fold_left2
 	  (fun (bindings,avoid) (x,_,_) p ->
-	     let id = Termops.next_global_ident_away false (Nameops.out_name x) avoid in
+	     let id = Nameops.next_ident_away (Nameops.out_name x) avoid in 
 	     (dummy_loc,Rawterm.NamedHyp id,nf_zeta p)::bindings,id::avoid)
 	  ([],avoid)
 	  princ_infos.predicates
@@ -471,7 +452,7 @@ let prove_fun_correct functional_induction funs_constr graphs_constr schemes lem
 	  (observe_tac "functional_induction" (
 	     fun g -> 
 	       observe
-		 (str "princ" ++ pr_constr_with_binding (Printer.pr_lconstr_env (pf_env g))  (mkVar principle_id,bindings));
+		 (pr_constr_with_binding (Printer.pr_lconstr_env (pf_env g))  (mkVar principle_id,bindings));
 	       functional_induction  false (applist(funs_constr.(i),List.map mkVar args_names))
 		 (Some (mkVar principle_id,bindings))
 		 pat g
@@ -492,6 +473,31 @@ let generalize_depedent_of x hyp g =
     )
     (pf_hyps g)
     g
+
+
+
+
+
+
+let rec reflexivity_with_destruct_cases g = 
+  let destruct_case () = 
+    try 
+      match kind_of_term (snd (destApp (pf_concl g))).(2) with 
+	| Case(_,_,v,_) -> 
+	    tclTHENSEQ[
+	      h_case (v,Rawterm.NoBindings);
+	      intros;
+	      observe_tac "reflexivity_with_destruct_cases" reflexivity_with_destruct_cases 
+	    ]
+	| _ -> reflexivity
+    with _ -> reflexivity
+  in
+  tclFIRST
+    [ reflexivity;
+      destruct_case ()
+    ]
+    g
+
 
 (* [prove_fun_complete funs graphs schemes lemmas_types_infos i] 
    is the tactic used to prove completness lemma. 
@@ -567,11 +573,12 @@ let prove_fun_complete funcs graphs schemes lemmas_types_infos i : tactic =
     *)
     let rewrite_tac j ids : tactic = 
       let graph_def = graphs.(j) in 
-      if Rtree.is_infinite graph_def.mind_recargs
+      let infos =  try find_Function_infos (destConst funcs.(j)) with Not_found ->  error "No graph found" in 
+      if infos.is_general ||  Rtree.is_infinite graph_def.mind_recargs
       then 
 	let eq_lemma = 
-	  try out_some (find_Function_infos (destConst funcs.(j))).equation_lemma
-	  with Failure "out_some" | Not_found -> anomaly "Cannot find equation lemma"
+	  try out_some (infos).equation_lemma
+	  with Failure "out_some"  -> anomaly "Cannot find equation lemma"
 	in 
 	tclTHENSEQ[
 	  tclMAP h_intro ids;
@@ -677,8 +684,8 @@ let prove_fun_complete funcs graphs schemes lemmas_types_infos i : tactic =
         observe_tac "rewrite_tac" (rewrite_tac this_ind_number this_branche_ids);
 	(* introduce hypothesis with some rewrite *)
         (intros_with_rewrite);
-	(* The proof is complete *)
-        observe_tac "reflexivity" (reflexivity)
+	(* The proof is (almost) complete *)
+        observe_tac "reflexivity" (reflexivity_with_destruct_cases)
       ]
 	g
     in
@@ -758,7 +765,7 @@ let derive_correctness make_scheme functional_induction (funs: constant list) (g
 	   (Decl_kinds.Global,(Decl_kinds.Proof Decl_kinds.Theorem))
 	   (fst lemmas_types_infos.(i))
 	   (fun _ _ -> ());
-	 Pfedit.by (observe_tac ("procve correctness ("^(string_of_id f_id)^")") (proving_tac i));
+	 Pfedit.by (observe_tac ("prove correctness ("^(string_of_id f_id)^")") (proving_tac i));
 	 do_save ();
 	 let finfo = find_Function_infos f_as_constant in 
 	 update_Function
@@ -968,10 +975,17 @@ let invfun qhyp f g =
 			 functional_inversion kn hid  f2 f_correct g
 		       with
 			 | Failure "" -> 
-			     errorlabstrm "" (Ppconstr.pr_id hid ++ str " must contain at leat one function")
+			     errorlabstrm "" (str "Hypothesis" ++ Ppconstr.pr_id hid ++ str " must contain at leat one Function")
 			 | Failure "out_some"  ->  
-			     error "Cannot use equivalence with graph for any side of equality"
-			 | Not_found -> error "No graph found for any side of equality" 
+			     if do_observe () 
+			     then
+			       error "Cannot use equivalence with graph for any side of the equality"
+			     else errorlabstrm "" (str "Cannot find inversion information for hypothesis " ++ Ppconstr.pr_id hid)
+			 | Not_found -> 
+			     if do_observe () 
+			     then
+			       error "No graph found for any side of equality" 
+			     else errorlabstrm "" (str "Cannot find inversion information for hypothesis " ++ Ppconstr.pr_id hid)
 		   end
 	       | _ -> errorlabstrm "" (Ppconstr.pr_id hid ++ str " must be an equality ")
 	  )

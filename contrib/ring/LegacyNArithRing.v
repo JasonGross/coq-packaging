@@ -6,11 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: NArithRing.v 6295 2004-11-12 16:40:39Z gregoire $ *)
+(* $Id: LegacyNArithRing.v 9179 2006-09-26 12:13:06Z barras $ *)
 
 (* Instantiation of the Ring tactic for the binary natural numbers *)
 
-Require Export Ring.
+Require Import Bool.
+Require Export LegacyRing.
 Require Export ZArith_base.
 Require Import NArith.
 Require Import Eqdep_dec.
@@ -37,8 +38,9 @@ Definition NTheory : Semi_Ring_Theory Nplus Nmult 1%N 0%N Neq.
     apply Nmult_1_l.
     apply Nmult_0_l.
     apply Nmult_plus_distr_r.
-    apply Nplus_reg_l.
+(*    apply Nplus_reg_l.*)
     apply Neq_prop.
 Qed.
 
-Add Semi Ring N Nplus Nmult 1%N 0%N Neq NTheory [ Npos 0%N xO xI 1%positive ].
+Add Legacy Semi Ring
+  N Nplus Nmult 1%N 0%N Neq NTheory [ Npos 0%N xO xI 1%positive ].

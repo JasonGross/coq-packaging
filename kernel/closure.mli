@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: closure.mli 8793 2006-05-05 17:41:41Z barras $ i*)
+(*i $Id: closure.mli 9215 2006-10-05 15:40:31Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -179,8 +179,9 @@ val whd_stack :
 (* [unfold_reference] unfolds references in a [fconstr] *)
 val unfold_reference : clos_infos -> table_key -> fconstr option
 
-(* [mind_equiv] checks whether two mutual inductives are intentionally equal *)
-val mind_equiv : clos_infos -> mutual_inductive -> mutual_inductive -> bool
+(* [mind_equiv] checks whether two inductive types are intentionally equal *)
+val mind_equiv : env -> inductive -> inductive -> bool
+val mind_equiv_infos : clos_infos -> inductive -> inductive -> bool
 
 (************************************************************************)
 (*i This is for lazy debug *)

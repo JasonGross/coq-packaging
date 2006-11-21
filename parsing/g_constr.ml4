@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_constr.ml4 9043 2006-07-12 10:06:40Z herbelin $ *)
+(* $Id: g_constr.ml4 9226 2006-10-09 16:11:01Z herbelin $ *)
 
 open Pcoq
 open Constr
@@ -155,8 +155,14 @@ GEXTEND Gram
     [ "200" RIGHTA
       [ c = binder_constr -> c ]
     | "100" RIGHTA
-      [ c1 = operconstr; ":"; c2 = binder_constr -> CCast(loc,c1, CastConv DEFAULTcast,c2)
-      | c1 = operconstr; ":"; c2 = SELF -> CCast(loc,c1,CastConv DEFAULTcast,c2) ]
+      [ c1 = operconstr; "<:"; c2 = binder_constr -> 
+                 CCast(loc,c1, CastConv VMcast,c2)
+      | c1 = operconstr; "<:"; c2 = SELF -> 
+                 CCast(loc,c1, CastConv VMcast,c2)
+      | c1 = operconstr; ":";c2 = binder_constr -> 
+                 CCast(loc,c1, CastConv DEFAULTcast,c2)
+      | c1 = operconstr; ":"; c2 = SELF -> 
+                 CCast(loc,c1, CastConv DEFAULTcast,c2) ]
     | "99" RIGHTA [ ]
     | "90" RIGHTA
       [ c1 = operconstr; "->"; c2 = binder_constr -> CArrow(loc,c1,c2)
@@ -287,7 +293,7 @@ GEXTEND Gram
         (match p with
           | CPatAtom (_, Some r) -> CPatCstr (loc, r, lp)
           | _ -> Util.user_err_loc 
-              (cases_pattern_loc p, "compound_pattern",
+              (cases_pattern_expr_loc p, "compound_pattern",
                Pp.str "Constructor expected"))
       | p = pattern; "as"; id = ident ->
 	  CPatAlias (loc, p, id) ]

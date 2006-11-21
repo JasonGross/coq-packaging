@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: termops.mli 8845 2006-05-23 07:41:58Z herbelin $ i*)
+(*i $Id: termops.mli 9314 2006-10-29 20:11:08Z herbelin $ i*)
 
 open Util
 open Pp
@@ -203,3 +203,11 @@ val global_vars_set_of_decl : env -> named_declaration -> Idset.t
 
 (* Test if an identifier is the basename of a global reference *)
 val is_section_variable : identifier -> bool
+
+val isGlobalRef : constr -> bool
+
+(* Combinators on judgments *)
+
+val on_judgment       : (types -> types) -> unsafe_judgment -> unsafe_judgment
+val on_judgment_value : (types -> types) -> unsafe_judgment -> unsafe_judgment
+val on_judgment_type  : (types -> types) -> unsafe_judgment -> unsafe_judgment

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extract_env.ml 6328 2004-11-18 17:31:41Z sacerdot $ i*)
+(*i $Id: extract_env.ml 9310 2006-10-28 19:35:09Z herbelin $ i*)
 
 open Term
 open Declarations
@@ -74,7 +74,8 @@ let visit_ref v r =
 exception Impossible
 
 let check_arity env cb = 
-  if Reduction.is_arity env cb.const_type then raise Impossible
+  let t = Typeops.type_of_constant_type env cb.const_type in
+  if Reduction.is_arity env t then raise Impossible
 
 let check_fix env cb i = 
   match cb.const_body with 

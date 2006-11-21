@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: subtac_pretyping.ml 8889 2006-06-01 20:23:56Z msozeau $ *)
+(* $Id: subtac_pretyping.ml 9326 2006-10-31 12:57:26Z msozeau $ *)
 
 open Global
 open Pp
@@ -151,3 +151,13 @@ let subtac_process env isevars id l c tycon =
   let evm = non_instanciated_map env isevars in
   let _ = try trace (str "Non instanciated evars map: " ++ Evd.pr_evar_map evm)  with _ -> () in
     evm, fullcoqc, fullctyp
+
+open Subtac_obligations
+
+let subtac_proof env isevars id l c tycon =
+  let nc = named_context env in
+  let nc_len = named_context_length nc in
+  let evm, coqc, coqt = subtac_process env isevars id l c tycon in
+  let evars, def = Eterm.eterm_obligations id nc_len evm coqc (Some coqt) in
+    trace (str "Adding to obligations list");
+    add_entry id def coqt evars

@@ -6,20 +6,20 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i      $Id: SplitAbsolu.v 5920 2004-07-16 20:01:26Z herbelin $       i*)
+(*i      $Id: SplitAbsolu.v 9245 2006-10-17 12:53:34Z notin $       i*)
 
 Require Import Rbasic_fun.
 
 Ltac split_case_Rabs :=
   match goal with
-  |  |- context [(Rcase_abs ?X1)] =>
+    |  |- context [(Rcase_abs ?X1)] =>
       case (Rcase_abs X1); try split_case_Rabs
   end.
 
 
 Ltac split_Rabs :=
   match goal with
-  | id:context [(Rabs _)] |- _ => generalize id; clear id; try split_Rabs
-  |  |- context [(Rabs ?X1)] =>
+    | id:context [(Rabs _)] |- _ => generalize id; clear id; try split_Rabs
+    |  |- context [(Rabs ?X1)] =>
       unfold Rabs in |- *; try split_case_Rabs; intros
   end.

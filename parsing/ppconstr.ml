@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppconstr.ml 8997 2006-07-03 16:40:20Z herbelin $ *)      
+(* $Id: ppconstr.ml 9304 2006-10-28 09:58:16Z herbelin $ *)      
 
 (*i*)
 open Util
@@ -95,8 +95,6 @@ let pr_patnotation = pr_notation_gen decode_patlist_value
 let pr_delimiters key strm =
   strm ++ str ("%"^key)
 
-let surround p = hov 1 (str"(" ++ p ++ str")")
-
 let pr_located pr ((b,e),x) =
   if Options.do_translate() && (b,e)<>dummy_loc then
     let (b,e) = unloc (b,e) in
@@ -115,12 +113,14 @@ let pr_optc pr = function
   | None -> mt ()
   | Some x -> pr_sep_com spc pr x
 
+let pr_in_comment pr x = str "(* " ++ pr x ++ str " *)"
+
 let pr_universe = Univ.pr_uni 
 
 let pr_rawsort = function
   | RProp Term.Null -> str "Prop"
   | RProp Term.Pos -> str "Set"
-  | RType u -> str "Type" ++ pr_opt pr_universe u
+  | RType u -> hov 0 (str "Type" ++ pr_opt (pr_in_comment pr_universe) u)
 
 let pr_id = pr_id
 let pr_name = pr_name
@@ -180,7 +180,7 @@ let rec pr_patt sep inh p =
   | CPatPrim (_,p) -> pr_prim_token p, latom
   | CPatDelimiters (_,k,p) -> pr_delimiters k (pr_patt mt lsimple p), 1
   in
-  let loc = cases_pattern_loc p in
+  let loc = cases_pattern_expr_loc p in
   pr_with_comments loc
     (sep() ++ if prec_less prec inh then strm else surround strm)
 
@@ -566,8 +566,9 @@ let rec pr sep inherited a =
   | CEvar (_,n) -> str (Evd.string_of_existential n), latom
   | CPatVar (_,(_,p)) -> str "?" ++ pr_patvar p, latom
   | CSort (_,s) -> pr_rawsort s, latom
-  | CCast (_,a,_,b) ->
-      hv 0 (pr mt (lcast,L) a ++ cut () ++ str ":" ++ pr mt (-lcast,E) b),
+  | CCast (_,a,k,b) ->
+      let s = match k with CastConv  VMcast -> "<:" | _ -> ":" in
+      hv 0 (pr mt (lcast,L) a ++ cut () ++ str s ++ pr mt (-lcast,E) b),
       lcast
   | CNotation (_,"( _ )",[t]) ->
       pr (fun()->str"(") (max_int,L) t ++ str")", latom

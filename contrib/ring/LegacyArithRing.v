@@ -6,11 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ArithRing.v 6295 2004-11-12 16:40:39Z gregoire $ *)
+(* $Id: LegacyArithRing.v 9179 2006-09-26 12:13:06Z barras $ *)
 
 (* Instantiation of the Ring tactic for the naturals of Arith $*)
 
-Require Export Ring.
+Require Import Bool.
+Require Export LegacyRing.
 Require Export Arith.
 Require Import Eqdep_dec.
 
@@ -36,12 +37,12 @@ Hint Resolve nateq_prop: arithring.
 
 Definition NatTheory : Semi_Ring_Theory plus mult 1 0 nateq.
   split; intros; auto with arith arithring.
-  apply (fun n m p:nat => plus_reg_l m p n) with (n := n).
-  trivial.
+(*  apply (fun n m p:nat => plus_reg_l m p n) with (n := n).
+  trivial.*)
 Defined.
 
 
-Add Semi Ring nat plus mult 1 0 nateq NatTheory [ 0 S ].
+Add Legacy Semi Ring nat plus mult 1 0 nateq NatTheory [ 0 S ].
 
 Goal forall n:nat, S n = 1 + n.
 intro; reflexivity.

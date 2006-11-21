@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extratactics.ml4 8979 2006-06-23 10:17:14Z herbelin $ *)
+(* $Id: extratactics.ml4 9266 2006-10-24 09:03:15Z herbelin $ *)
 
 open Pp
 open Pcoq
@@ -20,116 +20,25 @@ open Names
 (* Equality *)
 open Equality
 
-(* Pierre L: for an easy implementation of "rewrite ... in <clause>", rewrite
-  has moved to g_tactics.ml4
-
-TACTIC EXTEND rewrite
-| [ "rewrite" orient(b) constr_with_bindings(c) ] ->
-    [general_rewrite_bindings b c]
-END
-
-TACTIC EXTEND rewrite_in
-| [ "rewrite" orient(b) constr_with_bindings(c) "in" hyp(h) ] ->
-    [general_rewrite_bindings_in b h c]
-END
-
-let h_rewriteLR x = h_rewrite true (x,Rawterm.NoBindings) 
-*)
-
-(* Julien: Mise en commun des differentes version de replace with in by 
-   TODO: deplacer dans extraargs
-
-*)
-
-let pr_by_arg_tac _prc _prlc prtac opt_c = 
-  match opt_c with 
-    | None -> mt ()
-    | Some t -> spc () ++ hov 2 (str "by" ++ spc () ++ prtac (3,Ppextend.E) t)
-
-let pr_in_hyp = function
-  | None -> mt ()
-  | Some id -> spc () ++ hov 2 (str "in" ++ spc () ++ Nameops.pr_id id)
-
-let pr_in_arg_hyp _prc _prlc _prtac opt_c =
-  pr_in_hyp (Util.option_map snd opt_c)
-
-let pr_in_arg_hyp_typed _prc _prlc _prtac =
-  pr_in_hyp
-
-ARGUMENT EXTEND by_arg_tac
-  TYPED AS tactic_opt
-  PRINTED BY pr_by_arg_tac
-| [ "by" tactic3(c) ] -> [ Some c ]
-| [ ] -> [ None ]
-END
- 
-ARGUMENT EXTEND in_arg_hyp
-  TYPED AS var_opt
-  PRINTED BY pr_in_arg_hyp_typed
-  RAW_TYPED AS var_opt
-  RAW_PRINTED BY pr_in_arg_hyp
-  GLOB_TYPED AS var_opt
-  GLOB_PRINTED BY pr_in_arg_hyp
-| [ "in" hyp(c) ] -> [ Some (c) ]
-| [ ] -> [ None ]
-END
 
 TACTIC EXTEND replace 
    ["replace" constr(c1) "with" constr(c2) in_arg_hyp(in_hyp) by_arg_tac(tac) ]
--> [ new_replace c1 c2 in_hyp (Util.option_map Tacinterp.eval_tactic tac) ]
+-> [ replace_in_clause_maybe_by c1 c2 (glob_in_arg_hyp_to_clause in_hyp) (Util.option_map Tacinterp.eval_tactic tac) ]
 END
-
-(* Julien:
-  old version  
-
-TACTIC EXTEND replace
-| [ "replace" constr(c1) "with" constr(c2) ] ->
-    [ replace c1 c2 ]
-END
-
-TACTIC EXTEND replace_by
-|  [ "replace" constr(c1) "with" constr(c2) "by" tactic(tac) ] ->
-    [ replace_by c1 c2 (snd tac)  ]
- 
-END
-
-TACTIC EXTEND replace_in
-| [ "replace" constr(c1) "with" constr(c2) "in" hyp(h) ] ->
-    [ replace_in h c1 c2 ]
-END
-
-TACTIC EXTEND replace_in_by
-| [ "replace" constr(c1) "with" constr(c2) "in" hyp(h) "by" tactic(tac) ] ->
-    [ replace_in_by h c1 c2 (snd tac) ]
-END
-
-*)
 
 TACTIC EXTEND replace_term_left
-  [ "replace" "->" constr(c)  ] -> [ replace_term_left c ]
+  [ "replace"  "->" constr(c) in_arg_hyp(in_hyp) ]
+  -> [ replace_multi_term (Some true) c (glob_in_arg_hyp_to_clause in_hyp)]
 END
 
 TACTIC EXTEND replace_term_right
-  [ "replace" "<-" constr(c)  ] -> [ replace_term_right c ]
+  [ "replace"  "<-" constr(c) in_arg_hyp(in_hyp) ]
+  -> [replace_multi_term (Some false) c (glob_in_arg_hyp_to_clause in_hyp)]
 END
 
 TACTIC EXTEND replace_term
-  [ "replace" constr(c)  ] -> [ replace_term c ]
-END
-
-TACTIC EXTEND replace_term_in_left
-  [ "replace"  "->" constr(c) "in" hyp(h) ]
-  -> [ replace_term_in_left c h ]
-END
-
-TACTIC EXTEND replace_term_in_right
-  [ "replace"  "<-" constr(c) "in" hyp(h) ]
-  -> [ replace_term_in_right c h ]
-END
-
-TACTIC EXTEND replace_term_in
-  [ "replace" constr(c) "in" hyp(h) ]
-  -> [ replace_term_in c h ]
+  [ "replace" constr(c) in_arg_hyp(in_hyp) ]
+  -> [ replace_multi_term None c (glob_in_arg_hyp_to_clause in_hyp) ]
 END
 
 TACTIC EXTEND simplify_eq
@@ -143,7 +52,11 @@ END
 let h_discrHyp id = h_discriminate (Some id)
 
 TACTIC EXTEND injection
-  [ "injection" quantified_hypothesis_opt(h) ] -> [ injClause h ]
+  [ "injection" quantified_hypothesis_opt(h) ] -> [ injClause [] h ]
+END 
+TACTIC EXTEND injection_as
+  [ "injection" quantified_hypothesis_opt(h) 
+    "as" simple_intropattern_list(ipat)] -> [ injClause ipat h ]
 END
 
 let h_injHyp id = h_injection (Some id)
@@ -182,7 +95,7 @@ END
 (* AutoRewrite *)
 
 open Autorewrite
-
+(* J.F : old version 
 TACTIC EXTEND autorewrite
   [ "autorewrite" "with" ne_preident_list(l) ] ->
     [ autorewrite Refiner.tclIDTAC l ]
@@ -193,6 +106,21 @@ TACTIC EXTEND autorewrite
 | [ "autorewrite" "with" ne_preident_list(l) "in" hyp(id) "using" tactic(t) ] ->
     [ autorewrite_in id (snd t) l ]
 END
+*)
+
+TACTIC EXTEND autorewrite
+| [ "autorewrite" "with" ne_preident_list(l) in_arg_hyp(cl) ] ->
+    [ auto_multi_rewrite  l (glob_in_arg_hyp_to_clause  cl) ]
+| [ "autorewrite" "with" ne_preident_list(l) in_arg_hyp(cl) "using" tactic(t) ] ->
+    [ 
+      let cl =  glob_in_arg_hyp_to_clause cl in 
+      auto_multi_rewrite_with (snd t) l cl
+
+    ]
+END
+
+
+
 
 let add_rewrite_hint name ort t lcsr =
   let env = Global.env() and sigma = Evd.empty in
@@ -223,22 +151,22 @@ let refine_tac = h_refine
 open Setoid_replace
 
 TACTIC EXTEND setoid_replace
-   [ "setoid_replace" constr(c1) "with" constr(c2) ] ->
-     [ setoid_replace None c1 c2 ~new_goals:[] ]
- | [ "setoid_replace" constr(c1) "with" constr(c2) "using" "relation" constr(rel)] ->
-     [ setoid_replace (Some rel) c1 c2 ~new_goals:[] ]
- | [ "setoid_replace" constr(c1) "with" constr(c2) "generate" "side" "conditions" constr_list(l) ] ->
-     [ setoid_replace None c1 c2 ~new_goals:l ]
- | [ "setoid_replace" constr(c1) "with" constr(c2) "using" "relation" constr(rel) "generate" "side" "conditions" constr_list(l) ] ->
-     [ setoid_replace (Some rel) c1 c2 ~new_goals:l ]
- | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) ] ->
-     [ setoid_replace_in h None c1 c2 ~new_goals:[] ]
- | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) "using" "relation" constr(rel)] ->
-     [ setoid_replace_in h (Some rel) c1 c2 ~new_goals:[] ]
- | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) "generate" "side" "conditions" constr_list(l) ] ->
-     [ setoid_replace_in h None c1 c2 ~new_goals:l ]
- | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) "using" "relation" constr(rel) "generate" "side" "conditions" constr_list(l) ] ->
-     [ setoid_replace_in h (Some rel) c1 c2 ~new_goals:l ]
+   [ "setoid_replace" constr(c1) "with" constr(c2) by_arg_tac(tac)] ->
+     [ setoid_replace  (Util.option_map Tacinterp.eval_tactic tac) None c1 c2 ~new_goals:[] ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "using" "relation" constr(rel) by_arg_tac(tac)] ->
+     [ setoid_replace  (Util.option_map Tacinterp.eval_tactic tac) (Some rel) c1 c2 ~new_goals:[] ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "generate" "side" "conditions" constr_list(l) by_arg_tac(tac) ] ->
+     [ setoid_replace  (Util.option_map Tacinterp.eval_tactic tac) None c1 c2 ~new_goals:l ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "using" "relation" constr(rel) "generate" "side" "conditions" constr_list(l) by_arg_tac(tac) ] ->
+     [ setoid_replace  (Util.option_map Tacinterp.eval_tactic tac) (Some rel) c1 c2 ~new_goals:l ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) by_arg_tac(tac) ] ->
+     [ setoid_replace_in  (Util.option_map Tacinterp.eval_tactic tac) h None c1 c2 ~new_goals:[] ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) "using" "relation" constr(rel) by_arg_tac(tac)] ->
+     [ setoid_replace_in  (Util.option_map Tacinterp.eval_tactic tac) h (Some rel) c1 c2 ~new_goals:[] ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) "generate" "side" "conditions" constr_list(l) by_arg_tac(tac)] ->
+     [ setoid_replace_in  (Util.option_map Tacinterp.eval_tactic tac) h None c1 c2 ~new_goals:l ]
+ | [ "setoid_replace" constr(c1) "with" constr(c2) "in" hyp(h) "using" "relation" constr(rel) "generate" "side" "conditions" constr_list(l) by_arg_tac(tac)] ->
+     [ setoid_replace_in  (Util.option_map Tacinterp.eval_tactic tac) h (Some rel) c1 c2 ~new_goals:l ]
 END
 
 TACTIC EXTEND setoid_rewrite
@@ -470,4 +398,10 @@ END
 VERNAC COMMAND EXTEND ImplicitTactic
 | [ "Declare" "Implicit" "Tactic" tactic(tac) ] ->
     [ Tacinterp.declare_implicit_tactic (Tacinterp.interp tac) ]
+END
+
+TACTIC EXTEND apply_in
+| ["apply" constr_with_bindings(c) "in" hyp(id) ] -> [ apply_in id [c] ]
+| ["apply" constr_with_bindings(c) "," constr_with_bindings_list_sep(cl,",") 
+   "in" hyp(id) ] -> [ apply_in id (c::cl) ]
 END

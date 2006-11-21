@@ -6,18 +6,19 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ccproof.ml 7298 2005-08-17 12:56:38Z corbinea $ *)
+(* $Id: ccproof.ml 9151 2006-09-19 13:32:22Z corbinea $ *)
 
 (* This file uses the (non-compressed) union-find structure to generate *) 
 (* proof-trees that will be transformed into proof-terms in cctac.ml4   *)
 
 open Util
 open Names
+open Term
 open Ccalgo
   
 type proof=
-    Ax of identifier
-  | SymAx of identifier
+    Ax of constr
+  | SymAx of constr
   | Refl of term
   | Trans of proof*proof
   | Congr of proof*proof

@@ -73,6 +73,12 @@ val get_proof_clean : bool ->
     
 
 
+(* [with_full_print f a] applies [f] to [a] in full printing environment 
+   
+   This function preserves the print settings 
+*)
+val with_full_print : ('a -> 'b) -> 'a -> 'b
+
 
 (*****************)
 
@@ -86,12 +92,13 @@ type function_info =
       rect_lemma : constant option;
       rec_lemma : constant option;
       prop_lemma : constant option;
+      is_general : bool;
     }
 
 val find_Function_infos : constant -> function_info
 val find_Function_of_graph : inductive -> function_info
 (* WARNING: To be used just after the graph definition !!! *)
-val add_Function : constant -> unit
+val add_Function : bool -> constant -> unit
 
 val update_Function : function_info -> unit 
 
@@ -101,5 +108,10 @@ val pr_info : function_info -> Pp.std_ppcmds
 val pr_table : unit -> Pp.std_ppcmds
 
 
-val function_debug : bool ref 
+(* val function_debug : bool ref  *)
 val do_observe : unit -> bool
+
+(* To localize pb *)
+exception Building_graph of exn 
+exception Defining_principle of exn
+

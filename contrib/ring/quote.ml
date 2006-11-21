@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: quote.ml 7639 2005-12-02 10:01:15Z gregoire $ *)
+(* $Id: quote.ml 9178 2006-09-26 11:18:22Z barras $ *)
 
 (* The `Quote' tactic *)
 
@@ -298,7 +298,7 @@ let rec closed_under cset t =
   (ConstrSet.mem t cset) or
   (match (kind_of_term t) with
      | Cast(c,_,_) -> closed_under cset c  
-     | App(f,l) -> closed_under cset f & array_for_all (closed_under cset) l
+     | App(f,l) -> closed_under cset f && array_for_all (closed_under cset) l
      | _ -> false)
     
 (*s [btree_of_array [| c1; c2; c3; c4; c5 |]] builds the complete

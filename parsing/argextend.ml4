@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: argextend.ml4 8976 2006-06-23 10:03:54Z herbelin $ *)
+(* $Id: argextend.ml4 9265 2006-10-24 08:35:38Z herbelin $ *)
 
 open Genarg
 open Q_util
@@ -213,7 +213,7 @@ EXTEND
       [ e = argtype; LIDENT "list" -> List0ArgType e
       | e = argtype; LIDENT "option" -> OptArgType e ]
     | "0"
-      [ e = LIDENT -> fst (interp_entry_name loc e) 
+      [ e = LIDENT -> fst (interp_entry_name loc e "")
       | "("; e = argtype; ")" -> e ] ]
   ;
   argrule:
@@ -221,7 +221,9 @@ EXTEND
   ;
   genarg:
     [ [ e = LIDENT; "("; s = LIDENT; ")" ->
-        let t, g = interp_entry_name loc e in (g, Some (s,t))
+        let t, g = interp_entry_name loc e "" in (g, Some (s,t))
+      | e = LIDENT; "("; s = LIDENT; ","; sep = STRING; ")" ->
+        let t, g = interp_entry_name loc e sep in (g, Some (s,t))
       | s = STRING ->
 	  if String.length s > 0 && Util.is_letter s.[0] then
 	    Pcoq.lexer.Token.using ("", s);

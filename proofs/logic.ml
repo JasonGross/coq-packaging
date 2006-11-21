@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: logic.ml 8871 2006-05-28 16:46:48Z herbelin $ *)
+(* $Id: logic.ml 9323 2006-10-30 23:05:29Z herbelin $ *)
 
 open Pp
 open Util
@@ -80,15 +80,15 @@ let clear_hyps ids gl =
               error (string_of_id id'^
 		        " is used in hypothesis "^string_of_id id))
 	  (global_vars_set_of_decl env d) in
-    clear_hyps ids fcheck gl.evar_hyps in
+      clear_hyps ids fcheck gl.evar_hyps in
   let ncl = gl.evar_concl in
-  if !check && cleared_ids<>[] then
-    Idset.iter
-      (fun id' ->
-        if List.mem id' cleared_ids then
-          error (string_of_id id'^" is used in conclusion"))
-      (global_vars_set env ncl);
-  mk_goal nhyps ncl
+    if !check && cleared_ids<>[] then
+      Idset.iter
+	(fun id' ->
+          if List.mem id' cleared_ids then
+            error (string_of_id id'^" is used in conclusion"))
+	(global_vars_set_drop_evar env ncl);
+    mk_goal nhyps ncl gl.evar_extra
 
 (* The ClearBody tactic *)
 
@@ -155,7 +155,7 @@ let split_sign hfrom hto l =
       	else 
 	  splitrec (d::left) (toleft or (hyp = hto)) right
   in 
-  splitrec [] false l
+    splitrec [] false l
 
 let move_after with_dep toleft (left,(idfrom,_,_ as declfrom),right) hto =
   let env = Global.env() in
@@ -214,19 +214,25 @@ let check_forward_dependencies id tail =
 		^ (string_of_id id')))
     tail
 
+let check_goal_dependency id cl =
+  let env = Global.env() in
+    if Idset.mem id (global_vars_set_drop_evar env cl) then
+      error (string_of_id id^" is used in conclusion")
 
 let rename_hyp id1 id2 sign =
   apply_to_hyp_and_dependent_on sign id1
     (fun (_,b,t) _ -> (id2,b,t))
     (fun d _ -> map_named_declaration (replace_vars [id1,mkVar id2]) d)
 
-let replace_hyp sign id d =
+let replace_hyp sign id d cl =
+  if !check then
+    check_goal_dependency id cl;
   apply_to_hyp sign id
     (fun sign _ tail ->
-       if !check then
-	 (check_backward_dependencies sign d;
-	  check_forward_dependencies id tail);
-       d)
+      if !check then
+	(check_backward_dependencies sign d;
+	 check_forward_dependencies id tail); 
+      d)
 
 (* why we dont check that id does not appear in tail ??? *)
 let insert_after_hyp sign id d =
@@ -264,6 +270,7 @@ let goal_type_of env sigma c =
 let rec mk_refgoals sigma goal goalacc conclty trm =
   let env = evar_env goal in
   let hyps = goal.evar_hyps in
+  let mk_goal hyps concl = mk_goal hyps concl goal.evar_extra in
 (*
    if  not (occur_meta trm) then
     let t'ty = (unsafe_machine env sigma trm).uj_type in 	
@@ -284,9 +291,14 @@ let rec mk_refgoals sigma goal goalacc conclty trm =
 
     | App (f,l) ->
 	let (acc',hdty) =
-	  if isInd f & not (array_exists occur_meta l) (* we could be finer *)
-	  then (goalacc,type_of_inductive_knowing_parameters env sigma (destInd f) l)
-	  else mk_hdgoals sigma goal goalacc f
+	  match kind_of_term f with
+	    | (Ind _ (* needed if defs in Type are polymorphic: | Const _*))
+		when not (array_exists occur_meta l) (* we could be finer *) ->
+		(* Sort-polymorphism of definition and inductive types *)
+		goalacc, 
+		type_of_global_reference_knowing_parameters env sigma f l
+	    | _ -> 
+		mk_hdgoals sigma goal goalacc f
 	in
 	let (acc'',conclty') =
 	  mk_arggoals sigma goal acc' hdty (Array.to_list l) in
@@ -315,6 +327,7 @@ let rec mk_refgoals sigma goal goalacc conclty trm =
 and mk_hdgoals sigma goal goalacc trm =
   let env = evar_env goal in
   let hyps = goal.evar_hyps in
+  let mk_goal hyps concl = mk_goal hyps concl goal.evar_extra in
   match kind_of_term trm with
     | Cast (c,_, ty) when isMeta c ->
 	check_typability env sigma ty;
@@ -326,8 +339,10 @@ and mk_hdgoals sigma goal goalacc trm =
 
     | App (f,l) ->
 	let (acc',hdty) = 
-	  if isInd f & not (array_exists occur_meta l) (* we could be finer *)
-	  then (goalacc,type_of_inductive_knowing_parameters env sigma (destInd f) l)
+	  if isInd f or isConst f 
+	     & not (array_exists occur_meta l) (* we could be finer *)
+	  then
+	    (goalacc,type_of_global_reference_knowing_parameters env sigma f l)
 	  else mk_hdgoals sigma goal goalacc f
 	in
 	mk_arggoals sigma goal acc' hdty (Array.to_list l)
@@ -392,6 +407,7 @@ let prim_refiner r sigma goal =
   let env = evar_env goal in
   let sign = goal.evar_hyps in
   let cl = goal.evar_concl in
+  let mk_goal hyps concl = mk_goal hyps concl goal.evar_extra in
   match r with
     (* Logical rules *)
     | Intro id ->
@@ -416,12 +432,12 @@ let prim_refiner r sigma goal =
 	(match kind_of_term (strip_outer_cast cl) with
            | Prod (_,c1,b) ->
 	       if occur_meta c1 then error_use_instantiate();
-	       let sign' = replace_hyp sign id (id,None,c1) in
+	       let sign' = replace_hyp sign id (id,None,c1) cl in
 	       let sg = mk_goal sign' (subst1 (mkVar id) b) in
 	       [sg]
            | LetIn (_,c1,t1,b) ->
 	       if occur_meta c1 then error_use_instantiate();
-	       let sign' = replace_hyp sign id (id,Some c1,t1) in
+	       let sign' = replace_hyp sign id (id,Some c1,t1) cl in
 	       let sg = mk_goal sign' (subst1 (mkVar id) b) in
 	       [sg]
 	   | _ ->
@@ -474,7 +490,8 @@ let prim_refiner r sigma goal =
 		  let _ = find_coinductive env sigma b in ()
                 with Not_found -> 
 		  error ("All methods must construct elements " ^
-			  "in coinductive types")
+			  "in coinductiv-> goal
+e types")
 	in
 	let all = (f,cl)::others in
      	List.iter (fun (_,c) -> check_is_coind env c) all;

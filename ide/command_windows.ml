@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: command_windows.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id: command_windows.ml 9189 2006-09-29 12:39:24Z notin $ *)
 
 class command_window () = 
   let window = GWindow.window 
@@ -15,7 +15,7 @@ class command_window () =
 		 ~position:`CENTER
 		 ~title:"CoqIde queries" ~show:false ()
   in
-  let accel_group = GtkData.AccelGroup.create () in
+  let _ = GtkData.AccelGroup.create () in
   let vbox = GPack.vbox ~homogeneous:false ~packing:window#add () in
   let toolbar = GButton.toolbar 
 		  ~orientation:`HORIZONTAL 
@@ -52,7 +52,7 @@ class command_window () =
       ()
   in
 
-  let kill_page_menu = 
+  let _ = 
     toolbar#insert_button
       ~tooltip:"Kill Page"
       ~text:"Kill Page"

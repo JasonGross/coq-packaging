@@ -39,7 +39,8 @@ The remaining sections are concerned with the type-checking of terms.
 The beginner can skip them.
 
 The reader seeking a background on the Calculus of Inductive
-Constructions may read several papers.  Giménez~\cite{Gim98} provides
+Constructions may read several papers. Giménez and Castéran~\cite{GimCas05} 
+provide
 an introduction to inductive and coinductive definitions in Coq. In
 their book~\cite{CoqArt}, Bertot and Castéran give a precise
 description of the \CIC{} based on numerous practical examples.
@@ -117,7 +118,21 @@ indexes can be solved. From the user point of view we consequently
 have {\sf Type :Type}.
 
 We shall make precise in the typing rules the constraints between the
-indexes.
+indexes. 
+
+\paragraph{Implementation issues}
+In practice, the {\Type} hierarchy is implemented using algebraic
+universes. An algebraic universe $u$ is either a variable (a qualified
+identifier with a number) or a successor of an algebraic universe (an
+expression $u+1$), or an upper bound of algebraic universes (an
+expression $max(u_1,...,u_n)$), or the base universe (the expression
+$0$) which corresponds, in the arity of sort-polymorphic inductive
+types, to the predicative sort {\Set}. A graph of constraints between
+the universe variables is maintained globally. To ensure the existence
+of a mapping of the universes to the positive integers, the graph of
+constraints must remain acyclic.  Typing expressions that violate the
+acyclicity of the graph of constraints results in a \errindex{Universe
+inconsistency} error (see also section~\ref{PrintingUniverses}).
 
 \subsection{Constants}
 Besides the sorts, the language also contains constants denoting
@@ -1633,7 +1648,7 @@ using the {\tt Scheme} command described in section~\ref{Scheme}.
 The implementation contains also coinductive definitions, which are
 types inhabited by infinite objects. 
 More information on coinductive definitions can be found
-in~\cite{Gimenez95b,Gim98}.
+in~\cite{Gimenez95b,Gim98,GimCas05}.
 %They are described in chapter~\ref{Coinductives}.
 
 \section{\iCIC : the Calculus of Inductive Construction with
@@ -1684,7 +1699,7 @@ impredicative system for sort \Set{} become~:
      
 
 
-% $Id: RefMan-cic.tex 9001 2006-07-04 13:50:15Z herbelin $ 
+% $Id: RefMan-cic.tex 9306 2006-10-28 18:28:19Z herbelin $ 
 
 %%% Local Variables: 
 %%% mode: latex

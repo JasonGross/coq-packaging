@@ -6,15 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Arith.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id: Arith.v 9302 2006-10-27 21:21:17Z barras $ i*)
 
-Require Export Le.
-Require Export Lt.
-Require Export Plus.
-Require Export Gt.
-Require Export Minus.
-Require Export Mult.
-Require Export Between.
-Require Export Peano_dec.
-Require Export Compare_dec.
-Require Export Factorial.
+Require Export Arith_base.
+Require Export ArithRing.

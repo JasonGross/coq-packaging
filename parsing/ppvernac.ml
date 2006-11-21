@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppvernac.ml 9020 2006-07-05 17:35:23Z herbelin $ *)  
+(* $Id: ppvernac.ml 9154 2006-09-20 17:18:18Z corbinea $ *)  
 
 open Pp
 open Names
@@ -410,6 +410,7 @@ let rec pr_vernac = function
 	| ShowProofNames -> str"Show Conjectures"
 	| ShowIntros b -> str"Show " ++ (if b then str"Intros" else str"Intro")
 	| ShowMatch id -> str"Show Match " ++ pr_lident id
+	| ShowThesis -> str "Show Thesis"
 	| ExplainProof l -> str"Explain Proof" ++ spc() ++ prlist_with_sep sep int l
 	| ExplainTree l -> str"Explain Proof Tree" ++ spc() ++ prlist_with_sep sep int l 
       in pr_showable s
@@ -530,7 +531,7 @@ let rec pr_vernac = function
             fnl() ++
             str (if List.length l = 1 then "   " else " | ") ++
             prlist_with_sep (fun _ -> fnl() ++ str" | ") pr_constructor l in
-      let pr_oneind key (id,ntn,indpar,s,lc) =
+      let pr_oneind key ((id,indpar,s,lc),ntn) =
 	hov 0 (
           str key ++ spc() ++
           pr_lident id ++ pr_and_type_binders_arg indpar ++ spc() ++ str":" ++ 
@@ -585,14 +586,16 @@ let rec pr_vernac = function
         prlist_with_sep (fun _ -> fnl() ++ fnl() ++ str"with ") pr_onerec recs)
 
   | VernacCoFixpoint (corecs,b) ->
-      let pr_onecorec (id,bl,c,def) =
+      let pr_onecorec ((id,bl,c,def),ntn) =
         let (bl',def,c) =
               if Options.do_translate() then extract_def_binders def c
               else ([],def,c) in
         let bl = bl @ bl' in
         pr_id id ++ spc() ++ pr_binders bl ++ spc() ++ str":" ++
         spc() ++ pr_lconstr_expr c ++
-        str" :=" ++ brk(1,1) ++ pr_lconstr def in
+        str" :=" ++ brk(1,1) ++ pr_lconstr def  ++ 
+	pr_decl_notation pr_constr ntn
+      in
       let start = if b then "Boxed CoFixpoint" else "CoFixpoint" in
       hov 1 (str start ++ spc() ++
       prlist_with_sep (fun _ -> fnl() ++ str"with ") pr_onecorec corecs)  
@@ -678,6 +681,14 @@ let rec pr_vernac = function
 
   | VernacSolveExistential (i,c) ->
       str"Existential " ++ int i ++ pr_lconstrarg c
+
+  (* MMode *)
+ 
+  | VernacProofInstr instr -> anomaly "Not implemented"
+  | VernacDeclProof -> str "proof" 
+  | VernacReturn -> str "return"
+
+  (* /MMode *) 
 
   (* Auxiliary file and library management *)
   | VernacRequireFrom (exp,spe,f) -> hov 2
@@ -820,7 +831,7 @@ let rec pr_vernac = function
 
   (* For extension *)
   | VernacExtend (s,c) -> pr_extend s c
-  | VernacProof Tacexpr.TacId _ -> str "Proof"
+  | VernacProof (Tacexpr.TacId _) -> str "Proof"
   | VernacProof te -> str "Proof with" ++ spc() ++ pr_raw_tactic te 
 
 and pr_extend s cl =

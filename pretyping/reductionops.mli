@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: reductionops.mli 8812 2006-05-13 11:46:02Z herbelin $ i*)
+(*i $Id: reductionops.mli 9106 2006-09-01 11:18:17Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -37,6 +37,7 @@ and 'a stack = 'a stack_member list
 
 val empty_stack : 'a stack
 val append_stack : 'a array -> 'a stack -> 'a stack
+val append_stack_list : 'a list -> 'a stack -> 'a stack
 
 val decomp_stack : 'a stack -> ('a * 'a stack) option
 val list_of_stack : 'a stack -> 'a list
@@ -140,6 +141,7 @@ val whd_betadeltaiotaeta_stack :  stack_reduction_function
 val whd_betadeltaiotaeta_state :  state_reduction_function
 val whd_betadeltaiotaeta :  reduction_function
 
+val whd_eta : constr -> constr
 
 
 
@@ -162,6 +164,7 @@ val decomp_n_prod :
 val splay_prod_assum :
   env ->  evar_map -> constr -> Sign.rel_context * constr
 val decomp_sort : env -> evar_map -> types -> sorts
+val is_sort : env -> evar_map -> types -> bool
 
 type 'a miota_args = {
   mP      : constr;     (* the result type *)
@@ -206,11 +209,8 @@ val whd_meta : (metavariable * constr) list -> constr -> constr
 val plain_instance : (metavariable * constr) list -> constr -> constr
 val instance : (metavariable * constr) list -> constr -> constr
 
-(*s Obsolete Reduction Functions *)
+(*s Heuristic for Conversion with Evar *)
 
-(*i
-val hnf : env -> 'a evar_map -> constr -> constr * constr list
-i*)
 val apprec :  state_reduction_function
 
 (*s Meta-related reduction functions *)

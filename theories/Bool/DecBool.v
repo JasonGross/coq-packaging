@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: DecBool.v 8866 2006-05-28 16:21:04Z herbelin $ i*)
+(*i $Id: DecBool.v 9245 2006-10-17 12:53:34Z notin $ i*)
 
 Set Implicit Arguments.
 
@@ -15,17 +15,19 @@ Definition ifdec (A B:Prop) (C:Type) (H:{A} + {B}) (x y:C) : C :=
 
 
 Theorem ifdec_left :
- forall (A B:Prop) (C:Set) (H:{A} + {B}),
-   ~ B -> forall x y:C, ifdec H x y = x.
-intros; case H; auto.
-intro; absurd B; trivial.
+  forall (A B:Prop) (C:Set) (H:{A} + {B}),
+    ~ B -> forall x y:C, ifdec H x y = x.
+Proof.
+  intros; case H; auto.
+  intro; absurd B; trivial.
 Qed.
 
 Theorem ifdec_right :
- forall (A B:Prop) (C:Set) (H:{A} + {B}),
-   ~ A -> forall x y:C, ifdec H x y = y.
-intros; case H; auto.
-intro; absurd A; trivial.
+  forall (A B:Prop) (C:Set) (H:{A} + {B}),
+    ~ A -> forall x y:C, ifdec H x y = y.
+Proof.
+  intros; case H; auto.
+  intro; absurd A; trivial.
 Qed.
 
 Unset Implicit Arguments.

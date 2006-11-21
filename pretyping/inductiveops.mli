@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: inductiveops.mli 8845 2006-05-23 07:41:58Z herbelin $ i*)
+(*i $Id: inductiveops.mli 9194 2006-10-01 09:25:19Z herbelin $ i*)
 
 open Names
 open Term
@@ -65,6 +65,8 @@ val constructor_nrealargs : env -> constructor -> int
 val constructor_nrealhyps : env -> constructor -> int
 
 val get_full_arity_sign : env -> inductive -> rel_context
+
+val allowed_sorts : env -> inductive -> sorts_family list
 
 (* Extract information from an inductive family *)
 

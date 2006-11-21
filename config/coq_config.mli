@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coq_config.mli 8932 2006-06-09 09:29:03Z notin $ i*)
+(*i $Id: coq_config.mli 9115 2006-09-01 13:47:00Z notin $ i*)
 
 val local : bool        (* local use (no installation) *)
 
@@ -15,6 +15,7 @@ val coqlib : string     (* where the std library is installed *)
 
 val coqtop : string     (* where are the sources *)
 
+val camldir : string    (* base directory of OCaml binaries *)
 val camllib : string    (* for Dynlink *)
 
 val camlp4lib : string  (* where is the library of Camlp4 *)

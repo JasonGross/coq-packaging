@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pretyping.ml 8992 2006-06-27 21:29:18Z herbelin $ *)
+(* $Id: pretyping.ml 9338 2006-11-03 13:09:53Z herbelin $ *)
 
 open Pp
 open Util
@@ -245,6 +245,9 @@ module Pretyping_F (Coercion : Coercion.S) = struct
     let ccl' = mkLambda (Anonymous, ind, ccl) in
       {uj_val=lam_it ccl' sign; uj_type=prod_it s' sign} 
 
+  let evar_kind_of_term sigma c =
+    kind_of_term (whd_evar (Evd.evars_of sigma) c)
+
   (*************************************************************************)
   (* Main pretyping function                                               *)
 
@@ -375,10 +378,9 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 		  | Prod (na,c1,c2) ->
 		      let hj = pretype (mk_tycon c1) env isevars lvar c in
 		      let value, typ = applist (j_val resj, [j_val hj]), subst1 hj.uj_val c2 in
-		      let typ' = nf_isevar !isevars typ in
 			apply_rec env (n+1) 
-			  { uj_val = nf_isevar !isevars value;
-			    uj_type = typ' }
+			  { uj_val = value;
+			    uj_type = typ }
 			  rest
 		  | _ ->
 		      let hj = pretype empty_tycon env isevars lvar c in
@@ -386,15 +388,18 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 			  (join_loc floc argloc) env (evars_of !isevars)
 	      		  resj [hj]
 	in
-	let resj = j_nf_evar (evars_of !isevars) (apply_rec env 1 fj args) in
+	let resj = apply_rec env 1 fj args in
 	let resj =
-	  match kind_of_term resj.uj_val with
-	  | App (f,args) when isInd f ->
-	      let sigma = evars_of !isevars in
-	      let t = Retyping.type_of_inductive_knowing_parameters env sigma (destInd f) args in
-	      let s = snd (splay_arity env sigma t) in
-	      on_judgment_type (set_inductive_level env s) resj
-		(* Rem: no need to send sigma: no head evar, it's an arity *)
+	  match evar_kind_of_term !isevars resj.uj_val with
+	  | App (f,args) ->
+              let f = whd_evar (Evd.evars_of !isevars) f in
+              begin match kind_of_term f with
+              | Ind _ (* | Const _ *) ->
+	          let sigma = evars_of !isevars in
+		  let c = mkApp (f,Array.map (whd_evar sigma) args) in
+	          let t = Retyping.get_type_of env sigma c in
+		  make_judge c t
+              | _ -> resj end
 	  | _ -> resj in
 	inh_conv_coerce_to_tycon loc env isevars resj tycon
 
@@ -455,7 +460,7 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 		 | Some p ->
 		     let env_p = push_rels psign env in
 		     let pj = pretype_type empty_valcon env_p isevars lvar p in
-		     let ccl = nf_evar (evars_of !isevars) pj.utj_val in
+		     let ccl = nf_isevar !isevars pj.utj_val in
 		     let psign = make_arity_signature env true indf in (* with names *)
 		     let p = it_mkLambda_or_LetIn ccl psign in
 		     let inst = 
@@ -475,7 +480,7 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 		     let tycon = lift_tycon cs.cs_nargs tycon in
 		     let fj = pretype tycon env_f isevars lvar d in
 		     let f = it_mkLambda_or_LetIn fj.uj_val fsign in
-		     let ccl = nf_evar (evars_of !isevars) fj.uj_type in
+		     let ccl = nf_isevar !isevars fj.uj_type in
 		     let ccl =
 		       if noccur_between 1 cs.cs_nargs ccl then
 			 lift (- cs.cs_nargs) ccl 
@@ -632,35 +637,6 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 	  (pretype_type empty_valcon env isevars lvar c).utj_val in
       nf_evar (evars_of !isevars) c'
 
-  (* [check_evars] fails if some unresolved evar remains *)
-  (* it assumes that the defined existentials have already been substituted
-     (should be done in unsafe_infer and unsafe_infer_type) *)
-
-  let check_evars env initial_sigma isevars c =
-    let sigma = evars_of !isevars in
-    let rec proc_rec c =
-      match kind_of_term c with
-	| Evar (ev,args) ->
-            assert (Evd.mem sigma ev);
-	    if not (Evd.mem initial_sigma ev) then
-              let (loc,k) = evar_source ev !isevars in
-		error_unsolvable_implicit loc env sigma k
-	| _ -> iter_constr proc_rec c
-    in
-      proc_rec c(*;
-		  let (_,pbs) = get_conv_pbs !isevars (fun _ -> true) in
-		  if pbs <> [] then begin
-		  pperrnl
-		  (str"TYPING OF "++Termops.print_constr_env env c++fnl()++
-		  prlist_with_sep fnl
-		  (fun  (pb,c1,c2) ->
-		  Termops.print_constr c1 ++
-		  (if pb=Reduction.CUMUL then str " <="++ spc()
-		  else str" =="++spc()) ++
-		  Termops.print_constr c2)
-		  pbs ++ fnl())
-		  end*)
-
   (* TODO: comment faire remonter l'information si le typage a resolu des
      variables du sigma original. il faudrait que la fonction de typage
      retourne aussi le nouveau sigma...
@@ -669,7 +645,8 @@ module Pretyping_F (Coercion : Coercion.S) = struct
   let understand_judgment sigma env c =
     let isevars = ref (create_evar_defs sigma) in
     let j = pretype empty_tycon env isevars ([],[]) c in
-    let j = j_nf_evar (evars_of !isevars) j in
+    let isevars,_ = consider_remaining_unif_problems env !isevars in
+    let j = j_nf_evar (evars_of isevars) j in
       check_evars env sigma isevars (mkCast(j.uj_val,DEFAULTcast, j.uj_type));
       j
 
@@ -686,8 +663,10 @@ module Pretyping_F (Coercion : Coercion.S) = struct
   let ise_pretype_gen fail_evar sigma env lvar kind c =
     let isevars = ref (Evd.create_evar_defs sigma) in
     let c = pretype_gen isevars env lvar kind c in
+    let isevars,_ = consider_remaining_unif_problems env !isevars in
+    let c = nf_evar (evars_of isevars) c in
       if fail_evar then check_evars env sigma isevars c;
-      !isevars, c
+      isevars, c
 
   (** Entry points of the high-level type synthesis algorithm *)
 

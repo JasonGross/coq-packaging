@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: options.mli 7740 2005-12-26 20:07:21Z herbelin $ i*)
+(*i $Id: options.mli 9191 2006-09-29 15:45:42Z courtieu $ i*)
 
 (* Global options of the system. *)
 
@@ -17,6 +17,7 @@ val batch_mode : bool ref
 val debug : bool ref
 
 val print_emacs : bool ref
+val print_emacs_safechar : bool ref
 
 val term_quality : bool ref
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernac.ml 8924 2006-06-08 17:49:01Z notin $ *)
+(* $Id: vernac.ml 9133 2006-09-12 14:52:07Z notin $ *)
 
 (* Parsing of vernacular. *)
 
@@ -162,12 +162,12 @@ let rec vernac_com interpfun (loc,com) =
     | v -> if not !just_parsing then interpfun v
 
   in 
-  try
-    if do_translate () then pr_new_syntax loc (Some com);
-    interp com
-  with e -> 
-    Format.set_formatter_out_channel stdout;
-    raise (DuringCommandInterp (loc, e))
+    try
+      if do_translate () then pr_new_syntax loc (Some com);
+      interp com
+    with e -> 
+      Format.set_formatter_out_channel stdout;
+      raise (DuringCommandInterp (loc, e))
 
 and vernac interpfun input =
   vernac_com interpfun (parse_phrase input)

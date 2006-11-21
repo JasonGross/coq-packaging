@@ -6,23 +6,10 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: stamps.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id: LegacyField.v 9273 2006-10-25 11:30:36Z barras $ *)
 
-let new_stamp = 
-  let stamp_ctr = ref 0 in
-  fun () -> incr stamp_ctr; !stamp_ctr
+Require Export LegacyField_Compl.
+Require Export LegacyField_Theory.
+Require Export LegacyField_Tactic.
 
-type 'a timestamped = { stamp : int; ed : 'a }
-
-let ts_stamp st = st.stamp
-let ts_mod f st = { stamp = new_stamp(); ed = f st.ed }
-let ts_it st = st.ed
-let ts_mk v = { stamp = new_stamp(); ed = v}
-let ts_eq st1 st2 = st1.stamp = st2.stamp
-
-type 'a idstamped = 'a timestamped
-
-let ids_mod f st = { stamp = st.stamp; ed = f st.ed}
-let ids_it = ts_it
-let ids_mk = ts_mk
-let ids_eq = ts_eq
+(* Command declarations are moved to the ML side *)

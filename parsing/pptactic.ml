@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pptactic.ml 8926 2006-06-08 20:23:17Z herbelin $ *)
+(* $Id: pptactic.ml 9319 2006-10-30 12:41:21Z barras $ *)
 
 open Pp
 open Names
@@ -126,6 +126,8 @@ let rec pr_message_token prid = function
   | MsgString s -> qs s
   | MsgInt n -> int n
   | MsgIdent id -> prid id
+
+let pr_fresh_ids = prlist (fun s -> spc() ++ pr_or_var qs s)
 
 let rec pr_raw_generic prc prlc prtac prref (x:(Genarg.rlevel, Tacexpr.raw_tactic_expr) Genarg.generic_argument) =
   match Genarg.genarg_tag x with
@@ -260,8 +262,6 @@ let rec pr_tacarg_using_rule pr_gen = function
   | None :: l, a :: al -> pr_gen a ++ pr_tacarg_using_rule  pr_gen (l,al)
   | [], [] -> mt ()
   | _ -> failwith "Inconsistent arguments of extended tactic"
-
-let surround p = hov 1 (str"(" ++ p ++ str")")
 
 let pr_extend_gen prgen lev s l =
   try 
@@ -521,11 +521,11 @@ let rec pr_tacarg_using_rule pr_gen = function
 let pr_then () = str ";"
 
 let ltop = (5,E)
-let lseq = 5
+let lseq = 4
 let ltactical = 3
 let lorelse = 2
-let llet = 1
-let lfun = 1
+let llet = 5
+let lfun = 5
 let lcomplete = 1
 let labstract = 3
 let lmatch = 1
@@ -533,6 +533,7 @@ let latom = 0
 let lcall = 1
 let leval = 1
 let ltatom = 1
+let linfo = 5
 
 let level_of (n,p) = match p with E -> n | L -> n-1 | Prec n -> n | Any -> lseq
 
@@ -875,7 +876,7 @@ let rec pr_tac inherited tac =
       ltactical
   | TacInfo t ->
       hov 1 (str "info" ++ spc () ++ pr_tac (ltactical,E) t),
-      ltactical
+      linfo
   | TacOrelse (t1,t2) ->
       hov 1 (pr_tac (lorelse,L) t1 ++ str " ||" ++ brk (1,1) ++
              pr_tac (lorelse,E) t2),
@@ -902,7 +903,7 @@ let rec pr_tac inherited tac =
       str "constr:" ++ pr_constr c, latom
   | TacArg(ConstrMayEval c) ->
       pr_may_eval pr_constr pr_lconstr pr_cst c, leval
-  | TacArg(TacFreshId sopt) -> str "fresh" ++ pr_opt qs sopt, latom
+  | TacArg(TacFreshId l) -> str "fresh" ++ pr_fresh_ids l, latom
   | TacArg(Integer n) -> int n, latom
   | TacArg(TacCall(loc,f,l)) ->
       pr_with_comments loc
@@ -923,7 +924,7 @@ and pr_tacarg = function
   | Reference r -> pr_ref r
   | ConstrMayEval c ->
       pr_may_eval pr_constr pr_lconstr pr_cst c
-  | TacFreshId sopt -> str "fresh" ++ pr_opt qs sopt
+  | TacFreshId l -> str "fresh" ++ pr_fresh_ids l
   | TacExternal (_,com,req,la) ->
       str "external" ++ spc() ++ qs com ++ spc() ++ qs req ++ 
       spc() ++ prlist_with_sep spc pr_tacarg la

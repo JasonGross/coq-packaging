@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ring.ml 7837 2006-01-11 09:47:32Z herbelin $ *)
+(* $Id: ring.ml 9179 2006-09-26 12:13:06Z barras $ *)
 
 (* ML part of the Ring tactic *)
 
@@ -43,7 +43,7 @@ let ring_dir = ["Coq";"ring"]
 let setoids_dir = ["Coq";"Setoids"]
 
 let ring_constant = Coqlib.gen_constant_in_modules "Ring"
-  [ring_dir@["Ring_theory"];
+  [ring_dir@["LegacyRing_theory"];
    ring_dir@["Setoid_ring_theory"];
    ring_dir@["Ring_normalize"];
    ring_dir@["Ring_abstract"];
@@ -885,7 +885,7 @@ let match_with_equiv c = match (kind_of_term c) with
   | _ -> None
 
 let polynom lc gl =
-  Coqlib.check_required_library ["Coq";"ring";"Ring"];
+  Coqlib.check_required_library ["Coq";"ring";"LegacyRing"];
   match lc with 
    (* If no argument is given, try to recognize either an equality or
       a declared relation with arguments c1 ... cn, 

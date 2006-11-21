@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rbase.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: Rbase.v 9178 2006-09-26 11:18:22Z barras $ i*)
 
 Require Export Rdefinitions.
 Require Export Raxioms.
