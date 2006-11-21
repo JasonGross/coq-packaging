@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inductive.ml 8972 2006-06-22 22:17:43Z herbelin $ *)
+(* $Id: inductive.ml 9323 2006-10-30 23:05:29Z herbelin $ *)
 
 open Util
 open Names
@@ -30,8 +30,8 @@ let lookup_mind_specif env (kn,tyi) =
 let find_rectype env c =
   let (t, l) = decompose_app (whd_betadeltaiota env c) in
   match kind_of_term t with
-    | Ind ind -> (ind, l)
-    | _ -> raise Not_found
+  | Ind ind -> (ind, l)
+  | _ -> raise Not_found
 
 let find_inductive env c =
   let (t, l) = decompose_app (whd_betadeltaiota env c) in
@@ -122,14 +122,6 @@ where
 Remark: Set (predicative) is encoded as Type(0)
 *)
 
-let set_inductive_level env s t = 
-  let sign,s' = dest_prod_assum env t in
-  if family_of_sort s <> family_of_sort (destSort s') then
-    (* This induces reductions if user_arity <> nf_arity *)
-    mkArity (sign,s)
-  else
-    t
-
 let sort_as_univ = function
 | Type u -> u
 | Prop Null -> neutral_univ
@@ -139,44 +131,71 @@ let cons_subst u su subst =
   try (u, sup su (List.assoc u subst)) :: List.remove_assoc u subst
   with Not_found -> (u, su) :: subst
 
-let rec make_subst env exp act =
-  match exp, act with
-  (* Bind expected levels of parameters to actual levels *)
-  | None :: exp, _ :: act ->
-      make_subst env exp act
-  | Some u :: exp, t :: act ->
-      let su = sort_as_univ (snd (dest_arity env t)) in
-      cons_subst u su (make_subst env exp act)
-  (* Not enough parameters, create a fresh univ *)
-  | Some u :: exp, [] ->
-      let su = fresh_local_univ () in
-      cons_subst u su (make_subst env exp [])
-  | None :: exp, [] ->
-      make_subst env exp []
-  (* Uniform parameters are exhausted *)
-  | [], _ -> []
+let actualize_decl_level env lev t =
+  let sign,s = dest_arity env t in
+  mkArity (sign,lev)
 
-let sort_of_instantiated_universe mip subst level =
-  let level = subst_large_constraints subst level in
-  let nci = number_of_constructors mip in
-  if nci = 0 then mk_Prop
-  else
-    if is_empty_univ level then if nci = 1 then mk_Prop else mk_Set 
-    else if is_base_univ level then mk_Set
-    else Type level
+let polymorphism_on_non_applied_parameters = false
 
-let instantiate_inductive_with_param_levels env ar mip paramtyps =
-  let args = Array.to_list paramtyps in
-  let subst = make_subst env ar.mind_param_levels args in
-  sort_of_instantiated_universe mip subst ar.mind_level
+(* Bind expected levels of parameters to actual levels *)
+(* Propagate the new levels in the signature *)
+let rec make_subst env = function
+  | (_,Some _,_ as t)::sign, exp, args ->
+      let ctx,subst = make_subst env (sign, exp, args) in
+      t::ctx, subst
+  | d::sign, None::exp, args ->
+      let args = match args with _::args -> args | [] -> [] in
+      let ctx,subst = make_subst env (sign, exp, args) in
+      d::ctx, subst
+  | d::sign, Some u::exp, a::args ->
+      (* We recover the level of the argument, but we don't change the *)
+      (* level in the corresponding type in the arity; this level in the *)
+      (* arity is a global level which, at typing time, will be enforce *)
+      (* to be greater than the level of the argument; this is probably *)
+      (* a useless extra constraint *)
+      let s = sort_as_univ (snd (dest_arity env a)) in
+      let ctx,subst = make_subst env (sign, exp, args) in
+      d::ctx, cons_subst u s subst
+  | (na,None,t as d)::sign, Some u::exp, [] ->
+      (* No more argument here: we instantiate the type with a fresh level *)
+      (* which is first propagated to the corresponding premise in the arity *)
+      (* (actualize_decl_level), then to the conclusion of the arity (via *)
+      (* the substitution) *)
+      let ctx,subst = make_subst env (sign, exp, []) in
+      if polymorphism_on_non_applied_parameters then
+	let s = fresh_local_univ () in
+	let t = actualize_decl_level env (Type s) t in
+	(na,None,t)::ctx, cons_subst u s subst
+      else
+	d::ctx, subst
+  | sign, [], _ ->
+      (* Uniform parameters are exhausted *)
+      sign,[]
+  | [], _, _ ->
+      assert false
+
+let instantiate_universes env ctx ar argsorts =
+  let args = Array.to_list argsorts in
+  let ctx,subst = make_subst env (ctx,ar.poly_param_levels,args) in
+  let level = subst_large_constraints subst ar.poly_level in
+  ctx,
+  if is_empty_univ level then mk_Prop
+  else if is_base_univ level then mk_Set
+  else Type level
 
 let type_of_inductive_knowing_parameters env mip paramtyps =
   match mip.mind_arity with
   | Monomorphic s ->
       s.mind_user_arity
   | Polymorphic ar ->
-      let s = instantiate_inductive_with_param_levels env ar mip paramtyps in
-      mkArity (mip.mind_arity_ctxt,s)
+      let ctx = List.rev mip.mind_arity_ctxt in
+      let ctx,s = instantiate_universes env ctx ar paramtyps in
+      mkArity (List.rev ctx,s)
+
+(* Type of a (non applied) inductive type *)
+
+let type_of_inductive env (_,mip) =
+  type_of_inductive_knowing_parameters env mip [||]
 
 (* The max of an array of universes *)
 
@@ -187,18 +206,6 @@ let cumulate_constructor_univ u = function
 
 let max_inductive_sort =
   Array.fold_left cumulate_constructor_univ neutral_univ
-
-(* Type of a (non applied) inductive type *)
-
-let type_of_inductive (_,mip) =
-  match mip.mind_arity with
-  | Monomorphic s -> s.mind_user_arity
-  | Polymorphic s ->
-      let subst = map_succeed (function
-	| Some u -> (u, fresh_local_univ ())
-	| None -> failwith "") s.mind_param_levels in
-      let s = mkSort (sort_of_instantiated_universe mip subst s.mind_level) in
-      it_mkProd_or_LetIn s mip.mind_arity_ctxt
 
 (************************************************************************)
 (* Type of a constructor *)
@@ -364,7 +371,7 @@ let inductive_equiv env (kn1,i1) (kn2,i2) =
 let check_case_info env indsp ci =
   let (mib,mip) = lookup_mind_specif env indsp in
   if
-    (indsp <> ci.ci_ind) or
+    not (Closure.mind_equiv env indsp ci.ci_ind) or
     (mib.mind_nparams <> ci.ci_npar) or
     (mip.mind_consnrealdecls <> ci.ci_cstr_nargs)
   then raise (TypeError(env,WrongCaseInfo(indsp,ci)))

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evarconv.mli 6109 2004-09-15 16:50:56Z barras $ i*)
+(*i $Id: evarconv.mli 9141 2006-09-15 10:07:01Z herbelin $ i*)
 
 (*i*)
 open Term
@@ -33,3 +33,5 @@ val evar_eqappr_x :
     conv_pb -> constr * constr list -> constr * constr list ->
       evar_defs * bool
 (*i*)
+
+val consider_remaining_unif_problems : env -> evar_defs -> evar_defs * bool

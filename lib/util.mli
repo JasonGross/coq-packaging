@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id: util.mli 8867 2006-05-28 16:21:41Z herbelin $ i*)
+(*i $Id: util.mli 9225 2006-10-09 15:59:23Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -149,6 +149,7 @@ val array_hd : 'a array -> 'a
 val array_tl : 'a array -> 'a array
 val array_last : 'a array -> 'a
 val array_cons : 'a -> 'a array -> 'a array
+val array_rev : 'a array -> unit
 val array_fold_right_i : 
   (int -> 'b -> 'a -> 'a) -> 'b array -> 'a -> 'a
 val array_fold_left_i : (int -> 'a -> 'b -> 'a) -> 'a -> 'b array -> 'a
@@ -175,6 +176,7 @@ val array_map_left_pair : ('a -> 'b) -> 'a array -> ('c -> 'd) -> 'c array ->
 val array_fold_map' : ('a -> 'c -> 'b * 'c) -> 'a array -> 'c -> 'b array * 'c
 val array_fold_map2' :
   ('a -> 'b -> 'c -> 'd * 'c) -> 'a array -> 'b array -> 'c -> 'd array * 'c
+val array_distinct : 'a array -> bool
 
 (*s Matrices *)
 
@@ -207,6 +209,7 @@ val out_some : 'a option -> 'a
 val option_map : ('a -> 'b) -> 'a option -> 'b option
 val option_cons : 'a option -> 'a list -> 'a list
 val option_fold_right : ('a -> 'b -> 'b) -> 'a option -> 'b -> 'b
+val option_fold_left : ('a -> 'b -> 'a) -> 'a -> 'b option -> 'a
 val option_fold_left2 : ('a -> 'b -> 'c -> 'a) -> 'a -> 'b option ->
   'c option -> 'a
 val option_iter : ('a -> unit) -> 'a option -> unit
@@ -238,6 +241,8 @@ val prlist_with_sep :
 val prvect_with_sep :
    (unit -> std_ppcmds) -> ('b -> std_ppcmds) -> 'b array -> std_ppcmds
 val pr_vertical_list : ('b -> std_ppcmds) -> 'b list -> std_ppcmds
+val surround : std_ppcmds -> std_ppcmds
+
 
 (*s Size of an ocaml value (in words, bytes and kilobytes). *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pcoq.ml4 9043 2006-07-12 10:06:40Z herbelin $ i*)
+(*i $Id: pcoq.ml4 9333 2006-11-02 13:59:14Z barras $ i*)
 
 open Pp
 open Util
@@ -430,6 +430,7 @@ module Tactic =
     (* Main entries for ltac *)
     let tactic_arg = Gram.Entry.create "tactic:tactic_arg"
     let tactic_expr = Gram.Entry.create "tactic:tactic_expr"
+    let binder_tactic = Gram.Entry.create "tactic:binder_tactic"
 
     let tactic = make_gen_entry utactic (rawwit_tactic tactic_main_level) "tactic"
 
@@ -450,6 +451,12 @@ module Vernac_ =
     let command = gec_vernac "command"
     let syntax = gec_vernac "syntax_command"
     let vernac = gec_vernac "Vernac_.vernac"
+
+    (* MMode *)
+
+    let proof_instr = Gram.Entry.create "proofmode:instr"
+
+    (* /MMode *)
 
     let vernac_eoi = eoi_entry vernac
   end

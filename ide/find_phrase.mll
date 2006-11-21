@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: find_phrase.mll 6218 2004-10-15 14:27:04Z coq $ *)
+(* $Id: find_phrase.mll 9240 2006-10-13 17:51:11Z notin $ *)
 
 {
   exception Lex_error of string
@@ -28,7 +28,11 @@ rule next_phrase = parse
 		 next_phrase lexbuf
 	       }
   | phrase_sep[' ''\n''\t''\r'] {
-      length := !length + 2; 
+	begin 
+	  if !Preferences.current.Preferences.lax_syntax 
+	  then length := !length + 1
+	  else length := !length + 2
+	end;
       Buffer.add_string buff (Lexing.lexeme lexbuf);
       Buffer.contents buff}
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: options.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
+(* $Id: options.ml 9191 2006-09-29 15:45:42Z courtieu $ *)
 
 open Util
 
@@ -22,6 +22,7 @@ let batch_mode = ref false
 let debug = ref false
 
 let print_emacs = ref false
+let print_emacs_safechar = ref false
 
 let term_quality = ref false
 

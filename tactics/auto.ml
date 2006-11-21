@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: auto.ml 8878 2006-05-30 16:44:25Z herbelin $ *)
+(* $Id: auto.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
 
 open Pp
 open Util
@@ -192,7 +192,10 @@ let make_exact_entry (c,cty) =
 	   { pri=0; pat=None; code=Give_exact c })
 
 let dummy_goal =
-  {it={evar_hyps=empty_named_context_val;evar_concl=mkProp;evar_body=Evar_empty};
+  {it={evar_hyps=empty_named_context_val;
+       evar_concl=mkProp;
+       evar_body=Evar_empty;
+       evar_extra=None};
    sigma=Evd.empty}
 
 let make_apply_entry env sigma (eapply,verbose) (c,cty) =

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: libobject.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
+(* $Id: libobject.ml 9104 2006-09-01 11:04:44Z notin $ *)
 
 open Util
 open Names
@@ -144,7 +144,7 @@ let apply_dyn_fun deflt f lobj =
 	  else
 	    anomaly
 	      ("Cannot find library functions for an object with tag "^tag) in 
-  	f dodecl
+	f dodecl
     with
 	Failure "local to_apply_dyn_fun" -> deflt;;
 

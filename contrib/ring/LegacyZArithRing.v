@@ -6,13 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ZArithRing.v 6295 2004-11-12 16:40:39Z gregoire $ *)
+(* $Id: LegacyZArithRing.v 9181 2006-09-26 16:38:33Z barras $ *)
 
 (* Instantiation of the Ring tactic for the binary integers of ZArith *)
 
-Require Export ArithRing.
+Require Export LegacyArithRing.
 Require Export ZArith_base.
 Require Import Eqdep_dec.
+Require Import LegacyRing.
 
 Unboxed Definition Zeq (x y:Z) :=
   match (x ?= y)%Z with
@@ -32,5 +33,5 @@ Definition ZTheory : Ring_Theory Zplus Zmult 1%Z 0%Z Zopp Zeq.
 Qed.
 
 (* NatConstants and NatTheory are defined in Ring_theory.v *)
-Add Ring Z Zplus Zmult 1%Z 0%Z Zopp Zeq ZTheory
+Add Legacy Ring Z Zplus Zmult 1%Z 0%Z Zopp Zeq ZTheory
  [ Zpos Zneg 0%Z xO xI 1%positive ].

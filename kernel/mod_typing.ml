@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mod_typing.ml 7639 2005-12-02 10:01:15Z gregoire $ i*)
+(*i $Id: mod_typing.ml 9310 2006-10-28 19:35:09Z herbelin $ i*)
 
 open Util
 open Names
@@ -87,8 +87,8 @@ and merge_with env mtb with_decl =
 		match cb.const_body with
 		  | None -> 
 		      let (j,cst1) = Typeops.infer env' c in
-		      let cst2 = 
-			Reduction.conv_leq env' j.uj_type cb.const_type in
+		      let typ = Typeops.type_of_constant_type env' cb.const_type in
+		      let cst2 = Reduction.conv_leq env' j.uj_type typ in
 		      let cst = 
 			Constraint.union 
 			  (Constraint.union cb.const_constraints cst1)

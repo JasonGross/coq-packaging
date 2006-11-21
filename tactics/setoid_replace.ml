@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: setoid_replace.ml 8900 2006-06-06 14:40:27Z letouzey $ *)
+(* $Id: setoid_replace.ml 9331 2006-11-01 09:36:06Z herbelin $ *)
 
 open Tacmach
 open Proof_type
@@ -33,7 +33,7 @@ open Decl_kinds
 open Constrintern
 open Mod_subst
 
-let replace = ref (fun _ _ -> assert false)
+let replace = ref (fun _ _ _ -> assert false)
 let register_replace f = replace := f
 
 let general_rewrite = ref (fun _ _ -> assert false)
@@ -155,7 +155,7 @@ let coq_MSCovariant = lazy(constant ["Setoid"] "MSCovariant")
 let coq_MSContravariant = lazy(constant ["Setoid"] "MSContravariant")
 
 let coq_singl = lazy(constant ["Setoid"] "singl")
-let coq_cons = lazy(constant ["Setoid"] "cons")
+let coq_cons = lazy(constant ["Setoid"] "necons")
 
 let coq_equality_morphism_of_asymmetric_areflexive_transitive_relation =
  lazy(constant ["Setoid"]
@@ -805,135 +805,140 @@ let new_morphism m signature id hook =
   let typeofm = Typing.type_of env Evd.empty m in
   let typ = clos_norm_flags Closure.betaiotazeta empty_env Evd.empty typeofm in
   let argsrev, output =
-   match signature with
-      None -> decompose_prod typ
-    | Some (_,output') ->
-       (* the carrier of the relation output' can be a Prod ==>
-          we must uncurry on the fly output.
-          E.g: A -> B -> C vs        A -> (B -> C)
-                args   output     args     output
-       *)
-       let rel = find_relation_class output' in
-       let rel_a,rel_quantifiers_no =
-        match rel with
-           Relation rel -> rel.rel_a, rel.rel_quantifiers_no
-         | Leibniz (Some t) -> t, 0
-         | Leibniz None -> assert false in
-       let rel_a_n =
-        clos_norm_flags Closure.betaiotazeta empty_env Evd.empty rel_a in
-       try
-        let _,output_rel_a_n = decompose_lam_n rel_quantifiers_no rel_a_n in
-        let argsrev,_ = decompose_prod output_rel_a_n in
-        let n = List.length argsrev in
-        let argsrev',_ = decompose_prod typ in
-        let m = List.length argsrev' in
-         decompose_prod_n (m - n) typ
-       with UserError(_,_) ->
-        (* decompose_lam_n failed. This may happen when rel_a is an axiom,
-           a constructor, an inductive type, etc. *)
-        decompose_prod typ
+    match signature with
+	None -> decompose_prod typ
+      | Some (_,output') ->
+	  (* the carrier of the relation output' can be a Prod ==>
+             we must uncurry on the fly output.
+             E.g: A -> B -> C vs        A -> (B -> C)
+             args   output     args     output
+	  *)
+	  let rel = 
+	    try find_relation_class output' 
+	    with Not_found -> errorlabstrm "Add Morphism"
+	      (str "Not a valid signature: " ++ pr_lconstr output' ++
+		  str " is neither a registered relation nor the Leibniz " ++
+		  str " equality.") in
+	  let rel_a,rel_quantifiers_no =
+            match rel with
+		Relation rel -> rel.rel_a, rel.rel_quantifiers_no
+              | Leibniz (Some t) -> t, 0
+              | Leibniz None -> assert false in
+	  let rel_a_n =
+            clos_norm_flags Closure.betaiotazeta empty_env Evd.empty rel_a in
+	    try
+              let _,output_rel_a_n = decompose_lam_n rel_quantifiers_no rel_a_n in
+              let argsrev,_ = decompose_prod output_rel_a_n in
+              let n = List.length argsrev in
+              let argsrev',_ = decompose_prod typ in
+              let m = List.length argsrev' in
+		decompose_prod_n (m - n) typ
+	    with UserError(_,_) ->
+              (* decompose_lam_n failed. This may happen when rel_a is an axiom,
+		 a constructor, an inductive type, etc. *)
+              decompose_prod typ
   in
   let args_ty = List.rev argsrev in
   let args_ty_len = List.length (args_ty) in
   let args_ty_quantifiers_rev,args,args_instance,output,output_instance =
-   match signature with
-      None ->
-       if args_ty = [] then
-        errorlabstrm "New Morphism"
-         (str "The term " ++ pr_lconstr m ++ str " has type " ++
-          pr_lconstr typeofm ++ str " that is not a product.") ;
-       ignore (check_is_dependent 0 args_ty output) ;
-       let args =
-        List.map
-         (fun (_,ty) -> None,default_relation_for_carrier ty) args_ty in
-       let output = default_relation_for_carrier output in
-        [],args,args,output,output
-    | Some (args,output') ->
-       assert (args <> []);
-       let number_of_arguments = List.length args in
-       let number_of_quantifiers = args_ty_len - number_of_arguments in
-       if number_of_quantifiers < 0 then
-        errorlabstrm "New Morphism"
-         (str "The morphism " ++ pr_lconstr m ++ str " has type " ++
-          pr_lconstr typeofm ++ str " that attends at most " ++ int args_ty_len ++
-          str " arguments. The signature that you specified requires " ++
-          int number_of_arguments ++ str " arguments.")
-       else
-        begin
-         (* the real_args_ty returned are already delifted *)
-         let args_ty_quantifiers_rev, real_args_ty, real_output =
-          check_is_dependent number_of_quantifiers args_ty output in
-         let quantifiers_rel_context =
-          List.map (fun (n,t) -> n,None,t) args_ty_quantifiers_rev in
-         let env = push_rel_context quantifiers_rel_context env in
-         let find_relation_class t real_t =
-          try
-           let rel = find_relation_class t in
-            rel, unify_relation_class_carrier_with_type env rel real_t
-          with Not_found ->
-           errorlabstrm "Add Morphism"
-            (str "Not a valid signature: " ++ pr_lconstr t ++
-             str " is neither a registered relation nor the Leibniz " ++
-             str " equality.")
-         in
-         let find_relation_class_v (variance,t) real_t =
-          let relation,relation_instance = find_relation_class t real_t in
-           match relation, variance with
-              Leibniz _, None
-            | Relation {rel_sym = Some _}, None
-            | Relation {rel_sym = None}, Some _ ->
-               (variance, relation), (variance, relation_instance)
-            | Relation {rel_sym = None},None ->
-               errorlabstrm "Add Morphism"
-                (str "You must specify the variance in each argument " ++
-                 str "whose relation is asymmetric.")
-            | Leibniz _, Some _
-            | Relation {rel_sym = Some _}, Some _ ->
-               errorlabstrm "Add Morphism"
-                (str "You cannot specify the variance of an argument " ++
-                 str "whose relation is symmetric.")
-         in
-          let args, args_instance =
-           List.split
-            (List.map2 find_relation_class_v args real_args_ty) in
-          let output,output_instance= find_relation_class output' real_output in
-           args_ty_quantifiers_rev, args, args_instance, output, output_instance
-        end
+    match signature with
+	None ->
+	  if args_ty = [] then
+            errorlabstrm "New Morphism"
+              (str "The term " ++ pr_lconstr m ++ str " has type " ++
+		  pr_lconstr typeofm ++ str " that is not a product.") ;
+	  ignore (check_is_dependent 0 args_ty output) ;
+	  let args =
+            List.map
+              (fun (_,ty) -> None,default_relation_for_carrier ty) args_ty in
+	  let output = default_relation_for_carrier output in
+            [],args,args,output,output
+      | Some (args,output') ->
+	  assert (args <> []);
+	  let number_of_arguments = List.length args in
+	  let number_of_quantifiers = args_ty_len - number_of_arguments in
+	    if number_of_quantifiers < 0 then
+              errorlabstrm "New Morphism"
+		(str "The morphism " ++ pr_lconstr m ++ str " has type " ++
+		    pr_lconstr typeofm ++ str " that attends at most " ++ int args_ty_len ++
+		    str " arguments. The signature that you specified requires " ++
+		    int number_of_arguments ++ str " arguments.")
+	    else
+              begin
+		(* the real_args_ty returned are already delifted *)
+		let args_ty_quantifiers_rev, real_args_ty, real_output =
+		  check_is_dependent number_of_quantifiers args_ty output in
+		let quantifiers_rel_context =
+		  List.map (fun (n,t) -> n,None,t) args_ty_quantifiers_rev in
+		let env = push_rel_context quantifiers_rel_context env in
+		let find_relation_class t real_t =
+		  try
+		    let rel = find_relation_class t in
+		      rel, unify_relation_class_carrier_with_type env rel real_t
+		  with Not_found ->
+		    errorlabstrm "Add Morphism"
+		      (str "Not a valid signature: " ++ pr_lconstr t ++
+			  str " is neither a registered relation nor the Leibniz " ++
+			  str " equality.")
+		in
+		let find_relation_class_v (variance,t) real_t =
+		  let relation,relation_instance = find_relation_class t real_t in
+		    match relation, variance with
+			Leibniz _, None
+		      | Relation {rel_sym = Some _}, None
+		      | Relation {rel_sym = None}, Some _ ->
+			  (variance, relation), (variance, relation_instance)
+		      | Relation {rel_sym = None},None ->
+			  errorlabstrm "Add Morphism"
+			    (str "You must specify the variance in each argument " ++
+				str "whose relation is asymmetric.")
+		      | Leibniz _, Some _
+		      | Relation {rel_sym = Some _}, Some _ ->
+			  errorlabstrm "Add Morphism"
+			    (str "You cannot specify the variance of an argument " ++
+				str "whose relation is symmetric.")
+		in
+		let args, args_instance =
+		  List.split
+		    (List.map2 find_relation_class_v args real_args_ty) in
+		let output,output_instance= find_relation_class output' real_output in
+		  args_ty_quantifiers_rev, args, args_instance, output, output_instance
+              end
   in
-   let argsconstr,outputconstr,lem =
+  let argsconstr,outputconstr,lem =
     gen_compat_lemma_statement args_ty_quantifiers_rev output_instance
-     args_instance (apply_to_rels m args_ty_quantifiers_rev) in
-   (* "unfold make_compatibility_goal" *)
-   let lem =
+      args_instance (apply_to_rels m args_ty_quantifiers_rev) in
+    (* "unfold make_compatibility_goal" *)
+  let lem =
     Reductionops.clos_norm_flags
-     (Closure.unfold_red (Lazy.force coq_make_compatibility_goal_eval_ref))
-     env Evd.empty lem in
-   (* "unfold make_compatibility_goal_aux" *)
-   let lem =
+      (Closure.unfold_red (Lazy.force coq_make_compatibility_goal_eval_ref))
+      env Evd.empty lem in
+    (* "unfold make_compatibility_goal_aux" *)
+  let lem =
     Reductionops.clos_norm_flags
-     (Closure.unfold_red(Lazy.force coq_make_compatibility_goal_aux_eval_ref))
-     env Evd.empty lem in
-   (* "simpl" *)
-   let lem = Tacred.nf env Evd.empty lem in
+      (Closure.unfold_red(Lazy.force coq_make_compatibility_goal_aux_eval_ref))
+      env Evd.empty lem in
+    (* "simpl" *)
+  let lem = Tacred.nf env Evd.empty lem in
     if Lib.is_modtype () then
-     begin
-      ignore
-       (Declare.declare_internal_constant id
-        (ParameterEntry lem, IsAssumption Logical)) ;
-      let mor_name = morphism_theory_id_of_morphism_proof_id id in
-      let lemma_infos = Some (id,argsconstr,outputconstr) in
-       add_morphism lemma_infos mor_name
-        (m,args_ty_quantifiers_rev,args,output)
-     end
+      begin
+	ignore
+	  (Declare.declare_internal_constant id
+              (ParameterEntry lem, IsAssumption Logical)) ;
+	let mor_name = morphism_theory_id_of_morphism_proof_id id in
+	let lemma_infos = Some (id,argsconstr,outputconstr) in
+	  add_morphism lemma_infos mor_name
+            (m,args_ty_quantifiers_rev,args,output)
+      end
     else
-     begin
-      new_edited id
-       (m,args_ty_quantifiers_rev,args,argsconstr,output,outputconstr);
-      Pfedit.start_proof id (Global, Proof Lemma) 
-       (Declare.clear_proofs (Global.named_context ()))
-       lem hook;
-      Options.if_verbose msg (Printer.pr_open_subgoals ());
-     end
+      begin
+	new_edited id
+	  (m,args_ty_quantifiers_rev,args,argsconstr,output,outputconstr);
+	Pfedit.start_proof id (Global, Proof Lemma) 
+	  (Declare.clear_proofs (Global.named_context ()))
+	  lem hook;
+	Options.if_verbose msg (Printer.pr_open_subgoals ());
+      end
 
 let morphism_hook _ ref =
   let pf_id = id_of_global ref in
@@ -1272,7 +1277,7 @@ let relation_class_that_matches_a_constr caller_name new_goals hypt =
     forall x1 x2, rel1 x1 x2 -> rel2 x1 x2
    The Coq part of the tactic, however, needs rel1 == rel2.
    Hence the third case commented out.
-   Note: accepting user-defined subtrelations seems to be the last
+   Note: accepting user-defined subrelations seems to be the last
    useful generalization that does not go against the original spirit of
    the tactic.
 *)
@@ -1351,9 +1356,9 @@ let cartesian_product gl a =
    (aux (List.map (elim_duplicates gl identity) (Array.to_list a)))
 
 let mark_occur gl ~new_goals t in_c input_relation input_direction =
- let rec aux output_relation output_direction in_c =
+ let rec aux output_relation output_directions in_c =
   if eq_constr t in_c then
-   if input_direction = output_direction
+   if List.mem input_direction output_directions
    && subrelation gl input_relation output_relation then
     [ToReplace]
    else []
@@ -1400,33 +1405,32 @@ let mark_occur gl ~new_goals t in_c input_relation input_direction =
             (fun res (mor,c,al) ->
               let a =
                let arguments = Array.of_list mor.args in
-               let apply_variance_to_direction default_dir =
+               let apply_variance_to_direction =
                 function
-                   None -> default_dir
-                 | Some true -> output_direction
-                 | Some false -> opposite_direction output_direction
+                   None -> [Left2Right;Right2Left]
+                 | Some true -> output_directions
+                 | Some false -> List.map opposite_direction output_directions
                in
                 Util.array_map2
                  (fun a (variance,relation) ->
-                   (aux relation
-                     (apply_variance_to_direction Left2Right variance) a) @
-                   (aux relation
-                     (apply_variance_to_direction Right2Left variance) a)
+                   (aux relation (apply_variance_to_direction variance) a)
                  ) al arguments
               in
                let a' = cartesian_product gl a in
+	       List.flatten (List.map (fun output_direction ->
                 (List.map
                   (function a ->
                     if not (get_mark a) then
                      ToKeep (in_c,output_relation,output_direction)
                     else
-                     MApp (c,ACMorphism mor,a,output_direction)) a') @ res
+                     MApp (c,ACMorphism mor,a,output_direction)) a'))
+		 output_directions) @ res
             ) [] mors_and_cs_and_als in
           (* Then we look for well typed functions *)
           let res_functions =
            (* the tactic works only if the function type is
                made of non-dependent products only. However, here we
-               can cheat a bit by partially istantiating c to match
+               can cheat a bit by partially instantiating c to match
                the requirement when the arguments to be replaced are
                bound by non-dependent products only. *)
             let typeofc = Tacmach.pf_type_of gl c in
@@ -1437,7 +1441,9 @@ let mark_occur gl ~new_goals t in_c input_relation input_direction =
              function
                 [] ->
                  if a_rev = [] then
-                  [ToKeep (in_c,output_relation,output_direction)]
+		  List.map (fun output_direction ->
+                   ToKeep (in_c,output_relation,output_direction))
+		   output_directions
                  else
                   let a' =
                    cartesian_product gl (Array.of_list (List.rev a_rev))
@@ -1445,7 +1451,9 @@ let mark_occur gl ~new_goals t in_c input_relation input_direction =
                    List.fold_left
                     (fun res a ->
                       if not (get_mark a) then
-                       (ToKeep (in_c,output_relation,output_direction))::res
+			List.map (fun output_direction ->
+			 (ToKeep (in_c,output_relation,output_direction)))
+			 output_directions @ res
                       else
                        let err =
                         match output_relation with
@@ -1461,7 +1469,9 @@ let mark_occur gl ~new_goals t in_c input_relation input_direction =
                          let mor =
                           ACFunction{f_args=List.rev f_args_rev;f_output=typ} in
                          let func = beta_expand c c_args_rev in
-                          (MApp (func,mor,a,output_direction))::res
+			 List.map (fun output_direction ->
+                          (MApp (func,mor,a,output_direction)))
+			  output_directions @ res
                     ) [] a'
               | (he::tl) as a->
                  let typnf = Reduction.whd_betadeltaiota env typ in
@@ -1472,8 +1482,7 @@ let mark_occur gl ~new_goals t in_c input_relation input_direction =
                   | Prod (name,s,t) ->
                      let env' = push_rel (name,None,s) env in
                      let he =
-                      (aux (Leibniz (Some s)) Left2Right he) @
-                      (aux (Leibniz (Some s)) Right2Left he) in
+                      (aux (Leibniz (Some s)) [Left2Right;Right2Left] he) in
                      if he = [] then []
                      else
                       let he0 = List.hd he in
@@ -1515,41 +1524,48 @@ let mark_occur gl ~new_goals t in_c input_relation input_direction =
       | Prod (_, c1, c2) -> 
           if (dependent (mkRel 1) c2)
           then
-           errorlabstrm "Setoid_replace"
-            (str "Cannot rewrite in the type of a variable bound " ++
-             str "in a dependent product.")
+            if (occur_term t c2)
+	    then errorlabstrm "Setoid_replace"
+              (str "Cannot rewrite in the type of a variable bound " ++
+		  str "in a dependent product.")
+	    else
+	      List.map (fun output_direction ->
+	       ToKeep (in_c,output_relation,output_direction)) 
+	       output_directions
           else 
-           let typeofc1 = Tacmach.pf_type_of gl c1 in
-            if not (Tacmach.pf_conv_x gl typeofc1 mkProp) then
-             (* to avoid this error we should introduce an impl relation
-                whose first argument is Type instead of Prop. However,
-                the type of the new impl would be Type -> Prop -> Prop
-                that is no longer a Relation_Definitions.relation. Thus
-                the Coq part of the tactic should be heavily modified. *)
-             errorlabstrm "Setoid_replace"
-              (str "Rewriting in a product A -> B is possible only when A " ++
-               str "is a proposition (i.e. A is of type Prop). The type " ++
-               pr_lconstr c1 ++ str " has type " ++ pr_lconstr typeofc1 ++
-               str " that is not convertible to Prop.")
-            else
-             aux output_relation output_direction
-              (mkApp ((Lazy.force coq_impl),
-                [| c1 ; subst1 (mkRel 1 (*dummy*)) c2 |]))
+            let typeofc1 = Tacmach.pf_type_of gl c1 in
+              if not (Tacmach.pf_conv_x gl typeofc1 mkProp) then
+		(* to avoid this error we should introduce an impl relation
+                   whose first argument is Type instead of Prop. However,
+                   the type of the new impl would be Type -> Prop -> Prop
+                   that is no longer a Relation_Definitions.relation. Thus
+                   the Coq part of the tactic should be heavily modified. *)
+		errorlabstrm "Setoid_replace"
+		  (str "Rewriting in a product A -> B is possible only when A " ++
+		      str "is a proposition (i.e. A is of type Prop). The type " ++
+		      pr_lconstr c1 ++ str " has type " ++ pr_lconstr typeofc1 ++
+		      str " that is not convertible to Prop.")
+              else
+		aux output_relation output_directions
+		  (mkApp ((Lazy.force coq_impl),
+			 [| c1 ; subst1 (mkRel 1 (*dummy*)) c2 |]))
       | _ ->
-        if occur_term t in_c then
-         errorlabstrm "Setoid_replace"
-          (str "Trying to replace " ++ pr_lconstr t ++ str " in " ++ pr_lconstr in_c ++
-           str " that is not an applicative context.")
-        else
-         [ToKeep (in_c,output_relation,output_direction)]
+          if occur_term t in_c then
+            errorlabstrm "Setoid_replace"
+              (str "Trying to replace " ++ pr_lconstr t ++ str " in " ++ pr_lconstr in_c ++
+		  str " that is not an applicative context.")
+          else
+	    List.map (fun output_direction ->
+             ToKeep (in_c,output_relation,output_direction))
+	      output_directions
  in
   let aux2 output_relation output_direction =
    List.map
     (fun res -> output_relation,output_direction,res)
-     (aux output_relation output_direction in_c) in
+     (aux output_relation [output_direction] in_c) in
   let res =
    (aux2 (Lazy.force coq_iff_relation) Right2Left) @
-   (* This is the case of a proposition of signature A ++> iff or B --> iff *)
+   (* [Left2Right] is the case of a prop of signature A ++> iff or B --> iff *)
    (aux2 (Lazy.force coq_iff_relation) Left2Right) @
    (aux2 (Lazy.force coq_impl_relation) Right2Left) in
   let res = elim_duplicates gl (function (_,_,t) -> t) res in
@@ -1849,8 +1865,27 @@ let general_s_rewrite_in id lft2rgt c ~new_goals gl =
   else 
     relation_rewrite_in id c2 c1 (Right2Left,eqclause) ~new_goals gl
 
-let setoid_replace relation c1 c2 ~new_goals gl =
- try
+
+(* 
+   [general_setoid_replace rewrite_tac try_prove_eq_tac_opt relation c1 c2 ~new_goals ]
+   common part of [setoid_replace] and [setoid_replace_in]  (distinction is done using rewrite_tac). 
+
+   Algorith sketch: 
+   1- find the (setoid) relation [rel] between [c1] and [c2] using [relation]
+   2- assert [H:rel c2 c1] 
+   3- replace [c1] with [c2] using [rewrite_tac] (should be [general_s_rewrite] if we want to replace in the 
+      goal, and [general_s_rewrite_in id] if we want to replace in the hypothesis [id]). Possibly generate
+      new_goals if asked (cf general_s_rewrite)
+   4- if [try_prove_eq_tac_opt] is [Some tac] try to complete [rel c2 c1] using tac and do nothing if 
+      [try_prove_eq_tac_opt] is [None]
+*)
+let general_setoid_replace rewrite_tac try_prove_eq_tac_opt relation c1 c2 ~new_goals gl =
+  let try_prove_eq_tac = 
+    match try_prove_eq_tac_opt with 
+      | None -> Tacticals.tclIDTAC
+      | Some tac ->  Tacticals.tclTRY (Tacticals.tclCOMPLETE tac )
+  in 
+  try
   let relation =
    match relation with
       Some rel ->
@@ -1873,23 +1908,29 @@ let setoid_replace relation c1 c2 ~new_goals gl =
     tclTHENS (assert_tac false Anonymous eq)
       [onLastHyp (fun id ->
         tclTHEN
-          (general_s_rewrite dir (mkVar id) ~new_goals)
+          (rewrite_tac dir (mkVar id) ~new_goals)
           (clear [id]));
-       Tacticals.tclIDTAC]
+       try_prove_eq_tac]
    in
     tclORELSE
      (replace true eq_left_to_right) (replace false eq_right_to_left) gl
  with
-  Optimize -> (!replace c1 c2) gl
+  Optimize -> (* (!replace tac_opt c1 c2) gl *)
+    let eq =  mkApp (Lazy.force  coq_eq, [| pf_type_of gl c1;c2 ; c1 |]) in 
+    tclTHENS (assert_tac false Anonymous eq)
+      [onLastHyp (fun id ->
+		    tclTHEN
+		      (rewrite_tac false (mkVar id) ~new_goals)
+		      (clear [id]));
+       try_prove_eq_tac] gl
+      
 
-let setoid_replace_in id relation c1 c2 ~new_goals gl =
- let hyp = pf_type_of gl (mkVar id) in
- let new_hyp = Termops.replace_term c1 c2 hyp in
- cut_replacing id new_hyp
-   (fun exact -> tclTHENLASTn
-     (setoid_replace relation c2 c1 ~new_goals)
-     [| exact; tclIDTAC |]) gl
 
+
+let setoid_replace = general_setoid_replace general_s_rewrite
+let setoid_replace_in  tac_opt id relation c1 c2 ~new_goals gl = 
+  general_setoid_replace (general_s_rewrite_in id)  tac_opt relation c1 c2 ~new_goals gl
+ 
 (* [setoid_]{reflexivity,symmetry,transitivity} tactics *)
 
 let setoid_reflexivity gl =

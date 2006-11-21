@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacinterp.mli 8975 2006-06-23 08:52:53Z herbelin $ i*)
+(*i $Id: tacinterp.mli 9178 2006-09-26 11:18:22Z barras $ i*)
 
 (*i*)
 open Dyn
@@ -34,6 +34,7 @@ type value =
   | VIntroPattern of intro_pattern_expr
   | VConstr of constr
   | VConstr_context of constr
+  | VList of value list
   | VRec of value ref
 
 (* Signature for interpretation: val\_interp and interpretation functions *)
@@ -63,6 +64,14 @@ val add_tacdef :
   bool -> (identifier Util.located * raw_tactic_expr) list -> unit
 val add_primitive_tactic : string -> glob_tactic_expr -> unit
 
+(* Tactic extensions *)
+val add_tactic :
+  string -> (closed_generic_argument list -> tactic) -> unit
+val overwriting_add_tactic :
+  string -> (closed_generic_argument list -> tactic) -> unit
+val lookup_tactic :
+  string -> (closed_generic_argument list) -> tactic
+
 (* Adds an interpretation function for extra generic arguments *)
 type glob_sign = {
   ltacvars : identifier list * identifier list;
@@ -83,6 +92,9 @@ val interp_genarg :
 
 val intern_genarg :
   glob_sign -> raw_generic_argument -> glob_generic_argument
+
+val intern_tactic : 
+  glob_sign -> raw_tactic_expr -> glob_tactic_expr
 
 val intern_constr :
   glob_sign -> constr_expr -> rawconstr_and_expr

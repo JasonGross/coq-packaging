@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: q_coqast.ml4 8926 2006-06-08 20:23:17Z herbelin $ *)
+(* $Id: q_coqast.ml4 9315 2006-10-29 21:53:30Z barras $ *)
 
 open Util
 open Names
@@ -441,8 +441,12 @@ and mlexpr_of_tactic : (Tacexpr.raw_tactic_expr -> MLast.expr) = function
         $mlexpr_of_bool lz$
         $mlexpr_of_bool lr$
         $mlexpr_of_list (mlexpr_of_match_rule mlexpr_of_tactic) l$>>
+
+  | Tacexpr.TacFun (idol,body) ->
+      <:expr< Tacexpr.TacFun
+        ($mlexpr_of_list mlexpr_of_ident_option idol$,
+         $mlexpr_of_tactic body$) >>
 (*
-  | Tacexpr.TacFun of $dloc$ * tactic_fun_ast
   | Tacexpr.TacFunRec of $dloc$ * identifier * tactic_fun_ast
 *)
 (*

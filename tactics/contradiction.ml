@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: contradiction.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id: contradiction.ml 9269 2006-10-24 13:01:55Z herbelin $ *)
 
 open Util
 open Term
@@ -22,6 +22,10 @@ open Rawterm
 (* Absurd *)
 
 let absurd c gls =
+  let env = pf_env gls and sigma = project gls in
+  let _,j = Coercion.Default.inh_coerce_to_sort dummy_loc env
+    (Evd.create_evar_defs sigma) (Retyping.get_judgment_of env sigma c) in
+  let c = j.Environ.utj_val in
   (tclTHENS
      (tclTHEN (elim_type (build_coq_False ())) (cut c)) 
      ([(tclTHENS

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: index.mll 8863 2006-05-26 10:33:21Z notin $ i*)
+(*i $Id: index.mll 9204 2006-10-04 13:05:58Z notin $ i*)
 
 {
 
@@ -364,6 +364,7 @@ and end_ident = parse
 and module_ident = parse
   | space+
       { module_ident lexbuf }
+  | '"' { string lexbuf; module_ident lexbuf }
   | ident space* ":="
       { () }
   | ident

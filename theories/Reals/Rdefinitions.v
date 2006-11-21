@@ -5,12 +5,11 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i $Id: Rdefinitions.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: Rdefinitions.v 9245 2006-10-17 12:53:34Z notin $ i*)
 
 
 (*********************************************************)
 (**          Definitions for the axiomatization          *)
-(*                                                       *)
 (*********************************************************)
 
 Require Export ZArith_base.

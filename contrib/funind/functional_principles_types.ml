@@ -301,9 +301,18 @@ let pp_dur time time' =
   str (string_of_float (System.time_difference time time'))
 
 (* let qed () = save_named true  *)
-let defined () = Command.save_named false
-
-
+let defined () = 
+  try 
+    Command.save_named false 
+  with 
+    | UserError("extract_proof",msg) ->
+	Util.errorlabstrm
+	  "defined"
+	  ((try
+	      str "On goal : " ++ fnl () ++  pr_open_subgoals () ++ fnl ()
+	    with _ -> mt ()
+	   ) ++msg)
+    | e -> raise e
 
 
 
@@ -346,6 +355,7 @@ let generate_functional_principle
     interactive_proof
     old_princ_type sorts new_princ_name funs i proof_tac
     =
+  try 
   let f = funs.(i) in
   let type_sort = Termops.new_sort_in_family InType in
   let new_sorts =
@@ -384,6 +394,9 @@ let generate_functional_principle
 	     Decl_kinds.IsDefinition (Decl_kinds.Scheme)
 	    )
 	);
+	Options.if_verbose 
+	  (fun id -> Pp.msgnl (Ppconstr.pr_id id ++ str " is defined")) 
+	  name;
 	names := name :: !names
       in
       register_with_sort InProp;
@@ -393,6 +406,10 @@ let generate_functional_principle
     build_functional_principle interactive_proof old_princ_type new_sorts funs i proof_tac hook 
   in
   save false new_princ_name entry g_kind hook
+  with 
+    | Defining_principle _ as e -> raise e
+    | e -> raise (Defining_principle e)
+
 (*   defined  () *)
 
 
@@ -591,13 +608,6 @@ let make_scheme (fas : (constant*Rawterm.rawsort) list) : Entries.definition_ent
     const::other_result
 
 let build_scheme fas = 
-(*         (fun (f,_) ->  *)
-(* 	 try Libnames.constr_of_global (Nametab.global f) *)
-(* 	 with Not_found ->  *)
-(* 	   Util.error ("Cannot find "^ Libnames.string_of_reference f) *)
-(*       ) *)
-(*       fas *)
-
   let bodies_types = 
     make_scheme 
       (List.map 

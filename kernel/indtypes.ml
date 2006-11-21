@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: indtypes.ml 8871 2006-05-28 16:46:48Z herbelin $ *)
+(* $Id: indtypes.ml 9310 2006-10-28 19:35:09Z herbelin $ *)
 
 open Util
 open Names
@@ -163,9 +163,13 @@ let small_unit constrsinfos =
    w1,w2,w3 <= u3
 *)   
 
+let extract_level (_,_,_,lc,lev) =
+  (* Enforce that the level is not in Prop if more than two constructors *)
+  if Array.length lc >= 2 then sup base_univ lev else lev
+
 let inductive_levels arities inds =
   let levels = Array.map pi3 arities in
-  let cstrs_levels = Array.map (fun (_,_,_,_,lev) -> lev) inds in
+  let cstrs_levels = Array.map extract_level inds in
   (* Take the transitive closure of the system of constructors *)
   (* level constraints and remove the recursive dependencies *)
   solve_constraints_system levels cstrs_levels
@@ -388,7 +392,7 @@ let ienv_push_inductive (env, n, ntypes, ra_env) (mi,lpar) =
   let specif = lookup_mind_specif env mi in
   let env' =
     push_rel (Anonymous,None,
-              hnf_prod_applist env (type_of_inductive specif) lpar) env in
+              hnf_prod_applist env (type_of_inductive env specif) lpar) env in
   let ra_env' = 
     (Imbr mi,Rtree.mk_param 0) ::
     List.map (fun (r,t) -> (r,Rtree.lift 1 t)) ra_env in
@@ -597,8 +601,8 @@ let build_inductive env env_ar params isrecord isfinite inds nmr recargs cst =
     let arkind,kelim = match ar_kind with
     | Inr (param_levels,lev) ->
 	Polymorphic {
-	  mind_param_levels = param_levels;
-	  mind_level = lev; 
+	  poly_param_levels = param_levels;
+	  poly_level = lev; 
 	}, all_sorts
     | Inl ((issmall,isunit),ar,s) ->
 	let isunit = isunit && ntypes = 1 && not (is_recursive recargs.(0)) in

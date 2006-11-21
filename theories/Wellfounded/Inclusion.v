@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Inclusion.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: Inclusion.v 9245 2006-10-17 12:53:34Z notin $ i*)
 
 (** Author: Bruno Barras *)
 
@@ -21,7 +21,7 @@ Section WfInclusion.
     induction 2.
     apply Acc_intro; auto with sets.
   Qed.
-
+  
   Hint Resolve Acc_incl.
 
   Theorem wf_incl : inclusion A R1 R2 -> well_founded R2 -> well_founded R1.

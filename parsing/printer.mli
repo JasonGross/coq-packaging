@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: printer.mli 8831 2006-05-19 09:29:54Z herbelin $ i*)
+(*i $Id: printer.mli 9249 2006-10-19 07:46:03Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -35,6 +35,7 @@ val pr_lconstr             : constr -> std_ppcmds
 val pr_constr_env          : env -> constr -> std_ppcmds
 val pr_constr              : constr -> std_ppcmds
 
+val pr_ltype_env_at_top    : env -> types -> std_ppcmds
 val pr_ltype_env           : env -> types -> std_ppcmds
 val pr_ltype               : types -> std_ppcmds
 
@@ -87,7 +88,7 @@ val pr_context_of          : env -> std_ppcmds
 (* Proofs *)
 
 val pr_goal                : goal -> std_ppcmds
-val pr_subgoals            : evar_map -> goal list -> std_ppcmds
+val pr_subgoals            : string option -> evar_map -> goal list -> std_ppcmds
 val pr_subgoal             : int -> goal list -> std_ppcmds
 
 val pr_open_subgoals       : unit -> std_ppcmds

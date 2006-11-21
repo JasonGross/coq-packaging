@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacextend.ml4 8926 2006-06-08 20:23:17Z herbelin $ *)
+(* $Id: tacextend.ml4 9265 2006-10-24 08:35:38Z herbelin $ *)
 
 open Genarg
 open Q_util
@@ -165,7 +165,7 @@ let declare_tactic loc s cl =
       open Pcoq;
       declare $list:hidden$ end;
       try
-        let _=Refiner.add_tactic $se$ (fun [ $list:make_clauses s cl$ ]) in
+        let _=Tacinterp.add_tactic $se$ (fun [ $list:make_clauses s cl$ ]) in
         List.iter
           (fun s -> Tacinterp.add_primitive_tactic s
               (Tacexpr.TacAtom($default_loc$,
@@ -198,7 +198,10 @@ EXTEND
   ;
   tacargs:
     [ [ e = LIDENT; "("; s = LIDENT; ")" ->
-        let t, g = Q_util.interp_entry_name loc e in
+        let t, g = Q_util.interp_entry_name loc e "" in
+        TacNonTerm (loc, t, g, Some s)
+      | e = LIDENT; "("; s = LIDENT; ","; sep = STRING; ")" ->
+        let t, g = Q_util.interp_entry_name loc e sep in
         TacNonTerm (loc, t, g, Some s)
       | s = STRING ->
 	if s = "" then Util.user_err_loc (loc,"",Pp.str "Empty terminal");

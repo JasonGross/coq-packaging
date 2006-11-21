@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Field_Compl.v 8866 2006-05-28 16:21:04Z herbelin $ *)
+(* $Id: LegacyField_Compl.v 9273 2006-10-25 11:30:36Z barras $ *)
 
 Require Import List.
 

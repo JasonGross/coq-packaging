@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: rawterm.ml 8969 2006-06-22 12:51:04Z msozeau $ *)
+(* $Id: rawterm.ml 9226 2006-10-09 16:11:01Z herbelin $ *)
 
 (*i*)
 open Util
@@ -26,7 +26,7 @@ type cases_pattern =
   | PatVar of loc * name
   | PatCstr of loc * constructor * cases_pattern list * name
 
-let pattern_loc = function
+let cases_pattern_loc = function
     PatVar(loc,_) -> loc
   | PatCstr(loc,_,_,_) -> loc
 

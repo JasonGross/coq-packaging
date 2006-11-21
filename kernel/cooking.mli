@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cooking.mli 6748 2005-02-18 22:17:50Z herbelin $ i*)
+(*i $Id: cooking.mli 9310 2006-10-28 19:35:09Z herbelin $ i*)
 
 open Names
 open Term
@@ -25,7 +25,7 @@ type recipe = {
 
 val cook_constant :
   env -> recipe -> 
-    constr_substituted option * constr * constraints * bool * bool
+    constr_substituted option * constant_type * constraints * bool * bool
 
 (*s Utility functions used in module [Discharge]. *)
 

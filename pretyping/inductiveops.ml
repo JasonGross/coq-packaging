@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inductiveops.ml 8845 2006-05-23 07:41:58Z herbelin $ *)
+(* $Id: inductiveops.ml 9310 2006-10-28 19:35:09Z herbelin $ *)
 
 open Util
 open Names
@@ -23,7 +23,7 @@ open Reductionops
 
 let type_of_inductive env ind =
  let specif = Inductive.lookup_mind_specif env ind in
-  Inductive.type_of_inductive specif
+  Inductive.type_of_inductive env specif
 
 (* Return type as quoted by the user *)
 let type_of_constructor env cstr =
@@ -125,6 +125,10 @@ let get_full_arity_sign env ind =
 let inductive_nargs env ind =
   let (mib,mip) = Inductive.lookup_mind_specif env ind in
   mib.mind_nparams, mip.mind_nrealargs
+
+let allowed_sorts env (kn,i as ind) =
+  let (mib,mip) = Inductive.lookup_mind_specif env ind in
+  mip.mind_kelim
 
 (* Annotation for cases *)
 let make_case_info env ind style pats_source =

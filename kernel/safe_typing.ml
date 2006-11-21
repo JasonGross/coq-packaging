@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: safe_typing.ml 8898 2006-06-05 23:15:51Z letouzey $ *)
+(* $Id: safe_typing.ml 9310 2006-10-28 19:35:09Z herbelin $ *)
 
 open Util
 open Names
@@ -119,6 +119,12 @@ type global_declaration =
   | ConstantEntry of constant_entry
   | GlobalRecipe of Cooking.recipe
 
+let hcons_constant_type = function
+  | NonPolymorphicType t ->
+      NonPolymorphicType (hcons1_constr t)
+  | PolymorphicArity (ctx,s) ->
+      PolymorphicArity (map_rel_context hcons1_constr ctx,s)
+
 let hcons_constant_body cb =
   let body = match cb.const_body with
       None -> None
@@ -127,28 +133,28 @@ let hcons_constant_body cb =
   in
     { cb with
 	const_body = body;
-	const_type = hcons1_constr cb.const_type }
+	const_type = hcons_constant_type cb.const_type }
 
 let add_constant dir l decl senv =
   check_label l senv.labset;
-  let kn = make_con senv.modinfo.modpath dir l in 
+  let kn = make_con senv.modinfo.modpath dir l in
   let cb = 
     match decl with 
-    | ConstantEntry ce -> translate_constant senv.env kn ce
-    | GlobalRecipe r ->
-	let cb = translate_recipe senv.env kn r in
-	if dir = empty_dirpath then hcons_constant_body cb else cb
+      | ConstantEntry ce -> translate_constant senv.env kn ce
+      | GlobalRecipe r ->
+	  let cb = translate_recipe senv.env kn r in
+	    if dir = empty_dirpath then hcons_constant_body cb else cb
   in
   let env' = Environ.add_constraints cb.const_constraints senv.env in
   let env'' = Environ.add_constant kn cb env' in
-  kn, { old = senv.old;
-	env = env'';
-	modinfo = senv.modinfo;
-	labset = Labset.add l senv.labset;
-	revsign = (l,SPBconst cb)::senv.revsign;
-	revstruct = (l,SEBconst cb)::senv.revstruct;
-	imports = senv.imports;
-	loads = senv.loads }
+    kn, { old = senv.old;
+	  env = env'';
+	  modinfo = senv.modinfo;
+	  labset = Labset.add l senv.labset;
+	  revsign = (l,SPBconst cb)::senv.revsign;
+	  revstruct = (l,SEBconst cb)::senv.revstruct;
+	  imports = senv.imports;
+	  loads = senv.loads }
     
 
 (* Insertion of inductive types. *)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacexpr.ml 8917 2006-06-07 16:59:05Z herbelin $ i*)
+(*i $Id: tacexpr.ml 9267 2006-10-24 12:55:46Z herbelin $ i*)
 
 open Names
 open Topconstr
@@ -234,7 +234,7 @@ and ('constr,'pat,'cst,'ind,'ref,'id,'tac) gen_tactic_arg =
       'ref * ('constr,'pat,'cst,'ind,'ref,'id,'tac) gen_tactic_arg list
   | TacExternal of loc * string * string * 
       ('constr,'pat,'cst,'ind,'ref,'id,'tac) gen_tactic_arg list
-  | TacFreshId     of string option
+  | TacFreshId     of string or_var list
   | Tacexp of 'tac
 
 (* Globalized tactics *)

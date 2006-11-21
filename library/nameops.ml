@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: nameops.ml 8727 2006-04-24 09:48:06Z herbelin $ *)
+(* $Id: nameops.ml 9225 2006-10-09 15:59:23Z herbelin $ *)
 
 open Pp
 open Util
@@ -153,6 +153,10 @@ let name_cons na l =
 let name_app f = function
   | Name id -> Name (f id)
   | Anonymous -> Anonymous
+
+let name_fold_map f e = function
+  | Name id -> let (e,id) = f e id in (e,Name id)
+  | Anonymous -> e,Anonymous
 
 let next_name_away_with_default default name l = 
   match name with

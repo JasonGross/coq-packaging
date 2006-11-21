@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: util.ml 8867 2006-05-28 16:21:41Z herbelin $ *)
+(* $Id: util.ml 9225 2006-10-09 15:59:23Z herbelin $ *)
 
 open Pp
 
@@ -194,7 +194,7 @@ let list_map_i f =
 let list_map2_i f i l1 l2 =  
   let rec map_i i = function
     | ([], []) -> []
-    | ((h1::t1), (h2::t2)) -> (f i h1 h2) :: (map_i (succ i) (t1,t2))
+    | ((h1::t1), (h2::t2)) -> let v = f i h1 h2 in v :: map_i (succ i) (t1,t2)
     | (_, _) -> invalid_arg "map2_i"
   in 
   map_i i (l1,l2)
@@ -202,7 +202,7 @@ let list_map2_i f i l1 l2 =
 let list_map3 f l1 l2 l3 =
   let rec map = function
     | ([], [], []) -> []
-    | ((h1::t1), (h2::t2), (h3::t3)) -> (f h1 h2 h3) :: (map (t1,t2,t3))
+    | ((h1::t1), (h2::t2), (h3::t3)) -> let v = f h1 h2 h3 in v::map (t1,t2,t3)
     | (_, _, _) -> invalid_arg "map3"
   in 
   map (l1,l2,l3)
@@ -295,9 +295,11 @@ let list_try_find f =
   in 
   try_find_f
 
-let rec list_uniquize = function
-  | [] -> []
-  | h::t -> if List.mem h t then list_uniquize t else h::(list_uniquize t)
+let list_uniquize l =
+  let rec aux acc = function
+  | [] -> List.rev acc
+  | h::t -> if List.mem h acc then aux acc t else aux (h::acc) t
+  in aux [] l
 
 let rec list_distinct = function
   | h::t -> (not (List.mem h t)) && list_distinct t
@@ -472,6 +474,17 @@ let array_last v =
     | n -> v.(pred n)
 
 let array_cons e v = Array.append [|e|] v
+
+let array_rev t = 
+  let n=Array.length t in
+    if n <=0 then () 
+    else
+      let tmp=ref t.(0) in
+      for i=0 to pred (n/2) do 
+	tmp:=t.((pred n)-i);
+	t.((pred n)-i)<- t.(i);
+	t.(i)<- !tmp
+      done
 
 let array_fold_right_i f v a =
   let rec fold a n =
@@ -649,6 +662,17 @@ let array_fold_map2' f v1 v2 e =
   in
   (v',!e')
 
+let array_distinct v =
+  try
+    for i=0 to Array.length v-1 do
+      for j=i+1 to Array.length v-1 do
+	if v.(i)=v.(j) then raise Exit
+      done
+    done;
+    true
+  with Exit ->
+    false
+
 (* Matrices *)
 
 let matrix_transpose mat =
@@ -711,6 +735,10 @@ let option_cons a l = match a with
 
 let option_fold_left2 f e a b = match (a,b) with
   | Some x, Some y -> f e x y
+  | _ -> e
+
+let option_fold_left f e a = match a with
+  | Some x -> f e x
   | _ -> e
 
 let option_fold_right f a e = match a with
@@ -788,6 +816,8 @@ let prvect_with_sep sep elem v =
       in
   let n = Array.length v in
   if n = 0 then mt () else pr (n - 1)
+
+let surround p = hov 1 (str"(" ++ p ++ str")")
 
 (*s Size of ocaml values. *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: goptions.ml 6304 2004-11-16 15:49:08Z sacerdot $ *)
+(* $Id: goptions.ml 9060 2006-07-27 15:30:35Z notin $ *)
 
 (* This module manages customization parameters at the vernacular level     *)
 
@@ -253,7 +253,7 @@ let declare_option cast uncast
 	       unfreeze_function = write;
 	       init_function = (fun () -> write default);
 	       survive_module = false;
-	       survive_section = true}
+	       survive_section = false}
     in 
     fun v -> add_anonymous_leaf (decl_obj v)
   else write

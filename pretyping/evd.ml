@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evd.ml 8759 2006-04-28 12:24:14Z herbelin $ *)
+(* $Id: evd.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
 
 open Pp
 open Util
@@ -30,7 +30,8 @@ type evar_body =
 type evar_info = {
   evar_concl : constr;
   evar_hyps : named_context_val;
-  evar_body : evar_body}
+  evar_body : evar_body;
+  evar_extra : Dyn.t option}
 
 let evar_context evi = named_context_of_val evi.evar_hyps
 
@@ -46,7 +47,11 @@ type evar_map1 = evar_info Evarmap.t
 
 let empty = Evarmap.empty
 
-let to_list evc = Evarmap.fold (fun ev x acc -> (ev,x)::acc) evc []
+let to_list evc = (* Workaround for change in Map.fold behavior *)
+  let l = ref [] in 
+    Evarmap.iter (fun ev x -> l:=(ev,x)::!l) evc;
+    !l
+
 let dom evc = Evarmap.fold (fun ev _ acc -> ev::acc) evc []
 let find evc k = Evarmap.find k evc
 let remove evc k = Evarmap.remove k evc
@@ -60,9 +65,8 @@ let define evd ev body =
     try find evd ev
     with Not_found -> error "Evd.define: cannot define undeclared evar" in
   let newinfo =
-    { evar_concl = oldinfo.evar_concl;
-      evar_hyps = oldinfo.evar_hyps;
-      evar_body = Evar_defined body} in
+    { oldinfo with
+      evar_body = Evar_defined body } in
   match oldinfo.evar_body with
     | Evar_empty -> Evarmap.add ev newinfo evd
     | _ -> anomaly "Evd.define: cannot define an isevar twice"
@@ -377,14 +381,7 @@ let create_evar_defs sigma =
 let evars_of d = d.evars
 let evars_reset_evd evd d = {d with evars = evd}
 let reset_evd (sigma,mmap) d = {d with evars = sigma; metas=mmap}
-let add_conv_pb pb d =
-(*  let (pbty,c1,c2) = pb in
-  pperrnl
-    (Termops.print_constr c1 ++
-    (if pbty=Reduction.CUMUL then str " <="++ spc()
-    else str" =="++spc()) ++
-    Termops.print_constr c2);*)
-  {d with conv_pbs = pb::d.conv_pbs}
+let add_conv_pb pb d = {d with conv_pbs = pb::d.conv_pbs}
 let evar_source ev d =
   try List.assoc ev d.history
   with Not_found -> (dummy_loc, InternalHole)
@@ -396,7 +393,10 @@ let evar_define sp body isevars =
 let evar_declare hyps evn ty ?(src=(dummy_loc,InternalHole)) evd =
   { evd with
     evars = add evd.evars evn
-      {evar_hyps=hyps; evar_concl=ty; evar_body=Evar_empty};
+      {evar_hyps=hyps; 
+       evar_concl=ty; 
+       evar_body=Evar_empty; 
+       evar_extra=None};
     history = (evn,src)::evd.history }
 
 let is_defined_evar isevars (n,_) = is_defined isevars.evars n
@@ -548,14 +548,21 @@ let pr_evar_map sigma =
         h 0 (str(string_of_existential ev)++str"=="++ pr_evar_info evi))
       (to_list sigma))
 
+let pr_constraints pbs =
+  h 0
+    (prlist_with_sep pr_fnl (fun (pbty,t1,t2) ->
+      print_constr t1 ++ spc() ++
+      str (match pbty with
+	| Reduction.CONV -> "=="
+	| Reduction.CUMUL -> "<=") ++ 
+      spc() ++ print_constr t2) pbs)
+
 let pr_evar_defs evd =
   let pp_evm =
     if evd.evars = empty then mt() else
       str"EVARS:"++brk(0,1)++pr_evar_map evd.evars++fnl() in
-  let n = List.length evd.conv_pbs in
   let cstrs =
-    if n=0 then mt() else
-      str"=> " ++ int n ++ str" constraints" ++ fnl() ++ fnl() in
+    str"CONSTRAINTS:"++brk(0,1)++pr_constraints evd.conv_pbs++fnl() in
   let pp_met =
     if evd.metas = Metamap.empty then mt() else
       str"METAS:"++brk(0,1)++pr_meta_map evd.metas in

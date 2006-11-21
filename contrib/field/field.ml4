@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: field.ml4 8866 2006-05-28 16:21:04Z herbelin $ *)
+(* $Id: field.ml4 9273 2006-10-25 11:30:36Z barras $ *)
 
 open Names
 open Pp
@@ -86,7 +86,7 @@ let add_field a aplus amult aone azero aopp aeq ainv aminus_o adiv_o rth
       Ring.add_theory true true false a None None None aplus amult aone azero
         (Some aopp) aeq rth Quote.ConstrSet.empty
      with | UserError("Add Semi Ring",_) -> ());
-    let th = mkApp ((constant ["Field_Theory"] "Build_Field_Theory"),
+    let th = mkApp ((constant ["LegacyField_Theory"] "Build_Field_Theory"),
       [|a;aplus;amult;aone;azero;aopp;aeq;ainv;aminus_o;adiv_o;rth;ainv_l|]) in
     begin
       let _ = type_of (Global.env ()) Evd.empty th in ();
@@ -139,7 +139,7 @@ ARGUMENT EXTEND minus_div_arg
 END
 
 VERNAC COMMAND EXTEND Field
-  [ "Add" "Field" 
+  [ "Add" "Legacy" "Field" 
       constr(a) constr(aplus) constr(amult) constr(aone)
       constr(azero) constr(aopp) constr(aeq)
       constr(ainv) constr(rth) constr(ainv_l) minus_div_arg(md) ]
@@ -153,7 +153,7 @@ END
 
 (* Guesses the type and calls field_gen with the right theory *)
 let field g =
-  Coqlib.check_required_library ["Coq";"field";"Field"];
+  Coqlib.check_required_library ["Coq";"field";"LegacyField"];
   let typ = 
     match Hipattern.match_with_equation (pf_concl g) with
       | Some (eq,t::args) when eq = (Coqlib.build_coq_eq_data()).Coqlib.eq -> t
@@ -175,7 +175,7 @@ let guess_theory env evc = function
 
 (* Guesses the type and calls Field_Term with the right theory *)
 let field_term l g =
-  Coqlib.check_required_library ["Coq";"field";"Field"];
+  Coqlib.check_required_library ["Coq";"field";"LegacyField"];
   let env = (pf_env g)
   and evc = (project g) in
   let th = valueIn (VConstr (guess_theory env evc l))
@@ -187,7 +187,7 @@ let field_term l g =
 
 (* Declaration of Field *)
 
-TACTIC EXTEND field
-| [ "field" ] -> [ field ]
-| [ "field" ne_constr_list(l) ] -> [ field_term l ]
+TACTIC EXTEND legacy_field
+| [ "legacy" "field" ] -> [ field ]
+| [ "legacy" "field" ne_constr_list(l) ] -> [ field_term l ]
 END

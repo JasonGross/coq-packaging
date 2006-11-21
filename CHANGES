@@ -1,5 +1,49 @@
-Changes from V8.0 to V8.1
-=========================
+Changes from V8.1beta to V8.1gamma
+==================================
+
+Syntax
+
+- changed parsing precedence of let/in and fun constructions of Ltac:
+  let x := t in e1; e2 is now parsed as let x := t in (e1;e2).
+
+Language and commands
+
+- Added sort-polymorphism for definitions in Type.
+- Support for implicit arguments in the types of parameters in
+  (co-)fixpoints and (co-)inductive declarations.
+- Improved type inference: use as much of possible general information.
+  before applying irreversible unification heuristics (allow e.g. to
+  infer the predicate in "(exist _ 0 (refl_equal 0) : {n:nat | n=0 })").
+- Support for Miller-Pfenning's patterns unification in type synthesis
+  (e.g. can infer P such that P x y = phi(x,y)).
+- Support for "where" clause in cofixpoint definitions.
+- New option "Set Printing Universes" for making Type levels explicit.
+
+Tactics
+
+- Improved implementation of the ring and field tactics. For compatibility
+  reasons, the previous tactics are renamed as legacy ring and legacy field,
+  but should be considered as deprecated.
+- New declarative mathematical proof language.
+- Support for argument lists of arbitrary length in Tactic Notation.
+- [rewrite ... in H] now fails if [H] is used either in an hypothesis
+  or in the goal.
+- The semantics of [rewrite ... in *] has been slightly modified (see doc). 
+- Support for "as" clause in tactic injection.
+- New forward-reasoning tactic "apply in".
+- Ltac fresh operator now builds names from a concatenation of its arguments.
+- New ltac tactic "remember" to abstract over a subterm and keep an equality
+- Support for Miller-Pfenning's patterns unification in apply/rewrite/...
+  (may lead to few incompatibilities - generally now useless tactic calls).
+
+Bug fixes
+
+- Fix for notations involving basic "match" expressions.
+- Numerous other bugs solved (a few fixes may lead to incompatibilities).
+
+
+Changes from V8.0 to V8.1beta
+=============================
 
 Logic
 
@@ -48,6 +92,10 @@ Tactics
   setoid_symmetry, setoid_transitivity, setoid_reflexivity and autorewite).
   New syntax for declaring relations and morphisms (old syntax still working
   with minor modifications, but deprecated).
+- New implementation (still experimental) of the ring tactic with a built-in
+  notion of coefficients and a better usage of setoids.
+- New conversion tactic "vm_compute": evaluates the goal (or an hypothesis)
+  with a call-by-value strategy, using the compiled version of terms. 
 - When rewriting H where H is not directly a Coq equality, search first H for 
   a registered setoid equality before starting to reduce in H. This is unlikely
   to break any script. Should this happen nonetheless, one can insert manually 

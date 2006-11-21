@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernacextend.ml4 7732 2005-12-26 13:51:24Z herbelin $ *)
+(* $Id: vernacextend.ml4 9265 2006-10-24 08:35:38Z herbelin $ *)
 
 open Genarg
 open Q_util
@@ -114,7 +114,7 @@ EXTEND
   ;
   args:
     [ [ e = LIDENT; "("; s = LIDENT; ")" ->
-        let t, g = Q_util.interp_entry_name loc e in
+        let t, g = Q_util.interp_entry_name loc e "" in
         VernacNonTerm (loc, t, g, Some s)
       | s = STRING ->
         VernacTerm s

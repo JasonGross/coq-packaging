@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: term.mli 8850 2006-05-23 16:11:31Z herbelin $ i*)
+(*i $Id: term.mli 9303 2006-10-27 21:50:17Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -327,6 +327,11 @@ val map_named_declaration :
 val map_rel_declaration :
   (constr -> constr) -> rel_declaration -> rel_declaration
 
+val fold_named_declaration :
+  (constr -> 'a -> 'a) -> named_declaration -> 'a -> 'a
+val fold_rel_declaration :
+  (constr -> 'a -> 'a) -> rel_declaration -> 'a -> 'a
+
 (* Constructs either [(x:t)c] or [[x=b:t]c] *)
 val mkProd_or_LetIn : rel_declaration -> types -> types
 val mkNamedProd_or_LetIn : named_declaration -> types -> types
@@ -425,6 +430,9 @@ val under_casts : (constr -> constr) -> constr -> constr
 val under_outer_cast : (constr -> constr) -> constr -> constr
 
 (*s Occur checks *)
+
+(* [closedn n M] is true iff [M] is a (deBruijn) closed term under n binders *)
+val closedn : int -> constr -> bool
 
 (* [closed0 M] is true iff [M] is a (deBruijn) closed term *)
 val closed0 : constr -> bool

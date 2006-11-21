@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evar_tactics.ml 8759 2006-04-28 12:24:14Z herbelin $ *)
+(* $Id: evar_tactics.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
 
 open Term
 open Util
@@ -51,7 +51,7 @@ let instantiate n rawc ido gl =
       error "not enough uninstantiated existential variables";
     if n <= 0 then error "incorrect existential variable index";
     let ev,_ =  destEvar (List.nth evl (n-1)) in
-    let evd' = w_refine (pf_env gl) ev rawc (create_evar_defs sigma)  in
+    let evd' = w_refine ev rawc (create_evar_defs sigma)  in
     Refiner.tclEVARS (evars_of evd') gl
 	
 (*

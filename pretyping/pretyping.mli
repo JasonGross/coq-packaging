@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pretyping.mli 8688 2006-04-07 15:08:12Z msozeau $ i*)
+(*i $Id: pretyping.mli 9141 2006-09-15 10:07:01Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -78,7 +78,6 @@ sig
   (* Idem but do not fail on unresolved evars *)
   val understand_judgment_tcc : evar_defs ref -> env -> rawconstr -> unsafe_judgment
 
-       
   (*i*)
   (* Internal of Pretyping...
    *)

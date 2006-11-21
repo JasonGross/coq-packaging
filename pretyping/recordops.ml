@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: recordops.ml 9032 2006-07-07 16:30:34Z herbelin $ *)
+(* $Id: recordops.ml 9166 2006-09-23 11:20:06Z herbelin $ *)
 
 open Util
 open Pp
@@ -20,6 +20,7 @@ open Libobject
 open Library
 open Classops
 open Mod_subst
+open Reductionops
 
 (*s A structure S is a non recursive inductive type with a single
    constructor (the name of which defaults to Build_S) *)
@@ -78,7 +79,7 @@ let (inStruc,outStruc) =
     discharge_function = discharge_structure;
     export_function = (function x -> Some x) }
 
-let declare_structure (s,c,_,kl,pl) = 
+let declare_structure (s,c,kl,pl) = 
   Lib.add_anonymous_leaf (inStruc (s,c,kl,pl))
 
 let lookup_structure indsp = Indmap.find indsp !structure_table
@@ -197,7 +198,8 @@ let check_and_decompose_canonical_structure ref =
   let vc = match Environ.constant_opt_value env sp with
     | Some vc -> vc
     | None -> error_not_structure ref in
-  let f,args = match kind_of_term (snd (decompose_lam vc)) with
+  let body = snd (splay_lambda (Global.env()) Evd.empty vc) in
+  let f,args = match kind_of_term body with
     | App (f,args) -> f,args
     | _ -> error_not_structure ref in
   let indsp = match kind_of_term f with

@@ -35,6 +35,18 @@ let raw_decompose_prod =
 let raw_compose_prod = 
   List.fold_left (fun b (n,t) -> mkRProd(n,t,b))
 
+let raw_decompose_prod_n n = 
+  let rec raw_decompose_prod i args c = 
+    if i<=0 then args,c
+    else
+      match c with
+	| RProd(_,n,t,b) -> 
+	    raw_decompose_prod (i-1) ((n,t)::args) b 
+	| rt -> args,rt
+  in
+  raw_decompose_prod n []
+
+
 let raw_decompose_app = 
   let rec decompose_rapp acc rt =
 (*     msgnl (str "raw_decompose_app on : "++ Printer.pr_rawconstr rt); *)
@@ -321,14 +333,6 @@ let rec alpha_rt excluded rt =
 	     List.map (alpha_rt excluded) args
 	    )
   in 
-  if Indfun_common.do_observe ()  && false 
-  then
-    Pp.msgnl (str "debug: alpha_rt(" ++ str "[" ++
-	      prlist_with_sep (fun _ -> str";") Ppconstr.pr_id excluded ++
-	      str "]" ++ spc () ++ str "," ++ spc () ++
-	      Printer.pr_rawconstr rt ++ spc () ++ str ")" ++ spc () ++ str "=" ++
-	      spc () ++ Printer.pr_rawconstr new_rt
-	   );
   new_rt
 
 and alpha_br excluded (loc,ids,patl,res) = 
@@ -339,12 +343,6 @@ and alpha_br excluded (loc,ids,patl,res) =
   let new_res = alpha_rt new_excluded renamed_res in 
   (loc,new_ids,new_patl,new_res)
     
-
-
-
-
-
-
 (* 
    [is_free_in id rt] checks if [id] is a free variable in [rt]
 *)
@@ -541,6 +539,33 @@ let ids_of_pat =
   in
   ids_of_pat Idset.empty 
   
+let id_of_name = function 
+  | Names.Anonymous -> id_of_string "x" 
+  | Names.Name x -> x
+
+(* TODO: finish Rec caes *)
+let ids_of_rawterm c = 
+  let rec ids_of_rawterm acc c = 
+    let idof = id_of_name in
+    match c with
+      | RVar (_,id) -> id::acc
+      | RApp (loc,g,args) -> 
+          ids_of_rawterm [] g @ List.flatten (List.map (ids_of_rawterm []) args) @ acc
+      | RLambda (loc,na,ty,c) -> idof na :: ids_of_rawterm [] ty @ ids_of_rawterm [] c @ acc
+      | RProd (loc,na,ty,c) -> idof na :: ids_of_rawterm [] ty @ ids_of_rawterm [] c @ acc
+      | RLetIn (loc,na,b,c) -> idof na :: ids_of_rawterm [] b @ ids_of_rawterm [] c @ acc
+      | RCast (loc,c,k,t) -> ids_of_rawterm [] c @ ids_of_rawterm [] t @ acc
+      | RIf (loc,c,(na,po),b1,b2) -> ids_of_rawterm [] c @ ids_of_rawterm [] b1 @ ids_of_rawterm [] b2 @ acc
+      | RLetTuple (_,nal,(na,po),b,c) -> 
+          List.map idof nal @ ids_of_rawterm [] b @ ids_of_rawterm [] c @ acc
+      | RCases (loc,rtntypopt,tml,brchl) -> 
+	  List.flatten (List.map (fun (_,idl,patl,c) -> idl @ ids_of_rawterm [] c) brchl)
+      | RRec _ -> failwith "Fix inside a constructor branch"
+      | (RSort _ | RHole _ | RRef _ | REvar _ | RPatVar _ | RDynamic _) as x -> []
+  in
+  (* build the set *)
+  List.fold_left (fun acc x -> Idset.add x acc) Idset.empty (ids_of_rawterm [] c)
+  
 
 
 
@@ -601,3 +626,46 @@ let zeta_normalize =
     (loc,idl,patl,zeta_normalize_term res)
   in
   zeta_normalize_term 
+
+
+
+
+let expand_as = 
+  
+  let rec add_as map pat = 
+    match pat with 
+      | PatVar _ -> map 
+      | PatCstr(_,_,patl,Name id) -> 
+	  Idmap.add id (pattern_to_term pat) (List.fold_left add_as map patl)
+      | PatCstr(_,_,patl,_) -> List.fold_left add_as map patl
+  in 
+  let rec expand_as map rt = 
+    match rt with 
+      | RRef _ | REvar _ | RPatVar _ | RSort _ | RHole _ -> rt 
+      | RVar(_,id) -> 
+	  begin
+	    try 
+	      Idmap.find id map
+	    with Not_found -> rt 
+	  end
+      | RApp(loc,f,args) -> RApp(loc,expand_as map f,List.map (expand_as map) args)
+      | RLambda(loc,na,t,b) -> RLambda(loc,na,expand_as map t, expand_as map b)
+      | RProd(loc,na,t,b) -> RProd(loc,na,expand_as map t, expand_as map b)
+      | RLetIn(loc,na,v,b) -> RLetIn(loc,na, expand_as map v,expand_as map b)
+      | RLetTuple(loc,nal,(na,po),v,b) ->
+	  RLetTuple(loc,nal,(na,option_map (expand_as map) po),
+		    expand_as map v, expand_as map b)
+      | RIf(loc,e,(na,po),br1,br2) ->
+	  RIf(loc,expand_as map e,(na,option_map (expand_as map) po),
+	      expand_as map br1, expand_as map br2)
+      | RRec _ ->  error "Not handled RRec"
+      | RDynamic _ -> error "Not handled RDynamic"
+      | RCast(loc,b,kind,t) -> RCast(loc,expand_as map b,kind,expand_as map t)
+      | RCases(loc,po,el,brl) ->
+	  RCases(loc, option_map (expand_as map) po, List.map (fun (rt,t) -> expand_as map rt,t) el,
+		List.map (expand_as_br map) brl)
+	    
+  and expand_as_br map (loc,idl,cpl,rt) = 
+    (loc,idl,cpl,    expand_as (List.fold_left add_as map cpl) rt)
+  in
+  expand_as Idmap.empty 

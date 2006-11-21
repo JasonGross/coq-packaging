@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pretype_errors.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
+(* $Id: pretype_errors.ml 9217 2006-10-05 17:31:23Z notin $ *)
 
 open Util
 open Stdpp
@@ -27,6 +27,7 @@ type pretype_error =
   | NotClean of existential_key * constr * Evd.hole_kind
   | UnsolvableImplicit of Evd.hole_kind
   | CannotUnify of constr * constr
+  | CannotUnifyLocal of Environ.env * constr * constr * constr
   | CannotUnifyBindingType of constr * constr
   | CannotGeneralize of constr
   | NoOccurrenceFound of constr
@@ -156,6 +157,9 @@ let error_unsolvable_implicit loc env sigma e =
 
 let error_cannot_unify env sigma (m,n) =
   raise (PretypeError (env_ise sigma env,CannotUnify (m,n)))
+
+let error_cannot_unify_local env sigma (e,m,n,sn) = 
+  raise (PretypeError (env_ise sigma env,CannotUnifyLocal (e,m,n,sn)))
 
 let error_cannot_coerce env sigma (m,n) =
   raise (PretypeError (env_ise sigma env,CannotUnify (m,n)))

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: leminv.ml 7837 2006-01-11 09:47:32Z herbelin $ *)
+(* $Id: leminv.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
 
 open Pp
 open Util
@@ -217,7 +217,7 @@ let inversion_scheme env sigma t sort dep_option inv_op =
     (str"Computed inversion goal was not closed in initial signature");
   *)
   let invSign = named_context_val invEnv in
-  let pfs = mk_pftreestate (mk_goal invSign invGoal) in
+  let pfs = mk_pftreestate (mk_goal invSign invGoal None) in
   let pfs = solve_pftreestate (tclTHEN intro (onLastHyp inv_op)) pfs in
   let (pfterm,meta_types) = extract_open_pftreestate pfs in
   let global_named_context = Global.named_context () in

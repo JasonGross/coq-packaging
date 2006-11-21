@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: sign.ml 8845 2006-05-23 07:41:58Z herbelin $ *)
+(* $Id: sign.ml 9103 2006-09-01 11:02:52Z herbelin $ *)
 
 open Names
 open Util
@@ -82,6 +82,9 @@ let map_context f l =
 
 let map_rel_context = map_context
 let map_named_context = map_context
+
+let iter_rel_context f = List.iter (fun (_,b,t) -> f t; option_iter f b)
+let iter_named_context f = List.iter (fun (_,b,t) -> f t; option_iter f b)
 
 (* Push named declarations on top of a rel context *)
 (* Bizarre. Should be avoided. *)

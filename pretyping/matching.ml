@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: matching.ml 8827 2006-05-17 15:15:34Z jforest $ *)
+(* $Id: matching.ml 9280 2006-10-25 21:37:37Z herbelin $ *)
 
 (*i*)
 open Util
@@ -118,6 +118,8 @@ let matches_core convert allow_partial_app pat c =
       | PSort (RProp c1), Sort (Prop c2) when c1 = c2 -> sigma
 
       | PSort (RType _), Sort (Type _) -> sigma
+
+      | PApp (p, [||]), _ -> sorec stk sigma p t
 
       | PApp (PApp (h, a1), a2), _ ->
           sorec stk sigma (PApp(h,Array.append a1 a2)) t

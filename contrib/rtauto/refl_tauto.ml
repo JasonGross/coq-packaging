@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: refl_tauto.ml 7639 2005-12-02 10:01:15Z gregoire $ *)
+(* $Id: refl_tauto.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
 
 module Search = Explore.Make(Proof_search)
 
@@ -303,7 +303,6 @@ let rtauto_tac gls=
     end in
   let build_start_time=System.get_time () in
   let _ = step_count := 0; node_count := 0 in
-  let nhyps = List.length hyps in
   let main = mkApp (force node_count l_Reflect,
 		    [|build_env gamma;
 		      build_form formula;

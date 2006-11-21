@@ -789,7 +789,7 @@ and build_entry_lc_from_case_term env types funname make_discr patterns_to_preve
 	    avoid
 	    matched_expr
 	in
-	(* We know create the precondition of this branch i.e.
+	(* We now create the precondition of this branch i.e.
 
 	   1- the list of variable appearing in the different patterns of this branch and 
 	      the list of equation stating than el = patl (List.flatten ...)
@@ -1074,8 +1074,8 @@ let rec rebuild_return_type rt =
     | _ -> Topconstr.CArrow(dummy_loc,rt,Topconstr.CSort(dummy_loc,RType None))
 
 
-let build_inductive 
-    parametrize funnames (funsargs: (Names.name * rawconstr * bool) list list)  
+let do_build_inductive 
+    funnames (funsargs: (Names.name * rawconstr * bool) list list)  
     returned_types 
     (rtl:rawconstr list) =
   let _time1 = System.get_time () in
@@ -1085,7 +1085,7 @@ let build_inductive
   let funsargs = Array.of_list funsargs in 
   let returned_types = Array.of_list returned_types in
   (* alpha_renaming of the body to prevent variable capture during manipulation *)
-  let rtl_alpha = List.map (function rt ->  (alpha_rt [] rt) ) rtl in
+  let rtl_alpha = List.map (function rt ->  expand_as (alpha_rt [] rt)) rtl in
   let rta = Array.of_list rtl_alpha in
   (*i The next call to mk_rel_id is valid since we are constructing the graph
     Ensures by: obvious
@@ -1108,19 +1108,7 @@ let build_inductive
       (function result (* (args',concl') *) -> 
 	 let rt = compose_raw_context result.context result.value in 
 	 let nb_args = List.length funsargs.(i) in 
-(* 	   let old_implicit_args = Impargs.is_implicit_args () *)
-(* 	   and old_strict_implicit_args =  Impargs.is_strict_implicit_args () *)
-(* 	   and old_contextual_implicit_args = Impargs.is_contextual_implicit_args () in *)
-(* 	   let old_rawprint = !Options.raw_print in  *)
-(* 	   Options.raw_print := true; *)
-(* 	   Impargs.make_implicit_args false; *)
-(* 	   Impargs.make_strict_implicit_args false; *)
-(* 	   Impargs.make_contextual_implicit_args false; *)
-(* 	   Pp.msgnl (str "raw constr " ++ pr_rawconstr rt); *)
-(* 	   Impargs.make_implicit_args old_implicit_args; *)
-(* 	   Impargs.make_strict_implicit_args old_strict_implicit_args; *)
-(* 	   Impargs.make_contextual_implicit_args old_contextual_implicit_args; *)
-(* 	   Options.raw_print := old_rawprint; *)
+	 (*  with_full_print (fun rt -> Pp.msgnl (str "raw constr " ++ pr_rawconstr rt)) rt; *)
 	 fst (
 	   rebuild_cons nb_args relnames.(i)
 	     []
@@ -1145,12 +1133,7 @@ let build_inductive
   in
   let rel_constructors = Array.mapi rel_constructors resa in
   (* Computing the set of parameters if asked *)
-  let rels_params = 
-    if parametrize 
-    then
-      compute_params_name relnames_as_set funsargs  rel_constructors 
-    else []
-  in
+  let rels_params = compute_params_name relnames_as_set funsargs  rel_constructors in
   let nrel_params = List.length rels_params in
   let rel_constructors = (* Taking into account the parameters in constructors *)
     Array.map (List.map 
@@ -1182,8 +1165,6 @@ let build_inductive
      Then save the graphs and reset Printing options to their primitive values 
   *)
   let rel_arities = Array.mapi rel_arity funsargs in
-  let old_rawprint = !Options.raw_print in 
-  Options.raw_print := true;
   let rel_params =  
     List.map 
       (fun (n,t,is_defined) -> 
@@ -1199,16 +1180,19 @@ let build_inductive
   let ext_rels_constructors = 
     Array.map (List.map 
       (fun (id,t) -> 
-	 false,((dummy_loc,id),Constrextern.extern_rawtype Idset.empty ((* zeta_normalize *) t))
+	 false,((dummy_loc,id),
+		Options.with_option
+		  Options.raw_print
+		  (Constrextern.extern_rawtype Idset.empty) ((* zeta_normalize *) t)
+	       )
       ))
       (rel_constructors)
   in
   let rel_ind i ext_rel_constructors = 
-    (dummy_loc,relnames.(i)),
-    None,
+    ((dummy_loc,relnames.(i)),
     rel_params,
     rel_arities.(i),
-    ext_rel_constructors
+    ext_rel_constructors),None
   in
   let ext_rel_constructors = (Array.mapi rel_ind ext_rels_constructors) in 
   let rel_inds = Array.to_list ext_rel_constructors in 
@@ -1232,58 +1216,36 @@ let build_inductive
 (* 	rel_inds *)
 (*     ) *)
 (*   in *)
-  let old_implicit_args = Impargs.is_implicit_args ()
-  and old_strict_implicit_args =  Impargs.is_strict_implicit_args ()
-  and old_contextual_implicit_args = Impargs.is_contextual_implicit_args () in
-  Impargs.make_implicit_args false;
-  Impargs.make_strict_implicit_args false;
-  Impargs.make_contextual_implicit_args false;
   let _time2 = System.get_time () in 
-(*   Pp.msgnl (str "Bulding Inductive : " ++ str (string_of_float (System.time_difference time1 time2))); *)
   try 
-    Options.silently (Command.build_mutual rel_inds) true;
-    let _time3 = System.get_time () in 
-(*     Pp.msgnl (str "Bulding Done: "++ str (string_of_float (System.time_difference time2 time3)));  *)
-(* 	let msg = *)
-(* 	  str "while trying to define"++ spc () ++ *)
-(* 	    Ppvernac.pr_vernac (Vernacexpr.VernacInductive(true,rel_inds)) ++ fnl () *)
-(* 	in *)
-(*  	Pp.msgnl msg; *)
-    Impargs.make_implicit_args old_implicit_args;
-    Impargs.make_strict_implicit_args old_strict_implicit_args;
-    Impargs.make_contextual_implicit_args old_contextual_implicit_args;
-    Options.raw_print := old_rawprint;
-  with
-    | UserError(s,msg) ->
+    with_full_print (Options.silently (Command.build_mutual rel_inds)) true
+  with 
+    | UserError(s,msg) as e ->
 	let _time3 = System.get_time () in
 (* 	Pp.msgnl (str "error : "++ str (string_of_float (System.time_difference time2 time3))); *)
-	Impargs.make_implicit_args old_implicit_args;
-	Impargs.make_strict_implicit_args old_strict_implicit_args;
-	Impargs.make_contextual_implicit_args old_contextual_implicit_args;
-	Options.raw_print := old_rawprint;
 	let msg = 		     
 	  str "while trying to define"++ spc () ++
 	    Ppvernac.pr_vernac (Vernacexpr.VernacInductive(true,rel_inds)) ++ fnl () ++
 	    msg
 	in
 	observe (msg);
-	raise 
-	  (UserError(s, msg))
+	raise e
     | e -> 
 	let _time3 = System.get_time () in
 (* 	Pp.msgnl (str "error : "++ str (string_of_float (System.time_difference time2 time3))); *)
-	Impargs.make_implicit_args old_implicit_args;
-	Impargs.make_strict_implicit_args old_strict_implicit_args;
-	Impargs.make_contextual_implicit_args old_contextual_implicit_args;
-	Options.raw_print := old_rawprint;
 	let msg = 		     
 	  str "while trying to define"++ spc () ++
 	    Ppvernac.pr_vernac (Vernacexpr.VernacInductive(true,rel_inds)) ++ fnl () ++
 	    Cerrors.explain_exn e
 	in
  	observe msg;
-	raise 
-	  (UserError("",msg))
+	raise e
 
 
+
+let build_inductive funnames funsargs returned_types rtl = 
+  try 
+    do_build_inductive funnames funsargs returned_types rtl
+  with e -> raise (Building_graph e)
+      
 

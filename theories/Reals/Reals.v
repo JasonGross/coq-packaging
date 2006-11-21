@@ -6,9 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Reals.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: Reals.v 9245 2006-10-17 12:53:34Z notin $ i*)
 
-(* The library REALS is divided in 6 parts :
+(** The library REALS is divided in 6 parts :
    - Rbase: basic lemmas on R
             equalities and inequalities
             Ring and Field are instantiated on R

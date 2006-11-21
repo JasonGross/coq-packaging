@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evarutil.mli 8695 2006-04-10 16:33:52Z msozeau $ i*)
+(*i $Id: evarutil.mli 9141 2006-09-15 10:07:01Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -78,9 +78,17 @@ val solve_simple_eqn :
   -> env ->  evar_defs -> conv_pb * existential * constr ->
     evar_defs * bool
 
+(* [check_evars env initial_sigma extended_sigma c] fails if some
+   new unresolved evar remains in [c] *)
+val check_evars : env -> evar_map -> evar_defs -> constr -> unit
+
 val define_evar_as_arrow : evar_defs -> existential -> evar_defs * types
 val define_evar_as_lambda : evar_defs -> existential -> evar_defs * types
 val define_evar_as_sort : evar_defs -> existential -> evar_defs * sorts
+
+val is_unification_pattern_evar : existential -> constr list -> bool
+val is_unification_pattern : constr -> constr array -> bool
+val solve_pattern_eqn : env -> constr list -> constr -> constr
 
 (***********************************************************)
 (* Value/Type constraints *)

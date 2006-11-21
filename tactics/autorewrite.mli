@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: autorewrite.mli 7034 2005-05-18 19:30:44Z sacerdot $ i*)
+(*i $Id: autorewrite.mli 9073 2006-08-22 08:54:29Z jforest $ i*)
 
 (*i*)
 open Tacmach
@@ -21,5 +21,10 @@ val add_rew_rules : string -> raw_rew_rule list -> unit
 (* The AutoRewrite tactic *)
 val autorewrite : tactic -> string list -> tactic
 val autorewrite_in : Names.identifier -> tactic -> string list -> tactic
+
+
+val auto_multi_rewrite : string list -> Tacticals.clause -> tactic
+
+val auto_multi_rewrite_with : tactic -> string list -> Tacticals.clause -> tactic
 
 val print_rewrite_hintdb : string -> unit

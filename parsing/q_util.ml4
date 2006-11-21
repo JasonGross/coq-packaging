@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: q_util.ml4 8982 2006-06-23 13:17:49Z herbelin $ *)
+(* $Id: q_util.ml4 9333 2006-11-02 13:59:14Z barras $ *)
 
 (* This file defines standard combinators to build ml expressions *)
 
@@ -71,22 +71,46 @@ open Vernacexpr
 open Pcoq
 open Genarg
 
-let rec interp_entry_name loc s =
+let modifiers e =
+<:expr<  Gramext.srules
+    [([], Gramext.action(fun _loc -> []));
+     ([Gramext.Stoken ("", "(");
+       Gramext.Slist1sep ($e$, Gramext.Stoken ("", ","));
+       Gramext.Stoken ("", ")")],
+      Gramext.action (fun _ l _ _loc -> l))]
+ >>
+
+let rec interp_entry_name loc s sep =
   let l = String.length s in
   if l > 8 & String.sub s 0 3 = "ne_" & String.sub s (l-5) 5 = "_list" then
-    let t, g = interp_entry_name loc (String.sub s 3 (l-8)) in
+    let t, g = interp_entry_name loc (String.sub s 3 (l-8)) "" in
     List1ArgType t, <:expr< Gramext.Slist1 $g$ >>
+  else if l > 12 & String.sub s 0 3 = "ne_" &
+                   String.sub s (l-9) 9 = "_list_sep" then
+    let t, g = interp_entry_name loc (String.sub s 3 (l-12)) "" in
+    let sep = <:expr< Gramext.Stoken("",$str:sep$) >> in
+    List1ArgType t, <:expr< Gramext.Slist1sep $g$ $sep$ >>
   else if l > 5 & String.sub s (l-5) 5 = "_list" then
-    let t, g = interp_entry_name loc (String.sub s 0 (l-5)) in
+    let t, g = interp_entry_name loc (String.sub s 0 (l-5)) "" in
     List0ArgType t, <:expr< Gramext.Slist0 $g$ >>
+  else if l > 9 & String.sub s (l-9) 9 = "_list_sep" then
+    let t, g = interp_entry_name loc (String.sub s 0 (l-9)) "" in
+    let sep = <:expr< Gramext.Stoken("",$str:sep$) >> in
+    List0ArgType t, <:expr< Gramext.Slist0sep $g$ $sep$ >>
   else if l > 4 & String.sub s (l-4) 4 = "_opt" then
-    let t, g = interp_entry_name loc (String.sub s 0 (l-4)) in
+    let t, g = interp_entry_name loc (String.sub s 0 (l-4)) "" in
     OptArgType t, <:expr< Gramext.Sopt $g$ >>
+  else if l > 5 & String.sub s (l-5) 5 = "_mods" then
+    let t, g = interp_entry_name loc (String.sub s 0 (l-1)) "" in
+    List0ArgType t, modifiers g
   else
     let s = if s = "hyp" then "var" else s in
     let t, se, lev =
       match tactic_genarg_level s with
-	| Some n -> Some (ExtraArgType s), <:expr< Tactic. tactic_expr >>, Some n
+        | Some 5 ->
+            Some (ExtraArgType s), <:expr< Tactic. binder_tactic >>, None
+	| Some n ->
+            Some (ExtraArgType s), <:expr< Tactic. tactic_expr >>, Some n
 	| None ->
       match Pcoq.entry_type (Pcoq.get_univ "prim") s with
 	| Some _ as x -> x, <:expr< Prim. $lid:s$ >>, None

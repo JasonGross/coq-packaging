@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: g_congruence.ml4 7734 2005-12-26 14:06:51Z herbelin $ *)
+(* $Id: g_congruence.ml4 9151 2006-09-19 13:32:22Z corbinea $ *)
 
 open Cctac
 open Tactics
@@ -17,13 +17,9 @@ open Tacticals
 (* Tactic registration *)
       
 TACTIC EXTEND cc
- [ "congruence" ] -> [ tclORELSE 
-			 (tclTHEN (tclREPEAT introf) (cc_tactic [])) 
-			 cc_fail ]
-END
-      
-TACTIC EXTEND cc_with
- [ "congruence" "with" ne_constr_list(l) ] -> [ tclORELSE 
-			 (tclTHEN (tclREPEAT introf) (cc_tactic l)) 
-			 cc_fail]
+ [ "congruence" ] -> [ congruence_tac 0 [] ]
+ |[ "congruence" integer(n) ] -> [ congruence_tac n [] ]
+ |[ "congruence" "with" ne_constr_list(l) ] -> [ congruence_tac 0 l ]
+ |[ "congruence" integer(n) "with" ne_constr_list(l) ] -> 
+   [ congruence_tac n l ]
 END

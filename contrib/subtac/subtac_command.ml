@@ -43,6 +43,7 @@ open Notation
 module SPretyping = Subtac_pretyping.Pretyping
 open Subtac_utils
 open Pretyping
+open Subtac_obligations
 
 (*********************************************************************)
 (* Functions to parse and interpret constructions *)
@@ -149,15 +150,6 @@ let collect_non_rec env =
   in 
   searchrec [] 
 
-let definition_message id =
-  Options.if_verbose message ((string_of_id id) ^ " is defined")
-
-let recursive_message v =
-  match Array.length v with
-    | 0 -> error "no recursive definition"
-    | 1 -> (Printer.pr_global v.(0) ++ str " is recursively defined")
-    | _ -> hov 0 (prvect_with_sep pr_coma Printer.pr_global v ++
-		    spc () ++ str "are recursively defined")
 
 let filter_map f l = 
   let rec aux acc = function
@@ -190,9 +182,12 @@ let build_wellfounded (recname, n, bl,arityc,body) r measure notation boxed =
   let env = Global.env() in 
   let pr c = my_print_constr env c in
   let prr = Printer.pr_rel_context env in
+  let prn = Printer.pr_named_context env in
   let pr_rel env = Printer.pr_rel_context env in
+  let nc = named_context env in
+  let nc_len = named_context_length nc in
   let _ = 
-    try debug 2 (str "Rewriting fixpoint: " ++ Ppconstr.pr_id recname ++ 
+    try debug 2 (str "In named context: " ++ prn (named_context env) ++ str "Rewriting fixpoint: " ++ Ppconstr.pr_id recname ++ 
 		 Ppconstr.pr_binders bl ++ str " : " ++ 
 		 Ppconstr.pr_constr_expr arityc ++ str " := " ++ spc () ++
 		 Ppconstr.pr_constr_expr body)
@@ -204,25 +199,35 @@ let build_wellfounded (recname, n, bl,arityc,body) r measure notation boxed =
   let argid = match argname with Name n -> n | _ -> assert(false) in
   let _liftafter = lift_binders 1 after_length after in
   let envwf = push_rel_context before env in
-  let wf_rel, measure_fn = 
-    let rconstr = interp_constr isevars envwf r in
-    if measure then
-      let lt_rel = constr_of_global (Lazy.force lt_ref) in
-      let name s = Name (id_of_string s) in
-	mkLambda (name "x", argtyp,
-		  mkLambda (name "y", argtyp,
-			    mkApp (lt_rel,
-				   [| mkApp (rconstr, [| mkRel 2 |]) ;
-				      mkApp (rconstr, [| mkRel 1 |]) |]))),
-	Some rconstr
-    else rconstr, None
+  let wf_rel, wf_rel_fun, measure_fn = 
+    let rconstr_body, rconstr = 
+      let app = mkAppC (r, [mkIdentC (id_of_name argname)]) in
+       let env = push_rel_context [arg] envwf in
+       let capp = interp_constr isevars env app in
+ 	capp, mkLambda (argname, argtyp, capp)
+     in
+       if measure then
+ 	let lt_rel = constr_of_global (Lazy.force lt_ref) in
+ 	let name s = Name (id_of_string s) in
+ 	let wf_rel_fun = 
+ 	  (fun x y ->
+ 	      mkApp (lt_rel, [| subst1 x rconstr_body; 
+ 				subst1 y rconstr_body |])) 
+ 	in
+ 	let wf_rel = 
+ 	  mkLambda (name "x", argtyp,
+ 		    mkLambda (name "y", lift 1 argtyp,
+ 			      wf_rel_fun (mkRel 2) (mkRel 1)))
+ 	in
+ 	  wf_rel, wf_rel_fun , Some rconstr
+       else rconstr, (fun x y -> mkApp (rconstr, [|x; y|])), None
   in
   let wf_proof = mkApp (Lazy.force well_founded, [| argtyp ; wf_rel |])
   in
   let argid' = id_of_string (string_of_id argid ^ "'") in
   let wfarg len = (Name argid', None, 
-		   mkSubset (Name argid') argtyp 
-		     (mkApp (wf_rel, [|mkRel 1; mkRel (len + 1)|])))
+  		   mkSubset (Name argid') argtyp 
+		     (wf_rel_fun (mkRel 1) (mkRel (len + 1))))
   in
   let top_bl = after @ (arg :: before) in
   let intern_bl = after @ (wfarg 1 :: arg :: before) in
@@ -234,7 +239,7 @@ let build_wellfounded (recname, n, bl,arityc,body) r measure notation boxed =
   let projection = 
     mkApp (proj, [| argtyp ;
 		    (mkLambda (Name argid', argtyp,
-			       (mkApp (wf_rel, [|mkRel 1; mkRel 3|])))) ;
+			       (wf_rel_fun (mkRel 1) (mkRel 3)))) ;
 		    mkRel 1
 		 |])
   in
@@ -299,40 +304,16 @@ let build_wellfounded (recname, n, bl,arityc,body) r measure notation boxed =
   in
   let evm = non_instanciated_map env isevars in
   let _ = try trace (str "Non instanciated evars map: " ++ Evd.pr_evar_map evm)  with _ -> () in
-  let evars_def, evars_typ, evars = Eterm.eterm_term evm fullcoqc (Some fullctyp) in 	
-  let evars_typ = out_some evars_typ in
-  (try trace (str "Building evars sum for : ");
-     List.iter
-       (fun (n, t) -> trace (str "Evar " ++ str (string_of_id n) ++ spc () ++ my_print_constr env t))
-       evars;
-   with _ -> ());
-  let (sum_tac, sumg) = Subtac_utils.build_dependent_sum evars in
-  (try trace (str "Evars sum: " ++ my_print_constr env sumg);
-     trace (str "Evars type: " ++ my_print_constr env evars_typ);
-   with _ -> ());
-  let proofid = id_of_string (string_of_id recname ^ "_evars_proof") in
-    Command.start_proof proofid goal_proof_kind sumg
-      (fun strength gr -> 
-	 debug 2 (str "Proof finished");
-	 let def = constr_of_global gr in
-	 let args = Subtac_utils.destruct_ex def sumg in
-	 let _, newdef = decompose_lam_n (List.length args) evars_def in
-	 let constr = Term.substl (List.rev args) newdef in
-	   debug 2 (str "Applied existentials : " ++ my_print_constr env constr);
-	   let ce = 
-	     { const_entry_body = constr;
-	       const_entry_type = Some fullctyp;
-	       const_entry_opaque = false;
-	       const_entry_boxed = boxed} 
-	   in
-	   let _constant = Declare.declare_constant 
-			    recname (DefinitionEntry ce,IsDefinition Definition)
-	   in
-	     definition_message recname);
-    trace (str "Started existentials proof");
-    Pfedit.by sum_tac;
-    trace (str "Applied sum tac")  
-
+  let evars, evars_def = Eterm.eterm_obligations recname nc_len evm fullcoqc (Some fullctyp) in
+    (try trace (str "Generated obligations : ");
+       Array.iter
+	 (fun (n, t, _) -> trace (str "Evar " ++ str (string_of_id n) ++ spc () ++ my_print_constr env t))
+	 evars;
+     with _ -> ());    
+      trace (str "Adding to obligations list");
+      Subtac_obligations.add_entry recname evars_def fullctyp evars;
+      trace (str "Added to obligations list")
+(*
 let build_mutrec l boxed = 
   let sigma = Evd.empty
   and env0 = Global.env()
@@ -543,7 +524,7 @@ let build_mutrec l boxed =
 		 Environ.NoBody -> trace (str "Constant has no body")
 	       | Environ.Opaque -> trace (str "Constant is opaque")
       )
-
+*)
 let out_n = function
     Some n -> n
   | None -> 0
@@ -563,8 +544,8 @@ let build_recursive (lnameargsardef:(fixpoint_expr * decl_notation) list) boxed 
 		       errorlabstrm "Subtac_command.build_recursive"
 			 (str "Well-founded fixpoints not allowed in mutually recursive blocks"))
 	    lnameargsardef
-	in
-	  build_mutrec lnameargsardef boxed;
-	  assert(false)
+	in assert(false)
+	     (*build_mutrec lnameargsardef boxed*)
+	  
       
       

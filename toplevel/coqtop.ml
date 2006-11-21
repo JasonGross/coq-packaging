@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqtop.ml 8932 2006-06-09 09:29:03Z notin $ *)
+(* $Id: coqtop.ml 9191 2006-09-29 15:45:42Z courtieu $ *)
 
 open Pp
 open Util
@@ -21,18 +21,16 @@ open Coqinit
 
 let get_version_date () =
   try
-    let ch = open_in (Coq_config.coqtop^"/make.result") in
-    let l = input_line ch in
-    let i = String.index l ' ' in
-    let j = String.index_from l (i+1) ' ' in
-    "checked out on "^(String.sub l (i+1) (j-i-1))
-  with _ -> Coq_config.date
+    let ch = open_in (Coq_config.coqlib^"/revision") in
+    let ver = input_line ch in
+    let rev = input_line ch in
+      (ver,rev)
+  with _ -> (Coq_config.version,Coq_config.date)
 
 let print_header () =
-  Printf.printf "Welcome to Coq %s (%s)\n" 
-    Coq_config.version 
-    (get_version_date ());
-  flush stdout
+  let (ver,rev) = (get_version_date ()) in
+    Printf.printf "Welcome to Coq %s (%s)\n" ver rev;
+    flush stdout
 
 let memory_stat = ref false
 
@@ -249,6 +247,8 @@ let parse_args is_ide =
 
     | "-vm" :: rem -> use_vm := true; parse rem
     | "-emacs" :: rem -> Options.print_emacs := true; Pp.make_pp_emacs(); parse rem
+    | "-emacs-U" :: rem -> Options.print_emacs := true; 
+	Options.print_emacs_safechar := true; Pp.make_pp_emacs(); parse rem
 	  
     | "-where" :: _ -> print_endline (getenv_else "COQLIB" Coq_config.coqlib); exit 0
 

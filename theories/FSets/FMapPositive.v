@@ -11,8 +11,9 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: FMapPositive.v 8773 2006-04-29 14:31:32Z letouzey $ *)
+(* $Id: FMapPositive.v 9178 2006-09-26 11:18:22Z barras $ *)
 
+Require Import Bool.
 Require Import ZArith.
 Require Import OrderedType.
 Require Import FMapInterface.
@@ -734,7 +735,7 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   Proof.
   intros.
   generalize (xelements_complete _ _ _ _ H); clear H; intros.
-  revert H; revert v; revert m; revert q; revert p0.
+  revert p0 q m v H.
   induction p; destruct p0; simpl; intros; eauto; try discriminate.
   Qed.
 
@@ -743,7 +744,7 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   Proof.
   intros.
   generalize (xelements_complete _ _ _ _ H); clear H; intros.
-  revert H; revert v; revert m; revert q; revert p0.
+  revert p0 q m v H.
   induction p; destruct p0; simpl; intros; eauto; try discriminate.
   Qed.
 

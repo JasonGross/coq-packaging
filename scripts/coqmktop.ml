@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqmktop.ml 8787 2006-05-04 13:25:52Z notin $ *)
+(* $Id: coqmktop.ml 9347 2006-11-06 16:58:28Z notin $ *)
 
 (* coqmktop is a script to link Coq, analogous to ocamlmktop.
    The command line contains options specific to coqmktop, options for the
@@ -49,6 +49,9 @@ let searchisos = ref false
 let coqide     = ref false
 let echo       = ref false
 
+(* Caml inline flag *)
+let caml_inline_0 = ref false
+
 let src_dirs () = 
   [ []; ["kernel";"byterun"]; [ "config" ]; [ "toplevel" ] ] @
   if !coqide then [[ "ide" ]] else []
@@ -57,7 +60,7 @@ let includes () =
   List.fold_right
     (fun d l -> "-I" :: List.fold_left Filename.concat !src_coqtop d :: l)
     (src_dirs ())
-    (["-I"; Coq_config.camlp4lib] @ 
+    (["-I"; "\""; Coq_config.camlp4lib; "\""] @ 
      (if !coqide then ["-thread"; "-I"; "+lablgtk2"] else []))
 
 (* Transform bytecode object file names in native object file names *)
@@ -168,6 +171,7 @@ let parse_args () =
     | "-R" :: [] -> usage ()
     | ("-noassert"|"-compact"|"-g"|"-p"|"-thread"|"-dtypes" as o) :: rem ->
         parse (o::op,fl) rem
+    | "-inline" :: p :: rem -> caml_inline_0 := true; parse (op,fl) rem
     | ("-h"|"--help") :: _ -> usage ()
     | f :: rem ->
 	if Filename.check_suffix f ".ml" 
@@ -276,19 +280,22 @@ let main () =
   let (options, userfiles) = parse_args () in
   (* which ocaml command to invoke *)
   let prog =
-    if !opt then begin
-      (* native code *)
-      if !top then failwith "no custom toplevel in native code !";
-      "ocamlopt -linkall"
-    end else
+    if !opt then
+      begin
+	(* native code *)
+	if !top then failwith "no custom toplevel in native code !";
+	let ocamloptexec = Filename.concat Coq_config.camldir "ocamlopt" in
+          (if !caml_inline_0 then ocamloptexec^" -linkall"^" -inline 0" else ocamloptexec^" -linkall")
+      end else
       (* bytecode (we shunt ocamlmktop script which fails on win32) *)
       let ocamlmktoplib = " toplevellib.cma" in
-      let ocamlccustom = "ocamlc -custom -linkall" in
-      (if !top then ocamlccustom^ocamlmktoplib else ocamlccustom)
+      let ocamlcexec = Filename.concat Coq_config.camldir "ocamlc" in
+      let ocamlccustom = ocamlcexec^" -custom -linkall" in
+	(if !top then ocamlccustom^ocamlmktoplib else ocamlccustom)
   in
-  (* files to link *)
+    (* files to link *)
   let (modules, tolink) = files_to_link userfiles in
-  (*file for dynlink *)
+    (*file for dynlink *)
   let dynlink=
     if not (!opt || !top) then
       [tmp_dynlink()]

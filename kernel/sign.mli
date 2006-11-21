@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: sign.mli 6737 2005-02-18 20:49:43Z herbelin $ i*)
+(*i $Id: sign.mli 9103 2006-09-01 11:02:52Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -64,6 +64,12 @@ val map_rel_context : (constr -> constr) -> rel_context -> rel_context
 
 (*s Map function of [named_context] *)
 val map_named_context : (constr -> constr) -> named_context -> named_context
+
+(*s Map function of [rel_context] *)
+val iter_rel_context : (constr -> unit) -> rel_context -> unit
+
+(*s Map function of [named_context] *)
+val iter_named_context : (constr -> unit) -> named_context -> unit
 
 (*s Term constructors *)
 

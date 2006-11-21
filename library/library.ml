@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: library.ml 8877 2006-05-30 16:37:04Z notin $ *)
+(* $Id: library.ml 9352 2006-11-07 16:12:10Z notin $ *)
 
 open Pp
 open Util
@@ -300,7 +300,7 @@ let (in_import, out_import) =
 
 (*s Loading from disk to cache (preparation phase) *)
 
-let vo_magic_number = 08003 (* V8.0 final new syntax + new params in ind *)
+let vo_magic_number = 080999 (* V8.1gamma *)
 
 let (raw_extern_library, raw_intern_library) =
   System.raw_extern_intern vo_magic_number ".vo"
@@ -606,7 +606,7 @@ let save_library_to dir f =
     let di = Digest.file f' in
     System.marshal_out ch di;
     close_out ch
-  with e -> (warning ("Removed file "^f');close_out ch; Sys.remove f'; raise e)
+  with e -> (warning ("Removed file "^f'); close_out ch; Sys.remove f'; raise e)
 
 (************************************************************************)
 (*s Display the memory use of a library. *)

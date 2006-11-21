@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pcoq.mli 8926 2006-06-08 20:23:17Z herbelin $ i*)
+(*i $Id: pcoq.mli 9333 2006-11-02 13:59:14Z barras $ i*)
 
 open Util
 open Names
@@ -184,6 +184,7 @@ module Tactic :
     val simple_intropattern : Genarg.intro_pattern_expr Gram.Entry.e
     val tactic_arg : raw_tactic_arg Gram.Entry.e
     val tactic_expr : raw_tactic_expr Gram.Entry.e
+    val binder_tactic : raw_tactic_expr Gram.Entry.e
     val tactic : raw_tactic_expr Gram.Entry.e
     val tactic_eoi : raw_tactic_expr Gram.Entry.e
   end
@@ -196,6 +197,13 @@ module Vernac_ :
     val command : vernac_expr Gram.Entry.e
     val syntax : vernac_expr Gram.Entry.e
     val vernac : vernac_expr Gram.Entry.e
+    
+  (* MMode *)
+
+    val proof_instr : Decl_expr.raw_proof_instr Gram.Entry.e
+
+  (*/ MMode *)
+
     val vernac_eoi : vernac_expr Gram.Entry.e
   end
 

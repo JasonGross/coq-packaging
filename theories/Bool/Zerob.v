@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Zerob.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id: Zerob.v 9245 2006-10-17 12:53:34Z notin $ i*)
 
 Require Import Arith.
 Require Import Bool.
@@ -15,24 +15,28 @@ Open Local Scope nat_scope.
 
 Definition zerob (n:nat) : bool :=
   match n with
-  | O => true
-  | S _ => false
+    | O => true
+    | S _ => false
   end.
 
 Lemma zerob_true_intro : forall n:nat, n = 0 -> zerob n = true.
-destruct n; [ trivial with bool | inversion 1 ].
+Proof.
+  destruct n; [ trivial with bool | inversion 1 ].
 Qed.
 Hint Resolve zerob_true_intro: bool.
 
 Lemma zerob_true_elim : forall n:nat, zerob n = true -> n = 0.
-destruct n; [ trivial with bool | inversion 1 ].
+Proof.
+  destruct n; [ trivial with bool | inversion 1 ].
 Qed.
 
 Lemma zerob_false_intro : forall n:nat, n <> 0 -> zerob n = false.
-destruct n; [ destruct 1; auto with bool | trivial with bool ].
+Proof.
+  destruct n; [ destruct 1; auto with bool | trivial with bool ].
 Qed.
 Hint Resolve zerob_false_intro: bool.
 
 Lemma zerob_false_elim : forall n:nat, zerob n = false -> n <> 0.
-destruct n; [ intro H; inversion H | auto with bool ].
+Proof.
+  destruct n; [ inversion 1 | auto with bool ].
 Qed.

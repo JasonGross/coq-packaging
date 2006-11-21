@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Fourier.v 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id: Fourier.v 9178 2006-09-26 11:18:22Z barras $ *)
 
 (* "Fourier's method to solve linear inequations/equations systems.".*)
 
@@ -17,7 +17,7 @@ Declare ML Module "fourierR".
 Declare ML Module "field".
 
 Require Export Fourier_util.
-Require Export Field.
+Require Export LegacyField.
 Require Export DiscrR.
 
 Ltac fourier := abstract (fourierz; field; discrR).

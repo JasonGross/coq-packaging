@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: typeops.mli 8871 2006-05-28 16:46:48Z herbelin $ i*)
+(*i $Id: typeops.mli 9314 2006-10-29 20:11:08Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -14,6 +14,7 @@ open Univ
 open Term
 open Environ
 open Entries
+open Declarations
 (*i*)
 
 (*s Typing functions (not yet tagged as safe) *)
@@ -33,8 +34,6 @@ val infer_local_decls :
 
 val assumption_of_judgment :  env -> unsafe_judgment -> types
 val type_judgment          :  env -> unsafe_judgment -> unsafe_type_judgment
-val on_judgment_type       :  
-  (types -> types) -> unsafe_judgment -> unsafe_judgment
 
 (*s Type of sorts. *)
 val judge_of_prop_contents : contents -> unsafe_judgment
@@ -48,6 +47,9 @@ val judge_of_variable : env -> variable -> unsafe_judgment
 
 (*s type of a constant *)
 val judge_of_constant : env -> constant -> unsafe_judgment
+
+val judge_of_constant_knowing_parameters :
+  env -> constant -> unsafe_judgment array -> unsafe_judgment
 
 (*s Type of application. *)
 val judge_of_apply : 
@@ -95,3 +97,12 @@ val type_fixpoint : env -> name array -> types array
 (* Kernel safe typing but applicable to partial proofs *)
 val typing : env -> constr -> unsafe_judgment
 
+val type_of_constant : env -> constant -> types
+
+val type_of_constant_type : env -> constant_type -> types
+
+val type_of_constant_knowing_parameters : 
+  env -> constant_type -> constr array -> types
+
+(* Make a type polymorphic if an arity *)
+val make_polymorphic_if_arity : env -> types -> constant_type
