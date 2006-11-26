@@ -1,3 +1,9 @@
+coq (8.1~gamma-3) UNRELEASED; urgency=low
+
+  * Added next-ia64.dpatch to fix the FTBFS on ia64.
+
+ -- Samuel Mimram <smimram@debian.org>  Sun, 26 Nov 2006 18:45:33 +0000
+
 coq (8.1~gamma-2) experimental; urgency=low
 
   * Added no-complexity-test.dpatch to skip complexity checks (thanks Julien
