@@ -1,8 +1,11 @@
-coq (8.1~gamma-3) UNRELEASED; urgency=low
+coq (8.1~gamma-3) experimental; urgency=low
 
   * Added next-ia64.dpatch to fix the FTBFS on ia64.
+  * Correctly install coqdoc.sty, closes: #409027.
+  * Build-depend on tetex-extra | texlive-latex-extra in order to allow
+    building with texlive.
 
- -- Samuel Mimram <smimram@debian.org>  Sun, 26 Nov 2006 18:45:33 +0000
+ -- Samuel Mimram <smimram@debian.org>  Sun,  4 Feb 2007 20:38:43 +0100
 
 coq (8.1~gamma-2) experimental; urgency=low
 

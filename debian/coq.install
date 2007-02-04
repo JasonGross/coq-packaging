@@ -8,7 +8,9 @@ usr/bin/coq-tex
 usr/bin/coqtop*
 usr/bin/coqwc
 usr/bin/gallina
-usr/share/emacs/site-lisp/coq
+usr/lib/coq/tools/coqdoc/
+usr/share/emacs/site-lisp/coq/*
 usr/share/man/man1/c*
 usr/share/man/man1/gallina.1
 usr/share/texmf/tex/latex/misc/*
+usr/share/emacs/site-lisp/coqdoc.sty    usr/share/texmf/tex/latex/misc/
