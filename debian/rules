@@ -42,7 +42,11 @@ build-stamp:
 	else \
 		$(MAKE) BEST=byte HASCOQIDE=byte check; \
 	fi
-	$(MAKE) glob.dump
+	if [ -e opt-stamp ]; then \
+		$(MAKE) BEST=opt glob.dump; \
+	else \
+		$(MAKE) BEST=byte HASCOQIDE=byte glob.dump; \
+	fi
 	cp tools/coqdoc/coqdoc.sty doc/stdlib/
 	$(MAKE) -C doc stdlib/html/index.html
 	touch build-stamp
