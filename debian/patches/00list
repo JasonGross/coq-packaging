@@ -1,6 +1,4 @@
 coqdoc_stdlib
 browser
 makefile
-system
 no-complexity-test
-next-ia64

@@ -8,6 +8,8 @@ usr/bin/coq-tex
 usr/bin/coqtop*
 usr/bin/coqwc
 usr/bin/gallina
+usr/lib/coq/*.cma
+usr/lib/coq/*.cmxa
 usr/lib/coq/tools/coqdoc/
 usr/share/emacs/site-lisp/coq/*
 usr/share/man/man1/c*

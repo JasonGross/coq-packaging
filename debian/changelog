@@ -1,3 +1,16 @@
+coq (8.1+dfsg-1) experimental; urgency=low
+
+  * New upstream release.
+  * Removed system.dpatch and next-ia64.dpatch, integrated upstream.
+  * Removed the subdirectories common, faq, RecTutorial, refman, rt, tools,
+    tutorial of the directory doc since they contain documentation under the
+    Open Publication License which is not DFSG-free (thus the +dfsg in the
+    version number). The script debian/utils/purify_tarball automates this
+    process. This documentation in packaged separately in non-free, in
+    the coq-doc package.
+
+ -- Samuel Mimram <smimram@debian.org>  Tue, 13 Feb 2007 11:38:43 +0000
+
 coq (8.1~gamma-4) experimental; urgency=low
 
   * Correctly build glob.dump on non-native archs, closes: #400535.
