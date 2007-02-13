@@ -14,9 +14,9 @@ INRIA-CNRS, University Paris Sud, All rights reserved.
 This product includes also software developed by
         Yves Bertot, Lemme, INRIA Sophia-Antipolis (contrib/interface,
           parsing/search.ml)
-        Pierre CrÈgut, France Telecom R & D (contrib/omega and contrib/romega)
+        Pierre Cr√©gut, France Telecom R & D (contrib/omega and contrib/romega)
         Pierre Courtieu, Lemme (contrib/funind)
-        LoÔc Pottier, Lemme, INRIA Sophia-Antipolis (contrib/fourier)
+        Lo√Øc Pottier, Lemme, INRIA Sophia-Antipolis (contrib/fourier)
         Claudio Sacerdoti Coen, HELM, University of Bologna (contrib/xml)
 
 Coq includes a tactic Jp based on JProver, a theorem prover for
@@ -27,13 +27,13 @@ and then integrated it into Coq.
         
 The Coq development Team (march 2004)
         Bruno Barras (INRIA)
-        Pierre Corbineau (UniversitÈ Paris Sud)
-        Jean-Christophe Filli‚tre (CNRS)
+        Pierre Corbineau (Universit√© Paris Sud)
+        Jean-Christophe Filli√¢tre (CNRS)
         Hugo Herbelin (INRIA)
-        Pierre Letouzey (UniversitÈ Paris Sud)
-        Claude MarchÈ (UniversitÈ Paris Sud-INRIA)
-        Christine Paulin (UniversitÈ Paris Sud) 
-        ClÈment Renard (INRIA)
+        Pierre Letouzey (Universit√© Paris Sud)
+        Claude March√© (Universit√© Paris Sud-INRIA)
+        Christine Paulin (Universit√© Paris Sud) 
+        Cl√©ment Renard (INRIA)
 
 The complete list of developpers and contributors can be found in
 /usr/share/doc/doc/CREDITS.gz
