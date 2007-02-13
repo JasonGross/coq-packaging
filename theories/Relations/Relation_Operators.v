@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Relation_Operators.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Relation_Operators.v 9610 2007-02-07 14:45:18Z herbelin $ i*)
 
 (****************************************************************************)
 (*                      Bruno Barras, Cristina Cornes                       *)
@@ -78,7 +78,7 @@ End Union.
 
 
 Section Disjoint_Union.
-Variables A B : Set.
+Variables A B : Type.
 Variable leA : A -> A -> Prop.
 Variable leB : B -> B -> Prop.
 
@@ -94,8 +94,8 @@ End Disjoint_Union.
 Section Lexicographic_Product.
   (* Lexicographic order on dependent pairs *)
 
-  Variable A : Set.
-  Variable B : A -> Set.
+  Variable A : Type.
+  Variable B : A -> Type.
   Variable leA : A -> A -> Prop.
   Variable leB : forall x:A, B x -> B x -> Prop.
 
@@ -110,8 +110,8 @@ End Lexicographic_Product.
 
 
 Section Symmetric_Product.
-  Variable A : Set.
-  Variable B : Set.
+  Variable A : Type.
+  Variable B : Type.
   Variable leA : A -> A -> Prop.
   Variable leB : B -> B -> Prop.
 
@@ -125,7 +125,7 @@ End Symmetric_Product.
 
 
 Section Swap.
-  Variable A : Set.
+  Variable A : Type.
   Variable R : A -> A -> Prop.
 
   Inductive swapprod : A * A -> A * A -> Prop :=

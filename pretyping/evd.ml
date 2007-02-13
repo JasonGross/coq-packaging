@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evd.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
+(* $Id: evd.ml 9573 2007-01-31 20:18:18Z notin $ *)
 
 open Pp
 open Util
@@ -77,6 +77,8 @@ let is_defined sigma ev =
   let info = find sigma ev in 
   not (info.evar_body = Evar_empty)
 
+let evar_concl ev = ev.evar_concl
+let evar_hyps ev = ev.evar_hyps
 let evar_body ev = ev.evar_body
 let evar_env evd = Global.env_of_context evd.evar_hyps
 

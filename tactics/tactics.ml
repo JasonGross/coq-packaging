@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tactics.ml 9281 2006-10-26 07:52:31Z herbelin $ *)
+(* $Id: tactics.ml 9605 2007-02-07 12:19:19Z notin $ *)
 
 open Pp
 open Util
@@ -603,6 +603,7 @@ let cut_and_apply c gl =
   let goal_constr = pf_concl gl in 
     match kind_of_term (pf_hnf_constr gl (pf_type_of gl c)) with
       | Prod (_,c1,c2) when not (dependent (mkRel 1) c2) ->
+	  let c2 = refresh_universes c2 in
 	  tclTHENLAST
 	    (apply_type (mkProd (Anonymous,c2,goal_constr)) [mkMeta(new_meta())])
 	    (apply_term c [mkMeta (new_meta())]) gl
@@ -621,6 +622,11 @@ let exact_check c gl =
     error "Not an exact proof"
 
 let exact_no_check = refine_no_check
+
+let vm_cast_no_check c gl = 
+  let concl = pf_concl gl in
+  refine_no_check (Term.mkCast(c,Term.VMcast,concl)) gl
+
 
 let exact_proof c gl =
   (* on experimente la synthese d'ise dans exact *)
@@ -954,7 +960,7 @@ let true_cut = assert_tac true
 (**************************)
 
 let generalize_goal gl c cl =
-  let t = pf_type_of gl c in
+  let t = refresh_universes (pf_type_of gl c) in
   match kind_of_term c with
     | Var id ->
 	(* The choice of remembering or not a non dependent name has an impact
@@ -2448,40 +2454,40 @@ let abstract_subproof name tac gls =
   let sign,secsign = 
     List.fold_right
       (fun (id,_,_ as d) (s1,s2) -> 
-	 if mem_named_context id current_sign &
-           interpretable_as_section_decl (Sign.lookup_named id current_sign) d
-         then (s1,push_named_context_val d s2)
-	 else (add_named_decl d s1,s2)) 
+	if mem_named_context id current_sign &
+          interpretable_as_section_decl (Sign.lookup_named id current_sign) d
+        then (s1,push_named_context_val d s2)
+	else (add_named_decl d s1,s2)) 
       global_sign (empty_named_context,empty_named_context_val) in
   let na = next_global_ident_away false name (pf_ids_of_hyps gls) in
   let concl = it_mkNamedProd_or_LetIn (pf_concl gls) sign in
-  if occur_existential concl then
-    error "\"abstract\" cannot handle existentials";
-  let lemme =
-    start_proof na (Global, Proof Lemma) secsign concl (fun _ _ -> ());
-    let _,(const,kind,_) =
-      try
-	by (tclCOMPLETE (tclTHEN (tclDO (List.length sign) intro) tac)); 
-	let r = cook_proof () in 
-	delete_current_proof (); r
-      with e when catchable_exception e -> 
-	(delete_current_proof(); raise e)
-    in   (* Faudrait un peu fonctionnaliser cela *)
-    let cd = Entries.DefinitionEntry const in
-    let con = Declare.declare_internal_constant na (cd,IsProof Lemma) in
-    constr_of_global (ConstRef con)
-  in
-  exact_no_check 
-    (applist (lemme, 
-              List.rev (Array.to_list (instance_from_named_context sign))))
-    gls
+    if occur_existential concl then
+      error "\"abstract\" cannot handle existentials";
+    let lemme =
+      start_proof na (Global, Proof Lemma) secsign concl (fun _ _ -> ());
+      let _,(const,kind,_) =
+	try
+	  by (tclCOMPLETE (tclTHEN (tclDO (List.length sign) intro) tac)); 
+	  let r = cook_proof () in 
+	    delete_current_proof (); r
+	with e -> 
+	  (delete_current_proof(); raise e)
+      in   (* Faudrait un peu fonctionnaliser cela *)
+      let cd = Entries.DefinitionEntry const in
+      let con = Declare.declare_internal_constant na (cd,IsProof Lemma) in
+	constr_of_global (ConstRef con)
+    in
+      exact_no_check 
+	(applist (lemme, 
+		 List.rev (Array.to_list (instance_from_named_context sign))))
+	gls
 
 let tclABSTRACT name_op tac gls = 
   let s = match name_op with 
     | Some s -> s 
     | None   -> add_suffix (get_current_proof_name ()) "_subproof" 
   in  
-  abstract_subproof s tac gls
+    abstract_subproof s tac gls
 
 
 let admit_as_an_axiom gls =

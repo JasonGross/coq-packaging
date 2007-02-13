@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacentries.ml 9304 2006-10-28 09:58:16Z herbelin $ i*)
+(*i $Id: vernacentries.ml 9481 2007-01-11 19:17:56Z herbelin $ i*)
 
 (* Concrete syntax of the mathematical vernacular MV V2.6 *)
 
@@ -284,8 +284,8 @@ let vernac_bind_scope sc cll =
 
 let vernac_open_close_scope = Notation.open_close_scope
 
-let vernac_arguments_scope qid scl =
-  Notation.declare_arguments_scope (global qid) scl
+let vernac_arguments_scope local qid scl =
+  Notation.declare_arguments_scope local (global qid) scl
 
 let vernac_infix = Metasyntax.add_infix
 
@@ -597,28 +597,34 @@ let vernac_proof_instr instr =
 (* Auxiliary file management *)
 
 let vernac_require_from export spec filename =
-  Library.require_library_from_file None filename export
+  Library.require_library_from_file None
+    (System.expand_path_macros filename)
+    export
 
 let vernac_add_loadpath isrec pdir ldiropt =
+  let pdir = System.expand_path_macros pdir in
   let alias = match ldiropt with
     | None -> Nameops.default_root_prefix
     | Some ldir -> ldir in
   (if isrec then Mltop.add_rec_path else Mltop.add_path) pdir alias
 
-let vernac_remove_loadpath = Library.remove_load_path
+let vernac_remove_loadpath path =
+  Library.remove_load_path (System.expand_path_macros path)
 
   (* Coq syntax for ML or system commands *)
 
-let vernac_add_ml_path isrec s =
-  (if isrec then Mltop.add_rec_ml_dir else Mltop.add_ml_dir) (System.glob s)
+let vernac_add_ml_path isrec path =
+  (if isrec then Mltop.add_rec_ml_dir else Mltop.add_ml_dir)
+    (System.expand_path_macros path)
 
-let vernac_declare_ml_module l = Mltop.declare_ml_modules l
+let vernac_declare_ml_module l =
+  Mltop.declare_ml_modules (List.map System.expand_path_macros l)
 
 let vernac_chdir = function
   | None -> message (Sys.getcwd())
-  | Some s ->
+  | Some path ->
       begin
-	try Sys.chdir (System.glob s)
+	try Sys.chdir (System.expand_path_macros path)
 	with Sys_error str -> warning ("Cd failed: " ^ str)
       end;
       if_verbose message (Sys.getcwd())
@@ -658,9 +664,11 @@ let vernac_hints = Auto.add_hints
 
 let vernac_syntactic_definition = Command.syntax_definition 
 
-let vernac_declare_implicits locqid = function
-  | Some imps -> Impargs.declare_manual_implicits (Nametab.global locqid) imps
-  | None -> Impargs.declare_implicits (Nametab.global locqid)
+let vernac_declare_implicits local locqid = function
+  | Some imps ->
+      Impargs.declare_manual_implicits local (Nametab.global locqid) imps
+  | None -> 
+      Impargs.declare_implicits local (Nametab.global locqid)
 
 let vernac_reserve idl c =
   let t = Constrintern.interp_type Evd.empty (Global.env()) c in
@@ -1114,7 +1122,7 @@ let interp c = match c with
   | VernacDelimiters (sc,lr) -> vernac_delimiters sc lr
   | VernacBindScope (sc,rl) -> vernac_bind_scope sc rl
   | VernacOpenCloseScope sc -> vernac_open_close_scope sc
-  | VernacArgumentsScope (qid,scl) -> vernac_arguments_scope qid scl
+  | VernacArgumentsScope (lcl,qid,scl) -> vernac_arguments_scope lcl qid scl
   | VernacInfix (local,mv,qid,sc) -> vernac_infix local mv qid sc
   | VernacNotation (local,c,infpl,sc) -> vernac_notation local c infpl sc
 
@@ -1184,7 +1192,7 @@ let interp c = match c with
   | VernacDeclareTacticDefinition (x,l) -> vernac_declare_tactic_definition x l
   | VernacHints (local,dbnames,hints) -> vernac_hints local dbnames hints
   | VernacSyntacticDefinition (id,c,l,b) ->vernac_syntactic_definition id c l b
-  | VernacDeclareImplicits (qid,l) -> vernac_declare_implicits qid l
+  | VernacDeclareImplicits (local,qid,l) ->vernac_declare_implicits local qid l
   | VernacReserve (idl,c) -> vernac_reserve idl c
   | VernacSetOpacity (opaq, qidl) -> List.iter (vernac_set_opacity opaq) qidl
   | VernacSetOption (key,v) -> vernac_set_option key v

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: hiddentac.mli 8878 2006-05-30 16:44:25Z herbelin $ i*)
+(*i $Id: hiddentac.mli 9551 2007-01-29 15:13:35Z bgregoir $ i*)
 
 (*i*)
 open Names
@@ -30,6 +30,7 @@ val h_intros_until    : quantified_hypothesis -> tactic
 val h_assumption      : tactic
 val h_exact           : constr -> tactic
 val h_exact_no_check  : constr -> tactic
+val h_vm_cast_no_check  : constr -> tactic
 
 val h_apply           : constr with_bindings -> tactic
 

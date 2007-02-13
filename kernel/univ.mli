@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: univ.mli 8845 2006-05-23 07:41:58Z herbelin $ i*)
+(*i $Id: univ.mli 9507 2007-01-20 08:09:54Z herbelin $ i*)
 
 (* Universes. *)
 
@@ -18,6 +18,7 @@ val neutral_univ : universe
 val make_univ : Names.dir_path * int -> universe
 
 val is_base_univ : universe -> bool
+val is_univ_variable : universe -> bool
 
 (* The type of a universe *)
 val super : universe -> universe

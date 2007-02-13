@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: library.ml 9352 2006-11-07 16:12:10Z notin $ *)
+(* $Id: library.ml 9637 2007-02-10 08:32:28Z notin $ *)
 
 open Pp
 open Util
@@ -300,7 +300,7 @@ let (in_import, out_import) =
 
 (*s Loading from disk to cache (preparation phase) *)
 
-let vo_magic_number = 080999 (* V8.1gamma *)
+let vo_magic_number = 080100 (* V8.1 *)
 
 let (raw_extern_library, raw_intern_library) =
   System.raw_extern_intern vo_magic_number ".vo"
@@ -591,6 +591,12 @@ let current_deps () =
 let current_reexports () =
   List.map (fun m -> m.library_name) !libraries_exports_list
 
+let error_recursively_dependent_library dir =
+  errorlabstrm ""
+    (str "Unable to use logical name" ++ spc() ++ pr_dirpath dir ++ spc() ++ 
+     str "to save current library" ++ spc() ++ str"because" ++ spc() ++ 
+     str "it already depends on a library of this name.")
+
 let save_library_to dir f =
   let cenv, seg = Declaremods.end_library dir in
   let md = { 
@@ -599,6 +605,8 @@ let save_library_to dir f =
     md_objects = seg;
     md_deps = current_deps ();
     md_imports = current_reexports () } in
+  if List.mem_assoc dir md.md_deps then
+    error_recursively_dependent_library dir;
   let (f',ch) = raw_extern_library f in
   try
     System.marshal_out ch md;

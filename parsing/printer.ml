@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: printer.ml 9164 2006-09-23 09:36:05Z herbelin $ *)
+(* $Id: printer.ml 9573 2007-01-31 20:18:18Z notin $ *)
 
 open Pp
 open Util
@@ -29,7 +29,11 @@ open Pfedit
 open Ppconstr
 open Constrextern
 
-let emacs_str s = if !Options.print_emacs then s else "" 
+let emacs_str s alts = 
+  match !Options.print_emacs, !Options.print_emacs_safechar with
+    | true, true -> alts
+    | true , false -> s
+    | false,_ -> "" 
 
 (**********************************************************************)
 (** Terms                                                             *)
@@ -210,7 +214,7 @@ let pr_context_limit n env =
 	   else
              let pidt = pr_var_decl env d in
 	     (i+1, (pps ++ fnl () ++
-		      str (emacs_str (String.make 1 (Char.chr 253))) ++
+		      str (emacs_str (String.make 1 (Char.chr 253)) "") ++
 		      pidt)))
         env ~init:(0,(mt ())) 
     in
@@ -219,7 +223,7 @@ let pr_context_limit n env =
         (fun env d pps ->
            let pnat = pr_rel_decl env d in
 	   (pps ++ fnl () ++
-	      str (emacs_str (String.make 1 (Char.chr 253))) ++
+	      str (emacs_str (String.make 1 (Char.chr 253)) "") ++
 	      pnat))
         env ~init:(mt ())
     in 
@@ -231,25 +235,15 @@ let pr_context_of env = match Options.print_hyps_limit () with
 
 (* display goal parts (Proof mode) *)
 
-let pr_restricted_named_context among env =
-  hv 0 (fold_named_context
-	  (fun env ((id,_,_) as d) pps ->
-	     if true || Idset.mem id among then
-	       pps ++ 
-		 fnl () ++ str (emacs_str (String.make 1 (Char.chr 253))) ++
-		 pr_var_decl env d
-	     else 
-	       pps)
-          env ~init:(mt ()))
-
 let pr_subgoal_metas metas env=
   let pr_one (meta,typ) = 
     str "?" ++ int meta ++ str " : " ++ 
       hov 0 (pr_ltype_env_at_top env typ) ++ fnl () ++ 
-      str (emacs_str (String.make 1 (Char.chr 253))) in
+      str (emacs_str (String.make 1 (Char.chr 253)) "") in
     hv 0 (prlist_with_sep mt pr_one metas)
 
 (* display complete goal *)
+
 let pr_goal g =
   let env = evar_env g in
   let preamb,penv,pc =
@@ -258,14 +252,14 @@ let pr_goal g =
 	  pr_context_of env,
 	  pr_ltype_env_at_top env g.evar_concl
     else 
-      let {pm_subgoals=metas;pm_hyps=among} = get_info g in
+      let {pm_subgoals=metas} = get_info g in
 	(str "     *** Declarative Mode ***" ++ fnl ()++fnl ()),
-    pr_restricted_named_context among env,
+    pr_context_of env,
     pr_subgoal_metas metas env
   in
     preamb ++
     str"  " ++ hv 0 (penv ++ fnl () ++
-		       str (emacs_str (String.make 1 (Char.chr 253)))  ++
+		       str (emacs_str (String.make 1 (Char.chr 253)) "")  ++
 		       str "============================" ++ fnl ()  ++
 		       str" "  ++ pc) ++ fnl ()
      
@@ -273,7 +267,7 @@ let pr_goal g =
 let pr_concl n g =
   let env = evar_env g in
   let pc = pr_ltype_env_at_top env g.evar_concl in
-    str (emacs_str (String.make 1 (Char.chr 253)))  ++
+    str (emacs_str (String.make 1 (Char.chr 253)) "")  ++
       str "subgoal " ++ int n ++ str " is:" ++ cut () ++ str" "  ++ pc
 
 
@@ -424,6 +418,13 @@ let pr_prim_rule = function
 
   | Rename (id1,id2) ->
       (str "rename " ++ pr_id id1 ++ str " into " ++ pr_id id2)
+
+  | Change_evars ->
+      (* This is internal tactic and cannot be replayed at user-level.
+         Function pr_rule_dot below is used when we want to hide
+         Change_evars *)
+      str "Evar change"
+
 
 (* Backwards compatibility *)
 

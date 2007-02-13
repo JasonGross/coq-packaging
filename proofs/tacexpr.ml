@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacexpr.ml 9267 2006-10-24 12:55:46Z herbelin $ i*)
+(*i $Id: tacexpr.ml 9551 2007-01-29 15:13:35Z bgregoir $ i*)
 
 open Names
 open Topconstr
@@ -121,6 +121,7 @@ type ('constr,'pat,'cst,'ind,'ref,'id,'tac) gen_atomic_tactic_expr =
   | TacAssumption
   | TacExact of 'constr
   | TacExactNoCheck of 'constr
+  | TacVmCastNoCheck of 'constr
   | TacApply of 'constr with_bindings
   | TacElim of 'constr with_bindings * 'constr with_bindings option
   | TacElimType of 'constr

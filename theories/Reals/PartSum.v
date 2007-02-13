@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: PartSum.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: PartSum.v 9551 2007-01-29 15:13:35Z bgregoir $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -278,7 +278,7 @@ Proof.
   rewrite (tech5 An (2 * S N)).
   rewrite <- HrecN.
   ring.
-  ring_nat.
+  ring.
 Qed.
 
 Lemma sum_Rle :

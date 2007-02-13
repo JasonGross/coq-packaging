@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppvernac.ml 9154 2006-09-20 17:18:18Z corbinea $ *)  
+(* $Id: ppvernac.ml 9562 2007-01-31 09:00:36Z msozeau $ *)  
 
 open Pp
 open Names
@@ -447,7 +447,7 @@ let rec pr_vernac = function
   | VernacBindScope (sc,cll) ->
       str"Bind Scope" ++ spc () ++ str sc ++
       spc() ++ str "with " ++ prlist_with_sep spc pr_class_rawexpr cll
-  | VernacArgumentsScope (q,scl) -> let pr_opt_scope = function 
+  | VernacArgumentsScope (local,q,scl) -> let pr_opt_scope = function 
       |	None -> str"_"
       |	Some sc -> str sc in 
     str"Arguments Scope" ++ spc() ++ pr_reference q ++ spc() ++ str"[" ++ prlist_with_sep sep pr_opt_scope scl ++ str"]"
@@ -570,11 +570,11 @@ let rec pr_vernac = function
 			    spc() ++ str "{struct " ++ pr_name name ++ str"}"
 			  else mt()
 		      | CWfRec c -> 
-			  spc() ++ str "{wf " ++ pr_name name ++ spc() ++ 
-			    pr_lconstr_expr c ++ str"}"
+			  spc() ++ str "{wf " ++ pr_lconstr_expr c ++ spc() ++ 
+			    pr_name name ++ str"}"
 		      | CMeasureRec c -> 
-			  spc() ++ str "{measure " ++ pr_name name ++ spc() ++ 
-			    pr_lconstr_expr c ++ str"}"
+			  spc() ++ str "{measure " ++ pr_lconstr_expr c ++ spc() ++ 
+			    pr_name name ++ str"}"
 	    in
             pr_id id ++ pr_binders_arg bl ++ annot ++ spc()
             ++ pr_type_option (fun c -> spc() ++ pr_lconstr_expr c) type_
@@ -741,11 +741,11 @@ let rec pr_vernac = function
         (str"Notation " ++ pr_locality local ++ pr_id id ++ str" :=" ++
          pr_constrarg c ++
          pr_syntax_modifiers (if onlyparsing then [SetOnlyParsing] else []))
-  | VernacDeclareImplicits (q,None) ->
+  | VernacDeclareImplicits (local,q,None) ->
       hov 2 (str"Implicit Arguments" ++ spc() ++ pr_reference q)
-  | VernacDeclareImplicits (q,Some l) ->
+  | VernacDeclareImplicits (local,q,Some l) ->
       let r = Nametab.global q in
-      Impargs.declare_manual_implicits r l;
+      Impargs.declare_manual_implicits local r l;
       let imps = Impargs.implicits_of_global r in
       hov 1 (str"Implicit Arguments" ++ spc() ++ pr_reference q ++ spc() ++
              str"[" ++ prlist_with_sep sep (pr_explanation imps) l ++ str"]")

@@ -6,8 +6,8 @@
 # 
 ##################################
 
-VERSION=8.1gamma
-DATE="Nov. 2006"
+VERSION=8.1
+DATE="Feb. 2007"
 
 # a local which command for sh
 which () {
@@ -306,6 +306,9 @@ if test ! -f "$CAMLC" ; then
     exit 1
 fi
 
+# this fixes a camlp4 bug under FreeBSD
+# ("native-code program cannot do a dynamic load")
+if [ `uname -s` = "FreeBSD" ]; then camlp4oexec=$camlp4oexec.byte; fi
 
 CAMLVERSION=`"$bytecamlc" -v | sed -n -e 's|.*version* *\(.*\)$|\1|p' `
 
@@ -764,4 +767,4 @@ echo
 echo "*Warning* To compile the system for a new architecture"
 echo "          don't forget to do a 'make archclean' before './configure'."
 
-# $Id: configure 9353 2006-11-07 16:18:57Z notin $
+# $Id: configure 9637 2007-02-10 08:32:28Z notin $

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ListTactics.v 9290 2006-10-26 19:20:42Z herbelin $ i*)
+(*i $Id: ListTactics.v 9551 2007-01-29 15:13:35Z bgregoir $ i*)
 
 Require Import BinPos.
 Require Import List.
@@ -15,6 +15,14 @@ Ltac list_fold_right fcons fnil l :=
   match l with
   | (cons ?x ?tl) => fcons x ltac:(list_fold_right fcons fnil tl)
   | nil => fnil
+  end.
+
+Ltac lazy_list_fold_right fcons fnil l :=
+  match l with
+  | (cons ?x ?tl) => 
+       let cont := lazy_list_fold_right fcons fnil in
+       fcons x cont tl
+  | nil => fnil 
   end.
 
 Ltac list_fold_left fcons fnil l :=

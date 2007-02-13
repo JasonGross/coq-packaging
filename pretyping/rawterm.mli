@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: rawterm.mli 9226 2006-10-09 16:11:01Z herbelin $ i*)
+(*i $Id: rawterm.mli 9535 2007-01-26 09:26:08Z jforest $ i*)
 
 (*i*)
 open Util
@@ -113,7 +113,7 @@ val map_rawconstr_with_binders_loc : loc ->
 i*)
 
 val occur_rawconstr : identifier -> rawconstr -> bool
-
+val free_rawvars : rawconstr -> identifier list
 val loc_of_rawconstr : rawconstr -> loc
 
 (**********************************************************************)

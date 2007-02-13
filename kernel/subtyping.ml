@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: subtyping.ml 9310 2006-10-28 19:35:09Z herbelin $ i*)
+(*i $Id: subtyping.ml 9558 2007-01-30 14:58:42Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -81,6 +81,41 @@ let check_inductive cst env msid1 l info1 mib2 spec2 =
       | IndType ((_,0), mib) -> mib
       | _ -> error ()
   in
+  let check_inductive_type cst env t1 t2 =
+
+    (* Due to sort-polymorphism in inductive types, the conclusions of
+       t1 and t2, if in Type, are generated as the least upper bounds
+       of the types of the constructors. 
+
+       By monotonicity of the infered l.u.b.  wrt subtyping (i.e.  if X:U
+       |- T(X):s and |- M:U' and U'<=U then infer_type(T(M))<=s), each
+       universe in the conclusion of t1 has an bounding universe in
+       the conclusion of t2, so that we don't need to check the
+       subtyping of the conclusions of t1 and t2.
+
+       Even if we'd like to recheck it, the inference of constraints
+       is not designed to deal with algebraic constraints of the form
+       max-univ(u1..un) <= max-univ(u'1..u'n), so that it is not easy
+       to recheck it (in short, we would need the actual graph of
+       constraints as input while type checking is currently designed
+       to output a set of constraints instead) *)
+
+    (* So we cheat and replace the subtyping problem on algebraic
+       constraints of the form max-univ(u1..un) <= max-univ(u'1..u'n)
+       (that we know are necessary true) by trivial constraints that
+       the constraint generator knows how to deal with *)
+
+    let (ctx1,s1) = dest_arity env t1 in
+    let (ctx2,s2) = dest_arity env t2 in
+    let s1,s2 =
+      match s1, s2 with
+      | Type _, Type _ -> (* shortcut here *) mk_Prop, mk_Prop
+      | (Prop _, Type _) | (Type _,Prop _) -> error ()
+      | _ -> (s1, s2) in
+    check_conv cst conv_leq env 
+      (Sign.mkArity (ctx1,s1)) (Sign.mkArity (ctx2,s2))
+  in
+
   let check_packet cst p1 p2 =
     let check f = if f p1 <> f p2 then error () in
       check (fun p -> p.mind_consnames);
@@ -96,7 +131,7 @@ let check_inductive cst env msid1 l info1 mib2 spec2 =
       (* nparams done *)
       (* params_ctxt done because part of the inductive types *)
       (* Don't check the sort of the type if polymorphic *)
-      let cst = check_conv cst conv env (type_of_inductive env (mib1,p1)) (type_of_inductive env (mib2,p2))
+      let cst = check_inductive_type cst env (type_of_inductive env (mib1,p1)) (type_of_inductive env (mib2,p2))
       in
 	cst
   in
@@ -160,13 +195,60 @@ let check_inductive cst env msid1 l info1 mib2 spec2 =
 let check_constant cst env msid1 l info1 cb2 spec2 = 
   let error () = error_not_match l spec2 in
   let check_conv cst f = check_conv_error error cst f in
+  let check_type cst env t1 t2 = 
+
+    (* If the type of a constant is generated, it may mention
+       non-variable algebraic universes that the general conversion
+       algorithm is not ready to handle. Anyway, generated types of
+       constants are functions of the body of the constant. If the
+       bodies are the same in environments that are subtypes one of
+       the other, the types are subtypes too (i.e. if Gamma <= Gamma',
+       Gamma |- A |> T, Gamma |- A' |> T' and Gamma |- A=A' then T <= T').
+       Hence they don't have to be checked again *)
+
+    let t1,t2 = 
+      if Sign.isArity t2 then
+        let (ctx2,s2) = Sign.destArity t2 in
+        match s2 with
+        | Type v when not (is_univ_variable v) ->
+          (* The type in the interface is inferred and is made of algebraic
+             universes *)
+          begin try
+            let (ctx1,s1) = dest_arity env t1 in
+            match s1 with
+            | Type u when not (is_univ_variable u) ->
+              (* Both types are inferred, no need to recheck them. We
+                 cheat and collapse the types to Prop *)
+                Sign.mkArity (ctx1,mk_Prop), Sign.mkArity (ctx2,mk_Prop)
+            | Prop _ ->
+              (* The type in the interface is inferred, it may be the case
+                 that the type in the implementation is smaller because
+                 the body is more reduced. We safely collapse the upper
+                 type to Prop *)
+                Sign.mkArity (ctx1,mk_Prop), Sign.mkArity (ctx2,mk_Prop)
+            | Type _ ->
+              (* The type in the interface is inferred and the type in the
+                 implementation is not inferred or is inferred but from a
+                 more reduced body so that it is just a variable. Since
+                 constraints of the form "univ <= max(...)" are not
+                 expressible in the system of algebraic universes: we fail
+                 (the user has to use an explicit type in the interface *)
+                error ()
+          with UserError _ (* "not an arity" *) ->
+            error () end
+        | _ -> t1,t2
+      else
+        (t1,t2) in
+    check_conv cst conv_leq env t1 t2
+  in
+
   match info1 with
    | Constant cb1 ->
       assert (cb1.const_hyps=[] && cb2.const_hyps=[]) ;
       (*Start by checking types*)
       let typ1 = Typeops.type_of_constant_type env cb1.const_type in
       let typ2 = Typeops.type_of_constant_type env cb2.const_type in
-      let cst = check_conv cst conv_leq env typ1 typ2 in
+      let cst = check_type cst env typ1 typ2 in
       let con = make_con (MPself msid1) empty_dirpath l in
       let cst =
        match cb2.const_body with
@@ -222,14 +304,18 @@ let rec check_modules cst env msid1 l msb1 msb2 =
 and check_signatures cst env (msid1,sig1) (msid2,sig2') = 
   let mp1 = MPself msid1 in
   let env = add_signature mp1 sig1 env in 
-  let sig2 = subst_signature_msid msid2 mp1 sig2' in
+  let sig2 = try
+    subst_signature_msid msid2 mp1 sig2' 
+    with
+    | Circularity l -> 
+	error_circularity_in_subtyping l (string_of_msid msid1) (string_of_msid msid2) in
   let map1 = make_label_map mp1 sig1 in
   let check_one_body cst (l,spec2) = 
     let info1 = 
       try 
 	Labmap.find l map1 
       with 
-	  Not_found -> error_no_such_label l 
+	  Not_found -> error_no_such_label_sub l (string_of_msid msid1) (string_of_msid msid2)
     in
       match spec2 with
 	| SPBconst cb2 ->

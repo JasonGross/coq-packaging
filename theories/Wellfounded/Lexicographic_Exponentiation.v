@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Lexicographic_Exponentiation.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Lexicographic_Exponentiation.v 9610 2007-02-07 14:45:18Z herbelin $ i*)
 
 (** Author: Cristina Cornes
 

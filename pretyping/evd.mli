@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evd.mli 9154 2006-09-20 17:18:18Z corbinea $ i*)
+(*i $Id: evd.mli 9573 2007-01-31 20:18:18Z notin $ i*)
 
 (*i*)
 open Util
@@ -56,6 +56,8 @@ val is_evar : evar_map -> evar -> bool
 
 val is_defined : evar_map -> evar -> bool
 
+val evar_concl : evar_info -> constr
+val evar_hyps : evar_info -> Environ.named_context_val
 val evar_body : evar_info -> evar_body
 val evar_env :  evar_info -> Environ.env
 

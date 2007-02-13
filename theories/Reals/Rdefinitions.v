@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i $Id: Rdefinitions.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Rdefinitions.v 9551 2007-01-29 15:13:35Z bgregoir $ i*)
 
 
 (*********************************************************)
@@ -54,6 +54,8 @@ Definition Rminus (r1 r2:R) : R := (r1 + - r2)%R.
 
 (**********)
 Definition Rdiv (r1 r2:R) : R := (r1 * / r2)%R.
+
+(**********)
 
 Infix "-" := Rminus : R_scope.
 Infix "/" := Rdiv : R_scope.

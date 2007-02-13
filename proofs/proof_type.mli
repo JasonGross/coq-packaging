@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: proof_type.mli 9244 2006-10-16 17:11:44Z barras $ i*)
+(*i $Id: proof_type.mli 9573 2007-01-31 20:18:18Z notin $ i*)
 
 (*i*)
 open Environ
@@ -39,6 +39,7 @@ type prim_rule =
   | ThinBody of identifier list
   | Move of bool * identifier * identifier
   | Rename of identifier * identifier
+  | Change_evars
 
 (* The type [goal sigma] is the type of subgoal. It has the following form
 \begin{verbatim}
@@ -84,7 +85,6 @@ and rule =
   | Nested of compound_rule * proof_tree 
   | Decl_proof of bool
   | Daimon
-  | Change_evars
 
 and compound_rule= 
   (* the boolean of Tactic tells if the default tactic is used *)

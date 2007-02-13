@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_vernac.ml4 9306 2006-10-28 18:28:19Z herbelin $ *)
+(* $Id: g_vernac.ml4 9562 2007-01-31 09:00:36Z msozeau $ *)
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
 open Pp
@@ -264,8 +264,8 @@ GEXTEND Gram
   ;
   rec_annotation:
     [ [ "{"; IDENT "struct"; id=IDENT; "}" -> (Some (id_of_string id), CStructRec)
-      | "{"; IDENT "wf"; id=IDENT; rel=lconstr; "}" -> (Some (id_of_string id), CWfRec rel) 
-      | "{"; IDENT "measure"; id=IDENT; rel=lconstr; "}" -> (Some (id_of_string id), CMeasureRec rel) 
+      | "{"; IDENT "wf"; rel=constr; id=IDENT; "}" -> (Some (id_of_string id), CWfRec rel) 
+      | "{"; IDENT "measure"; rel=constr; id=IDENT; "}" -> (Some (id_of_string id), CMeasureRec rel) 
       | ->  (None, CStructRec)
       ] ]
   ;
@@ -459,7 +459,7 @@ GEXTEND Gram
       | IDENT "Implicit"; IDENT "Arguments"; qid = global; 
          pos = OPT [ "["; l = LIST0 ident; "]" -> l ] ->
 	   let pos = option_map (List.map (fun id -> ExplByName id)) pos in
-	   VernacDeclareImplicits (qid,pos)
+	   VernacDeclareImplicits (true,qid,pos)
 
       | IDENT "Implicit"; ["Type" | IDENT "Types"];
 	   idl = LIST1 identref; ":"; c = lconstr -> VernacReserve (idl,c) ] ]
@@ -711,7 +711,7 @@ GEXTEND Gram
        refl = LIST1 class_rawexpr -> VernacBindScope (sc,refl)
 
      | IDENT "Arguments"; IDENT "Scope"; qid = global;
-         "["; scl = LIST0 opt_scope; "]" -> VernacArgumentsScope (qid,scl)
+       "["; scl = LIST0 opt_scope; "]" -> VernacArgumentsScope (true,qid,scl)
 
      | IDENT "Infix"; local = locality;
 	 op = ne_string; ":="; p = global; 

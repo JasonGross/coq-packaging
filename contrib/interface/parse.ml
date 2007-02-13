@@ -315,21 +315,21 @@ let parse_file_action reqid file_name =
 		   fnl () ++ Cerrors.explain_exn e));;
 
 let add_rec_path_action reqid string_arg ident_arg =
-  let directory_name = glob string_arg in
+  let directory_name = expand_path_macros string_arg in
     begin
       add_rec_path directory_name (Libnames.dirpath_of_string ident_arg)
     end;;
 	
 
 let add_path_action reqid string_arg =
-  let directory_name = glob string_arg in
+  let directory_name = expand_path_macros string_arg in
     begin
       add_path directory_name Names.empty_dirpath
     end;;
 
 let print_version_action () =
   msgnl (mt ());
-  msgnl (str "$Id: parse.ml 7844 2006-01-11 16:36:14Z bertot $");;
+  msgnl (str "$Id: parse.ml 9397 2006-11-21 21:50:54Z herbelin $");;
 
 let load_syntax_action reqid module_name =
  msg (str "loading " ++ str module_name ++ str "... ");

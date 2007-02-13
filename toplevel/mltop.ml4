@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: mltop.ml4 6692 2005-02-06 13:03:51Z herbelin $ *)
+(* $Id: mltop.ml4 9397 2006-11-21 21:50:54Z herbelin $ *)
 
 open Util
 open Pp
@@ -42,9 +42,8 @@ open Vernacinterp
 
 (* This path is where we look for .cmo *)
 let coq_mlpath_copy = ref ["."]
-let keep_copy_mlpath s = 
-  let dir = glob s in
-  coq_mlpath_copy := dir :: !coq_mlpath_copy
+let keep_copy_mlpath path = 
+  coq_mlpath_copy := path :: !coq_mlpath_copy
 
 (* If there is a toplevel under Coq *)
 type toplevel = { 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: inductive.mli 9314 2006-10-29 20:11:08Z herbelin $ i*)
+(*i $Id: inductive.mli 9421 2006-12-08 16:00:53Z barras $ i*)
 
 (*i*)
 open Names
@@ -106,5 +106,5 @@ type guard_env =
   }
 
 val subterm_specif : guard_env -> constr -> subterm_spec
-val case_branches_specif : guard_env -> constr -> inductive ->
+val case_branches_specif : guard_env -> subterm_spec -> inductive ->
   constr array -> (guard_env * constr) array

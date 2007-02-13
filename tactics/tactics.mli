@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tactics.mli 9266 2006-10-24 09:03:15Z herbelin $ i*)
+(*i $Id: tactics.mli 9551 2007-01-29 15:13:35Z bgregoir $ i*)
 
 (*i*)
 open Names
@@ -106,6 +106,7 @@ val intros_pattern    : identifier option -> intro_pattern_expr list -> tactic
 
 val assumption       : tactic
 val exact_no_check   : constr -> tactic
+val vm_cast_no_check : constr -> tactic
 val exact_check      : constr -> tactic
 val exact_proof      : Topconstr.constr_expr -> tactic
 

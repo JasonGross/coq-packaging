@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: impargs.mli 7732 2005-12-26 13:51:24Z herbelin $ i*)
+(*i $Id: impargs.mli 9488 2007-01-17 11:11:58Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -51,17 +51,10 @@ val declare_var_implicits : variable -> unit
 val declare_constant_implicits : constant -> unit
 val declare_mib_implicits : mutual_inductive -> unit
 
-val declare_implicits : global_reference -> unit
+val declare_implicits : bool -> global_reference -> unit
 
 (* Manual declaration of which arguments are expected implicit *)
-val declare_manual_implicits : global_reference -> 
+val declare_manual_implicits : bool -> global_reference -> 
   Topconstr.explicitation list -> unit
 
-(* Get implicit arguments *)
-val is_implicit_constant : constant -> implicits_flags
-val is_implicit_inductive_definition : mutual_inductive -> implicits_flags
-val is_implicit_var : variable -> implicits_flags
-
 val implicits_of_global : global_reference -> implicits_list
-
-val implicits_flags : unit -> implicits_flags

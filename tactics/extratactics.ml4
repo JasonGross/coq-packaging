@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extratactics.ml4 9266 2006-10-24 09:03:15Z herbelin $ *)
+(* $Id: extratactics.ml4 9430 2006-12-12 08:25:19Z herbelin $ *)
 
 open Pp
 open Pcoq
@@ -285,7 +285,7 @@ open Evar_tactics
 (* evar creation *)
 
 TACTIC EXTEND evar
-  [ "evar" "(" ident(id) ":" constr(typ) ")" ] -> [ let_evar (Name id) typ ]
+  [ "evar" "(" ident(id) ":" lconstr(typ) ")" ] -> [ let_evar (Name id) typ ]
 | [ "evar" constr(typ) ] -> [ let_evar Anonymous typ ]
 END
 

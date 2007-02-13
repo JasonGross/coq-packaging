@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Transitive_Closure.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: Transitive_Closure.v 9597 2007-02-06 19:44:05Z herbelin $ i*)
 
 (** Author: Bruno Barras *)
 
@@ -14,7 +14,7 @@ Require Import Relation_Definitions.
 Require Import Relation_Operators.
 
 Section Wf_Transitive_Closure.
-  Variable A : Set.
+  Variable A : Type.
   Variable R : relation A.
 
   Notation trans_clos := (clos_trans A R).

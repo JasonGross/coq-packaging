@@ -6,9 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Nnat.v 8733 2006-04-25 22:52:18Z letouzey $ i*)
+(*i $Id: Nnat.v 9551 2007-01-29 15:13:35Z bgregoir $ i*)
 
-Require Import Arith.
+Require Import Arith_base.
 Require Import Compare_dec.
 Require Import Sumbool.
 Require Import Div2.

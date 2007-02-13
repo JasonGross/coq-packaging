@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernac.ml 9133 2006-09-12 14:52:07Z notin $ *)
+(* $Id: vernac.ml 9397 2006-11-21 21:50:54Z herbelin $ *)
 
 (* Parsing of vernacular. *)
 
@@ -119,6 +119,7 @@ let pr_new_syntax loc ocom =
 let rec vernac_com interpfun (loc,com) =
   let rec interp = function
     | VernacLoad (verbosely, fname) ->
+	let fname = expand_path_macros fname in
         (* translator state *)
         let ch = !chan_translate in
         let cs = Lexer.com_state() in
