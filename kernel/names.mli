@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: names.mli 8852 2006-05-23 17:52:43Z notin $ i*)
+(*i $Id: names.mli 9558 2007-01-30 14:58:42Z soubiran $ i*)
 
 (*s Identifiers *)
 
@@ -50,6 +50,7 @@ type mod_self_id
 val make_msid : dir_path -> string -> mod_self_id
 val id_of_msid : mod_self_id -> identifier
 val debug_string_of_msid : mod_self_id -> string
+val string_of_msid : mod_self_id -> string
 
 (*s Unique names for bound modules *)
 type mod_bound_id
@@ -57,11 +58,13 @@ type mod_bound_id
 val make_mbid : dir_path -> string -> mod_bound_id
 val id_of_mbid : mod_bound_id -> identifier
 val debug_string_of_mbid : mod_bound_id -> string
+val string_of_mbid : mod_bound_id -> string
 
 (*s Names of structure elements *)
 type label
 val mk_label : string -> label
 val string_of_label : label -> string
+
 
 val label_of_id : identifier -> label
 val id_of_label : label -> identifier

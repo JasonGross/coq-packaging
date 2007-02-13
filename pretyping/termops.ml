@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: termops.ml 9314 2006-10-29 20:11:08Z herbelin $ *)
+(* $Id: termops.ml 9429 2006-12-12 08:01:03Z herbelin $ *)
 
 open Pp
 open Util
@@ -912,7 +912,7 @@ let next_name_not_occuring is_goal_ccl name l env_names t =
         (* Normally, an anonymous name is not dependent and will not be *)
         (* taken into account by the function concrete_name; just in case *)
         (* invent a valid name *)
-        id_of_string "H"
+        next (id_of_string "H")
 
 (* On reduit une serie d'eta-redex de tete ou rien du tout  *)
 (* [x1:c1;...;xn:cn]@(f;a1...an;x1;...;xn) --> @(f;a1...an) *)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: lib.mli 8852 2006-05-23 17:52:43Z notin $ i*)
+(*i $Id: lib.mli 9488 2007-01-17 11:11:58Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -160,8 +160,10 @@ val set_xml_close_section : (identifier -> unit) -> unit
 
 (*s Section management for discharge *)
 
-val section_segment : global_reference -> Sign.named_context
-val section_instance : global_reference -> Term.constr array
+val section_segment_of_constant : constant -> Sign.named_context
+val section_segment_of_mutual_inductive: mutual_inductive -> Sign.named_context
+
+val section_instance : global_reference -> identifier array
 
 val add_section_variable : identifier -> unit
 val add_section_constant : constant -> Sign.named_context -> unit

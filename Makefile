@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile 9347 2006-11-06 16:58:28Z notin $ 
+# $Id: Makefile 9606 2007-02-07 12:21:01Z notin $ 
 
 
 # Makefile for Coq
@@ -225,7 +225,7 @@ ML4FILES +=\
   contrib/omega/g_omega.ml4 \
   contrib/romega/g_romega.ml4 contrib/ring/g_quote.ml4 \
   contrib/ring/g_ring.ml4 contrib/dp/g_dp.ml4 \
-  contrib/setoid_ring/newring.ml4 \
+  contrib/setoid_ring/newring.ml4  \
   contrib/field/field.ml4 contrib/fourier/g_fourier.ml4 \
   contrib/extraction/g_extraction.ml4 contrib/xml/xmlentries.ml4
 
@@ -305,7 +305,7 @@ CCCMO=contrib/cc/ccalgo.cmo contrib/cc/ccproof.cmo contrib/cc/cctac.cmo \
 SUBTACCMO=contrib/subtac/subtac_utils.cmo contrib/subtac/eterm.cmo \
   contrib/subtac/g_eterm.cmo contrib/subtac/context.cmo \
   contrib/subtac/subtac_errors.cmo contrib/subtac/subtac_coercion.cmo \
-  contrib/subtac/subtac_obligations.cmo \
+  contrib/subtac/subtac_obligations.cmo contrib/subtac/subtac_cases.cmo \
   contrib/subtac/subtac_pretyping_F.cmo contrib/subtac/subtac_pretyping.cmo \
   contrib/subtac/subtac_interp_fixpoint.cmo \
   contrib/subtac/subtac_command.cmo contrib/subtac/subtac.cmo \
@@ -829,7 +829,8 @@ LOGICVO=\
  theories/Logic/RelationalChoice.vo   theories/Logic/Diaconescu.vo \
  theories/Logic/EqdepFacts.vo         theories/Logic/ProofIrrelevanceFacts.vo \
  theories/Logic/ClassicalEpsilon.vo   theories/Logic/ClassicalUniqueChoice.vo \
- theories/Logic/DecidableType.vo      theories/Logic/DecidableTypeEx.vo 
+ theories/Logic/DecidableType.vo      theories/Logic/DecidableTypeEx.vo \
+ theories/Logic/ConstructiveEpsilon.vo
 
 ARITHVO=\
  theories/Arith/Arith.vo        theories/Arith/Gt.vo          \
@@ -874,7 +875,8 @@ ZARITHVO=\
  theories/ZArith/Zdiv.vo	theories/ZArith/Zsqrt.vo \
  theories/ZArith/Zwf.vo		theories/ZArith/ZArith_base.vo \
  theories/ZArith/Zbool.vo	theories/ZArith/Zbinary.vo \
- theories/ZArith/Znumtheory.vo  theories/ZArith/Int.vo
+ theories/ZArith/Znumtheory.vo  theories/ZArith/Int.vo \
+ theories/ZArith/Zpow_def.vo
 
 QARITHVO=\
  theories/QArith/QArith_base.vo theories/QArith/Qreduction.vo \
@@ -957,7 +959,7 @@ WELLFOUNDEDVO=\
  theories/Wellfounded/Lexicographic_Product.vo 
 
 REALSBASEVO=\
- theories/Reals/Rdefinitions.vo \
+ theories/Reals/Rdefinitions.vo theories/Reals/Rpow_def.vo \
  theories/Reals/Raxioms.vo      theories/Reals/RIneq.vo \
  theories/Reals/DiscrR.vo       theories/Reals/Rbase.vo \
  theories/Reals/LegacyRfield.vo
@@ -965,7 +967,7 @@ REALSBASEVO=\
 REALS_basic= 
 
 REALS_all=\
- theories/Reals/R_Ifp.vo \
+ theories/Reals/R_Ifp.vo        theories/Reals/Rpow_def.vo \
  theories/Reals/Rbasic_fun.vo   theories/Reals/R_sqr.vo \
  theories/Reals/SplitAbsolu.vo  theories/Reals/SplitRmult.vo \
  theories/Reals/ArithProp.vo    theories/Reals/Rfunctions.vo \
@@ -1075,7 +1077,8 @@ JPROVERVO=
 
 CCVO=
 
-SUBTACVO=contrib/subtac/FixSub.vo contrib/subtac/Utils.vo
+SUBTACVO=contrib/subtac/Utils.vo contrib/subtac/FixSub.vo contrib/subtac/Subtac.vo \
+       contrib/subtac/FunctionalExtensionality.vo
 
 RTAUTOVO = \
  contrib/rtauto/Bintree.vo contrib/rtauto/Rtauto.vo
@@ -1120,9 +1123,6 @@ theories/%.vo: theories/%.v states/initial.coq
 
 contrib/%.vo: contrib/%.v
 	$(BOOTCOQTOP) -compile contrib/$*
-
-contrib/extraction/%.vo: contrib/extraction/%.v states/barestate.coq $(COQC)
-	$(BOOTCOQTOP) -is states/barestate.coq -compile $*
 
 cleantheories:
 	rm -f states/*.coq
@@ -1267,6 +1267,13 @@ install-tools::
 LIBFILES=$(THEORIESVO) $(CONTRIBVO)
 LIBFILESLIGHT=$(THEORIESLIGHTVO)
 
+OBJECTCMA=lib/lib.cma kernel/kernel.cma library/library.cma \
+        pretyping/pretyping.cma interp/interp.cma proofs/proofs.cma \
+        parsing/parsing.cma tactics/tactics.cma toplevel/toplevel.cma \
+        parsing/highparsing.cma tactics/hightactics.cma contrib/contrib.cma
+
+OBJECTCMXA=$(OBJECTCMA:.cma=.cmxa)
+
 install-library:
 	$(MKDIR) $(FULLCOQLIB)
 	for f in $(LIBFILES); do \
@@ -1276,6 +1283,7 @@ install-library:
 	$(MKDIR) $(FULLCOQLIB)/states
 	cp states/*.coq $(FULLCOQLIB)/states
 	$(MKDIR) $(FULLCOQLIB)/user-contrib
+	cp $(OBJECTCMA) $(OBJECTCMXA) $(FULLCOQLIB)
 
 install-library-light:
 	$(MKDIR) $(FULLCOQLIB)
@@ -1323,10 +1331,10 @@ install-latex:
 .PHONY: doc
 
 doc: glob.dump
-	(cd doc; make all)
+	(cd doc; $(MAKE) all)
 
 clean::
-	(cd doc; make clean)
+	(cd doc; $(MAKE) clean)
 
 clean::
 	rm -f doc/coq.tex
@@ -1595,8 +1603,8 @@ parsing/lexer.cmo: parsing/lexer.ml4
 revision:
 ifeq ($(CHECKEDOUT),1)
 	- /bin/rm -f revision
-	sed -ne '/url/s/^.*\/\([^\/]\+\)"$$/\1/p' .svn/entries > revision
-	sed -ne '/revision/s/^.*"\([0-9]\+\)".*$$/r\1/p' .svn/entries >> revision
+	sed -ne '/url/s/^.*\/\([^\/"]\{1,\}\)"$$/\1/p' .svn/entries > revision
+	sed -ne '/revision/s/^.*"\([0-9]\{1,\}\)".*$$/r\1/p' .svn/entries >> revision
 endif
 
 archclean::
@@ -1754,8 +1762,6 @@ depend: beforedepend dependp4 ml4filesml
 	done
 # 5.  We express dependencies of .o files
 	$(CC) -MM $(CINCLUDES) kernel/byterun/*.c >> .depend
-	$(CC) -MM  $(CINCLUDES) kernel/byterun/*.c | sed -e 's/\.o/.d.o/' >> \
-                    .depend
 # 6. Finally, we erase the generated .ml files
 	rm -f $(ML4FILESML)
 # 7. Since .depend contains correct dependencies .depend.devel can be deleted

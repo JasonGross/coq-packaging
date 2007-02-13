@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: proof_type.ml 9244 2006-10-16 17:11:44Z barras $ *)
+(*i $Id: proof_type.ml 9573 2007-01-31 20:18:18Z notin $ *)
 
 (*i*)
 open Environ
@@ -39,6 +39,7 @@ type prim_rule =
   | ThinBody of identifier list
   | Move of bool * identifier * identifier
   | Rename of identifier * identifier
+  | Change_evars
 
 type proof_tree = {
   open_subgoals : int;
@@ -50,7 +51,6 @@ and rule =
   | Nested of compound_rule * proof_tree 
   | Decl_proof of bool
   | Daimon
-  | Change_evars
 
 and compound_rule=  
   | Tactic of tactic_expr * bool

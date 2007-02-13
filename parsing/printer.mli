@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: printer.mli 9249 2006-10-19 07:46:03Z herbelin $ i*)
+(*i $Id: printer.mli 9385 2006-11-17 15:14:14Z courtieu $ i*)
 
 (*i*)
 open Pp
@@ -98,8 +98,11 @@ val pr_evars_int           : int -> (evar * evar_info) list -> std_ppcmds
 val pr_prim_rule           : prim_rule -> std_ppcmds
 
 (* Emacs/proof general support *)
-
-val emacs_str              : string -> string
+(* (emacs_str s alts) outputs 
+   - s if emacs mode & unicode allowed, 
+   - alts if emacs mode and & unicode not allowed
+   - nothing otherwise *)
+val emacs_str              : string -> string -> string
 
 (* Backwards compatibility *)
 

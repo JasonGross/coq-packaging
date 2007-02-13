@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: miniml.mli 8724 2006-04-20 09:57:01Z letouzey $ i*)
+(*i $Id: miniml.mli 9456 2006-12-17 20:08:38Z letouzey $ i*)
 
 (*s Target language for extraction: a core ML called MiniML. *)
 
@@ -79,7 +79,9 @@ type ml_ind_packet = {
 type ml_ind = {
   ind_info : inductive_info;
   ind_nparams : int; 	       
-  ind_packets : ml_ind_packet array }
+  ind_packets : ml_ind_packet array;
+  ind_equiv : kernel_name option
+}
 
 (*s ML terms. *)
 

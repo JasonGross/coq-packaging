@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: notation.mli 9208 2006-10-05 07:45:01Z herbelin $ i*)
+(*i $Id: notation.mli 9481 2007-01-11 19:17:56Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -135,7 +135,9 @@ val exists_notation_in_scope : scope_name option -> notation ->
       interpretation -> bool
 
 (* Declares and looks for scopes associated to arguments of a global ref *)
-val declare_arguments_scope: global_reference -> scope_name option list -> unit
+val declare_arguments_scope : 
+  bool (* true=local *) -> global_reference -> scope_name option list -> unit
+
 val find_arguments_scope : global_reference -> scope_name option list
 
 val declare_class_scope : scope_name -> Classops.cl_typ -> unit

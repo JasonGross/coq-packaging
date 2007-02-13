@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_constr.ml4 9226 2006-10-09 16:11:01Z herbelin $ *)
+(* $Id: g_constr.ml4 9562 2007-01-31 09:00:36Z msozeau $ *)
 
 open Pcoq
 open Constr
@@ -249,8 +249,8 @@ GEXTEND Gram
   ;
   fixannot:
     [ [ "{"; IDENT "struct"; id=name; "}" -> (Some id, CStructRec)
-      | "{"; IDENT "wf"; id=name; rel=lconstr; "}" -> (Some id, CWfRec rel)
-      | "{"; IDENT "measure"; id=name; rel=lconstr; "}" -> (Some id, CMeasureRec rel)
+      | "{"; IDENT "wf"; rel=constr; id=name; "}" -> (Some id, CWfRec rel)
+      | "{"; IDENT "measure"; rel=constr; id=name; "}" -> (Some id, CMeasureRec rel)
       | ->  (None, CStructRec)
       ] ]
   ;

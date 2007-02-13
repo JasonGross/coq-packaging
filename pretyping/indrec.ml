@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: indrec.ml 8845 2006-05-23 07:41:58Z herbelin $ *)
+(* $Id: indrec.ml 9519 2007-01-22 18:13:29Z notin $ *)
 
 open Pp
 open Util
@@ -422,16 +422,15 @@ let mis_make_indrec env sigma listdepkind mib =
 
       (* Body on make_one_rec *)
     let (indi,mibi,mipi,dep,kind) = List.nth listdepkind p in
-
-    if mis_is_recursive_subset
-      (List.map (fun (indi,_,_,_,_) -> snd indi) listdepkind)
-      mipi.mind_recargs
-    then 
-    let env' = push_rel_context lnamesparrec env in
-      it_mkLambda_or_LetIn_name env (put_arity env' 0 listdepkind) 
-	lnamesparrec
-    else 
-      mis_make_case_com (Some dep) env sigma indi (mibi,mipi) kind 
+      if (mis_is_recursive_subset
+	     (List.map (fun (indi,_,_,_,_) -> snd indi) listdepkind)
+	     mipi.mind_recargs) 
+      then 
+	let env' = push_rel_context lnamesparrec env in
+	  it_mkLambda_or_LetIn_name env (put_arity env' 0 listdepkind) 
+	    lnamesparrec
+      else 
+	mis_make_case_com (Some dep) env sigma indi (mibi,mipi) kind 
   in 
       (* Body of mis_make_indrec *)
   list_tabulate make_one_rec nrec

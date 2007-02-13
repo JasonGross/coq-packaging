@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: command.ml 9310 2006-10-28 19:35:09Z herbelin $ *)
+(* $Id: command.ml 9617 2007-02-07 18:59:26Z herbelin $ *)
 
 open Pp
 open Util
@@ -216,12 +216,19 @@ let declare_one_elimination ind =
   let env = Global.env () in
   let sigma = Evd.empty in
   let elim_scheme = Indrec.build_indrec env sigma ind in
-  let npars = mib.mind_nparams_rec in
+  let npars = 
+    (* if a constructor of [ind] contains a recursive call, the scheme
+       is generalized only wrt recursively uniform parameters *)
+    if (Inductiveops.mis_is_recursive_subset [snd ind] mip.mind_recargs) 
+    then 
+      mib.mind_nparams_rec
+    else 
+      mib.mind_nparams in
   let make_elim s = Indrec.instantiate_indrec_scheme s npars elim_scheme in
   let kelim = elim_sorts (mib,mip) in
-  (* in case the inductive has a type elimination, generates only one
-     induction scheme, the other ones share the same code with the
-     apropriate type *)
+    (* in case the inductive has a type elimination, generates only one
+       induction scheme, the other ones share the same code with the
+       apropriate type *)
   if List.mem InType kelim then
     let elim = make_elim (new_sort_in_family InType) in
     let cte = declare (mindstr^(Indrec.elimination_suffix InType)) elim None in
@@ -588,6 +595,7 @@ let interp_recursive fixkind l boxed =
   let fixdefs = List.map (nf_evar (Evd.evars_of isevars)) fixdefs in
   let fixtypes = List.map (nf_evar (Evd.evars_of isevars)) fixtypes in
   List.iter (check_evars env_rec Evd.empty isevars) fixdefs;
+  List.iter (check_evars env Evd.empty isevars) fixtypes;
   check_mutuality env kind (List.combine fixnames fixdefs);
 
   (* Build the fix declaration block *)

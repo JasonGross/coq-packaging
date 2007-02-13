@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_tactic.ml4 8878 2006-05-30 16:44:25Z herbelin $ *)
+(* $Id: g_tactic.ml4 9551 2007-01-29 15:13:35Z bgregoir $ *)
 
 open Pp
 open Pcoq
@@ -309,6 +309,7 @@ GEXTEND Gram
       | IDENT "assumption" -> TacAssumption
       | IDENT "exact"; c = constr -> TacExact c
       | IDENT "exact_no_check"; c = constr -> TacExactNoCheck c
+      | IDENT "vm_cast_no_check"; c = constr -> TacVmCastNoCheck c
 
       | IDENT "apply"; cl = constr_with_bindings -> TacApply cl
       | IDENT "elim"; cl = constr_with_bindings; el = OPT eliminator ->

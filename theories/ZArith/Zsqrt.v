@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Zsqrt.v 9245 2006-10-17 12:53:34Z notin $ *)
+(* $Id: Zsqrt.v 9551 2007-01-29 15:13:35Z bgregoir $ *)
 
 Require Import ZArithRing.
 Require Import Omega.
@@ -132,7 +132,7 @@ Definition Zsqrt :
                (fun r:Z => 0 = 0 * 0 + r /\ 0 * 0 <= 0 < (0 + 1) * (0 + 1)) 0
                _)
     end); try omega.
-split; [ omega | rewrite Heq; ring_simplify ((s + 1) * (s + 1)); omega ].
+ split; [ omega | rewrite Heq; ring_simplify (s*s) ((s + 1) * (s + 1)); omega ].
 Defined.
 
 (** Define a function of type Z->Z that computes the integer square root,

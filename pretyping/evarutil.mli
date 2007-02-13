@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evarutil.mli 9141 2006-09-15 10:07:01Z herbelin $ i*)
+(*i $Id: evarutil.mli 9573 2007-01-31 20:18:18Z notin $ i*)
 
 (*i*)
 open Util
@@ -158,3 +158,8 @@ val whd_castappevar :  evar_map -> constr -> constr
 
 val pr_tycon_type : env -> type_constraint_type -> Pp.std_ppcmds
 val pr_tycon : env -> type_constraint -> Pp.std_ppcmds
+
+
+(**********************************)
+(* Removing hyps in evars'context *)
+val clear_hyps_in_evi : evar_defs ref -> evar_info -> identifier list -> evar_info

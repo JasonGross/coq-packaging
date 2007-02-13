@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id:$ *)
+(* $Id$ *)
 
 open Util
 open Pp
@@ -54,7 +54,7 @@ let tcl_change_info_gen info_gen =
       [pftree] ->
 	{pftree with
 	   goal=gl;
-	   ref=Some (Change_evars,[pftree])} 
+	   ref=Some (Prim Change_evars,[pftree])} 
     | _ -> anomaly "change_info : Wrong number of subtrees")
 
 let tcl_change_info info gls =  tcl_change_info_gen (Some (pm_in info)) gls
@@ -92,18 +92,29 @@ let mk_evd metalist gls =
   let add_one (meta,typ) evd = 
     meta_declare meta typ evd in
     List.fold_right add_one metalist evd0
+
+let set_last cpl gls = 
+  let info = get_its_info gls in
+    tclTHEN 
+      begin 
+	match info.pm_last with 
+	    Some (lid,false) when 
+	      not (occur_id [] lid info.pm_partial_goal) -> 
+		tclTRY (clear [lid])
+	  | _ -> tclIDTAC
+      end
+      begin
+	tcl_change_info 
+	  {info with 
+	    pm_last=Some cpl }
+      end gls
 	  
 (* start a proof *)
 
 let start_proof_tac gls=
   let gl=sig_it gls in
-  let info={pm_last=Anonymous;
+  let info={pm_last=None;
 	    pm_partial_goal=mkMeta 1; 
-	    pm_hyps= 
-      begin
-	let hyps = pf_ids_of_hyps gls in
-	  List.fold_right Idset.add hyps Idset.empty
-      end; 
 	    pm_subgoals= [1,gl.evar_concl];
 	    pm_stack=[]} in
     {it=[{gl with evar_extra=Some (pm_in info)}];sigma=sig_sig gls}, 
@@ -259,13 +270,12 @@ let add_justification_hyps keep items gls =
 	    letin_tac false (Names.Name id) c Tacexpr.nowhere gls in 
     tclMAP add_aux items gls   
 
-let apply_to_prepared_goal items kont gls =
+let prepare_goal items gls =
   let tokeep = ref Idset.empty in
   let auxres = add_justification_hyps tokeep items gls in
    tclTHENLIST
      [ (fun _ -> auxres);
-       filter_hyps (let keep = !tokeep in fun id -> Idset.mem id keep);
-       kont ] gls
+       filter_hyps (let keep = !tokeep in fun id -> Idset.mem id keep)] gls
 
 let my_automation_tac = ref 
   (fun gls -> anomaly "No automation registered")
@@ -276,7 +286,7 @@ let automation_tac gls = !my_automation_tac gls
 
 let justification tac gls= 
     tclORELSE 
-      (tclSOLVE [tac]) 
+      (tclSOLVE [tclTHEN tac assumption]) 
       (fun gls -> 
 	 if get_strictness () then 
 	   error "insufficient justification" 
@@ -286,8 +296,8 @@ let justification tac gls=
 	     daimon_tac gls
 	   end) gls
 
-let default_justification items gls=
-  justification (apply_to_prepared_goal items automation_tac) gls
+let default_justification elems gls=
+  justification (tclTHEN (prepare_goal elems) automation_tac) gls
 
 (* code for have/then/thus/hence *)
 
@@ -342,10 +352,11 @@ let enstack_subsubgoals env se stack gls=
 	    Array.iteri process gentypes
       | _ -> ()
 
-let find_subsubgoal env c ctyp skip evd metas gls =
+let find_subsubgoal env c ctyp skip evd metas submetas gls =
   let stack = Stack.create () in
   let max_meta = 
-    List.fold_left (fun a (m,_) -> max a m) 0 metas in
+    let tmp = List.fold_left (fun a (m,_) -> max a m) 0 metas in
+      List.fold_left (fun a (m,_) -> max a m) tmp submetas in
   let _ = 
     List.iter (fun (m,typ) -> 
 		 Stack.push 
@@ -361,7 +372,10 @@ let find_subsubgoal env c ctyp skip evd metas gls =
 	  Unification.w_unify true env Reduction.CUMUL 
 	    ctyp se.se_type se.se_evd in
 	  if n <= 0 then 
-	      {se with se_evd=meta_assign se.se_meta c unifier}	  
+	    {se with 
+	       se_evd=meta_assign se.se_meta c unifier;
+	       se_meta_list=replace_in_list 
+		se.se_meta submetas se.se_meta_list}
 	  else
 	      dfs (pred n)
       with _ -> 
@@ -380,7 +394,6 @@ let rec nf_list evd =
 	    nf_list evd others
 	else
 	  (m,nf_meta evd typ)::nf_list evd others
-
 
 let rec max_linear_context meta_one c =
   if !meta_one = None then
@@ -403,12 +416,12 @@ let rec max_linear_context meta_one c =
     else
       map_constr (max_linear_context meta_one) c
 
-let thus_tac c ctyp gls =  
+let thus_tac c ctyp submetas gls =  
   let info = get_its_info gls in
-  let evd0 = mk_evd info.pm_subgoals gls in
+  let evd0 = mk_evd (info.pm_subgoals@submetas) gls in
   let list,evd = 
     try
-      find_subsubgoal (pf_env gls) c ctyp 0 evd0 info.pm_subgoals gls
+      find_subsubgoal (pf_env gls) c ctyp 0 evd0 info.pm_subgoals submetas gls
     with Not_found -> 
       error "I could not relate this statement to the thesis" in
   let nflist = nf_list evd list in
@@ -450,34 +463,44 @@ let mk_stat_or_thesis info = function
 	  [_,c] -> c
 	| _ -> error 
 	    "\"thesis\" is split, please specify which part you refer to."
-			
-let instr_cut mkstat _thus _then cut gls0 = 
-  let info = get_its_info gls0 in  
-  let just_tac gls = 
+
+let just_tac _then cut info gls0 =
+  let items_tac gls =
     match cut.cut_by with
-        Automated l ->	
-	  let elems = 
+	None -> tclIDTAC gls
+      | Some items -> 
+	  let items_ = 
 	    if _then then
 	      match info.pm_last with
-		  Anonymous -> l
-		| Name id -> (mkVar id) ::l
-	    else l in
-	    default_justification elems gls
-      | By_tactic t -> 
-	  justification (Tacinterp.eval_tactic t) gls in
-  let c_id = match cut.cut_stat.st_label with 
+		  None -> error "no previous statement to use"
+		| Some (id,_) -> (mkVar id)::items
+	    else items
+	  in prepare_goal items_ gls in
+  let method_tac gls = 
+    match cut.cut_using with
+        None ->	
+	  automation_tac gls
+      | Some tac -> 
+	  (Tacinterp.eval_tactic tac) gls in
+    justification (tclTHEN items_tac method_tac) gls0
+			
+let instr_cut mkstat _thus _then cut gls0 = 
+  let info = get_its_info gls0 in 
+  let stat = cut.cut_stat in
+  let (c_id,_) as cpl = match stat.st_label with 
       Anonymous -> 
-	pf_get_new_id (id_of_string "_fact") gls0 
-    | Name id -> id in
-  let c_stat = mkstat info cut.cut_stat.st_it in
+	pf_get_new_id (id_of_string "_fact") gls0,false 
+    | Name id -> id,true in
+  let c_stat = mkstat info stat.st_it in
   let thus_tac gls= 
     if _thus then 
-      thus_tac (mkVar c_id) c_stat gls
+      thus_tac (mkVar c_id) c_stat [] gls
     else tclIDTAC gls in
-  let ninfo = {info with pm_last=Name c_id} in
     tclTHENS (internal_cut c_id c_stat) 
-      [tclTHEN tcl_erase_info just_tac;
-       tclTHEN (tcl_change_info ninfo) thus_tac] gls0
+      [tclTHEN tcl_erase_info (just_tac _then cut info);
+       tclTHEN (set_last cpl) thus_tac] gls0
+
+
 
 (* iterated equality *)
 let _eq = Libnames.constr_of_reference (Coqlib.glob_eq)
@@ -498,24 +521,28 @@ let instr_rew _thus rew_side cut gls0 =
   let info = get_its_info gls0 in
   let last_id = 	    
     match info.pm_last with
-	Anonymous -> error "no previous equality"
-      | Name id -> id in
+	None -> error "no previous equality"
+      | Some (id,_) -> id in
   let typ,lhs,rhs = decompose_eq last_id gls0 in  
-  let just_tac gls = 
+  let items_tac gls =
     match cut.cut_by with
-        Automated l ->	
-	  let elems = (mkVar last_id) :: l in
-	    default_justification elems gls
-      | By_tactic t -> 
-	  justification (Tacinterp.eval_tactic t) gls in
-  let c_id = match cut.cut_stat.st_label with 
+	None -> tclIDTAC gls
+      | Some items -> prepare_goal items gls in
+  let method_tac gls = 
+    match cut.cut_using with
+        None ->	
+	  automation_tac gls
+      | Some tac -> 
+	  (Tacinterp.eval_tactic tac) gls in
+  let just_tac gls =
+    justification (tclTHEN items_tac method_tac) gls in
+  let (c_id,_) as cpl = match cut.cut_stat.st_label with 
       Anonymous -> 
-	pf_get_new_id (id_of_string "_eq") gls0 
-    | Name id -> id in
-  let ninfo = {info with pm_last=Name c_id} in
+	pf_get_new_id (id_of_string "_eq") gls0,false 
+    | Name id -> id,true in
   let thus_tac new_eq gls= 
     if _thus then 
-      thus_tac (mkVar c_id) new_eq gls
+      thus_tac (mkVar c_id) new_eq [] gls
     else tclIDTAC gls in
     match rew_side with 
 	Lhs ->
@@ -524,14 +551,14 @@ let instr_rew _thus rew_side cut gls0 =
 	      [tclTHEN tcl_erase_info 
 		 (tclTHENS (transitivity lhs) 
 		    [just_tac;exact_check (mkVar last_id)]);
-	       tclTHEN (tcl_change_info ninfo) (thus_tac new_eq)] gls0
+	       tclTHEN (set_last cpl) (thus_tac new_eq)] gls0
       | Rhs ->
 	  let new_eq = mkApp(_eq,[|typ;lhs;cut.cut_stat.st_it|]) in
 	    tclTHENS (internal_cut c_id new_eq) 
 	      [tclTHEN tcl_erase_info 
 		 (tclTHENS (transitivity rhs) 
 		    [exact_check (mkVar last_id);just_tac]);
-	       tclTHEN (tcl_change_info ninfo) (thus_tac new_eq)] gls0
+	       tclTHEN (set_last cpl) (thus_tac new_eq)] gls0
 	      
 
 
@@ -539,22 +566,21 @@ let instr_rew _thus rew_side cut gls0 =
 
 let instr_claim _thus st gls0 = 
   let info = get_its_info gls0 in  
-  let id = match st.st_label with 
-      Anonymous -> pf_get_new_id (id_of_string "_claim") gls0 
-    | Name id -> id in
+  let (id,_) as cpl = match st.st_label with 
+      Anonymous -> pf_get_new_id (id_of_string "_claim") gls0,false 
+    | Name id -> id,true in
   let thus_tac gls= 
     if _thus then 
-      thus_tac (mkVar id) st.st_it gls
+      thus_tac (mkVar id) st.st_it [] gls
     else tclIDTAC gls in
   let ninfo1 = {info with 
 		  pm_stack=
       (if _thus then Focus_claim else Claim)::info.pm_stack;
 		  pm_partial_goal=mkMeta 1;
 	          pm_subgoals = [1,st.st_it]} in
-  let ninfo2 = {info with pm_last=Name id} in
     tclTHENS (internal_cut id st.st_it) 
       [tcl_change_info ninfo1;
-       tclTHEN (tcl_change_info ninfo2) thus_tac] gls0
+       tclTHEN (set_last cpl) thus_tac] gls0
 
 (* tactics for assume *)
 
@@ -565,11 +591,6 @@ let reset_concl gls =
 	 pm_partial_goal=mkMeta 1;
 	 pm_subgoals= [1,gls.it.evar_concl]} gls
 
-let set_last id gls = 
-  let info = get_its_info gls in
-    tcl_change_info 
-      {info with 
-	 pm_last=Name id} gls
 
 let intro_pm id gls=
   let info = get_its_info gls in
@@ -579,20 +600,14 @@ let intro_pm id gls=
       | _ -> error "Goal is split"
 
 let push_intro_tac coerce nam gls = 
-      let hid =
+      let (hid,_) as cpl =
 	match nam with 
-	    Anonymous -> pf_get_new_id (id_of_string "_hyp") gls 
-	  | Name id -> id in
-      let mark_id gls0 =
-	let info = get_its_info gls0 in
-	let ninfo = {info with 
-		       pm_last = Name hid;
-		       pm_hyps = Idset.add hid info.pm_hyps } in
-	  tcl_change_info ninfo gls0 in
+	    Anonymous -> pf_get_new_id (id_of_string "_hyp") gls,false 
+	  | Name id -> id,true in
 	tclTHENLIST 
 	  [intro_pm hid;
 	   coerce hid;
-	   mark_id]
+	   set_last cpl]
 	  gls 
 
 let assume_tac hyps gls = 
@@ -634,6 +649,56 @@ let assume_st_letin hyps gls =
 	    (fun id -> 
 	       convert_hyp (id,Some (fst st.st_it),snd st.st_it)) st.st_label))
 	 hyps tclIDTAC gls 
+
+(* suffices *)
+
+let free_meta info = 
+  let max_next (i,_) j  = if j <= i then succ i else j in
+  List.fold_right max_next info.pm_subgoals 1
+
+let rec metas_from n hyps = 
+  match hyps with
+      _ :: q -> n :: metas_from (succ n) q
+    | [] -> []
+ 
+let rec build_product args body =
+  match args with 
+      (Hprop st| Hvar st )::rest -> 
+	let pprod= lift 1 (build_product rest body) in
+	let lbody =
+	  match st.st_label with
+	      Anonymous -> pprod
+	    | Name id -> subst_term (mkVar id) pprod in
+	  mkProd (st.st_label, st.st_it, lbody)
+    | [] -> body 
+
+let rec build_applist prod = function
+    [] -> [],prod
+  | n::q -> 
+      let (_,typ,_) = destProd prod in
+      let ctx,head = build_applist (Term.prod_applist prod [mkMeta n]) q in
+	(n,typ)::ctx,head
+
+let instr_suffices _then cut gls0 = 
+  let info = get_its_info gls0 in 
+  let c_id = pf_get_new_id (id_of_string "_cofact") gls0 in 
+  let ctx,hd = cut.cut_stat in
+  let c_stat = build_product ctx (mk_stat_or_thesis info hd) in
+  let metas = metas_from (free_meta info) ctx in
+  let c_ctx,c_head = build_applist c_stat metas in
+  let c_term = applist (mkVar c_id,List.map mkMeta metas) in  
+  let thus_tac gls= 
+    thus_tac c_term c_head c_ctx gls in
+   tclTHENS (internal_cut c_id c_stat) 
+     [tclTHENLIST 
+	 [ tcl_change_info 
+	     {info with 
+	       pm_partial_goal=mkMeta 1;
+	       pm_subgoals=[1,c_stat]};
+	   assume_tac ctx;   
+	   tcl_erase_info;
+	   just_tac _then cut info];
+      tclTHEN (set_last (c_id,false)) thus_tac] gls0
 
 (* tactics for consider/given *)
 
@@ -684,14 +749,7 @@ let pm_rename_hyp id hid gls =
 let rec consider_match may_intro introduced available expected gls =
   match available,expected with 
       [],[] ->
-	if not may_intro then 
 	  set_last (List.hd introduced) gls
-	else
-	  let info = get_its_info gls in 
-	  let nameset=List.fold_right Idset.add introduced info.pm_hyps in
-	    tcl_change_info {info with 
-			       pm_last = Name (List.hd introduced);
-			       pm_hyps = nameset} gls
     | _,[] -> error "last statements do not match a complete hypothesis" 
 	(* should tell which ones *)
     | [],hyps -> 
@@ -704,7 +762,7 @@ let rec consider_match may_intro introduced available expected gls =
 		(fun _ -> 
 		   error "not enough sub-hypotheses to match statements")
 		gls 
-          end
+          end 
 	else
 	  error "not enough sub-hypotheses to match statements" 
 	    (* should tell which ones *)
@@ -713,11 +771,11 @@ let rec consider_match may_intro introduced available expected gls =
 	  begin
 	    match st.st_label with 
 		Anonymous -> 
-		  consider_match may_intro (id::introduced) rest_ids rest
+		  consider_match may_intro ((id,false)::introduced) rest_ids rest
 	      | Name hid -> 
 		  tclTHENLIST 
 		    [pm_rename_hyp id hid;
-		     consider_match may_intro (hid::introduced) rest_ids rest]
+		     consider_match may_intro ((hid,true)::introduced) rest_ids rest]
 	  end
 	  begin
 	    (fun gls -> 
@@ -753,7 +811,7 @@ let rec take_tac wits gls =
       [] -> tclIDTAC gls
     | wit::rest ->  
 	let typ = pf_type_of gls wit in  
-	  tclTHEN (thus_tac wit typ) (take_tac rest)  gls
+	  tclTHEN (thus_tac wit typ []) (take_tac rest)  gls
 
 
 (* tactics for define *)
@@ -873,17 +931,6 @@ let per_tac etype casee gls=
 	      gls
 
 (* suppose *)
-
-let rec build_product args body =
-  match args with 
-      (Hprop st| Hvar st )::rest -> 
-	let pprod= lift 1 (build_product rest body) in
-	let lbody =
-	  match st.st_label with
-	      Anonymous -> body
-	    | Name id -> subst_term (mkVar id) pprod in
-	  mkProd (st.st_label, st.st_it, lbody)
-    | [] -> body 
 
 let register_nodep_subcase id= function
     Per(et,pi,ek,clauses)::s ->
@@ -1201,6 +1248,30 @@ let hrec_for obj_id fix_id per_info gls=
 	    else None
       | _ -> None
 
+
+(* custom elim performs the case analysis of hypothesis id from the local 
+context, 
+
+- generalizing hypotheses below id
+- computing the elimination predicate (abstract inductive predicate) 
+- build case analysis term 
+- generalize rec_calls (use wf_paths)
+- vector of introduced identifiers per branch 
+
+match id in t return p with
+ C1 ... => ?1 
+|C2 ... => ?2
+...
+end*)
+
+
+    
+
+
+
+
+
+
 let rec execute_cases at_top fix_name per_info kont0 stacks tree gls = 
   match tree with
       Pop t ->  
@@ -1388,6 +1459,8 @@ let rec do_proof_instr_gen _thus _then instr =
 	do_proof_instr_gen true true i
     | Pcut c ->
 	instr_cut mk_stat_or_thesis _thus _then c
+    | Psuffices c ->
+	instr_suffices _then c 
     | Prew (s,c) ->
 	assert (not _then);
 	instr_rew _thus s c
@@ -1412,7 +1485,7 @@ let eval_instr {instr=instr} =
 let rec preprocess pts instr =
   match instr with
     Phence i |Pthus i | Pthen i -> preprocess pts i
-  | Pcut _ |  Passume _ | Plet _ | Pclaim _ | Pfocus _ 
+  | Psuffices _ | Pcut _ |  Passume _ | Plet _ | Pclaim _ | Pfocus _ 
   | Pconsider (_,_) | Pcast (_,_) | Pgiven _ | Ptake _ 
   | Pdefine (_,_,_) | Pper _ | Prew _ ->
       check_not_per pts;
@@ -1428,11 +1501,23 @@ let rec preprocess pts instr =
 let rec postprocess pts instr = 
   match instr with
       Phence i | Pthus i | Pthen i -> postprocess pts i
-    | Pcut _ | Passume _ | Plet _ | Pconsider (_,_) | Pcast (_,_)
+    | Pcut _ | Psuffices _ | Passume _ | Plet _ | Pconsider (_,_) | Pcast (_,_)
     | Pgiven _ | Ptake _ | Pdefine (_,_,_) | Prew (_,_) -> pts
     | Pclaim _ | Pfocus _ | Psuppose _ | Pcase _ | Pper _ -> nth_unproven 1 pts
-    | Pescape ->
-	escape_command pts
+    | Pescape -> escape_command pts
+    | Pend (B_elim ET_Induction) ->
+  	begin
+	  let pf = proof_of_pftreestate pts in
+	  let (pfterm,_) = extract_open_pftreestate pts in
+	  let env =  Evd.evar_env (goal_of_proof pf) in
+	    try 
+	      Inductiveops.control_only_guard env pfterm;
+	      goto_current_focus_or_top (mark_as_done pts)
+ 	    with 
+		Type_errors.TypeError(env,
+				      Type_errors.IllFormedRecBody(_,_,_)) ->
+		  anomaly "\"end induction\" generated an ill-formed fixpoint"
+	end
     | Pend _ -> 
 	goto_current_focus_or_top (mark_as_done pts)
 

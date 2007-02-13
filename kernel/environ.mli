@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: environ.mli 9310 2006-10-28 19:35:09Z herbelin $ i*)
+(*i $Id: environ.mli 9573 2007-01-31 20:18:18Z notin $ i*)
 
 (*i*)
 open Names
@@ -195,11 +195,6 @@ val compile_constant_body :
     env -> constr_substituted option -> bool -> bool -> Cemitcodes.body_code
                                  (* opaque *) (* boxed *)
 
-(*s Functions for proofs/logic.ml *)
-val clear_hyps : 
-    variable list -> (variable list -> named_declaration -> unit) -> 
-      named_context_val -> named_context_val * variable list
-
 exception Hyp_not_found
 
 (* [apply_to_hyp sign id f] split [sign] into [tail::(id,_,_)::head] and
@@ -221,3 +216,6 @@ val apply_to_hyp_and_dependent_on : named_context_val -> variable ->
 val insert_after_hyp : named_context_val -> variable ->
   named_declaration -> 
     (named_context -> unit) -> named_context_val
+
+val remove_hyps : identifier list -> (named_declaration -> named_declaration) -> named_context_val -> named_context_val * identifier list
+

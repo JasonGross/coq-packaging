@@ -6,7 +6,7 @@
   (*         *       GNU Lesser General Public License Version 2.1        *)
   (************************************************************************)
 
-  (*i $Id: ArithProp.v 9245 2006-10-17 12:53:34Z notin $ i*)
+  (*i $Id: ArithProp.v 9551 2007-01-29 15:13:35Z bgregoir $ i*)
 
 Require Import Rbase.
 Require Import Rbasic_fun.
@@ -75,7 +75,7 @@ Proof.
   apply H3; assumption.
   right.
   apply H4; assumption.
-  unfold double in |- *; ring.
+  unfold double in |- *;ring.
 Qed.
 
   (* 2m <= 2n => m<=n *)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libnames.mli 8768 2006-04-28 14:25:31Z notin $ i*)
+(*i $Id: libnames.mli 9488 2007-01-17 11:11:58Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -22,6 +22,8 @@ type global_reference =
   | ConstRef of constant
   | IndRef of inductive
   | ConstructRef of constructor
+
+val isVarRef : global_reference -> bool
 
 val subst_global : substitution -> global_reference -> global_reference * constr
 
@@ -141,3 +143,9 @@ val qualid_of_reference : reference -> qualid located
 val string_of_reference : reference -> string
 val pr_reference : reference -> std_ppcmds
 val loc_of_reference : reference -> loc
+
+(* popping one level of section in global names *)
+
+val pop_con : constant -> constant
+val pop_kn : kernel_name -> kernel_name
+val pop_global_reference : global_reference -> global_reference

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modops.mli 8721 2006-04-15 15:30:04Z herbelin $ i*)
+(*i $Id: modops.mli 9558 2007-01-30 14:58:42Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -19,6 +19,8 @@ open Mod_subst
 (*i*)
 
 (* Various operations on modules and module types *)
+
+exception Circularity of string
 
 (* recursively unfold MTBdent module types *)
 val scrape_modtype : env -> module_type_body -> module_type_body
@@ -97,6 +99,10 @@ val error_a_generative_module_expected : label -> 'a
 val error_local_context : label option -> 'a
 
 val error_circular_with_module : identifier -> 'a
+
+val error_circularity_in_subtyping : string->string->string-> 'a
+
+val error_no_such_label_sub : label->string->string->'a
 
 val resolver_of_environment :
  mod_bound_id -> module_type_body -> module_path -> env -> resolver

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: logic.mli 8107 2006-03-01 17:34:36Z herbelin $ i*)
+(*i $Id: logic.mli 9573 2007-01-31 20:18:18Z notin $ i*)
 
 (*i*)
 open Names
@@ -34,7 +34,7 @@ val with_check    : tactic -> tactic
 
 (* The primitive refiner. *)
 
-val prim_refiner : prim_rule -> evar_map -> goal -> goal list
+val prim_refiner : prim_rule -> evar_map -> goal -> goal list * evar_map
 
 type proof_variable
 

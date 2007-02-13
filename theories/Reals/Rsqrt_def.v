@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rsqrt_def.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Rsqrt_def.v 9551 2007-01-29 15:13:35Z bgregoir $ i*)
 
 Require Import Sumbool.
 Require Import Rbase.
@@ -522,7 +522,7 @@ Proof.
   intro; assumption.
   intro; reflexivity.
   split.
-  intro; elim diff_false_true; assumption.
+  intro feqt;discriminate feqt.
   intro.
   elim n0; assumption.
   unfold Vn in |- *.
@@ -540,7 +540,7 @@ Proof.
   unfold cond_positivity in |- *.
   case (Rle_dec 0 z); intro.
   split.
-  intro; elim diff_true_false; assumption.
+  intro feqt; discriminate feqt.
   intro; elim (Rlt_irrefl _ (Rle_lt_trans _ _ _ r H7)).
   split.
   intro; auto with real.

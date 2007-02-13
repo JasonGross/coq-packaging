@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ground.ml 7909 2006-01-21 11:09:18Z herbelin $ *)
+(* $Id: ground.ml 9537 2007-01-26 10:05:04Z corbinea $ *)
 
 open Formula
 open Sequent
@@ -81,7 +81,7 @@ let ground_tac solver startseq gl=
 			      tclFAIL 0 (Pp.str "reversible in 1st order mode")
 			    else
 			      backtrack in
-			    forall_tac backtrack continue (re_add seq1)
+			    forall_tac backtrack1 continue (re_add seq1)
 		      | Rarrow->
 			  arrow_tac backtrack continue (re_add seq1)
 		      | Ror->

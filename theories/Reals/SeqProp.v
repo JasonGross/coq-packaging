@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: SeqProp.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: SeqProp.v 9551 2007-01-29 15:13:35Z bgregoir $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -1265,8 +1265,8 @@ Proof.
   apply lt_le_trans with 1%nat; [ apply lt_O_Sn | assumption ].
   apply INR_fact_neq_0.
   apply not_O_INR; discriminate.
-  ring_nat.
-  ring_nat.
+  ring.
+  ring.
   unfold Vn in |- *; rewrite Rmult_assoc; unfold Rdiv in |- *;
     rewrite (Rmult_comm (Un 0%nat)); rewrite (Rmult_comm (Un n)).
   repeat apply Rmult_le_compat_l.
@@ -1293,8 +1293,8 @@ Proof.
   apply le_INR; omega.
   apply INR_fact_neq_0.
   apply INR_fact_neq_0.
-  ring_nat.
-  ring_nat.
+  ring.
+  ring.
   intro; unfold Un in |- *; unfold Rdiv in |- *; apply Rmult_lt_0_compat.
   apply pow_lt; assumption.
   apply Rinv_0_lt_compat; apply lt_INR_0; apply neq_O_lt; red in |- *; intro;

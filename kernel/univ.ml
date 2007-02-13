@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: univ.ml 9314 2006-10-29 20:11:08Z herbelin $ *)
+(* $Id: univ.ml 9507 2007-01-20 08:09:54Z herbelin $ *)
 
 (* Initial Caml version originates from CoC 4.8 [Dec 1988] *)
 (* Extension with algebraic universes by HH [Sep 2001] *)
@@ -133,6 +133,10 @@ let is_base_univ = function
   | Atom Base -> true
   | Max ([Base],[]) -> warning "Non canonical Set"; true
   | u -> false
+
+let is_univ_variable = function
+  | Atom a when a<>Base -> true
+  | _ -> false
 
 (* When typing [Prop] and [Set], there is no constraint on the level,
    hence the definition of [prop_univ], the type of [Prop] *)

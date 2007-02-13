@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Eqdep_dec.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Eqdep_dec.v 9597 2007-02-06 19:44:05Z herbelin $ i*)
 
 (** We prove that there is only one proof of [x=x], i.e [refl_equal x].
     This holds if the equality upon the set of [x] is decidable.
@@ -235,7 +235,7 @@ End DecidableEqDep.
 
 Module Type DecidableSet.
 
-  Parameter U:Set.
+  Parameter U:Type.
   Axiom eq_dec : forall x y:U, {x = y} + {x <> y}.
 
 End DecidableSet.
@@ -276,14 +276,6 @@ Module DecidableEqDepSet (M:DecidableSet).
     forall (x:U) (P:x = x -> Prop), P (refl_equal x) -> forall p:x = x, P p.
   Proof N.Streicher_K.
 
-  (** Injectivity of equality on dependent pairs with second component
-      in [Type] *)
-
-  Lemma inj_pairT2 :
-    forall (P:U -> Type) (p:U) (x y:P p),
-      existT P p x = existT P p y -> x = y.
-  Proof N.inj_pairT2.
-
   (** Proof-irrelevance on subsets of decidable sets *)
 
   Lemma inj_pairP2 :
@@ -291,11 +283,16 @@ Module DecidableEqDepSet (M:DecidableSet).
       ex_intro P x p = ex_intro P x q -> p = q.
   Proof N.inj_pairP2.
 
-  (** Injectivity of equality on dependent pairs in [Set] *)
+  (** Injectivity of equality on dependent pairs in [Type] *)
 
   Lemma inj_pair2 :
-    forall (P:U -> Set) (p:U) (x y:P p),
+    forall (P:U -> Type) (p:U) (x y:P p),
       existS P p x = existS P p y -> x = y.
   Proof eq_dep_eq__inj_pair2 U N.eq_dep_eq.
+
+  (** Injectivity of equality on dependent pairs with second component
+      in [Type] *)
+
+  Notation inj_pairT2 := inj_pair2.
 
 End DecidableEqDepSet.
