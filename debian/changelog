@@ -1,3 +1,10 @@
+coq (8.1+dfsg-2) UNRELEASED; urgency=low
+
+  * Added configure.dpatch for the configure to correctly detect whether
+    ocamlopt is present or not.
+
+ -- Samuel Mimram <smimram@debian.org>  Thu, 15 Feb 2007 13:00:45 +0000
+
 coq (8.1+dfsg-1) experimental; urgency=low
 
   * New upstream release.

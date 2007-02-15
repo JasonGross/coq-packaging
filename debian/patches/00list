@@ -2,3 +2,4 @@ coqdoc_stdlib
 browser
 makefile
 no-complexity-test
+configure
