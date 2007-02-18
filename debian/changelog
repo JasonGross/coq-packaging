@@ -1,9 +1,10 @@
 coq (8.1+dfsg-2) UNRELEASED; urgency=low
 
+  * Added cmxa-install.dpatch to install cmxa only on native archs.
   * Added configure.dpatch for the configure to correctly detect whether
     ocamlopt is present or not.
 
- -- Samuel Mimram <smimram@debian.org>  Thu, 15 Feb 2007 13:00:45 +0000
+ -- Samuel Mimram <smimram@debian.org>  Sun, 18 Feb 2007 13:28:11 +0100
 
 coq (8.1+dfsg-1) experimental; urgency=low
 
