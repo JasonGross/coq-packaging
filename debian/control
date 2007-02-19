@@ -6,6 +6,7 @@ Uploaders: Ralf Treinen <treinen@debian.org>, Sven Luther <luther@debian.org>, R
 Standards-Version: 3.6.2
 Build-Depends: debhelper (>= 4.0.0), dpatch, ocaml-nox (>= 3.09.0), ocaml-best-compilers, liblablgtk2-ocaml-dev (>= 2.4.0), chrpath
 XS-Vcs-Svn: svn://svn.debian.org/svn/pkg-ocaml-maint/trunk/packages/coq
+XS-Vcs-Browser: http://svn.debian.org/wsvn/pkg-ocaml-maint/trunk/packages/coq/trunk/
 
 Package: coq
 Architecture: any
