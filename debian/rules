@@ -119,6 +119,7 @@ binary-common:
 	dh_installemacsen
 	dh_installman
 	dh_installchangelogs CHANGES
+	dh_installtex
 	dh_desktop
 	dh_link
 	dh_compress
