@@ -1,4 +1,4 @@
-coq (8.1+dfsg-2) UNRELEASED; urgency=low
+coq (8.1+dfsg-2) experimental; urgency=low
 
   * Added cmxa-install.dpatch to install cmxa only on native archs,
     closes: #415867.
