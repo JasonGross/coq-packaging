@@ -1,0 +1,19 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## coqdoc_stdlib.dpatch by Samuel Mimram <smimram@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Add an option to coqdoc to be able to use a custom stdlib path in order
+## DP: to be able to build the documentation before coqdoc is installed.
+
+@DPATCH@
+diff -urNad coq-8.0pl3+8.1beta~/doc/Makefile coq-8.0pl3+8.1beta/doc/Makefile
+--- coq-8.0pl3+8.1beta~/doc/Makefile	2006-06-16 13:02:33.000000000 +0000
++++ coq-8.0pl3+8.1beta/doc/Makefile	2006-06-16 13:19:11.000000000 +0000
+@@ -216,6 +216,7 @@
+ 	mkdir stdlib/html
+ 	(cd stdlib/html;\
+ 	 $(COQDOC) -q --multi-index --html --glob-from $(GLOBDUMP)\
++	  --coqlib_path $(COQTOP) \
+ 	  -R $(COQTOP)/theories Coq $(COQTOP)/theories/*/*.v)
+ 	mv stdlib/html/index.html stdlib/index-body.html
+ 

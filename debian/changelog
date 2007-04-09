@@ -1,3 +1,9 @@
+coq (8.1+dfsg-3) unstable; urgency=low
+
+  * Uploading to unstable.
+
+ -- Samuel Mimram <smimram@debian.org>  Mon, 09 Apr 2007 16:48:46 +0200
+
 coq (8.1+dfsg-2) experimental; urgency=low
 
   * Added cmxa-install.dpatch to install cmxa only on native archs,

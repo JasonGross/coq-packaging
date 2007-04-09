@@ -1,0 +1,20 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## makefile.dpatch by Samuel Mimram <smimram@debian.org>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+## DP: Do not use ocamlopt to test grammar.cma, we don't want to use ocamlopt
+## DP: when compiling on non-native archs.
+
+@DPATCH@
+diff -urNad coq-8.0pl3+8.1alpha~/Makefile coq-8.0pl3+8.1alpha/Makefile
+--- coq-8.0pl3+8.1alpha~/Makefile	2006-04-07 15:08:12.000000000 +0000
++++ coq-8.0pl3+8.1alpha/Makefile	2006-04-30 11:41:09.000000000 +0000
+@@ -1401,7 +1401,7 @@
+ parsing/grammar.cma: $(GRAMMARCMO)
+ 	$(SHOW)'Testing $@'
+ 	@touch test.ml4
+-	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) $(GRAMMARCMO) -impl" -impl test.ml4 -o test-grammar
++	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) $(GRAMMARCMO) -impl" -impl test.ml4 -o test-grammar
+ 	@rm -f test-grammar test.*
+ 	$(SHOW)'OCAMLC -a $@'   
+ 	$(HIDE)$(OCAMLC) $(BYTEFLAGS) $(GRAMMARCMO) -linkall -a -o $@
