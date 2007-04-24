@@ -36,6 +36,7 @@ build-stamp:
 		|| (echo WARNING: NATIVE CODE COMPILATION FAILED \
 		   && echo Trying to build coq in bytecode instead \
 		   && $(MAKE) archclean clean \
+		   && sed -i -e 's/best = "opt"/best = "byte"/' config/coq_config.ml \
 		   && $(MAKE) BEST=byte HASCOQIDE=byte check \
 		   && echo NATIVE CODE COMPILATION FAILED \
 		   && echo Coq was built in bytecode instead); \
