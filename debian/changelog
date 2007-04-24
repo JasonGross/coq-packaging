@@ -1,6 +1,7 @@
 coq (8.1+dfsg-4) unstable; urgency=low
 
   * Correctly set Coq_config.best when rebuilding in byte mode.
+  * Removed tetex-extra from build-dependencies.
 
  -- Samuel Mimram <smimram@debian.org>  Tue, 24 Apr 2007 14:46:59 +0000
 
