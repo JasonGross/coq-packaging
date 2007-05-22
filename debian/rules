@@ -64,6 +64,7 @@ clean: unpatch
 	rm -f config/coq_config.ml config/Makefile test-suite/check.log
 	rm -f dev/ocamldebug-v7
 	rm -f ide/undo.mli glob.dump
+	rm -f test-suite/modules/*.vo
 
 	dh_clean
 

@@ -1,3 +1,9 @@
+coq (8.1+dfsg-5) unstable; urgency=low
+
+  * Correctly clean, closes: #424162.
+
+ -- Samuel Mimram <smimram@debian.org>  Tue, 22 May 2007 21:53:16 +0200
+
 coq (8.1+dfsg-4) unstable; urgency=low
 
   * Correctly set Coq_config.best when rebuilding in byte mode.
