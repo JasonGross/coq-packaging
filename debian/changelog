@@ -1,3 +1,9 @@
+coq (8.1+dfsg-6) unstable; urgency=low
+
+  * Add dependencies on ${misc:Depends}, closes: #431679.
+
+ -- Samuel Mimram <smimram@debian.org>  Wed, 04 Jul 2007 10:49:01 +0200
+
 coq (8.1+dfsg-5) unstable; urgency=low
 
   * Correctly clean, closes: #424162.
