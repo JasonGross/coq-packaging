@@ -13,7 +13,7 @@ include /usr/share/dpatch/dpatch.make
 COQPREF := $(CURDIR)/debian/tmp
 ADDPREF := COQINSTALLPREFIX=$(COQPREF)
 
-CONFIGUREOPTS := --prefix /usr --mandir /usr/share/man --emacslib /usr/share/emacs/site-lisp/coq --reals all --fsets all
+CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man --emacslib /usr/share/emacs/site-lisp/coq --reals all --fsets all
 
 configure: configure-stamp
 configure-stamp:
@@ -57,8 +57,8 @@ clean: unpatch
 	dh_testroot
 	rm -f build-stamp configure-stamp opt-stamp
 
-	-$(MAKE) clean
-	-$(MAKE) archclean
+	[ ! -f config/Makefile ] || $(MAKE) clean
+	[ ! -f config/Makefile ] || $(MAKE) archclean
 	rm -f bin/*
 	rm -f tools/coqdoc/*.cm[oi]
 	rm -f config/coq_config.ml config/Makefile test-suite/check.log

@@ -6,7 +6,7 @@ CURDIR=`pwd`
 ORIG=$1
 WORKDIR=`dirname $ORIG`
 ORIGFILE=`basename $ORIG`
-VERSION=`echo "$ORIGFILE" | sed "s/^coq-\([0-9\.]\+\)\.tar\.gz$/\1/"`
+VERSION=`echo "$ORIGFILE" | sed "s/^coq-\([0-9\.a-z]\+\)\.tar\.gz$/\1/"`
 
 cd $WORKDIR
 
