@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: equality.ml 9521 2007-01-23 14:31:21Z notin $ *)
+(* $Id: equality.ml 9835 2007-05-17 22:23:03Z jforest $ *)
 
 open Pp
 open Util
@@ -93,7 +93,7 @@ let general_rewrite_bindings_clause cls lft2rgt (c,l) gl =
       (* Original code. In particular, [splay_prod] performs delta-reduction. *)
       let env = pf_env gl in
       let sigma = project gl in 
-      let _,t = splay_prod env sigma t in
+      let _,t = splay_prod env sigma ctype in
 	match match_with_equation t with
 	  | None -> 
 	      if l = NoBindings
@@ -312,6 +312,13 @@ let discriminable env sigma t1 t2 =
   match find_positions env sigma t1 t2 with
     | Inl _ -> true
     | _ -> false
+
+let injectable env sigma t1 t2 = 
+    match find_positions env sigma t1 t2 with
+    | Inl _ | Inr [] -> false
+    | Inr _ -> true
+
+
 
 (* Once we have found a position, we need to project down to it.  If
    we are discriminating, then we need to produce False on one of the

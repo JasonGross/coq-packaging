@@ -1,8 +1,13 @@
-<html>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 
 <head>
-<link rel="stylesheet" href="coqdoc.css" type="text/css">
-<title>The Coq Standard Library
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-15"/>
+<link rel="stylesheet" href="css/context.css" type="text/css">
+<title>The Coq Standard Library</title>
 </head>
 
 <body>
@@ -60,6 +65,7 @@ through the <tt>Require Import</tt> command.</p>
     theories/Logic/Hurkens.v
     theories/Logic/ProofIrrelevance.v
     theories/Logic/ProofIrrelevanceFacts.v
+    theories/Logic/ConstructiveEpsilon.v
   </dd>
     
   <dt> <b>Arith</b>:
@@ -203,6 +209,8 @@ through the <tt>Require Import</tt> command.</p>
     theories/Reals/SeqProp.v
     theories/Reals/SeqSeries.v
     theories/Reals/Sqrt_reg.v
+    theories/Reals/LegacyRfield.v
+    theories/Reals/Rpow_def.v
     (theories/Reals/Reals.v)
   </dd>
     
@@ -289,6 +297,7 @@ through the <tt>Require Import</tt> command.</p>
     theories/Lists/SetoidList.v
     theories/Lists/Streams.v
     theories/Lists/TheoryList.v
+    theories/Lists/ListTactics.v
   </dd>
 
   <dt> <b>FSets</b>:

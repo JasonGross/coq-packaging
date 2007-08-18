@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: names.ml 9558 2007-01-30 14:58:42Z soubiran $ *)
+(* $Id: names.ml 9980 2007-07-12 13:32:37Z soubiran $ *)
 
 open Pp
 open Util
@@ -65,7 +65,7 @@ let repr_dirpath x = x
 let empty_dirpath = []
 
 let string_of_dirpath = function
-  | [] -> "<empty>"
+  | [] -> ""
   | sl ->
       String.concat "." (List.map string_of_id (List.rev sl))
 

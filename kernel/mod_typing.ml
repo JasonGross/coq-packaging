@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mod_typing.ml 9558 2007-01-30 14:58:42Z soubiran $ i*)
+(*i $Id: mod_typing.ml 9980 2007-07-12 13:32:37Z soubiran $ i*)
 
 open Util
 open Names
@@ -131,8 +131,12 @@ and merge_with env mtb with_decl =
 	    let equiv = 
  	      match old.msb_equiv with
 		| None -> Some mp
-		| Some mp' -> 
-		    check_modpath_equiv env' mp mp';
+		| Some mp' ->
+		    begin
+		      try 
+			check_modpath_equiv env' mp mp'
+		      with Not_equiv_path -> error_not_equal mp mp
+		    end;
 		    Some mp
 	    in
 	    let msb =

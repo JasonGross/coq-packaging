@@ -11,7 +11,7 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: FMapPositive.v 9178 2006-09-26 11:18:22Z barras $ *)
+(* $Id: FMapPositive.v 9862 2007-05-25 16:57:06Z letouzey $ *)
 
 Require Import Bool.
 Require Import ZArith.
@@ -20,7 +20,7 @@ Require Import FMapInterface.
 
 Set Implicit Arguments.
 
-Open Scope positive_scope.
+Open Local Scope positive_scope.
 
 (** * An implementation of [FMapInterface.S] for positive keys. *)
 

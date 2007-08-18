@@ -10,7 +10,7 @@
   Syntax for the subtac terms and types.
   Elaborated from correctness/psyntax.ml4 by Jean-Christophe Filliâtre *)
 
-(* $Id: g_subtac.ml4 9588 2007-02-02 16:17:13Z herbelin $ *)
+(* $Id: g_subtac.ml4 9976 2007-07-12 11:58:30Z msozeau $ *)
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
@@ -104,15 +104,36 @@ VERNAC COMMAND EXTEND Subtac_Obligations
 | [ "Next" "Obligation" ] -> [ Subtac_obligations.next_obligation None ]
 END
 
+VERNAC COMMAND EXTEND Subtac_Solve_Obligation
+| [ "Solve" "Obligation" integer(num) "of" ident(name) "using" tactic(t) ] -> 
+    [ Subtac_obligations.try_solve_obligation num (Some name) (Tacinterp.interp t) ]
+| [ "Solve" "Obligation" integer(num) "using" tactic(t) ] -> 
+    [ Subtac_obligations.try_solve_obligation num None (Tacinterp.interp t) ]
+      END
+
 VERNAC COMMAND EXTEND Subtac_Solve_Obligations
-| [ "Solve" "Obligations" "of" ident(name) "using" tactic(t) ] -> [ Subtac_obligations.solve_obligations (Some name) (Tacinterp.interp t) ]
-| [ "Solve" "Obligations" "using" tactic(t) ] -> [ Subtac_obligations.solve_obligations None (Tacinterp.interp t) ]
+| [ "Solve" "Obligations" "of" ident(name) "using" tactic(t) ] -> 
+    [ Subtac_obligations.try_solve_obligations (Some name) (Tacinterp.interp t) ]
+| [ "Solve" "Obligations" "using" tactic(t) ] -> 
+    [ Subtac_obligations.try_solve_obligations None (Tacinterp.interp t) ]
+| [ "Solve" "Obligations" ] -> 
+    [ Subtac_obligations.try_solve_obligations None (Subtac_obligations.default_tactic ()) ]
+      END
+
+VERNAC COMMAND EXTEND Subtac_Solve_All_Obligations
+| [ "Solve" "All" "Obligations" "using" tactic(t) ] -> 
+    [ Subtac_obligations.solve_all_obligations (Tacinterp.interp t) ]
+| [ "Solve" "All" "Obligations" ] -> 
+    [ Subtac_obligations.solve_all_obligations (Subtac_obligations.default_tactic ()) ]
+      END
+
+VERNAC COMMAND EXTEND Subtac_Admit_Obligations
 | [ "Admit" "Obligations" "of" ident(name) ] -> [ Subtac_obligations.admit_obligations (Some name) ] 
 | [ "Admit" "Obligations" ] -> [ Subtac_obligations.admit_obligations None ] 
     END
 
 VERNAC COMMAND EXTEND Subtac_Set_Solver
-| [ "Obligations" "Tactic" ":=" tactic(t) ] -> [ Subtac_obligations.set_default_tactic (Tacinterp.interp t) ]
+| [ "Obligations" "Tactic" ":=" tactic(t) ] -> [ Subtac_obligations.set_default_tactic (Tacinterp.glob_tactic t) ]
 END
 
 VERNAC COMMAND EXTEND Subtac_Show_Obligations

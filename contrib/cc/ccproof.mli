@@ -6,26 +6,26 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ccproof.mli 9151 2006-09-19 13:32:22Z corbinea $ *)
+(* $Id: ccproof.mli 9856 2007-05-24 14:05:40Z corbinea $ *)
 
 open Ccalgo
 open Names
 open Term
 
-type proof =
+type rule=
     Ax of constr
   | SymAx of constr
   | Refl of term
-  | Trans of proof * proof
-  | Congr of proof * proof
-  | Inject of proof * constructor * int * int
+  | Trans of proof*proof
+  | Congr of proof*proof
+  | Inject of proof*constructor*int*int 
+and proof = 
+    private {p_lhs:term;p_rhs:term;p_rule:rule}
 
 val build_proof : 
   forest -> 
   [ `Discr of int * pa_constructor * int * pa_constructor
   | `Prove of int * int ] -> proof
 
-val type_proof :
-  (constr, (term * term)) Hashtbl.t -> proof -> term * term
 
 

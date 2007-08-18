@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: rawterm.mli 9535 2007-01-26 09:26:08Z jforest $ i*)
+(*i $Id: rawterm.mli 9976 2007-07-12 11:58:30Z msozeau $ i*)
 
 (*i*)
 open Util
@@ -51,8 +51,8 @@ type 'a bindings =
 
 type 'a with_bindings = 'a * 'a bindings
 
-type cast_type =
-  | CastConv of cast_kind
+type 'a cast_type =
+  | CastConv of cast_kind * 'a
   | CastCoerce (* Cast to a base type (eg, an underlying inductive type) *)
 
 type rawconstr = 
@@ -72,7 +72,7 @@ type rawconstr =
       rawconstr array * rawconstr array
   | RSort of loc * rawsort
   | RHole of (loc * Evd.hole_kind)
-  | RCast of loc * rawconstr * cast_type * rawconstr
+  | RCast of loc * rawconstr * rawconstr cast_type
   | RDynamic of loc * Dyn.t
 
 and rawdecl = name * rawconstr option * rawconstr

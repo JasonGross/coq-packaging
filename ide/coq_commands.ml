@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq_commands.ml 7102 2005-06-03 13:14:27Z coq $ *)
+(* $Id: coq_commands.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
 
 let commands = [
   [(* "Abort"; *)
@@ -77,10 +77,17 @@ let commands = [
   ["Module";
    "Module Type";
    "Mutual Inductive";];
-  ["Notation";];
-  ["Opaque";];
+  ["Notation";
+   "Next Obligation";];
+  ["Opaque";
+   "Obligations Tactic";];
   ["Parameter";
-   "Proof."];
+   "Proof.";
+   "Program Definition";
+   "Program Fixpoint";     
+   "Program Lemma";
+   "Program Theorem";
+  ];
   ["Qed.";
    ];
   ["Read Module";
@@ -155,6 +162,8 @@ let state_preserving = [
   "Extraction Module";
   "Inspect";
   "Locate";
+  
+  "Obligations";
   "Print";
   "Print All.";
   "Print Classes";

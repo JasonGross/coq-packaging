@@ -11,7 +11,7 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: OrderedTypeEx.v 9066 2006-08-14 10:11:18Z letouzey $ *)
+(* $Id: OrderedTypeEx.v 9940 2007-07-05 12:32:47Z letouzey $ *)
 
 Require Import OrderedType.
 Require Import ZArith.
@@ -73,7 +73,7 @@ End Nat_as_OT.
 
 (** [Z] is an ordered type with respect to the usual order on integers. *)
 
-Open Scope Z_scope.
+Open Local Scope Z_scope.
 
 Module Z_as_OT <: UsualOrderedType.
 
@@ -103,7 +103,7 @@ End Z_as_OT.
 
 (** [positive] is an ordered type with respect to the usual order on natural numbers. *) 
 
-Open Scope positive_scope.
+Open Local Scope positive_scope.
 
 Module Positive_as_OT <: UsualOrderedType.
   Definition t:=positive.
@@ -138,14 +138,14 @@ Module Positive_as_OT <: UsualOrderedType.
   apply GT; unfold lt.
   replace Eq with (CompOpp Eq); auto.
   rewrite <- Pcompare_antisym; rewrite H; auto.
-  Qed.
+  Defined.
 
 End Positive_as_OT.
 
 
 (** [N] is an ordered type with respect to the usual order on natural numbers. *) 
 
-Open Scope positive_scope.
+Open Local Scope positive_scope.
 
 Module N_as_OT <: UsualOrderedType.
   Definition t:=N.

@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile 9606 2007-02-07 12:21:01Z notin $ 
+# $Id: Makefile 10014 2007-07-17 15:14:39Z notin $ 
 
 
 # Makefile for Coq
@@ -42,7 +42,10 @@ help:
 
 
 # build and install the three subsystems: coq, coqide, pcoq
-world: revision coq coqide pcoq
+world: depend dependcoq
+	$(MAKE) worldnodep
+
+worldnodep: revision coq coqide pcoq
 
 install: install-coq install-coqide install-pcoq
 #install-manpages: install-coq-manpages install-pcoq-manpages
@@ -245,8 +248,6 @@ NEWRINGCMO=\
   contrib/setoid_ring/newring.cmo
 
 DPCMO=contrib/dp/dp_why.cmo contrib/dp/dp.cmo contrib/dp/g_dp.cmo
-#  contrib/dp/dp_simplify.cmo contrib/dp/dp_zenon.cmo contrib/dp/dp_cvcl.cmo \
-#  contrib/dp/dp_sorts.cmo 
 
 FIELDCMO=\
   contrib/field/field.cmo 
@@ -303,11 +304,10 @@ CCCMO=contrib/cc/ccalgo.cmo contrib/cc/ccproof.cmo contrib/cc/cctac.cmo \
   contrib/cc/g_congruence.cmo 
 
 SUBTACCMO=contrib/subtac/subtac_utils.cmo contrib/subtac/eterm.cmo \
-  contrib/subtac/g_eterm.cmo contrib/subtac/context.cmo \
+  contrib/subtac/g_eterm.cmo \
   contrib/subtac/subtac_errors.cmo contrib/subtac/subtac_coercion.cmo \
   contrib/subtac/subtac_obligations.cmo contrib/subtac/subtac_cases.cmo \
   contrib/subtac/subtac_pretyping_F.cmo contrib/subtac/subtac_pretyping.cmo \
-  contrib/subtac/subtac_interp_fixpoint.cmo \
   contrib/subtac/subtac_command.cmo contrib/subtac/subtac.cmo \
   contrib/subtac/g_subtac.cmo
 
@@ -376,9 +376,7 @@ kernel/copcodes.ml: kernel/byterun/coq_instruct.h
 	kernel/byterun/coq_instruct.h | \
 	awk -f kernel/make-opcodes > kernel/copcodes.ml
 
-bytecompfile : kernel/byterun/coq_jumptbl.h kernel/copcodes.ml
-
-beforedepend:: bytecompfile
+BEFOREDEPEND+= kernel/byterun/coq_jumptbl.h kernel/copcodes.ml
 
 clean ::
 	rm -f kernel/byterun/coq_jumptbl.h kernel/copcodes.ml
@@ -450,7 +448,7 @@ scripts/tolink.ml: Makefile
 	$(HIDE)echo "let core_objs = \""$(OBJSCMO)"\"" >> $@
 	$(HIDE)echo "let ide = \""$(COQIDECMO)"\"" >> $@
 
-beforedepend:: scripts/tolink.ml
+BEFOREDEPEND+= scripts/tolink.ml
 
 # coqc
 
@@ -614,9 +612,9 @@ COQIDECMO=ide/utils/okey.cmo ide/utils/config_file.cmo \
 
 COQIDECMX=$(COQIDECMO:.cmo=.cmx)
 COQIDEFLAGS=-thread -I +lablgtk2
-beforedepend:: ide/config_lexer.ml ide/find_phrase.ml ide/highlight.ml
-beforedepend:: ide/config_parser.mli ide/config_parser.ml
-beforedepend:: ide/utf8_convert.ml
+BEFOREDEPEND+= ide/config_lexer.ml ide/find_phrase.ml ide/highlight.ml
+BEFOREDEPEND+= ide/config_parser.mli ide/config_parser.ml
+BEFOREDEPEND+= ide/utf8_convert.ml
 
 COQIDEVO=ide/utf8.vo
 
@@ -1077,7 +1075,8 @@ JPROVERVO=
 
 CCVO=
 
-SUBTACVO=contrib/subtac/Utils.vo contrib/subtac/FixSub.vo contrib/subtac/Subtac.vo \
+SUBTACVO=contrib/subtac/SubtacTactics.vo contrib/subtac/Heq.vo \
+	contrib/subtac/Utils.vo contrib/subtac/FixSub.vo contrib/subtac/Subtac.vo \
        contrib/subtac/FunctionalExtensionality.vo
 
 RTAUTOVO = \
@@ -1169,7 +1168,7 @@ $(COQDEP): $(COQDEPCMO)
 	$(SHOW)'OCAMLC -o $@'
 	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ unix.cma $(COQDEPCMO) $(OSDEPLIBS)
 
-beforedepend:: tools/coqdep_lexer.ml $(COQDEP)
+BEFOREDEPEND+= tools/coqdep_lexer.ml $(COQDEP)
 
 GALLINACMO=tools/gallina_lexer.cmo tools/gallina.cmo
 
@@ -1177,7 +1176,7 @@ $(GALLINA): $(GALLINACMO)
 	$(SHOW)'OCAMLC -o $@'
 	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ $(GALLINACMO)
 
-beforedepend:: tools/gallina_lexer.ml
+BEFOREDEPEND+= tools/gallina_lexer.ml
 
 $(COQMAKEFILE): tools/coq_makefile.cmo
 	$(SHOW)'OCAMLC -o $@'
@@ -1187,13 +1186,13 @@ $(COQTEX): tools/coq-tex.cmo
 	$(SHOW)'OCAMLC -o $@'
 	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ str.cma tools/coq-tex.cmo
 
-beforedepend:: tools/coqwc.ml
+BEFOREDEPEND+= tools/coqwc.ml
 
 $(COQWC): tools/coqwc.cmo
 	$(SHOW)'OCAMLC -o $@'
 	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ tools/coqwc.cmo
 
-beforedepend:: tools/coqdoc/pretty.ml tools/coqdoc/index.ml
+BEFOREDEPEND+= tools/coqdoc/pretty.ml tools/coqdoc/index.ml
 
 COQDOCCMO=$(CONFIG) tools/coqdoc/cdglobals.cmo tools/coqdoc/alpha.cmo \
 	tools/coqdoc/index.cmo tools/coqdoc/output.cmo \
@@ -1233,14 +1232,16 @@ archclean::
 ###########################################################################
 
 COQINSTALLPREFIX=
+OLDROOT=
+
   # Can be changed for a local installation (to make packages).
   # You must NOT put a "/" at the end (Cygnus for win32 does not like "//").
 
-FULLBINDIR=$(COQINSTALLPREFIX)$(BINDIR)
-FULLCOQLIB=$(COQINSTALLPREFIX)$(COQLIB)
-FULLMANDIR=$(COQINSTALLPREFIX)$(MANDIR)
-FULLEMACSLIB=$(COQINSTALLPREFIX)$(EMACSLIB)
-FULLCOQDOCDIR=$(COQINSTALLPREFIX)$(COQDOCDIR)
+FULLBINDIR=$(BINDIR:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
+FULLCOQLIB=$(COQLIB:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
+FULLMANDIR=$(MANDIR:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
+FULLEMACSLIB=$(EMACSLIB:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
+FULLCOQDOCDIR=$(COQDOCDIR:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
 
 install-coq: install-binaries install-library install-coq-info
 install-coqlight: install-binaries install-library-light
@@ -1499,9 +1500,9 @@ ML4FILES +=parsing/g_minicoq.ml4 \
 	   parsing/g_decl_mode.ml4
 
 
-# beforedepend:: $(GRAMMARCMO)
+# BEFOREDEPEND+= $(GRAMMARCMO)
 
-# beforedepend:: parsing/pcoq.ml parsing/extend.ml
+# BEFOREDEPEND+= parsing/pcoq.ml parsing/extend.ml
 
 # File using pa_ifdef and only necessary for parsing ml files
 
@@ -1652,6 +1653,9 @@ archclean::
 	$(SHOW)'OCAMLC4   $<'
 	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) `$(CAMLP4DEPS) $<` $(CAMLP4COMPAT) -impl" -c -impl $<
 
+%.ml: %.ml4
+	$(CAMLP4O) $(CAMLP4EXTENDFLAGS) pa_ifdef.cmo pr_o.cmo `$(CAMLP4DEPS) $<` $(CAMLP4COMPAT) -impl $< > $@ || rm -f $@
+
 #.v.vo:
 #	$(BOOTCOQTOP) -compile $*
 
@@ -1713,9 +1717,11 @@ cleanconfig::
 # Dependencies
 ###########################################################################
 
+.PHONY: alldepend dependcoq scratchdepend
+
 alldepend: depend dependcoq 
 
-dependcoq:: beforedepend
+dependcoq:
 	$(COQDEP) -coqlib . -R theories Coq -R contrib Coq $(COQINCLUDES) \
 	 $(ALLFSETS:.vo=.v) $(ALLREALS:.vo=.v) $(ALLVO:.vo=.v) > .depend.coq
 
@@ -1724,7 +1730,7 @@ dependcoq:: beforedepend
 # by making scratchdepend, one gets dependencies OK for .ml files and
 # .ml4 files not using fancy parsers. This is sufficient to get beforedepend
 # and depend targets successfully built
-scratchdepend:: dependp4
+scratchdepend: dependp4
 	$(OCAMLDEP) $(DEPFLAGS) */*.mli */*/*.mli */*.ml */*/*.ml > .depend
 	-$(MAKE) -k -f Makefile.dep $(ML4FILESML)
 	$(OCAMLDEP) $(DEPFLAGS) */*.mli */*/*.mli */*.ml */*/*.ml > .depend
@@ -1737,18 +1743,17 @@ scratchdepend:: dependp4
 ML4FILESML = $(ML4FILES:.ml4=.ml)
 
 # Expresses dependencies of the .ml4 files w.r.t their grammars
-dependp4::
+
+.PHONY: dependp4
+dependp4: $(ML4FILES)
 	rm -f .depend.camlp4
 	for f in $(ML4FILES); do \
 	  printf "%s" `dirname $$f`/`basename $$f .ml4`".ml: " >> .depend.camlp4; \
 	  echo `$(CAMLP4DEPS) $$f` >> .depend.camlp4; \
 	done
 
-# Produce the .ml files using Makefile.dep
-ml4filesml:: .depend.camlp4
-	$(MAKE) -f Makefile.dep $(ML4FILESML)
-
-depend: beforedepend dependp4 ml4filesml
+.PHONY: depend
+depend: $(BEFOREDEPEND) dependp4 $(ML4FILESML)
 # 1. We express dependencies of the .ml files w.r.t their grammars
 # 2. Then we are able to produce the .ml files using Makefile.dep
 # 3. We compute the dependencies inside the .ml files using ocamldep
@@ -1761,7 +1766,7 @@ depend: beforedepend dependp4 ml4filesml
 	  echo `$(CAMLP4DEPS) $$f` >> .depend; \
 	done
 # 5.  We express dependencies of .o files
-	$(CC) -MM $(CINCLUDES) kernel/byterun/*.c >> .depend
+	$(CC) -I $(CAMLHLIB) -MM kernel/byterun/*.c >> .depend
 # 6. Finally, we erase the generated .ml files
 	rm -f $(ML4FILESML)
 # 7. Since .depend contains correct dependencies .depend.devel can be deleted
@@ -1782,6 +1787,7 @@ devel:
 
 -include .depend
 -include .depend.coq
+-include .depend.camlp4
 
 clean::
 	find . -name "\.#*" -exec rm -f {} \;

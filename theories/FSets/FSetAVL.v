@@ -12,7 +12,7 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: FSetAVL.v 8985 2006-06-23 16:12:45Z jforest $ *)
+(* $Id: FSetAVL.v 9862 2007-05-25 16:57:06Z letouzey $ *)
 
 (** This module implements sets using AVL trees.
     It follows the implementation from Ocaml's standard library. *)
@@ -28,7 +28,7 @@ Module Raw (I:Int)(X:OrderedType).
 Import I.
 Module II:=MoreInt(I).
 Import II.
-Open Scope Int_scope.
+Open Local Scope Int_scope.
 
 Module E := X.
 Module MX := OrderedTypeFacts X.
@@ -2286,7 +2286,7 @@ Qed.
 
 (** termination of [compare_aux] *)
 
-Open Scope Z_scope.
+Open Local Scope Z_scope.
  
 Fixpoint measure_e_t (s : tree) : Z := match s with
   | Leaf => 0

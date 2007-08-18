@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: clenv.ml 9279 2006-10-25 15:51:24Z herbelin $ *)
+(* $Id: clenv.ml 9665 2007-02-21 17:08:10Z herbelin $ *)
 
 open Pp
 open Util
@@ -54,7 +54,7 @@ let cl_sigma ce = evars_of ce.env
 let subst_clenv sub clenv = 
   { templval = map_fl (subst_mps sub) clenv.templval;
     templtyp = map_fl (subst_mps sub) clenv.templtyp;
-    env = subst_evar_defs sub clenv.env;
+    env = subst_evar_defs_light sub clenv.env;
     templenv = clenv.templenv }
 
 let clenv_nf_meta clenv c = nf_meta clenv.env c

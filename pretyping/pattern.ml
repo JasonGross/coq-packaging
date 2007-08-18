@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pattern.ml 8963 2006-06-19 18:54:49Z barras $ *)
+(* $Id: pattern.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
 
 open Util
 open Names
@@ -233,7 +233,7 @@ let rec pat_of_raw metas vars = function
       PSort s
   | RHole _ ->
       PMeta None
-  | RCast (_,c,_,t) ->
+  | RCast (_,c,_) ->
       Options.if_verbose
         Pp.warning "Cast not taken into account in constr pattern";
       pat_of_raw metas vars c

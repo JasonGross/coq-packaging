@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: record.ml 9082 2006-08-24 17:03:28Z herbelin $ *)
+(* $Id: record.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
 
 open Pp
 open Util
@@ -36,10 +36,10 @@ let interp_decl sigma env = function
   | Vernacexpr.DefExpr((_,id),c,t) ->
       let c = match t with
 	| None -> c
-	| Some t -> mkCastC (c, Rawterm.CastConv DEFAULTcast,t)
+	| Some t -> mkCastC (c, Rawterm.CastConv (DEFAULTcast,t))
       in
       let j = interp_constr_judgment Evd.empty env c in
-      (id,Some j.uj_val, j.uj_type)
+      (id,Some j.uj_val, refresh_universes j.uj_type)
 
 let typecheck_params_and_fields ps fs =
   let env0 = Global.env () in

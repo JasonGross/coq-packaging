@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: output.ml 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: output.ml 9976 2007-07-12 11:58:30Z msozeau $ i*)
 
 open Cdglobals
 open Index
@@ -40,15 +40,14 @@ let is_keyword =
       "Module"; "Module Type"; "Declare Module";
       "Mutual"; "Parameter"; "Parameters"; "Print"; "Proof"; "Qed";
       "Record"; "Recursive"; "Remark"; "Require"; "Save"; "Scheme";
-      "Section"; "Show"; "Syntactic"; "Syntax"; "Tactic"; "Theorem"; 
+      "Section"; "Show"; "Structure"; "Syntactic"; "Syntax"; "Tactic"; "Theorem"; 
       "Unset"; "Variable"; "Variables"; 
       "Notation"; 
-      (*i (* correctness *)
-      "array"; "assert"; "begin"; "do"; "done"; "else"; "end"; "if";
-      "in"; "invariant"; "let"; "of"; "ref"; "state"; "then"; "variant";
-      "while"; i*)
-      (*i (* coq terms *)
-      "with"; "Case"; "Cases"; "Prop"; "Set"; "Type"; i*)
+      (* Program *)
+      "Program Definition"; "Program Fixpoint"; "Program Lemma";
+      "Obligation"; "Obligations"; "Solve"; "using"; "Next Obligation"; "Next";
+      (*i (* coq terms *) *)
+	"match"; "as"; "in"; "return"; "with"; "end"; "let"; "dest"; "fun"; "if"; "then"; "else"; "Prop"; "Set"; "Type"; ":="
        ]
 
 (*s Current Coq module *)

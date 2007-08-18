@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Compare_dec.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Compare_dec.v 9941 2007-07-05 12:42:35Z letouzey $ i*)
 
 Require Import Le.
 Require Import Lt.
@@ -34,7 +34,7 @@ Defined.
 Definition le_lt_dec n m : {n <= m} + {m < n}.
   induction n.
   auto with arith.
-  induction m.
+  destruct m.
   auto with arith.
   elim (IHn m); auto with arith.
 Defined.

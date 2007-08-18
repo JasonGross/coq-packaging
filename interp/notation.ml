@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: notation.ml 9481 2007-01-11 19:17:56Z herbelin $ *)
+(* $Id: notation.ml 9694 2007-03-09 18:09:53Z herbelin $ *)
 
 (*i*)
 open Util
@@ -393,8 +393,14 @@ let uninterp_prim_token_cases_pattern c =
       | Some n -> (na,sc,n)
   with Not_found -> raise No_match
 
-let availability_of_prim_token printer_scope local_scopes =
-  let f scope = Hashtbl.mem prim_token_interpreter_tab scope in
+let availability_of_prim_token printer_scope local_scopes t =
+  let f scope =
+    try
+      (* raise Not_found if no primitive interpreter for scope *)
+      let interp = Hashtbl.find prim_token_interpreter_tab scope in
+      (* raise Not_found if no primitive interpreter for this token in scope *)
+      let _ = interp dummy_loc t in true
+    with Not_found -> false in
   let scopes = make_current_scopes local_scopes in
   option_map snd (find_without_delimiters f (Some printer_scope,None) scopes)
 

@@ -46,6 +46,9 @@ open Eauto
 open Genarg
 
 
+let compute_renamed_type gls c = 
+  rename_bound_var (pf_env gls) [] (pf_type_of gls c)
+
 let qed () = Command.save_named true 
 let defined () = Command.save_named false
 
@@ -388,32 +391,57 @@ let rec compute_le_proofs = function
   | a::tl ->
       tclORELSE assumption 
 	(tclTHENS
-	   (apply_with_bindings
-	      (delayed_force le_trans,
-	       ExplicitBindings[dummy_loc,NamedHyp(id_of_string "m"),a]))
+	   (fun g -> 
+	      let le_trans = delayed_force le_trans in 
+	      let t_le_trans = compute_renamed_type g le_trans in 
+	      let m_id = 
+		let _,_,t = destProd t_le_trans in 
+		let na,_,_ = destProd t in 
+		Nameops.out_name na
+	      in
+	      apply_with_bindings
+		(le_trans,
+		 ExplicitBindings[dummy_loc,NamedHyp m_id,a])
+		g
+	   )
 	   [compute_le_proofs tl; 
             tclORELSE (apply (delayed_force le_n)) assumption])
 
 let make_lt_proof pmax le_proof =
   tclTHENS
-    (apply_with_bindings
-       (delayed_force le_lt_trans,
-	ExplicitBindings[dummy_loc,NamedHyp(id_of_string "m"), pmax]))
-    [compute_le_proofs le_proof; 
-     tclTHENLIST[apply (delayed_force lt_S_n); default_full_auto]];;
+    (fun g -> 
+       let le_lt_trans = delayed_force le_lt_trans in 
+       let t_le_lt_trans = compute_renamed_type g le_lt_trans in 
+       let m_id = 
+	 let _,_,t = destProd t_le_lt_trans in 
+	 let na,_,_ = destProd t in 
+	 Nameops.out_name na
+       in
+       apply_with_bindings
+	 (le_lt_trans,
+	  ExplicitBindings[dummy_loc,NamedHyp m_id, pmax]) g)
+    [observe_tac "compute_le_proofs" (compute_le_proofs le_proof); 
+     tclTHENLIST[observe_tac "lt_S_n" (apply (delayed_force lt_S_n)); default_full_auto]];;
 
 let rec list_cond_rewrite k def pmax cond_eqs le_proofs =
   match cond_eqs with
     [] -> tclIDTAC
   | eq::eqs ->
       (fun g -> 
+	 let t_eq = compute_renamed_type g (mkVar eq) in 
+	 let k_id,def_id = 
+	   let k_na,_,t = destProd t_eq in 
+	   let _,_,t  = destProd t in 
+	   let def_na,_,_ = destProd t in 
+	   Nameops.out_name k_na,Nameops.out_name def_na
+	 in
 	 tclTHENS
 	   (general_rewrite_bindings false
 	      (mkVar eq,
 	       ExplicitBindings[dummy_loc, NamedHyp k_id, mkVar k;
 				dummy_loc, NamedHyp def_id, mkVar def]))
 	   [list_cond_rewrite k def pmax eqs le_proofs;
-            make_lt_proof pmax le_proofs] g
+            observe_tac "make_lt_proof" (make_lt_proof pmax le_proofs)] g
       ) 
 
 let rec introduce_all_equalities func eqs values specs bound le_proofs 
@@ -1023,12 +1051,20 @@ let rec introduce_all_values_eq  cont_tac functional termine
       [] ->
 	tclTHENLIST
 	  [tclTHENS
-	     (general_rewrite_bindings false
+	     (fun gls -> 
+		let t_eq = compute_renamed_type gls (mkVar heq1) in 
+		let k_id,def_id = 
+		  let k_na,_,t = destProd t_eq in 
+		  let _,_,t  = destProd t in 
+		  let def_na,_,_ = destProd t in 
+		  Nameops.out_name k_na,Nameops.out_name def_na
+		in
+		general_rewrite_bindings false
 		(mkVar heq1,
 		 ExplicitBindings[dummy_loc,NamedHyp k_id,
 				  f_S(f_S(mkVar pmax));
 				  dummy_loc,NamedHyp def_id,
-				  f]))
+				  f]) gls )
 	     [tclTHENLIST
 		[simpl_iter();
 		 unfold_constr (reference_of_constr functional);
@@ -1067,12 +1103,22 @@ let rec introduce_all_values_eq  cont_tac functional termine
 		   h_intros [heq;heq2];
 		   rewriteLR (mkVar heq2);
 		   tclTHENS
-		     (general_rewrite_bindings false
-			(mkVar heq,
-			 ExplicitBindings
-			   [dummy_loc, NamedHyp k_id,
-			    f_S(mkVar pmax');
-			    dummy_loc, NamedHyp def_id, f]))
+		     ( fun g -> 
+			 let t_eq = compute_renamed_type g (mkVar heq) in 
+			 let k_id,def_id = 
+			   let k_na,_,t = destProd t_eq in 
+			   let _,_,t  = destProd t in 
+			   let def_na,_,_ = destProd t in 
+			   Nameops.out_name k_na,Nameops.out_name def_na
+			 in
+			 general_rewrite_bindings false
+			   (mkVar heq,
+			    ExplicitBindings
+			      [dummy_loc, NamedHyp k_id,
+			       f_S(mkVar pmax');
+			       dummy_loc, NamedHyp def_id, f]) 
+			   g
+		     )
 		     [tclIDTAC;
 		      tclTHENLIST
 			[apply (delayed_force le_lt_n_Sm);
@@ -1132,9 +1178,9 @@ let rec prove_eq  (termine:constr) (f:constr)(functional:global_reference)
 	      | fn,args ->
 		  fun g ->
 		    let ids = ids_of_named_context (pf_hyps g) in
-		    rec_leaf_eq  
+		    observe_tac "rec_leaf_eq" (rec_leaf_eq  
 		      termine f ids (constr_of_reference functional)
-		      eqs expr fn args g));;
+		      eqs expr fn args) g));;
 
 let (com_eqn : identifier ->
        global_reference -> global_reference -> global_reference
@@ -1159,8 +1205,17 @@ let (com_eqn : identifier ->
 	       )
 	  )
        );
+(*      (try Vernacentries.interp (Vernacexpr.VernacShow Vernacexpr.ShowProof) with _ -> ()); 
+     Vernacentries.interp (Vernacexpr.VernacShow Vernacexpr.ShowScript);
+*)
      Options.silently defined (); 
     );;
+
+
+let nf_zeta env =       
+  Reductionops.clos_norm_flags  (Closure.RedFlags.mkflags [Closure.RedFlags.fZETA])
+    env
+    Evd.empty
 
 
 let recursive_definition is_mes function_name rec_impls type_of_f r rec_arg_num eq 
@@ -1171,10 +1226,12 @@ let recursive_definition is_mes function_name rec_impls type_of_f r rec_arg_num 
   let equation_lemma_type = interp_gen (OfType None) Evd.empty env ~impls:([],rec_impls) eq in 
 (*   Pp.msgnl (Printer.pr_lconstr equation_lemma_type); *)
   let res_vars,eq' = decompose_prod equation_lemma_type in 
+  let env_eq' = Environ.push_rel_context (List.map (fun (x,y) -> (x,None,y)) res_vars) env in
+  let eq' = nf_zeta env_eq' eq'  in 
   let res = 
 (*     Pp.msgnl (str "res_var :=" ++ Printer.pr_lconstr_env (push_rel_context (List.map (function (x,t) -> (x,None,t)) res_vars) env) eq'); *)
 (*     Pp.msgnl (str "rec_arg_num := " ++ str (string_of_int rec_arg_num)); *)
-(*     Pp.msgnl (str "eq' := " ++ str (string_of_int rec_arg_num)); *)
+(*     Pp.msgnl (str "eq' := " ++ Printer.pr_lconstr_env env eq' ++ fnl () ++str (string_of_int rec_arg_num)); *)
     match kind_of_term eq' with 
       | App(e,[|_;_;eq_fix|]) -> 
 	  mkLambda (Name function_name,function_type,subst_var function_name (compose_lam res_vars  eq_fix))
@@ -1201,16 +1258,19 @@ let recursive_definition is_mes function_name rec_impls type_of_f r rec_arg_num 
     let term_ref = Nametab.locate (make_short_qualid term_id) in
     let f_ref = declare_f function_name (IsProof Lemma) arg_types term_ref in
 (*     message "start second proof"; *)
+    let continue = ref true in 
     begin 
       try com_eqn equation_id functional_ref f_ref term_ref (subst_var function_name equation_lemma_type)
       with e -> 
 	begin 
 	  if Tacinterp.get_debug () <> Tactic_debug.DebugOff
-	  then anomalylabstrm "" (str "Cannot create equation Lemma " ++ Cerrors.explain_exn e);
-	  ignore(try Vernacentries.vernac_reset_name (Util.dummy_loc,functional_id) with _ -> ());
-	  anomaly "Cannot create equation Lemma"
+	  then (Pp.msgnl (str "Cannot create equation Lemma " ++ Cerrors.explain_exn e); continue := false)
+	  else (ignore(try Vernacentries.vernac_reset_name (Util.dummy_loc,functional_id) with _ -> ());
+	  anomaly "Cannot create equation Lemma")
 	end
     end;
+    if !continue 
+    then
     let eq_ref = Nametab.locate (make_short_qualid equation_id ) in
     let f_ref = destConst (constr_of_reference f_ref) 
     and functional_ref = destConst (constr_of_reference functional_ref) 

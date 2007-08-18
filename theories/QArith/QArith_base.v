@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: QArith_base.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: QArith_base.v 9932 2007-07-02 14:31:33Z notin $ i*)
 
 Require Export ZArith.
 Require Export ZArithRing.
@@ -38,8 +38,8 @@ Notation " 1 " := (1#1) : Q_scope.
 Definition Qeq (p q : Q) := (Qnum p * QDen q)%Z = (Qnum q * QDen p)%Z.
 Definition Qle (x y : Q) := (Qnum x * QDen y <= Qnum y * QDen x)%Z.
 Definition Qlt (x y : Q) := (Qnum x * QDen y < Qnum y * QDen x)%Z.
-Notation Qgt := (fun x y : Q => Qlt y x).
-Notation Qge := (fun x y : Q => Qle y x).
+Notation Qgt := (fun a b : Q => Qlt b a).
+Notation Qge := (fun a b : Q => Qle b a).
 
 Infix "==" := Qeq (at level 70, no associativity) : Q_scope. 
 Infix "<" := Qlt : Q_scope.

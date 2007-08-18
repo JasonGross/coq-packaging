@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tactics.mli 9551 2007-01-29 15:13:35Z bgregoir $ i*)
+(*i $Id: tactics.mli 9853 2007-05-23 14:25:47Z letouzey $ i*)
 
 (*i*)
 open Names
@@ -276,16 +276,19 @@ val simplest_split             : tactic
 (*s Logical connective tactics. *)
 
 val register_setoid_reflexivity : tactic -> unit
+val reflexivity_red             : bool -> tactic
 val reflexivity                 : tactic
 val intros_reflexivity          : tactic
 
 val register_setoid_symmetry : tactic -> unit
+val symmetry_red                : bool -> tactic
 val symmetry                    : tactic
 val register_setoid_symmetry_in : (identifier -> tactic) -> unit
 val symmetry_in                 : identifier -> tactic
 val intros_symmetry             : clause -> tactic
 
 val register_setoid_transitivity : (constr -> tactic) -> unit
+val transitivity_red            : bool -> constr -> tactic
 val transitivity                : constr -> tactic
 val intros_transitivity         : constr -> tactic
 

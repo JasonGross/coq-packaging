@@ -9,7 +9,7 @@
 (* coqwc - counts the lines of spec, proof and comments in Coq sources
  * Copyright (C) 2003 Jean-Christophe Filliâtre *)
 
-(*i $Id: coqwc.mll 7095 2005-05-31 15:05:23Z filliatr $ i*)
+(*i $Id: coqwc.mll 9976 2007-07-12 11:58:30Z msozeau $ i*)
 
 (*s {\bf coqwc.} Counts the lines of spec, proof and comments in a Coq source. 
     It assumes the files to be lexically well-formed. *)
@@ -97,7 +97,7 @@ let rcs = "\036" rcs_keyword [^ '$']* "\036"
 let stars = "(*" '*'* "*)"
 let dot = '.' (' ' | '\t' | '\n' | '\r' | eof)
 let proof_start =   
-  "Theorem" | "Lemma" | "Fact" | "Remark" | "Goal" | "Correctness"
+  "Theorem" | "Lemma" | "Fact" | "Remark" | "Goal" | "Correctness" | "Obligation" | "Next"
 let proof_end =
   ("Save" | "Qed" | "Defined" | "Abort" | "Admitted") [^'.']* '.'
 
@@ -114,8 +114,10 @@ rule spec = parse
            { seen_spec := true; spec_to_dot lexbuf; proof lexbuf }
   | proof_start '\n'
            { seen_spec := true; newline (); spec_to_dot lexbuf; proof lexbuf }
-  | "Definition" space
+  | "Program"? "Definition" space
            { seen_spec := true; definition lexbuf }
+  | "Program"? "Fixpoint" space
+  	   { seen_spec := true; definition lexbuf }
   | character | _ 
 	   { seen_spec := true; spec lexbuf }
   | eof    { () }
