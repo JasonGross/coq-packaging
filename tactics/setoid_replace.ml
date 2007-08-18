@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: setoid_replace.ml 9331 2006-11-01 09:36:06Z herbelin $ *)
+(* $Id: setoid_replace.ml 9853 2007-05-23 14:25:47Z letouzey $ *)
 
 open Tacmach
 open Proof_type
@@ -709,9 +709,10 @@ let add_morphism lemma_infos mor_name (m,quantifiers_rev,args,output) =
 let unify_relation_carrier_with_type env rel t =
  let raise_error quantifiers_no =
   errorlabstrm "New Morphism"
-   (str "One morphism argument or its output has type " ++ pr_lconstr t ++
+   (str "One morphism argument or its output has type " ++ 
+    pr_lconstr_env env t ++
     str " but the signature requires an argument of type \"" ++
-    pr_lconstr rel.rel_a ++ str " " ++ prvect_with_sep pr_spc (fun _ -> str  "?")
+    pr_lconstr_env env rel.rel_a ++ prvect_with_sep mt (fun _ -> str " ?")
      (Array.make quantifiers_no 0) ++ str "\"") in
  let args =
   match kind_of_term t with
@@ -757,9 +758,10 @@ let unify_relation_class_carrier_with_type env rel t =
       rel
      else
       errorlabstrm "New Morphism"
-       (str "One morphism argument or its output has type " ++ pr_lconstr t ++
+       (str "One morphism argument or its output has type " ++ 
+        pr_lconstr_env env t ++
         str " but the signature requires an argument of type " ++
-        pr_lconstr t')
+        pr_lconstr_env env t')
   | Leibniz None -> Leibniz (Some t)
   | Relation rel -> Relation (unify_relation_carrier_with_type env rel t)
 
@@ -961,6 +963,8 @@ let new_named_morphism id m sign =
   match sign with
      None -> None
    | Some (args,out) ->
+      if args = [] then
+	error "Morphism signature expects at least one argument.";
       Some
        (List.map (fun (variance,ty) -> variance, constr_of ty) args,
         constr_of out)
@@ -1947,7 +1951,7 @@ let setoid_reflexivity gl =
            (str "The relation " ++ prrelation rel ++ str " is not reflexive.")
        | Some refl -> apply refl gl
  with
-  Optimize -> reflexivity gl
+  Optimize -> reflexivity_red true gl
 
 let setoid_symmetry gl =
  try
@@ -1963,7 +1967,7 @@ let setoid_symmetry gl =
            (str "The relation " ++ prrelation rel ++ str " is not symmetric.")
        | Some sym -> apply sym gl
  with
-  Optimize -> symmetry gl
+  Optimize -> symmetry_red true gl
 
 let setoid_symmetry_in id gl =
  let new_hyp =
@@ -1998,7 +2002,7 @@ let setoid_transitivity c gl =
             apply_with_bindings
              (trans, Rawterm.ExplicitBindings [ dummy_loc, binder, c ]) gl
  with
-  Optimize -> transitivity c gl
+  Optimize -> transitivity_red true c gl
 ;;
 
 Tactics.register_setoid_reflexivity setoid_reflexivity;;

@@ -1,3 +1,24 @@
+Changes from V8.1 to V8.1pl1
+============================
+
+Bug fixes 
+
+- Many bugs have been fixed (cf coq-bugs web page)
+
+Tactics
+ 
+- All known failures of ROmega have been fixed. It should now be a 
+  faithful and quicker replacement for Omega (except when nat parts
+  are involved). ROmega and Omega now handle <->. 
+
+Libraries
+
+- Better computational behavior of some constants (eq_nat_dec and 
+  le_lt_dec more efficient, Z_lt_le_dec and Positive_as_OT.compare 
+  transparent) [exceptionally source of incompatibilities].
+- Loading FSets/FMap used to open unwanted scopes of integer datatypes 
+  (see bug #1347). These scopes may need to be manually opened now.
+
 Changes from V8.1gamma to V8.1
 ==============================
 
@@ -7,7 +28,7 @@ Bug fixes
 
 Tactics
 
-- New tactic ring, ring_simplify and new tactic field now able to manage
+- New tactics ring, ring_simplify and new tactic field now able to manage
   power to a positive integer constant. Tactic ring on Z and R, and
   field on R manage power (may lead to incompatibilities with V8.1gamma).
 - Tactic field_simplify now applicable in hypotheses.

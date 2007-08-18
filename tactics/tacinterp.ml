@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacinterp.ml 9551 2007-01-29 15:13:35Z bgregoir $ *)
+(* $Id: tacinterp.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
 
 open Constrintern
 open Closure
@@ -1195,7 +1195,7 @@ let interp_hyp_location ist gl ((occs,id),hl) =
 let interp_clause ist gl { onhyps=ol; onconcl=b; concl_occs=occs } =
   { onhyps=option_map(List.map (interp_hyp_location ist gl)) ol;
     onconcl=b;
-    concl_occs=occs }
+    concl_occs=interp_int_or_var_list ist occs }
 
 (* Interpretation of constructions *)
 
@@ -1253,7 +1253,7 @@ open Evd
 
 let solvable_by_tactic env evi (ev,args) src = 
   match (!implicit_tactic, src) with
-  | Some tac, (ImplicitArg _ | QuestionMark)
+  | Some tac, (ImplicitArg _ | QuestionMark _)
       when 
 	Environ.named_context_of_val evi.evar_hyps = 
 	Environ.named_context env ->
@@ -1827,6 +1827,8 @@ and interp_genarg ist gl x =
         (interp_bindings ist gl (out_gen globwit_bindings x))
   | List0ArgType ConstrArgType -> interp_genarg_constr_list0 ist gl x
   | List1ArgType ConstrArgType -> interp_genarg_constr_list1 ist gl x
+  | List0ArgType VarArgType -> interp_genarg_var_list0 ist gl x
+  | List1ArgType VarArgType -> interp_genarg_var_list1 ist gl x
   | List0ArgType _ -> app_list0 (interp_genarg ist gl) x
   | List1ArgType _ -> app_list1 (interp_genarg ist gl) x
   | OptArgType _ -> app_opt (interp_genarg ist gl) x
@@ -1848,6 +1850,16 @@ and interp_genarg_constr_list1 ist gl x =
   let lc = out_gen (wit_list1 globwit_constr) x in
   let lc = pf_interp_constr_list ist gl lc in
   in_gen (wit_list1 wit_constr) lc
+
+and interp_genarg_var_list0 ist gl x =
+  let lc = out_gen (wit_list0 globwit_var) x in
+  let lc = interp_hyp_list ist gl lc in
+  in_gen (wit_list0 wit_var) lc
+
+and interp_genarg_var_list1 ist gl x =
+  let lc = out_gen (wit_list1 globwit_var) x in
+  let lc = interp_hyp_list ist gl lc in
+  in_gen (wit_list1 wit_var) lc
 
 (* Interprets the Match expressions *)
 and interp_match ist g lz constr lmr =

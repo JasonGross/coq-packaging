@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacentries.ml 9481 2007-01-11 19:17:56Z herbelin $ i*)
+(*i $Id: vernacentries.ml 9874 2007-06-04 13:46:11Z soubiran $ i*)
 
 (* Concrete syntax of the mathematical vernacular MV V2.6 *)
 
@@ -395,7 +395,7 @@ let vernac_define_module export id binders_ast mty_ast_o mexpr_ast_o =
        let binders_ast,argsexport =
         List.fold_right
          (fun (export,idl,ty) (args,argsexport) ->
-           (idl,ty)::args, List.map (fun (_,i) -> export,i) idl) binders_ast
+           (idl,ty)::args, (List.map (fun (_,i) -> export,i)idl)@argsexport) binders_ast
              ([],[]) in
 	Declaremods.start_module Modintern.interp_modtype export
 	  id binders_ast mty_ast_o;

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evarutil.ml 9573 2007-01-31 20:18:18Z notin $ *)
+(* $Id: evarutil.ml 9869 2007-05-29 11:07:04Z herbelin $ *)
 
 open Util
 open Pp
@@ -424,6 +424,8 @@ let need_restriction k args = not (array_for_all (closedn k) args)
  * false. The problem is that we won't get the right error message.
  *)
 
+exception NotClean of constr
+
 let real_clean env isevars ev evi args rhs =
   let evd = ref isevars in
   let subst = List.map (fun (x,y) -> (y,mkVar x)) (list_uniquize args) in
@@ -434,7 +436,7 @@ let real_clean env isevars ev evi args rhs =
  	 else
 	   (* Flex/Rel problem: unifiable as a pattern iff Rel in ev scope *)
 	   (try List.assoc (mkRel (i-k)) subst 
-	    with Not_found -> if rigid then raise Exit else t)
+	    with Not_found -> if rigid then raise (NotClean t) else t)
       | Evar (ev,args) ->
           if Evd.is_defined_evar !evd (ev,args) then
             subs rigid k (existential_value (evars_of !evd) (ev,args))
@@ -460,7 +462,7 @@ let real_clean env isevars ev evi args rhs =
 		 or List.exists (fun (id',_,_) -> id=id') (evar_context evi)
 	     *)
              then t
-             else raise Exit)
+             else raise (NotClean t))
                
       | _ ->
 	  (* Flex/Rigid problem (or assimilated if not normal): we "imitate" *)
@@ -470,8 +472,8 @@ let real_clean env isevars ev evi args rhs =
   let rhs = whd_beta rhs (* heuristic *) in
   let body = 
     try subs true 0 rhs
-    with Exit -> 
-      error_not_clean env (evars_of !evd) ev rhs (evar_source ev !evd) in
+    with NotClean t -> 
+      error_not_clean env (evars_of !evd) ev t (evar_source ev !evd) in
   (!evd,body)
 
 (* [evar_define] solves the problem lhs = rhs when lhs is an uninstantiated
@@ -619,7 +621,7 @@ let solve_pattern_eqn env l1 c =
  * ass.
  *)
 
-let status_changed lev (pbty,t1,t2) =
+let status_changed lev (pbty,_,t1,t2) =
   try 
     List.mem (head_evar t1) lev or List.mem (head_evar t2) lev
   with Failure _ ->
@@ -678,7 +680,7 @@ let solve_simple_eqn conv_algo env isevars (pbty,(n1,args1 as ev1),t2) =
 	  evar_define env ev1 t2 isevars in
     let (isevars,pbs) = get_conv_pbs isevars (status_changed lsp) in
     List.fold_left
-      (fun (isevars,b as p) (pbty,t1,t2) ->
+      (fun (isevars,b as p) (pbty,env,t1,t2) ->
 	if b then conv_algo env isevars pbty t1 t2 else p) (isevars,true)
       pbs
   with e when precatchable_exception e ->

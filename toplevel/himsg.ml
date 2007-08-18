@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: himsg.ml 9528 2007-01-24 09:43:03Z herbelin $ *)
+(* $Id: himsg.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
 
 open Pp
 open Util
@@ -331,7 +331,7 @@ let explain_occur_check ctx ev rhs =
   str" with term" ++ brk(1,1) ++ pt
 
 let explain_hole_kind env = function
-  | QuestionMark -> str "a term for this placeholder"
+  | QuestionMark _ -> str "a term for this placeholder"
   | CasesType ->
       str "the type of this pattern-matching problem"
   | BinderType (Name id) ->
@@ -352,9 +352,8 @@ let explain_hole_kind env = function
 
 let explain_not_clean ctx ev t k =
   let ctx = make_all_name_different ctx in
-  let c = mkRel (Intset.choose (free_rels t)) in
   let id = Evd.string_of_existential ev in
-  let var = pr_lconstr_env ctx c in
+  let var = pr_lconstr_env ctx t in
   str"Tried to define " ++ explain_hole_kind ctx k ++
   str" (" ++ str id ++ str ")" ++ spc() ++
   str"with a term using variable " ++ var ++ spc () ++
@@ -381,15 +380,15 @@ let explain_wrong_case_info ctx ind ci =
     spc () ++ pc
        
 
-let explain_cannot_unify m n =
-  let pm = pr_lconstr m in 
-  let pn = pr_lconstr n in
+let explain_cannot_unify ctx m n =
+  let pm = pr_lconstr_env ctx m in 
+  let pn = pr_lconstr_env ctx n in
   str"Impossible to unify" ++ brk(1,1)  ++ pm ++ spc ()  ++
   str"with" ++ brk(1,1)  ++ pn
 
 let explain_cannot_unify_local env m n subn =
-  let pm = pr_lconstr m in 
-  let pn = pr_lconstr n in
+  let pm = pr_lconstr_env env m in 
+  let pn = pr_lconstr_env env n in
   let psubn = pr_lconstr_env env subn in
     str"Impossible to unify" ++ brk(1,1)  ++ pm ++ spc ()  ++
       str"with" ++ brk(1,1)  ++ pn ++ spc() ++ str"as" ++ brk(1,1) ++ 
@@ -402,9 +401,9 @@ let explain_refiner_cannot_generalize ty =
 let explain_no_occurrence_found c =
   str "Found no subterm matching " ++ pr_lconstr c ++ str " in the current goal"
 
-let explain_cannot_unify_binding_type m n =
-  let pm = pr_lconstr m in 
-  let pn = pr_lconstr n in
+let explain_cannot_unify_binding_type ctx m n =
+  let pm = pr_lconstr_env ctx m in 
+  let pn = pr_lconstr_env ctx n in
   str "This binding has type" ++ brk(1,1) ++ pm ++ spc () ++ 
   str "which should be unifiable with" ++ brk(1,1) ++ pn
 
@@ -464,11 +463,11 @@ let explain_pretype_error ctx err =
       explain_unexpected_type ctx actual expected
   | NotProduct c ->
       explain_not_product ctx c
-  | CannotUnify (m,n) -> explain_cannot_unify m n
+  | CannotUnify (m,n) -> explain_cannot_unify ctx m n
   | CannotUnifyLocal (e,m,n,sn) -> explain_cannot_unify_local e m n sn
   | CannotGeneralize ty -> explain_refiner_cannot_generalize ty
   | NoOccurrenceFound c -> explain_no_occurrence_found c
-  | CannotUnifyBindingType (m,n) -> explain_cannot_unify_binding_type m n
+  | CannotUnifyBindingType (m,n) -> explain_cannot_unify_binding_type ctx m n
 
 (* Refiner errors *)
 

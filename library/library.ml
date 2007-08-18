@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: library.ml 9637 2007-02-10 08:32:28Z notin $ *)
+(* $Id: library.ml 9525 2007-01-24 08:43:01Z herbelin $ *)
 
 open Pp
 open Util
@@ -300,7 +300,7 @@ let (in_import, out_import) =
 
 (*s Loading from disk to cache (preparation phase) *)
 
-let vo_magic_number = 080100 (* V8.1 *)
+let vo_magic_number = 080992 (* V8.1 beta2 *)
 
 let (raw_extern_library, raw_intern_library) =
   System.raw_extern_intern vo_magic_number ".vo"

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: util.ml 9225 2006-10-09 15:59:23Z herbelin $ *)
+(* $Id: util.ml 9766 2007-04-13 13:26:28Z herbelin $ *)
 
 open Pp
 
@@ -266,6 +266,12 @@ let rec list_remove_first a = function
   | b::l when a = b -> l
   | b::l -> b::list_remove_first a l
   | [] -> raise Not_found
+
+let list_eq_set l1 l2 =
+  let rec aux l1 = function
+  | [] -> l1 = []
+  | a::l2 -> aux (list_remove_first a l1) l2 in
+  try aux l1 l2 with Not_found -> false
 
 let list_for_all2eq f l1 l2 = try List.for_all2 f l1 l2 with Failure _ -> false
 

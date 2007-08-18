@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: reserve.ml 8752 2006-04-27 19:37:33Z herbelin $ i*)
+(*i $Id: reserve.ml 9976 2007-07-12 11:58:30Z msozeau $ i*)
 
 (* Reserved names *)
 
@@ -73,7 +73,8 @@ let rec unloc = function
               bl,
             Array.map unloc tyl,
             Array.map unloc bv)
-  | RCast (_,c,k,t) -> RCast (dummy_loc,unloc c,k,unloc t)
+  | RCast (_,c, CastConv (k,t)) -> RCast (dummy_loc,unloc c, CastConv (k,unloc t))
+  | RCast (_,c, CastCoerce) -> RCast (dummy_loc,unloc c, CastCoerce)
   | RSort (_,x) -> RSort (dummy_loc,x)
   | RHole (_,x)  -> RHole (dummy_loc,x)
   | RRef (_,x) -> RRef (dummy_loc,x)

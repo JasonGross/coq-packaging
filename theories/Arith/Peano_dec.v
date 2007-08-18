@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Peano_dec.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Peano_dec.v 9941 2007-07-05 12:42:35Z letouzey $ i*)
 
 Require Import Decidable.
 
@@ -23,7 +23,7 @@ Defined.
 
 Theorem eq_nat_dec : forall n m, {n = m} + {n <> m}.
 Proof.
-  induction n; induction m; auto.
+  induction n; destruct m; auto.
   elim (IHn m); auto.
 Defined.
 

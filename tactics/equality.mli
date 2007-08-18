@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: equality.mli 9195 2006-10-01 09:41:57Z herbelin $ i*)
+(*i $Id: equality.mli 9835 2007-05-17 22:23:03Z jforest $ i*)
 
 (*i*)
 open Names
@@ -105,6 +105,7 @@ val substHyp : bool -> types -> identifier -> tactic
 *)
 
 val discriminable : env -> evar_map -> constr -> constr -> bool
+val injectable : env -> evar_map -> constr -> constr -> bool
 
 (* Subst *)
 

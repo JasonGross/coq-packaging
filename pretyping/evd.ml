@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evd.ml 9573 2007-01-31 20:18:18Z notin $ *)
+(* $Id: evd.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
 
 open Pp
 open Util
@@ -358,24 +358,23 @@ let metamap_to_list m =
 type hole_kind =
   | ImplicitArg of global_reference * (int * identifier option)
   | BinderType of name
-  | QuestionMark
+  | QuestionMark of bool
   | CasesType
   | InternalHole
   | TomatchTypeParameter of inductive * int
 
 type conv_pb = Reduction.conv_pb
-type evar_constraint = conv_pb * constr * constr
+type evar_constraint = conv_pb * Environ.env * constr * constr
 type evar_defs =
     { evars : evar_map;
       conv_pbs : evar_constraint list;
       history : (existential_key * (loc * hole_kind)) list;
       metas : clbinding Metamap.t }
 
-let subst_evar_defs sub evd =
+let subst_evar_defs_light sub evd =
+  assert (evd.evars = (Evarmap.empty,UniverseMap.empty));
+  assert (evd.conv_pbs = []);
   { evd with
-    conv_pbs =
-      List.map (fun (k,t1,t2) ->(k,subst_mps sub t1,subst_mps sub t2))
-        evd.conv_pbs;
     metas = Metamap.map (map_clb (subst_mps sub)) evd.metas }
 
 let create_evar_defs sigma =
@@ -552,7 +551,7 @@ let pr_evar_map sigma =
 
 let pr_constraints pbs =
   h 0
-    (prlist_with_sep pr_fnl (fun (pbty,t1,t2) ->
+    (prlist_with_sep pr_fnl (fun (pbty,_,t1,t2) ->
       print_constr t1 ++ spc() ++
       str (match pbty with
 	| Reduction.CONV -> "=="

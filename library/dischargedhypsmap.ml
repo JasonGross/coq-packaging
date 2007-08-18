@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: dischargedhypsmap.ml 9488 2007-01-17 11:11:58Z herbelin $ *)
+(* $Id: dischargedhypsmap.ml 9903 2007-06-21 17:02:07Z herbelin $ *)
 
 open Util
 open Libnames
@@ -31,7 +31,7 @@ let get_discharged_hyps sp =
   try
    Spmap.find sp !discharged_hyps_map
   with Not_found ->
-   anomaly ("No discharged hypothesis for object " ^ string_of_path sp)
+    []
 
 (*s Registration as global tables and rollback. *)
 

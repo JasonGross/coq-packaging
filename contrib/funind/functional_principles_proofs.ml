@@ -621,33 +621,39 @@ let build_proof
     fun g -> 
       
 (*      observe (str "proving on " ++ Printer.pr_lconstr_env (pf_env g) term);*)
-	match kind_of_term dyn_infos.info with 
-	  | Case(_,_,t,_) -> 
-	      let g_nb_prod = nb_prod (pf_concl g) in
-	      let type_of_term = pf_type_of g t in
-	      let term_eq =
-		make_refl_eq type_of_term t
+	match kind_of_term dyn_infos.info with 	  | Case(ci,ct,t,cb) -> 
+	      let do_finalize_t dyn_info' = 
+		fun g ->
+		  let t = dyn_info'.info in 
+		  let dyn_infos = {dyn_info' with info = 
+		      mkCase(ci,ct,t,cb)} in
+		  let g_nb_prod = nb_prod (pf_concl g) in
+		  let type_of_term = pf_type_of g t in
+		  let term_eq =
+		    make_refl_eq type_of_term t
+		  in
+		  tclTHENSEQ
+		    [
+		      h_generalize (term_eq::(List.map mkVar dyn_infos.rec_hyps));
+		      thin dyn_infos.rec_hyps;
+		      pattern_option [[-1],t] None;
+		      h_simplest_case t;
+		      (fun g' -> 
+			 let g'_nb_prod = nb_prod (pf_concl g') in 
+			 let nb_instanciate_partial = g'_nb_prod - g_nb_prod in 
+			 		     observe_tac "treat_new_case"
+			 (treat_new_case  
+			    ptes_infos
+			    nb_instanciate_partial 
+			    (build_proof do_finalize) 
+			    t 
+			    dyn_infos)
+			   g'
+		      )
+			
+		    ] g
 	      in
-	      tclTHENSEQ
-		[
-		  h_generalize (term_eq::(List.map mkVar dyn_infos.rec_hyps));
-		  thin dyn_infos.rec_hyps;
-		  pattern_option [[-1],t] None;
-		  h_simplest_case t;
-		  (fun g' -> 
-		     let g'_nb_prod = nb_prod (pf_concl g') in 
-		     let nb_instanciate_partial = g'_nb_prod - g_nb_prod in 
-		     observe_tac "treat_new_case" 
-		       (treat_new_case  
-		       ptes_infos
-		       nb_instanciate_partial 
-		       (build_proof do_finalize) 
-		       t 
-		       dyn_infos)
-		       g'
-		  )
-		  
-		] g
+	      build_proof do_finalize_t {dyn_infos with info = t} g
 	  | Lambda(n,t,b) ->
 	      begin
 		match kind_of_term( pf_concl g) with
@@ -1474,7 +1480,7 @@ let prove_principle_for_gen
  	 (mkApp (delayed_force acc_rel,[|input_type;relation;mkVar rec_arg_id|]))
       );
       observe_tac "reverting" (revert (List.rev (acc_rec_arg_id::args_ids)));
-      observe_tac "h_fix" (h_fix (Some fix_id) (npost_rec_arg + 1)); 
+      observe_tac "h_fix" (h_fix (Some fix_id) (List.length args_ids + 1)); 
       h_intros (List.rev (acc_rec_arg_id::args_ids));
       Equality.rewriteLR (mkConst eq_ref);
       observe_tac "finish" (fun gl' -> 

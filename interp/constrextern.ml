@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: constrextern.ml 9226 2006-10-09 16:11:01Z herbelin $ *)
+(* $Id: constrextern.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
 
 (*i*)
 open Pp
@@ -191,9 +191,11 @@ let rec check_same_type ty1 ty2 =
   | CHole _, CHole _ -> ()
   | CPatVar(_,i1), CPatVar(_,i2) when i1=i2 -> ()
   | CSort(_,s1), CSort(_,s2) when s1=s2 -> ()
-  | CCast(_,a1,_,b1), CCast(_,a2,_,b2) ->
+  | CCast(_,a1,CastConv (_,b1)), CCast(_,a2, CastConv(_,b2)) ->
       check_same_type a1 a2;
       check_same_type b1 b2
+  | CCast(_,a1,CastCoerce), CCast(_,a2, CastCoerce) ->
+      check_same_type a1 a2
   | CNotation(_,n1,e1), CNotation(_,n2,e2) when n1=n2 ->
       List.iter2 check_same_type e1 e2
   | CPrim(_,i1), CPrim(_,i2) when i1=i2 -> ()
@@ -283,8 +285,8 @@ let rec same_raw c d =
   | RSort(_,s1), RSort(_,s2) -> if s1<>s2 then failwith "RSort"
   | RHole _, _ -> ()
   | _, RHole _ -> ()
-  | RCast(_,c1,_,_),r2 -> same_raw c1 r2
-  | r1, RCast(_,c2,_,_) -> same_raw r1 c2
+  | RCast(_,c1,_),r2 -> same_raw c1 r2
+  | r1, RCast(_,c2,_) -> same_raw r1 c2
   | RDynamic(_,d1), RDynamic(_,d2) -> if d1<>d2 then failwith"RDynamic"
   | _ -> failwith "same_raw"
      
@@ -402,7 +404,7 @@ let rec extern_cases_pattern_in_scope (scopes:local_scopes) vars pat =
   try 
     if !Options.raw_print or !print_no_symbol then raise No_match;
     let (na,sc,p) = uninterp_prim_token_cases_pattern pat in
-    match availability_of_prim_token sc scopes with
+    match availability_of_prim_token sc scopes p with
     | None -> raise No_match
     | Some key ->
       let loc = cases_pattern_loc pat in
@@ -602,7 +604,7 @@ let rec share_fix_binders n rbl ty def =
 let extern_possible_prim_token scopes r =
   try
     let (sc,n) = uninterp_prim_token r in
-    match availability_of_prim_token sc scopes with
+    match availability_of_prim_token sc scopes n with
     | None -> None
     | Some key -> Some (insert_delimiters (CPrim (loc_of_rawconstr r,n)) key)
   with No_match ->
@@ -744,8 +746,10 @@ let rec extern inctx scopes vars r =
 
   | RHole (loc,e) -> CHole loc
 
-  | RCast (loc,c,k,t) ->
-      CCast (loc,sub_extern true scopes vars c,k,extern_typ scopes vars t)
+  | RCast (loc,c, CastConv (k,t)) ->
+      CCast (loc,sub_extern true scopes vars c, CastConv (k,extern_typ scopes vars t))
+  | RCast (loc,c, CastCoerce) ->
+      CCast (loc,sub_extern true scopes vars c, CastCoerce)
 
   | RDynamic (loc,d) -> CDynamic (loc,d)
 
@@ -813,7 +817,7 @@ and extern_symbol (tmp_scope,scopes as allscopes) vars t = function
 	let (t,args) = match t,n with
 	  | RApp (_,f,args), Some n when List.length args > n ->
 	      let args1, args2 = list_chop n args in
-	      RApp (dummy_loc,f,args1), args2
+	      (if n = 0 then f else RApp (dummy_loc,f,args1)), args2
 	  | _ -> t,[] in
 	(* Try matching ... *)
 	let subst = match_aconstr t pat in

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacred.ml 8793 2006-05-05 17:41:41Z barras $ *)
+(* $Id: tacred.ml 9762 2007-04-13 12:46:50Z herbelin $ *)
 
 open Pp
 open Util
@@ -365,7 +365,7 @@ let contract_cofix_use_function f (bodynum,(_,names,bodies as typedbodies)) =
     | Some c -> c in
 (*    match List.nth names j with Name id -> f id | _ -> assert false in*)
   let subbodies = list_tabulate make_Fi nbodies in
-  substl subbodies bodies.(bodynum)
+  substl (List.rev subbodies) bodies.(bodynum)
 
 let reduce_mind_case_use_function func env mia =
   match kind_of_term mia.mconstr with 

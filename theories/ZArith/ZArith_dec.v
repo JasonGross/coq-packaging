@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ZArith_dec.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: ZArith_dec.v 9958 2007-07-06 22:47:40Z letouzey $ i*)
 
 Require Import Sumbool.
 
@@ -94,7 +94,7 @@ Section decidability.
     elim Z_lt_ge_dec.
     intros; left; assumption.
     intros; right; apply Zge_le; assumption.
-  Qed.
+  Defined.
 
   Definition Z_le_gt_dec : {x <= y} + {x > y}.
   Proof.
