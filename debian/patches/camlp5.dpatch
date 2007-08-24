@@ -6,8 +6,8 @@
 
 @DPATCH@
 diff -urNad coq-8.1.pl1+dfsg~/Makefile coq-8.1.pl1+dfsg/Makefile
---- coq-8.1.pl1+dfsg~/Makefile	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/Makefile	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/Makefile	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/Makefile	2007-08-24 10:56:52.000000000 +0000
 @@ -1504,11 +1504,11 @@
  
  # BEFOREDEPEND+= parsing/pcoq.ml parsing/extend.ml
@@ -60,8 +60,8 @@ diff -urNad coq-8.1.pl1+dfsg~/Makefile coq-8.1.pl1+dfsg/Makefile
  #.v.vo:
  #	$(BOOTCOQTOP) -compile $*
 diff -urNad coq-8.1.pl1+dfsg~/Makefile.dep coq-8.1.pl1+dfsg/Makefile.dep
---- coq-8.1.pl1+dfsg~/Makefile.dep	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/Makefile.dep	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/Makefile.dep	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/Makefile.dep	2007-08-24 10:56:52.000000000 +0000
 @@ -12,4 +12,4 @@
  include .depend.camlp4
  
@@ -69,8 +69,8 @@ diff -urNad coq-8.1.pl1+dfsg~/Makefile.dep coq-8.1.pl1+dfsg/Makefile.dep
 -	$(CAMLP4O) $(CAMLP4EXTENDFLAGS) pa_ifdef.cmo pr_o.cmo `$(CAMLP4DEPS) $<` $(CAMLP4COMPAT) -impl $< > $@ || rm -f $@
 +	$(CAMLP4O) $(CAMLP4EXTENDFLAGS) pa_macro.cmo pr_o.cmo `$(CAMLP4DEPS) $<` $(CAMLP4COMPAT) -impl $< > $@ || rm -f $@
 diff -urNad coq-8.1.pl1+dfsg~/config/Makefile.template coq-8.1.pl1+dfsg/config/Makefile.template
---- coq-8.1.pl1+dfsg~/config/Makefile.template	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/config/Makefile.template	2007-08-23 23:21:52.000000000 +0000
+--- coq-8.1.pl1+dfsg~/config/Makefile.template	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/config/Makefile.template	2007-08-24 10:56:52.000000000 +0000
 @@ -62,7 +62,7 @@
  CAMLMKTOP="CAMLMKTOPEXEC"
  
@@ -92,8 +92,8 @@ diff -urNad coq-8.1.pl1+dfsg~/config/Makefile.template coq-8.1.pl1+dfsg/config/M
  # Your architecture
  # Can be obtain by UNIX command arch
 diff -urNad coq-8.1.pl1+dfsg~/configure coq-8.1.pl1+dfsg/configure
---- coq-8.1.pl1+dfsg~/configure	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/configure	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/configure	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/configure	2007-08-24 10:56:52.000000000 +0000
 @@ -78,7 +78,7 @@
  ocamllexexec=ocamllex
  ocamlyaccexec=ocamlyacc
@@ -155,8 +155,8 @@ diff -urNad coq-8.1.pl1+dfsg~/configure coq-8.1.pl1+dfsg/configure
      CAMLP4LIBFORCAMLDEBUG=$CAMLP4LIB
    fi
 diff -urNad coq-8.1.pl1+dfsg~/dev/ocamldebug-coq.template coq-8.1.pl1+dfsg/dev/ocamldebug-coq.template
---- coq-8.1.pl1+dfsg~/dev/ocamldebug-coq.template	2006-10-13 20:29:04.000000000 +0000
-+++ coq-8.1.pl1+dfsg/dev/ocamldebug-coq.template	2007-08-23 23:25:35.000000000 +0000
+--- coq-8.1.pl1+dfsg~/dev/ocamldebug-coq.template	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/dev/ocamldebug-coq.template	2007-08-24 10:56:52.000000000 +0000
 @@ -7,7 +7,7 @@
  export COQTH=$COQLIB/theories
  CAMLBIN=CAMLBINDIRECTORY
@@ -167,8 +167,8 @@ diff -urNad coq-8.1.pl1+dfsg~/dev/ocamldebug-coq.template coq-8.1.pl1+dfsg/dev/o
  exec $OCAMLDEBUG \
  	-I $CAMLP4LIB \
 diff -urNad coq-8.1.pl1+dfsg~/lib/compat.ml4 coq-8.1.pl1+dfsg/lib/compat.ml4
---- coq-8.1.pl1+dfsg~/lib/compat.ml4	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/lib/compat.ml4	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/lib/compat.ml4	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/lib/compat.ml4	2007-08-24 10:56:52.000000000 +0000
 @@ -11,6 +11,7 @@
  (* IFDEF not available in 3.06; use ifdef instead *)
  
@@ -192,8 +192,8 @@ diff -urNad coq-8.1.pl1+dfsg~/lib/compat.ml4 coq-8.1.pl1+dfsg/lib/compat.ml4
 +let make_loc = Stdpp.make_loc
 +let unloc loc = Stdpp.first_pos loc, Stdpp.last_pos loc
 diff -urNad coq-8.1.pl1+dfsg~/lib/util.ml coq-8.1.pl1+dfsg/lib/util.ml
---- coq-8.1.pl1+dfsg~/lib/util.ml	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/lib/util.ml	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/lib/util.ml	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/lib/util.ml	2007-08-24 10:56:52.000000000 +0000
 @@ -34,7 +34,7 @@
  let invalid_arg_loc (loc,s) = Stdpp.raise_with_loc loc (Invalid_argument s)
  let join_loc loc1 loc2 =
@@ -204,8 +204,8 @@ diff -urNad coq-8.1.pl1+dfsg~/lib/util.ml coq-8.1.pl1+dfsg/lib/util.ml
  (* Like Exc_located, but specifies the outermost file read, the filename
     associated to the location of the error, and the error itself. *)
 diff -urNad coq-8.1.pl1+dfsg~/parsing/argextend.ml4 coq-8.1.pl1+dfsg/parsing/argextend.ml4
---- coq-8.1.pl1+dfsg~/parsing/argextend.ml4	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/parsing/argextend.ml4	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/parsing/argextend.ml4	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/parsing/argextend.ml4	2007-08-24 10:56:52.000000000 +0000
 @@ -12,7 +12,7 @@
  open Q_util
  open Q_coqast
@@ -225,8 +225,8 @@ diff -urNad coq-8.1.pl1+dfsg~/parsing/argextend.ml4 coq-8.1.pl1+dfsg/parsing/arg
      ] ]
    ;
 diff -urNad coq-8.1.pl1+dfsg~/parsing/egrammar.mli coq-8.1.pl1+dfsg/parsing/egrammar.mli
---- coq-8.1.pl1+dfsg~/parsing/egrammar.mli	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/parsing/egrammar.mli	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/parsing/egrammar.mli	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/parsing/egrammar.mli	2007-08-24 10:56:52.000000000 +0000
 @@ -45,7 +45,7 @@
  type grammar_tactic_production =
    | TacTerm of string
@@ -246,8 +246,8 @@ diff -urNad coq-8.1.pl1+dfsg~/parsing/egrammar.mli coq-8.1.pl1+dfsg/parsing/egra
  val recover_notation_grammar :
    notation -> (precedence * tolerability list) -> notation_grammar
 diff -urNad coq-8.1.pl1+dfsg~/parsing/pcoq.ml4 coq-8.1.pl1+dfsg/parsing/pcoq.ml4
---- coq-8.1.pl1+dfsg~/parsing/pcoq.ml4	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/parsing/pcoq.ml4	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/parsing/pcoq.ml4	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/parsing/pcoq.ml4	2007-08-24 10:56:52.000000000 +0000
 @@ -30,20 +30,23 @@
     lexer. B.B. *)
  
@@ -288,8 +288,8 @@ diff -urNad coq-8.1.pl1+dfsg~/parsing/pcoq.ml4 coq-8.1.pl1+dfsg/parsing/pcoq.ml4
  
  let camlp4_state = ref []
 diff -urNad coq-8.1.pl1+dfsg~/parsing/pcoq.mli coq-8.1.pl1+dfsg/parsing/pcoq.mli
---- coq-8.1.pl1+dfsg~/parsing/pcoq.mli	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/parsing/pcoq.mli	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/parsing/pcoq.mli	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/parsing/pcoq.mli	2007-08-24 10:56:52.000000000 +0000
 @@ -20,9 +20,9 @@
  
  (* The lexer and parser of Coq. *)
@@ -321,8 +321,8 @@ diff -urNad coq-8.1.pl1+dfsg~/parsing/pcoq.mli coq-8.1.pl1+dfsg/parsing/pcoq.mli
  (* Registering/resetting the level of an entry *)
  
 diff -urNad coq-8.1.pl1+dfsg~/parsing/ppconstr.ml coq-8.1.pl1+dfsg/parsing/ppconstr.ml
---- coq-8.1.pl1+dfsg~/parsing/ppconstr.ml	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/parsing/ppconstr.ml	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/parsing/ppconstr.ml	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/parsing/ppconstr.ml	2007-08-24 10:56:52.000000000 +0000
 @@ -95,9 +95,9 @@
  let pr_delimiters key strm =
    strm ++ str ("%"^key)
@@ -346,8 +346,8 @@ diff -urNad coq-8.1.pl1+dfsg~/parsing/ppconstr.ml coq-8.1.pl1+dfsg/parsing/ppcon
      let (b,_) = unloc loc in
      pr_located pr_id (make_loc (b,b+String.length(string_of_id id)),id)
 diff -urNad coq-8.1.pl1+dfsg~/parsing/ppvernac.ml coq-8.1.pl1+dfsg/parsing/ppvernac.ml
---- coq-8.1.pl1+dfsg~/parsing/ppvernac.ml	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/parsing/ppvernac.ml	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/parsing/ppvernac.ml	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/parsing/ppvernac.ml	2007-08-24 10:56:52.000000000 +0000
 @@ -28,7 +28,7 @@
  
  let pr_spc_lconstr = pr_sep_com spc pr_lconstr_expr
@@ -367,8 +367,8 @@ diff -urNad coq-8.1.pl1+dfsg~/parsing/ppvernac.ml coq-8.1.pl1+dfsg/parsing/ppver
     let (b,_) = unloc loc in
      pr_located pr_fqid (make_loc (b,b+String.length(string_of_fqid fqid)),fqid)
 diff -urNad coq-8.1.pl1+dfsg~/parsing/q_coqast.ml4 coq-8.1.pl1+dfsg/parsing/q_coqast.ml4
---- coq-8.1.pl1+dfsg~/parsing/q_coqast.ml4	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/parsing/q_coqast.ml4	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/parsing/q_coqast.ml4	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/parsing/q_coqast.ml4	2007-08-24 10:56:52.000000000 +0000
 @@ -22,10 +22,8 @@
  let anti loc x =
    let e =
@@ -383,8 +383,8 @@ diff -urNad coq-8.1.pl1+dfsg~/parsing/q_coqast.ml4 coq-8.1.pl1+dfsg/parsing/q_co
    in
    <:expr< $anti:e$ >>
 diff -urNad coq-8.1.pl1+dfsg~/parsing/q_util.ml4 coq-8.1.pl1+dfsg/parsing/q_util.ml4
---- coq-8.1.pl1+dfsg~/parsing/q_util.ml4	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/parsing/q_util.ml4	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/parsing/q_util.ml4	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/parsing/q_util.ml4	2007-08-24 10:56:52.000000000 +0000
 @@ -37,18 +37,18 @@
    List.fold_right
      (fun e1 e2 ->
@@ -408,8 +408,8 @@ diff -urNad coq-8.1.pl1+dfsg~/parsing/q_util.ml4 coq-8.1.pl1+dfsg/parsing/q_util
  
  (* We don't give location for tactic quotation! *)
 diff -urNad coq-8.1.pl1+dfsg~/parsing/tacextend.ml4 coq-8.1.pl1+dfsg/parsing/tacextend.ml4
---- coq-8.1.pl1+dfsg~/parsing/tacextend.ml4	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/parsing/tacextend.ml4	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/parsing/tacextend.ml4	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/parsing/tacextend.ml4	2007-08-24 10:56:52.000000000 +0000
 @@ -13,7 +13,7 @@
  open Q_coqast
  open Argextend
@@ -420,8 +420,8 @@ diff -urNad coq-8.1.pl1+dfsg~/parsing/tacextend.ml4 coq-8.1.pl1+dfsg/parsing/tac
  let default_loc = <:expr< Util.dummy_loc >>
  
 diff -urNad coq-8.1.pl1+dfsg~/parsing/vernacextend.ml4 coq-8.1.pl1+dfsg/parsing/vernacextend.ml4
---- coq-8.1.pl1+dfsg~/parsing/vernacextend.ml4	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/parsing/vernacextend.ml4	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/parsing/vernacextend.ml4	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/parsing/vernacextend.ml4	2007-08-24 10:56:52.000000000 +0000
 @@ -13,7 +13,7 @@
  open Q_coqast
  open Argextend
@@ -432,14 +432,14 @@ diff -urNad coq-8.1.pl1+dfsg~/parsing/vernacextend.ml4 coq-8.1.pl1+dfsg/parsing/
  let default_loc = <:expr< Util.dummy_loc >>
  
 diff -urNad coq-8.1.pl1+dfsg~/scripts/coqmktop.ml coq-8.1.pl1+dfsg/scripts/coqmktop.ml
---- coq-8.1.pl1+dfsg~/scripts/coqmktop.ml	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/scripts/coqmktop.ml	2007-08-23 23:26:36.000000000 +0000
+--- coq-8.1.pl1+dfsg~/scripts/coqmktop.ml	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/scripts/coqmktop.ml	2007-08-24 10:57:13.000000000 +0000
 @@ -32,7 +32,7 @@
  
  (* 3. Toplevel objects *)
  let camlp4topobjs =
 -  ["camlp4_top.cma"; "pa_o.cmo"; "pa_op.cmo"; "pa_extend.cmo"]
-+  ["camlp5_top.cma"; "pa_o.cmo"; "pa_op.cmo"; "pa_extend.cmo"]
++  ["camlp5_top.cma"; "camlp5o.cma"; "pa_o.cmo"; "pa_op.cmo"; "pa_extend.cmo"]
  let topobjs = camlp4topobjs
  
  let gramobjs = []
@@ -459,8 +459,8 @@ diff -urNad coq-8.1.pl1+dfsg~/scripts/coqmktop.ml coq-8.1.pl1+dfsg/scripts/coqmk
    in
      (* files to link *)
 diff -urNad coq-8.1.pl1+dfsg~/tools/coq_makefile.ml4 coq-8.1.pl1+dfsg/tools/coq_makefile.ml4
---- coq-8.1.pl1+dfsg~/tools/coq_makefile.ml4	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/tools/coq_makefile.ml4	2007-08-23 23:20:24.000000000 +0000
+--- coq-8.1.pl1+dfsg~/tools/coq_makefile.ml4	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/tools/coq_makefile.ml4	2007-08-24 10:56:52.000000000 +0000
 @@ -175,7 +175,7 @@
      | _ :: r -> var_aux r
    in
@@ -482,8 +482,8 @@ diff -urNad coq-8.1.pl1+dfsg~/tools/coq_makefile.ml4 coq-8.1.pl1+dfsg/tools/coq_
    print "\n"
  
 diff -urNad coq-8.1.pl1+dfsg~/toplevel/metasyntax.ml coq-8.1.pl1+dfsg/toplevel/metasyntax.ml
---- coq-8.1.pl1+dfsg~/toplevel/metasyntax.ml	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/toplevel/metasyntax.ml	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/toplevel/metasyntax.ml	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/toplevel/metasyntax.ml	2007-08-24 10:56:52.000000000 +0000
 @@ -28,7 +28,7 @@
  (**********************************************************************)
  (* Tokens                                                             *)
@@ -494,8 +494,8 @@ diff -urNad coq-8.1.pl1+dfsg~/toplevel/metasyntax.ml coq-8.1.pl1+dfsg/toplevel/m
  let (inToken, outToken) =
    declare_object {(default_object "TOKEN") with
 diff -urNad coq-8.1.pl1+dfsg~/toplevel/mltop.ml4 coq-8.1.pl1+dfsg/toplevel/mltop.ml4
---- coq-8.1.pl1+dfsg~/toplevel/mltop.ml4	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/toplevel/mltop.ml4	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/toplevel/mltop.ml4	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/toplevel/mltop.ml4	2007-08-24 10:56:52.000000000 +0000
 @@ -98,7 +98,7 @@
                  str s; str" to Coq code." >])
  (* TO DO: .cma loading without toplevel *)
@@ -515,8 +515,8 @@ diff -urNad coq-8.1.pl1+dfsg~/toplevel/mltop.ml4 coq-8.1.pl1+dfsg/toplevel/mltop
  	errorlabstrm "Mltop.no_load_object"
            [< str"Loading of ML object file forbidden in a native Coq" >]
 diff -urNad coq-8.1.pl1+dfsg~/toplevel/toplevel.ml coq-8.1.pl1+dfsg/toplevel/toplevel.ml
---- coq-8.1.pl1+dfsg~/toplevel/toplevel.ml	2007-08-23 23:19:37.000000000 +0000
-+++ coq-8.1.pl1+dfsg/toplevel/toplevel.ml	2007-08-23 23:19:38.000000000 +0000
+--- coq-8.1.pl1+dfsg~/toplevel/toplevel.ml	2007-08-24 10:56:51.000000000 +0000
++++ coq-8.1.pl1+dfsg/toplevel/toplevel.ml	2007-08-24 10:56:52.000000000 +0000
 @@ -139,16 +139,16 @@
  
  (* Functions to report located errors in a file. *)
