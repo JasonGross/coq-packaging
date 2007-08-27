@@ -10,7 +10,7 @@ XS-Vcs-Browser: http://svn.debian.org/wsvn/pkg-ocaml-maint/trunk/packages/coq/tr
 
 Package: coq
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, coq-libs (= ${source:Version})
+Depends: ${shlibs:Depends}, ${misc:Depends}, ocaml-base-nox-${F:OCamlABI}, coq-libs (= ${source:Version})
 Recommends: coqide | proofgeneral-coq
 Suggests: ocaml-nox (>= 3.08), proofgeneral-coq, ledit, cle, coq-doc
 Description: proof assistant for higher-order logic (toplevel and compiler)

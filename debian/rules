@@ -13,6 +13,8 @@ include /usr/share/dpatch/dpatch.make
 COQPREF := $(CURDIR)/debian/tmp
 ADDPREF := COQINSTALLPREFIX=$(COQPREF)
 
+OCAMLABI := $(shell ocamlc -version)
+
 CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man --emacslib /usr/share/emacs/site-lisp/coq --reals all --fsets all
 
 configure: configure-stamp
@@ -128,7 +130,7 @@ binary-common:
 	dh_fixperms
 	dh_installdeb
 	dh_shlibdeps
-	dh_gencontrol
+	dh_gencontrol -- -VF:OCamlABI="$(OCAMLABI)"
 	dh_md5sums
 	dh_builddeb
 

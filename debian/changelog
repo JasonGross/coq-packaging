@@ -1,3 +1,9 @@
+coq (8.1.pl1+dfsg-3) UNRELEASED; urgency=low
+
+  * Depend on ocaml-base-nox since coq_makefile needs ocamlrun.
+
+ -- Samuel Mimram <smimram@debian.org>  Mon, 27 Aug 2007 09:28:38 +0200
+
 coq (8.1.pl1+dfsg-2) experimental; urgency=low
 
   * Updated for OCaml 3.10.
