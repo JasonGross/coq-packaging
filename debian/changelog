@@ -1,3 +1,9 @@
+coq (8.1.pl1+dfsg-4) UNRELEASED; urgency=low
+
+  * Corrected emacs-mode startup file, closes: #446170.
+
+ -- Samuel Mimram <smimram@debian.org>  Wed, 10 Oct 2007 22:36:07 +0000
+
 coq (8.1.pl1+dfsg-3) unstable; urgency=low
 
   * Depend on ocaml-base-nox since coq_makefile needs ocamlrun,
