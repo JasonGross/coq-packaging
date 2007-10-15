@@ -1,8 +1,12 @@
-coq (8.1.pl1+dfsg-4) UNRELEASED; urgency=low
+coq (8.1.pl2+dfsg-1) experimental; urgency=low
 
+  * New upstream release.
+  * Removed camlp5.dpatch, integrated upstream.
+  * Updated browser.dpatch, coqdoc_stdlib.dpatch and makefile.dpatch.
   * Corrected emacs-mode startup file, closes: #446170.
+  * Removed Sven Luther from uploaders.
 
- -- Samuel Mimram <smimram@debian.org>  Wed, 10 Oct 2007 22:36:07 +0000
+ -- Samuel Mimram <smimram@debian.org>  Mon, 15 Oct 2007 18:55:09 +0000
 
 coq (8.1.pl1+dfsg-3) unstable; urgency=low
 
