@@ -6,14 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacextend.ml4 9265 2006-10-24 08:35:38Z herbelin $ *)
+(* $Id: tacextend.ml4 10089 2007-08-24 10:49:43Z herbelin $ *)
 
+open Util
 open Genarg
 open Q_util
 open Q_coqast
 open Argextend
 
-let join_loc (deb1,_) (_,fin2) = (deb1,fin2)
 let loc = Util.dummy_loc
 let default_loc = <:expr< Util.dummy_loc >>
 

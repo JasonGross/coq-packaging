@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: metasyntax.ml 9333 2006-11-02 13:59:14Z barras $ *)
+(* $Id: metasyntax.ml 10192 2007-10-08 00:33:39Z letouzey $ *)
 
 open Pp
 open Util
@@ -28,7 +28,7 @@ open Notation
 (**********************************************************************)
 (* Tokens                                                             *)
 
-let cache_token (_,s) = Pcoq.lexer.Token.using ("", s)
+let cache_token (_,s) = Compat.using Pcoq.lexer ("", s)
 
 let (inToken, outToken) =
   declare_object {(default_object "TOKEN") with
@@ -739,7 +739,9 @@ let set_entry_type etyps (x,typ) =
 
 let check_rule_productivity l = 
   if List.for_all (function NonTerminal _ -> true | _ -> false) l then
-    error "A notation must include at least one symbol"
+    error "A notation must include at least one symbol";
+  if (match l with SProdList _ :: _ -> true | _ -> false) then
+    error "A recursive notation must start with at least one symbol"
 
 let is_not_printable = function
   | AVar _ -> warning "This notation won't be used for printing as it is bound to a \nsingle variable"; true

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq_makefile.ml4 8840 2006-05-22 13:51:14Z notin $ *)
+(* $Id: coq_makefile.ml4 10185 2007-10-06 18:05:13Z herbelin $ *)
 
 (* créer un Makefile pour un développement Coq automatiquement *)
 
@@ -175,8 +175,8 @@ let variables l =
     | _ :: r -> var_aux r
   in
   section "Variables definitions.";
-  print "CAMLP4LIB=`camlp4 -where`\n";
-(*  print "MAKE=make \"COQBIN=$(COQBIN)\" \"OPT=$(OPT)\"\n"; *)
+  print "CAMLP4LIB=`camlp5 -where 2> /dev/null || camlp4 -where`\n";
+  print "CAMLP4=`basename $CAMLP4LIB`\n"; 
   print "COQSRC=-I $(COQTOP)/kernel -I $(COQTOP)/lib \\
   -I $(COQTOP)/library -I $(COQTOP)/parsing \\
   -I $(COQTOP)/pretyping -I $(COQTOP)/interp \\
@@ -204,8 +204,8 @@ let variables l =
   print "CAMLOPTLINK=ocamlopt\n";
   print "COQDEP=$(COQBIN)coqdep -c\n";
   print "GRAMMARS=grammar.cma\n";
-  print "CAMLP4EXTEND=pa_extend.cmo pa_ifdef.cmo q_MLast.cmo\n";
-  print "PP=-pp \"camlp4o -I . -I $(COQTOP)/parsing $(CAMLP4EXTEND) $(GRAMMARS) -impl\"\n";
+  print "CAMLP4EXTEND=pa_extend.cmo pa_macro.cmo q_MLast.cmo\n";
+  print "PP=-pp \"$(CAMLP4)o -I . -I $(COQTOP)/parsing $(CAMLP4EXTEND) $(GRAMMARS) -impl\"\n";
   var_aux l;
   print "\n"
 

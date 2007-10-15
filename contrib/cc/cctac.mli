@@ -6,10 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: cctac.mli 9151 2006-09-19 13:32:22Z corbinea $ *)
+(* $Id: cctac.mli 10121 2007-09-14 09:45:40Z corbinea $ *)
 
 open Term 
 open Proof_type
+
+val proof_tac: Ccproof.proof -> Proof_type.tactic
 
 val cc_tactic : int -> constr list -> tactic
 

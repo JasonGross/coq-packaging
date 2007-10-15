@@ -6,11 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: table.mli 6441 2004-12-09 02:27:09Z letouzey $ i*)
+(*i $Id: table.mli 10209 2007-10-09 21:49:37Z letouzey $ i*)
 
 open Names
 open Libnames
 open Miniml
+open Declarations
 
 val id_of_global : global_reference -> identifier
 
@@ -27,11 +28,11 @@ val error_unknown_module : qualid -> 'a
 val error_toplevel : unit -> 'a
 val error_scheme : unit -> 'a
 val error_not_visible : global_reference -> 'a
-val error_unqualified_name : string -> string -> 'a 
 val error_MPfile_as_mod : dir_path -> 'a
 val error_record : global_reference -> 'a 
 val check_inside_module : unit -> unit
 val check_inside_section : unit -> unit
+val check_loaded_modfile : module_path -> unit
 
 (*s utilities concerning [module_path]. *)
 
@@ -55,8 +56,8 @@ val lookup_term : constant -> ml_decl
 val add_type : constant -> ml_schema -> unit
 val lookup_type : constant -> ml_schema
 
-val add_ind : kernel_name -> ml_ind -> unit
-val lookup_ind : kernel_name -> ml_ind
+val add_ind : kernel_name -> mutual_inductive_body -> ml_ind -> unit
+val lookup_ind : kernel_name -> mutual_inductive_body * ml_ind
 
 val add_recursors : Environ.env -> kernel_name -> unit
 val is_recursor : global_reference -> bool 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqmktop.ml 9496 2007-01-17 15:22:11Z herbelin $ *)
+(* $Id: coqmktop.ml 10192 2007-10-08 00:33:39Z letouzey $ *)
 
 (* coqmktop is a script to link Coq, analogous to ocamlmktop.
    The command line contains options specific to coqmktop, options for the
@@ -32,7 +32,10 @@ let ide       = split_list Tolink.ide
 
 (* 3. Toplevel objects *)
 let camlp4topobjs =
-  ["camlp4_top.cma"; "pa_o.cmo"; "pa_op.cmo"; "pa_extend.cmo"]
+  if Coq_config.camlp4 = "camlp5" then
+    ["camlp5_top.cma"; "camlp5o.cma"; "pa_o.cmo"; "pa_op.cmo"; "pa_extend.cmo"]
+  else
+    ["camlp4_top.cma"; "pa_o.cmo"; "pa_op.cmo"; "pa_extend.cmo"]
 let topobjs = camlp4topobjs
 
 let gramobjs = []
@@ -310,7 +313,7 @@ let main () =
     (* add topstart.cmo explicitly because we shunted ocamlmktop wrapper *)
     let args = if !top then args @ [ "topstart.cmo" ] else args in
     (* Now, with the .cma, we MUST use the -linkall option *)
-    let command = String.concat " " (prog::args) in
+    let command = String.concat " " (prog::"-rectypes"::args) in
     if !echo then 
       begin 
 	print_endline command; 

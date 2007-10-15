@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: command_windows.ml 9189 2006-09-29 12:39:24Z notin $ *)
+(* $Id: command_windows.ml 10197 2007-10-08 13:52:35Z notin $ *)
 
 class command_window () = 
   let window = GWindow.window 
@@ -69,9 +69,10 @@ object(self)
   val notebook = notebook
   method window = window
   method new_command ?command ?term () =
+    let appendp x = ignore (notebook#append_page x) in
     let frame = GBin.frame 
 		  ~shadow_type:`ETCHED_OUT
-		  ~packing:notebook#append_page
+		  ~packing:appendp
 		  ()
     in
     notebook#goto_page (notebook#page_num frame#coerce);

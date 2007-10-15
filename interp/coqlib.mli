@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coqlib.mli 8688 2006-04-07 15:08:12Z msozeau $ i*)
+(*i $Id: coqlib.mli 10067 2007-08-09 17:13:16Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -129,6 +129,7 @@ val build_coq_not : constr delayed
 
 (* Conjunction *)
 val build_coq_and : constr delayed
+val build_coq_conj : constr delayed
 
 (* Disjunction *)
 val build_coq_or : constr delayed

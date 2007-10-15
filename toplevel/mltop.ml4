@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: mltop.ml4 9397 2006-11-21 21:50:54Z herbelin $ *)
+(* $Id: mltop.ml4 10185 2007-10-06 18:05:13Z herbelin $ *)
 
 open Util
 open Pp
@@ -98,7 +98,7 @@ let dir_ml_load s =
                 str s; str" to Coq code." >])
 (* TO DO: .cma loading without toplevel *)
     | WithoutTop ->
-      ifdef Byte then
+      IFDEF Byte THEN
         let _,gname = where_in_path !coq_mlpath_copy s in
         try
           Dynlink.loadfile gname;
@@ -108,7 +108,7 @@ let dir_ml_load s =
 	    [Filename.dirname gname]
 	with | Dynlink.Error a ->
           errorlabstrm "Mltop.load_object" [< str (Dynlink.error_message a) >]
-      else ()
+      ELSE () END
     | Native ->
 	errorlabstrm "Mltop.no_load_object"
           [< str"Loading of ML object file forbidden in a native Coq" >]

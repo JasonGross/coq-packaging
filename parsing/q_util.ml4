@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: q_util.ml4 9333 2006-11-02 13:59:14Z barras $ *)
+(* $Id: q_util.ml4 10087 2007-08-24 10:39:30Z herbelin $ *)
 
 (* This file defines standard combinators to build ml expressions *)
 
@@ -37,18 +37,18 @@ let mlexpr_of_list f l =
   List.fold_right
     (fun e1 e2 ->
       let e1 = f e1 in
-       let loc = (fst (MLast.loc_of_expr e1), snd (MLast.loc_of_expr e2)) in
+       let loc = join_loc (MLast.loc_of_expr e1) (MLast.loc_of_expr e2) in
        <:expr< [$e1$ :: $e2$] >>)
     l (let loc = dummy_loc in <:expr< [] >>)
 
 let mlexpr_of_pair m1 m2 (a1,a2) =
   let e1 = m1 a1 and e2 = m2 a2 in
-  let loc = (fst (MLast.loc_of_expr e1), snd (MLast.loc_of_expr e2)) in
+  let loc = join_loc (MLast.loc_of_expr e1) (MLast.loc_of_expr e2) in
   <:expr< ($e1$, $e2$) >>
 
 let mlexpr_of_triple m1 m2 m3 (a1,a2,a3)=
   let e1 = m1 a1 and e2 = m2 a2 and e3 = m3 a3 in
-  let loc = (fst (MLast.loc_of_expr e1), snd (MLast.loc_of_expr e3)) in
+  let loc = join_loc (MLast.loc_of_expr e1) (MLast.loc_of_expr e3) in
   <:expr< ($e1$, $e2$, $e3$) >>
 
 (* We don't give location for tactic quotation! *)

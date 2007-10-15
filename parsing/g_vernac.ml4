@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_vernac.ml4 9977 2007-07-12 12:18:46Z msozeau $ *)
+(* $Id: g_vernac.ml4 10067 2007-08-09 17:13:16Z msozeau $ *)
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
 open Pp
@@ -143,7 +143,9 @@ GEXTEND Gram
           VernacFixpoint (recs,Options.boxed_definitions())
       | "CoFixpoint"; corecs = LIST1 corec_definition SEP "with" ->
           VernacCoFixpoint (corecs,false)
-      | IDENT "Scheme"; l = LIST1 scheme SEP "with" -> VernacScheme l ] ]
+      | IDENT "Scheme"; l = LIST1 scheme SEP "with" -> VernacScheme l
+      | IDENT "Combined"; IDENT "Scheme"; id = identref; IDENT "from"; 
+	l = LIST1 identref SEP "," -> VernacCombinedScheme (id, l) ] ]
   ;
   gallina_ext:
     [ [ b = record_token; oc = opt_coercion; name = identref;
