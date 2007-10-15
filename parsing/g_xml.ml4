@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_xml.ml4 9976 2007-07-12 11:58:30Z msozeau $ *)
+(* $Id: g_xml.ml4 10090 2007-08-24 10:53:53Z herbelin $ *)
 
 open Pp
 open Util

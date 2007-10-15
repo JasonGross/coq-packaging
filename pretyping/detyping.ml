@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: detyping.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
+(* $Id: detyping.ml 10135 2007-09-21 14:28:12Z herbelin $ *)
 
 open Pp
 open Util
@@ -241,7 +241,9 @@ and align_tree nal isgoal (e,c as rhs) = match nal with
   | [] -> [[],rhs]
   | na::nal ->
     match kind_of_term c with
-    | Case (ci,_,c,cl) when c = mkRel (list_index na (snd e)) ->
+    | Case (ci,p,c,cl) when c = mkRel (list_index na (snd e)) 
+	& (* don't contract if p dependent *)
+	computable p (ci.ci_pp_info.ind_nargs) ->
 	let clauses = build_tree na isgoal e ci cl in
 	List.flatten
           (List.map (fun (pat,rhs) ->

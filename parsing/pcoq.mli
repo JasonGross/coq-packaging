@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pcoq.mli 9333 2006-11-02 13:59:14Z barras $ i*)
+(*i $Id: pcoq.mli 10185 2007-10-06 18:05:13Z herbelin $ i*)
 
 open Util
 open Names
@@ -20,9 +20,9 @@ open Libnames
 
 (* The lexer and parser of Coq. *)
 
-val lexer : Token.lexer
+val lexer : Compat.lexer
 
-module Gram : Grammar.S with type te = Token.t
+module Gram : Grammar.S with type te = Compat.token
 
 (* The superclass of all grammar entries *)
 type grammar_object
@@ -42,7 +42,7 @@ val get_constr_entry :
 val grammar_extend :
   grammar_object Gram.Entry.e -> Gramext.position option ->
     (string option * Gramext.g_assoc option *
-     (Token.t Gramext.g_symbol list * Gramext.g_action) list) list
+     (Compat.token Gramext.g_symbol list * Gramext.g_action) list) list
     -> unit
 
 val remove_grammars : int -> unit
@@ -210,7 +210,7 @@ module Vernac_ :
 (* Binding entry names to campl4 entries *)
 
 val symbol_of_production : Gramext.g_assoc option -> constr_entry ->
-  bool -> constr_production_entry -> Token.t Gramext.g_symbol
+  bool -> constr_production_entry -> Compat.token Gramext.g_symbol
 
 (* Registering/resetting the level of an entry *)
 

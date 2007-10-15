@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: setoid_replace.ml 9853 2007-05-23 14:25:47Z letouzey $ *)
+(* $Id: setoid_replace.ml 10213 2007-10-10 13:05:59Z letouzey $ *)
 
 open Tacmach
 open Proof_type
@@ -819,15 +819,16 @@ let new_morphism m signature id hook =
 	    try find_relation_class output' 
 	    with Not_found -> errorlabstrm "Add Morphism"
 	      (str "Not a valid signature: " ++ pr_lconstr output' ++
-		  str " is neither a registered relation nor the Leibniz " ++
-		  str " equality.") in
+		 str " is neither a registered relation nor the Leibniz " ++
+		 str " equality.") in
 	  let rel_a,rel_quantifiers_no =
             match rel with
 		Relation rel -> rel.rel_a, rel.rel_quantifiers_no
               | Leibniz (Some t) -> t, 0
-              | Leibniz None -> assert false in
+              | Leibniz None -> let _,t = decompose_prod typ in t, 0 in
 	  let rel_a_n =
-            clos_norm_flags Closure.betaiotazeta empty_env Evd.empty rel_a in
+            clos_norm_flags Closure.betaiotazeta empty_env Evd.empty rel_a 
+	  in
 	    try
               let _,output_rel_a_n = decompose_lam_n rel_quantifiers_no rel_a_n in
               let argsrev,_ = decompose_prod output_rel_a_n in
@@ -1890,47 +1891,49 @@ let general_setoid_replace rewrite_tac try_prove_eq_tac_opt relation c1 c2 ~new_
       | Some tac ->  Tacticals.tclTRY (Tacticals.tclCOMPLETE tac )
   in 
   try
-  let relation =
-   match relation with
-      Some rel ->
-       (try
-         match find_relation_class rel with
-            Relation sa -> sa
-          | Leibniz _ -> raise Optimize
-        with
-         Not_found ->
-          errorlabstrm "Setoid_rewrite"
-           (pr_lconstr rel ++ str " is not a registered relation."))
-    | None ->
-       match default_relation_for_carrier (pf_type_of gl c1) with
-          Relation sa -> sa
-        | Leibniz _ -> raise Optimize
-  in
-   let eq_left_to_right = mkApp (relation.rel_aeq, [| c1 ; c2 |]) in
-   let eq_right_to_left = mkApp (relation.rel_aeq, [| c2 ; c1 |]) in
-   let replace dir eq =
-    tclTHENS (assert_tac false Anonymous eq)
-      [onLastHyp (fun id ->
-        tclTHEN
-          (rewrite_tac dir (mkVar id) ~new_goals)
-          (clear [id]));
-       try_prove_eq_tac]
-   in
-    tclORELSE
-     (replace true eq_left_to_right) (replace false eq_right_to_left) gl
- with
-  Optimize -> (* (!replace tac_opt c1 c2) gl *)
-    let eq =  mkApp (Lazy.force  coq_eq, [| pf_type_of gl c1;c2 ; c1 |]) in 
-    tclTHENS (assert_tac false Anonymous eq)
-      [onLastHyp (fun id ->
-		    tclTHEN
-		      (rewrite_tac false (mkVar id) ~new_goals)
-		      (clear [id]));
-       try_prove_eq_tac] gl
+    let carrier,args = decompose_app (pf_type_of gl c1) in
+    let relation =
+      match relation with
+	  Some rel ->
+	    (try
+		match find_relation_class rel with
+		    Relation sa -> if not (eq_constr carrier sa.rel_a) then 		    
+			errorlabstrm "Setoid_rewrite"
+			  (str "the carrier of " ++ pr_lconstr rel ++ 
+			      str " does not match the type of " ++ pr_lconstr c1);
+		      sa
+		  | Leibniz _ -> raise Optimize
+              with
+		  Not_found ->
+		    errorlabstrm "Setoid_rewrite"
+		      (pr_lconstr rel ++ str " is not a registered relation."))
+	| None ->
+	    match default_relation_for_carrier (pf_type_of gl c1) with
+		Relation sa -> sa
+              | Leibniz _ -> raise Optimize
+    in
+    let eq_left_to_right = mkApp (relation.rel_aeq, Array.of_list (List.append args [ c1 ; c2 ])) in
+    let eq_right_to_left = mkApp (relation.rel_aeq, Array.of_list (List.append args [ c2 ; c1 ])) in
+    let replace dir eq =
+      tclTHENS (assert_tac false Anonymous eq)
+	[onLastHyp (fun id ->
+          tclTHEN
+            (rewrite_tac dir (mkVar id) ~new_goals)
+            (clear [id]));
+	 try_prove_eq_tac]
+    in
+      tclORELSE
+	(replace true eq_left_to_right) (replace false eq_right_to_left) gl
+  with
+      Optimize -> (* (!replace tac_opt c1 c2) gl *)
+	let eq =  mkApp (Lazy.force  coq_eq, [| pf_type_of gl c1;c2 ; c1 |]) in 
+	  tclTHENS (assert_tac false Anonymous eq)
+	    [onLastHyp (fun id ->
+	      tclTHEN
+		(rewrite_tac false (mkVar id) ~new_goals)
+		(clear [id]));
+	     try_prove_eq_tac] gl
       
-
-
-
 let setoid_replace = general_setoid_replace general_s_rewrite
 let setoid_replace_in  tac_opt id relation c1 c2 ~new_goals gl = 
   general_setoid_replace (general_s_rewrite_in id)  tac_opt relation c1 c2 ~new_goals gl
@@ -1970,11 +1973,22 @@ let setoid_symmetry gl =
   Optimize -> symmetry_red true gl
 
 let setoid_symmetry_in id gl =
- let new_hyp =
-  let _,he,c1,c2 = analyse_hypothesis gl (mkVar id) in
-   mkApp (he, [| c2 ; c1 |])
- in
- cut_replacing id new_hyp (tclTHEN setoid_symmetry) gl
+  let ctype = pf_type_of gl (mkVar id) in
+  let binders,concl = Sign.decompose_prod_assum ctype in
+  let (equiv, args) = decompose_app concl in
+  let rec split_last_two = function
+    | [c1;c2] -> [],(c1, c2)
+    | x::y::z -> let l,res = split_last_two (y::z) in x::l, res
+    | _ -> error "The term provided is not an equivalence" 
+  in
+  let others,(c1,c2) = split_last_two args in
+  let he,c1,c2 =  mkApp (equiv, Array.of_list others),c1,c2 in
+  let new_hyp' =  mkApp (he, [| c2 ; c1 |]) in
+  let new_hyp = it_mkProd_or_LetIn new_hyp'  binders in
+  tclTHENS (cut new_hyp)
+    [ intro_replacing id;
+      tclTHENLIST [ intros; setoid_symmetry; apply (mkVar id); assumption ] ]
+    gl
 
 let setoid_transitivity c gl =
  try

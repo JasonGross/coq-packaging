@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: q_coqast.ml4 9551 2007-01-29 15:13:35Z bgregoir $ *)
+(* $Id: q_coqast.ml4 10185 2007-10-06 18:05:13Z herbelin $ *)
 
 open Util
 open Names
@@ -19,13 +19,18 @@ let purge_str s =
   if String.length s == 0 || s.[0] <> '$' then s
   else String.sub s 1 (String.length s - 1)
 
+IFDEF OCAML308 THEN DEFINE NOP END
+IFDEF OCAML309 THEN DEFINE NOP END
+IFDEF CAMLP5 THEN DEFINE NOP END
+
 let anti loc x =
   let e =
     let loc =
-      ifdef OCAML_308 then
+      IFDEF NOP THEN 
         loc
-      else
-        (1, snd loc - fst loc)
+      ELSE 
+	(1, snd loc - fst loc)
+      END 
     in <:expr< $lid:purge_str x$ >>
   in
   <:expr< $anti:e$ >>

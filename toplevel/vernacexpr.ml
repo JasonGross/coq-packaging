@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacexpr.ml 9481 2007-01-11 19:17:56Z herbelin $ i*)
+(*i $Id: vernacexpr.ml 10067 2007-08-09 17:13:16Z msozeau $ i*)
 
 open Util
 open Names
@@ -199,6 +199,7 @@ type vernac_expr =
   | VernacFixpoint of (fixpoint_expr * decl_notation) list * bool
   | VernacCoFixpoint of (cofixpoint_expr * decl_notation) list * bool
   | VernacScheme of (lident * bool * lreference * sort_expr) list
+  | VernacCombinedScheme of lident * lident list
 
   (* Gallina extensions *)
   | VernacRecord of bool (* = Record or Structure *)

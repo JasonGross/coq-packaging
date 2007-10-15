@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: options.ml 9191 2006-09-29 15:45:42Z courtieu $ *)
+(* $Id: options.ml 10105 2007-08-30 16:53:32Z herbelin $ *)
 
 open Util
 
@@ -121,4 +121,4 @@ let browser_cmd_fmt =
   Not_found ->
    if Sys.os_type = "Win32"
    then "C:\\PROGRA~1\\INTERN~1\\IEXPLORE ", ""
-   else "netscape -remote \"OpenURL(", ")\""
+   else "firefox -remote \"OpenURL(", ")\""

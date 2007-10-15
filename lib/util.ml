@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: util.ml 9766 2007-04-13 13:26:28Z herbelin $ *)
+(* $Id: util.ml 10185 2007-10-06 18:05:13Z herbelin $ *)
 
 open Pp
 
@@ -32,9 +32,7 @@ type 'a located = loc * 'a
 let anomaly_loc (loc,s,strm) = Stdpp.raise_with_loc loc (Anomaly (s,strm))
 let user_err_loc (loc,s,strm) = Stdpp.raise_with_loc loc (UserError (s,strm))
 let invalid_arg_loc (loc,s) = Stdpp.raise_with_loc loc (Invalid_argument s)
-let join_loc loc1 loc2 =
-  if loc1 = dummy_loc or loc2 = dummy_loc then dummy_loc
-  else (fst loc1, snd loc2)
+let join_loc = Compat.join_loc
 
 (* Like Exc_located, but specifies the outermost file read, the filename
    associated to the location of the error, and the error itself. *)

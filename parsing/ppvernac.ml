@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppvernac.ml 9562 2007-01-31 09:00:36Z msozeau $ *)  
+(* $Id: ppvernac.ml 10087 2007-08-24 10:39:30Z herbelin $ *)  
 
 open Pp
 open Names
@@ -28,7 +28,7 @@ open Tacinterp
 
 let pr_spc_lconstr = pr_sep_com spc pr_lconstr_expr
 
-let pr_lident (b,_ as loc,id) =
+let pr_lident (loc,id) =
   if loc <> dummy_loc then
     let (b,_) = unloc loc in
     pr_located pr_id (make_loc (b,b+String.length(string_of_id id)),id)
@@ -39,7 +39,7 @@ let string_of_fqid fqid =
 
 let pr_fqid fqid = str (string_of_fqid fqid)
 
-let pr_lfqid (_,_ as loc,fqid) =
+let pr_lfqid (loc,fqid) =
   if loc <> dummy_loc then
    let (b,_) = unloc loc in
     pr_located pr_fqid (make_loc (b,b+String.length(string_of_fqid fqid)),fqid)
@@ -602,6 +602,11 @@ let rec pr_vernac = function
   | VernacScheme l ->
       hov 2 (str"Scheme" ++ spc() ++
              prlist_with_sep (fun _ -> fnl() ++ str"with ") pr_onescheme l)
+  | VernacCombinedScheme (id, l) ->
+      hov 2 (str"Combined Scheme" ++ spc() ++
+	       pr_lident id ++ spc() ++ str"from" ++ spc() ++
+	       prlist_with_sep (fun _ -> fnl() ++ str", ") pr_lident l)
+	
 
   (* Gallina extensions *)
   | VernacRecord (b,(oc,name),ps,s,c,fs) ->

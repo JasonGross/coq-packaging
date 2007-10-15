@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq.ml 9537 2007-01-26 10:05:04Z corbinea $ *)
+(* $Id: coq.ml 10174 2007-10-04 13:52:23Z vsiles $ *)
 
 open Vernac
 open Vernacexpr
@@ -152,6 +152,7 @@ let interp verbosely s =
 		  | VernacFixpoint _
 		  | VernacCoFixpoint _
 		  | VernacEndProof _
+                  | VernacScheme _ 
 		    -> Options.make_silent (not verbosely)
 		  | _ -> ()
 	      end;

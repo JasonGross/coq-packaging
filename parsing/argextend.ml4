@@ -6,13 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: argextend.ml4 9265 2006-10-24 08:35:38Z herbelin $ *)
+(* $Id: argextend.ml4 10185 2007-10-06 18:05:13Z herbelin $ *)
 
 open Genarg
 open Q_util
 open Q_coqast
 
-let join_loc (deb1,_) (_,fin2) = (deb1,fin2)
+let join_loc = Util.join_loc
 let loc = Util.dummy_loc
 let default_loc = <:expr< Util.dummy_loc >>
 
@@ -226,7 +226,7 @@ EXTEND
         let t, g = interp_entry_name loc e sep in (g, Some (s,t))
       | s = STRING ->
 	  if String.length s > 0 && Util.is_letter s.[0] then
-	    Pcoq.lexer.Token.using ("", s);
+	    Compat.using Pcoq.lexer ("", s);
         (<:expr< (Gramext.Stoken (Lexer.terminal $str:s$)) >>, None)
     ] ]
   ;

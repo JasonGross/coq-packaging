@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: egrammar.mli 9147 2006-09-15 21:49:56Z herbelin $ i*)
+(*i $Id: egrammar.mli 10185 2007-10-06 18:05:13Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -45,7 +45,7 @@ val extend_grammar : all_grammar_command -> unit
 type grammar_tactic_production =
   | TacTerm of string
   | TacNonTerm of
-      loc * (Token.t Gramext.g_symbol * Genarg.argument_type) * string option
+      loc * (Compat.token Gramext.g_symbol * Genarg.argument_type) * string option
 
 val extend_tactic_grammar :
   string -> grammar_tactic_production list list -> unit
@@ -61,7 +61,7 @@ val get_extend_vernac_grammars :
 (*
 val reset_extend_grammars_v8 : unit -> unit
 *)
-val interp_entry_name : int -> string -> entry_type * Token.t Gramext.g_symbol
+val interp_entry_name : int -> string -> entry_type * Compat.token Gramext.g_symbol
 
 val recover_notation_grammar :
   notation -> (precedence * tolerability list) -> notation_grammar

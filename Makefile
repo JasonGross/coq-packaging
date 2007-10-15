@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile 10014 2007-07-17 15:14:39Z notin $ 
+# $Id: Makefile 10216 2007-10-11 13:44:00Z notin $ 
 
 
 # Makefile for Coq
@@ -79,18 +79,19 @@ LOCALINCLUDES=-I config -I tools -I tools/coqdoc \
               -I contrib/field -I contrib/subtac -I contrib/rtauto \
               -I contrib/recdef
 
-MLINCLUDES=$(LOCALINCLUDES) -I $(MYCAMLP4LIB)
+MLINCLUDES=$(LOCALINCLUDES) -I $(MYCAMLP4LIB) $(COQIDEINCLUDES)
 
 OCAMLC += $(CAMLFLAGS)
 OCAMLOPT += $(CAMLFLAGS)
 
 BYTEFLAGS=$(MLINCLUDES) $(CAMLDEBUG) $(USERFLAGS)
 OPTFLAGS=$(MLINCLUDES) $(CAMLTIMEPROF) $(INLINEFLAG) $(USERFLAGS)
-DEPFLAGS=$(LOCALINCLUDES)
+DEPFLAGS= -slash $(LOCALINCLUDES)
 
 OCAMLC_P4O=$(OCAMLC) -pp $(CAMLP4O) $(BYTEFLAGS)
 OCAMLOPT_P4O=$(OCAMLOPT) -pp $(CAMLP4O) $(OPTFLAGS)
-CAMLP4EXTENDFLAGS=-I . pa_extend.cmo pa_extend_m.cmo q_MLast.cmo
+CAMLP4EXTENSIONS=-I . pa_extend.cmo pa_extend_m.cmo q_MLast.cmo pa_macro.cmo
+CAMLP4OPTIONS=$(CAMLP4COMPAT) -D$(CAMLVERSION)
 CAMLP4DEPS=sed -n -e 's|^(\*.*camlp4deps: "\(.*\)".*\*)|\1|p'
 
 COQINCLUDES=          # coqtop includes itself the needed paths
@@ -352,12 +353,6 @@ OBJSCMO=$(CONFIG) $(LIBREP) $(KERNEL) $(LIBRARY) $(PRETYPING) $(INTERP) \
 
 CINCLUDES= -I $(CAMLHLIB)
 
-ifeq ($(CAMLVERSION),OCAML307)
-  CFLAGS=-fno-defer-pop -Wall -Wno-unused -DOCAML_307
-else
-  CFLAGS=-fno-defer-pop -Wall -Wno-unused
-endif
-
 # libcoqrun.a 
 
 $(LIBCOQRUN): kernel/byterun/coq_jumptbl.h $(BYTERUN) 
@@ -611,7 +606,7 @@ COQIDECMO=ide/utils/okey.cmo ide/utils/config_file.cmo \
 	  ide/coq_tactics.cmo  ide/command_windows.cmo ide/coqide.cmo
 
 COQIDECMX=$(COQIDECMO:.cmo=.cmx)
-COQIDEFLAGS=-thread -I +lablgtk2
+COQIDEFLAGS=-thread $(COQIDEINCLUDES)
 BEFOREDEPEND+= ide/config_lexer.ml ide/find_phrase.ml ide/highlight.ml
 BEFOREDEPEND+= ide/config_parser.mli ide/config_parser.ml
 BEFOREDEPEND+= ide/utf8_convert.ml
@@ -1168,7 +1163,7 @@ $(COQDEP): $(COQDEPCMO)
 	$(SHOW)'OCAMLC -o $@'
 	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ unix.cma $(COQDEPCMO) $(OSDEPLIBS)
 
-BEFOREDEPEND+= tools/coqdep_lexer.ml $(COQDEP)
+BEFOREDEPEND+= tools/coqdep_lexer.ml
 
 GALLINACMO=tools/gallina_lexer.cmo tools/gallina.cmo
 
@@ -1262,6 +1257,7 @@ install-tools::
 	$(MKDIR) $(FULLBINDIR)
 	# recopie des fichiers de style pour coqide
 	$(MKDIR) $(FULLCOQLIB)/tools/coqdoc
+	touch $(FULLCOQLIB)/tools/coqdoc/coqdoc.sty $(FULLCOQLIB)/tools/coqdoc/coqdoc.css # to have the mode according to umask (bug #1715)
 	cp tools/coqdoc/coqdoc.css tools/coqdoc/coqdoc.sty $(FULLCOQLIB)/tools/coqdoc
 	cp $(TOOLS) $(FULLBINDIR)
 
@@ -1483,7 +1479,7 @@ dev/printers.cma: $(PRINTERSCMO)
 parsing/grammar.cma: $(GRAMMARCMO)
 	$(SHOW)'Testing $@'
 	@touch test.ml4
-	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) $(GRAMMARCMO) -impl" -impl test.ml4 -o test-grammar
+	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENSIONS) $(GRAMMARCMO) -impl" -impl test.ml4 -o test-grammar
 	@rm -f test-grammar test.*
 	$(SHOW)'OCAMLC -a $@'   
 	$(HIDE)$(OCAMLC) $(BYTEFLAGS) $(GRAMMARCMO) -linkall -a -o $@
@@ -1500,15 +1496,15 @@ ML4FILES +=parsing/g_minicoq.ml4 \
 	   parsing/g_decl_mode.ml4
 
 
-# BEFOREDEPEND+= $(GRAMMARCMO)
+BEFOREDEPEND+= $(GRAMMARCMO)
 
 # BEFOREDEPEND+= parsing/pcoq.ml parsing/extend.ml
 
-# File using pa_ifdef and only necessary for parsing ml files
+# File using pa_macro and only necessary for parsing ml files
 
 parsing/q_coqast.cmo: parsing/q_coqast.ml4
 	$(SHOW)'OCAMLC4  $<' 
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) pa_ifdef.cmo $(CAMLP4COMPAT) -impl" -c -impl $<
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENSIONS) $(CAMLP4OPTIONS) -impl" -c -impl $<
 
 # toplevel/mltop.ml4 (ifdef Byte)
 
@@ -1522,11 +1518,11 @@ toplevel/mltop.cmx: toplevel/mltop.optml
 
 toplevel/mltop.byteml: toplevel/mltop.ml4
 	$(SHOW)'CAMLP4O   $<'	
-	$(HIDE)$(CAMLP4O) $(CAMLP4EXTENDFLAGS) pa_ifdef.cmo pr_o.cmo -DByte -impl $< > $@ || rm -f $@
+	$(HIDE)$(CAMLP4O) $(CAMLP4EXTENSIONS) pr_o.cmo -DByte -impl $< > $@ || rm -f $@
 
 toplevel/mltop.optml: toplevel/mltop.ml4
 	$(SHOW)'CAMLP4O   $<'	
-	$(HIDE)$(CAMLP4O) $(CAMLP4EXTENDFLAGS) pa_ifdef.cmo pr_o.cmo -impl $< > $@ || rm -f $@
+	$(HIDE)$(CAMLP4O) $(CAMLP4EXTENSIONS) pr_o.cmo -impl $< > $@ || rm -f $@
 
 ML4FILES += toplevel/mltop.ml4
 
@@ -1571,11 +1567,11 @@ ML4FILES += lib/pp.ml4 lib/compat.ml4
 
 lib/compat.cmo: lib/compat.ml4
 	$(SHOW)'OCAMLC4  $<' 
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) pa_ifdef.cmo -impl" -c -impl $<
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENSIONS) $(CAMLP4OPTIONS) -impl" -c -impl $<
 
 lib/compat.cmx: lib/compat.ml4
 	$(SHOW)'OCAMLOPT  $<' 
-	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) pa_ifdef.cmo -impl" -c -impl $<
+	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENSIONS) $(CAMLP4OPTIONS) -impl" -c -impl $<
 
 # files compiled with camlp4 because of streams syntax
 
@@ -1591,11 +1587,11 @@ ML4FILES += contrib/xml/xml.ml4		\
 
 parsing/lexer.cmx: parsing/lexer.ml4
 	$(SHOW)'OCAMLOPT4 $<'
-	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) `$(CAMLP4DEPS) $<` pr_o.cmo -impl" -c -impl $<
+	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENSIONS) pr_o.cmo `$(CAMLP4DEPS) $<` -impl" -c -impl $<
 
 parsing/lexer.cmo: parsing/lexer.ml4
 	$(SHOW)'OCAMLC4   $<'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) `$(CAMLP4DEPS) $<` pr_o.cmo -impl" -c -impl $<
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENSIONS) pr_o.cmo `$(CAMLP4DEPS) $<` -impl" -c -impl $<
 
 # pretty printing of the revision number when compiling a checked out
 # source tree
@@ -1647,17 +1643,11 @@ archclean::
 
 .ml4.cmx:
 	$(SHOW)'OCAMLOPT4 $<'
-	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) `$(CAMLP4DEPS) $<` $(CAMLP4COMPAT) -impl" -c -impl $<
+	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENSIONS) `$(CAMLP4DEPS) $<` $(CAMLP4OPTIONS) -impl" -c -impl $<
 
 .ml4.cmo:
 	$(SHOW)'OCAMLC4   $<'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) `$(CAMLP4DEPS) $<` $(CAMLP4COMPAT) -impl" -c -impl $<
-
-%.ml: %.ml4
-	$(CAMLP4O) $(CAMLP4EXTENDFLAGS) pa_ifdef.cmo pr_o.cmo `$(CAMLP4DEPS) $<` $(CAMLP4COMPAT) -impl $< > $@ || rm -f $@
-
-#.v.vo:
-#	$(BOOTCOQTOP) -compile $*
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENSIONS) `$(CAMLP4DEPS) $<` $(CAMLP4OPTIONS) -impl" -c -impl $<
 
 .el.elc:
 	echo "(setq load-path (cons \".\" load-path))" > $*.compile
@@ -1721,8 +1711,8 @@ cleanconfig::
 
 alldepend: depend dependcoq 
 
-dependcoq:
-	$(COQDEP) -coqlib . -R theories Coq -R contrib Coq $(COQINCLUDES) \
+dependcoq: $(BEFOREDEPEND) $(COQDEP)
+	$(COQDEP) -slash -coqlib . -R theories Coq -R contrib Coq $(COQINCLUDES) \
 	 $(ALLFSETS:.vo=.v) $(ALLREALS:.vo=.v) $(ALLVO:.vo=.v) > .depend.coq
 
 # Build dependencies ignoring failures in building ml files from ml4 files
@@ -1745,30 +1735,43 @@ ML4FILESML = $(ML4FILES:.ml4=.ml)
 # Expresses dependencies of the .ml4 files w.r.t their grammars
 
 .PHONY: dependp4
-dependp4: $(ML4FILES)
+dependp4: 
 	rm -f .depend.camlp4
 	for f in $(ML4FILES); do \
 	  printf "%s" `dirname $$f`/`basename $$f .ml4`".ml: " >> .depend.camlp4; \
 	  echo `$(CAMLP4DEPS) $$f` >> .depend.camlp4; \
 	done
 
+# Produce the .ml files using Makefile.dep
+.PHONY: ml4filesml
+ml4filesml:: .depend.camlp4 parsing/grammar.cma
+	$(MAKE) -f Makefile.dep $(ML4FILESML)
+
+
 .PHONY: depend
-depend: $(BEFOREDEPEND) dependp4 $(ML4FILESML)
+depend: dependp4 ml4filesml $(BEFOREDEPEND)
 # 1. We express dependencies of the .ml files w.r.t their grammars
 # 2. Then we are able to produce the .ml files using Makefile.dep
 # 3. We compute the dependencies inside the .ml files using ocamldep
 	$(OCAMLDEP) $(DEPFLAGS) */*.mli */*/*.mli */*.ml */*/*.ml > .depend
 # 4. We express dependencies of .cmo and .cmx files w.r.t their grammars
 	for f in $(ML4FILES); do \
-	  printf "%s" `dirname $$f`/`basename $$f .ml4`".cmo: " >> .depend; \
-	  echo `$(CAMLP4DEPS) $$f` >> .depend; \
-	  printf "%s" `dirname $$f`/`basename $$f .ml4`".cmx: " >> .depend; \
-	  echo `$(CAMLP4DEPS) $$f` >> .depend; \
+	  bn=`dirname $$f`/`basename $$f .ml4`; \
+	  deps=`$(CAMLP4DEPS) $$f`; \
+	  if [[ $${deps} != "" ]]; then \
+	    /bin/mv -f .depend .depend.tmp; \
+	    sed -e "\|^$${bn}.cmo|s|^$${bn}.cmo: \(.*\)$$|$${bn}.cmo: $${deps} \1|" \
+	        -e "\|^$${bn}.cmx|s|^$${bn}.cmx: \(.*\)$$|$${bn}.cmx: $${deps} \1|" \
+	        .depend.tmp > .depend; \
+	    /bin/rm -f .depend.tmp; \
+	  fi; \
 	done
 # 5.  We express dependencies of .o files
-	$(CC) -I $(CAMLHLIB) -MM kernel/byterun/*.c >> .depend
+	$(CC) -MM -isystem $(CAMLHLIB) kernel/byterun/*.c >> .depend
 # 6. Finally, we erase the generated .ml files
 	rm -f $(ML4FILESML)
+#    and the .cmo and .cmi files needed by grammar.cma
+	rm -f rm parsing/*.cm[io] lib/pp.cm[io] lib/compat.cm[io]
 # 7. Since .depend contains correct dependencies .depend.devel can be deleted
 # (see dev/Makefile.dir for details about this file)
 	if [ -e makefile ]; then >.depend.devel; else rm -f .depend.devel; fi
@@ -1787,7 +1790,6 @@ devel:
 
 -include .depend
 -include .depend.coq
--include .depend.camlp4
 
 clean::
 	find . -name "\.#*" -exec rm -f {} \;

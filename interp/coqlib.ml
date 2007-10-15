@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqlib.ml 8866 2006-05-28 16:21:04Z herbelin $ *)
+(* $Id: coqlib.ml 10067 2007-08-09 17:13:16Z msozeau $ *)
 
 open Util
 open Pp
@@ -236,6 +236,7 @@ let coq_I      = lazy_init_constant ["Logic"] "I"
 (* Connectives *)
 let coq_not = lazy_init_constant ["Logic"] "not"
 let coq_and = lazy_init_constant ["Logic"] "and"
+let coq_conj = lazy_init_constant ["Logic"] "conj"
 let coq_or = lazy_init_constant ["Logic"] "or"
 let coq_ex = lazy_init_constant ["Logic"] "ex"
 
@@ -246,6 +247,7 @@ let build_coq_I ()     = Lazy.force coq_I
 let build_coq_False () = Lazy.force coq_False
 let build_coq_not ()   = Lazy.force coq_not
 let build_coq_and ()   = Lazy.force coq_and
+let build_coq_conj ()  = Lazy.force coq_conj
 let build_coq_or ()   = Lazy.force coq_or
 let build_coq_ex ()   = Lazy.force coq_ex
 

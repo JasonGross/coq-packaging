@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacentries.ml 9874 2007-06-04 13:46:11Z soubiran $ i*)
+(*i $Id: vernacentries.ml 10067 2007-08-09 17:13:16Z msozeau $ i*)
 
 (* Concrete syntax of the mathematical vernacular MV V2.6 *)
 
@@ -358,6 +358,8 @@ let vernac_fixpoint = build_recursive
 let vernac_cofixpoint = build_corecursive
 
 let vernac_scheme = build_scheme
+
+let vernac_combined_scheme = build_combined_scheme
 
 (**********************)
 (* Modules            *)
@@ -1137,6 +1139,7 @@ let interp c = match c with
   | VernacFixpoint (l,b) -> vernac_fixpoint l b
   | VernacCoFixpoint (l,b) -> vernac_cofixpoint l b
   | VernacScheme l -> vernac_scheme l
+  | VernacCombinedScheme (id, l) -> vernac_combined_scheme id l
 
   (* Modules *)
   | VernacDeclareModule (export,(_,id),bl,mtyo) -> 

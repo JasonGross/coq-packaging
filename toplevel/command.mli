@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: command.mli 9976 2007-07-12 11:58:30Z msozeau $ i*)
+(*i $Id: command.mli 10067 2007-08-09 17:13:16Z msozeau $ i*)
 
 (*i*)
 open Util
@@ -52,6 +52,8 @@ val build_recursive : (fixpoint_expr * decl_notation) list -> bool -> unit
 val build_corecursive : (cofixpoint_expr * decl_notation) list -> bool -> unit
 
 val build_scheme : (identifier located * bool * reference * rawsort) list -> unit
+
+val build_combined_scheme : identifier located -> identifier located list -> unit
 
 val generalize_constr_expr : constr_expr -> local_binder list -> constr_expr
 
