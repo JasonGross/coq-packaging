@@ -1,3 +1,9 @@
+coq (8.1.pl2+dfsg-2) unstable; urgency=low
+
+  * Upload to unstable.
+
+ -- Samuel Mimram <smimram@debian.org>  Fri, 16 Nov 2007 19:20:24 +0000
+
 coq (8.1.pl2+dfsg-1) experimental; urgency=low
 
   * New upstream release.
