@@ -1,4 +1,4 @@
-coq (8.1.pl2+dfsg-3) UNRELEASED; urgency=low
+coq (8.1.pl2+dfsg-3) unstable; urgency=low
 
   * Added check.dpatch to remove warnings which made some tests erroneously
     fail, closes: #452572.
