@@ -4,3 +4,4 @@ makefile
 no-complexity-test
 configure
 cmxa-install
+check
