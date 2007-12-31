@@ -5,7 +5,7 @@ Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
 Uploaders: Ralf Treinen <treinen@debian.org>, Remi Vanicat <vanicat@debian.org>, Stefano Zacchiroli <zack@debian.org>, Samuel Mimram <smimram@debian.org>
 Standards-Version: 3.7.2
 Build-Depends: debhelper (>= 4.0.0), dpkg-dev (>= 1.13.19), dpatch, ocaml-nox (>= 3.10), ocaml-best-compilers, camlp5, liblablgtk2-ocaml-dev (>= 2.4.0), texlive-latex-extra, hevea
-Vcs-Svn: svn://svn.debian.org/svn/pkg-ocaml-maint/trunk/packages/coq
+Vcs-Svn: svn://svn.debian.org/svn/pkg-ocaml-maint/trunk/packages/coq/trunk
 Vcs-Browser: http://svn.debian.org/wsvn/pkg-ocaml-maint/trunk/packages/coq/trunk/
 
 Package: coq

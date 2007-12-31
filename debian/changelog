@@ -1,3 +1,9 @@
+coq (8.1.pl2+dfsg-4) UNRELEASED; urgency=low
+
+  * fix vcs-svn field to point just above the debian/ dir
+
+ -- Stefano Zacchiroli <zack@debian.org>  Mon, 31 Dec 2007 16:49:55 +0100
+
 coq (8.1.pl2+dfsg-3) unstable; urgency=low
 
   * Added check.dpatch to remove warnings which made some tests erroneously
