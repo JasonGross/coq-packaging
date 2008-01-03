@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile 10216 2007-10-11 13:44:00Z notin $ 
+# $Id: Makefile 10314 2007-11-12 15:10:25Z notin $ 
 
 
 # Makefile for Coq
@@ -1161,7 +1161,7 @@ COQDEPCMO=config/coq_config.cmo tools/coqdep_lexer.cmo tools/coqdep.cmo
 
 $(COQDEP): $(COQDEPCMO)
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ unix.cma $(COQDEPCMO) $(OSDEPLIBS)
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ unix.cma $(COQDEPCMO) $(OSDEPLIBS)
 
 BEFOREDEPEND+= tools/coqdep_lexer.ml
 
@@ -1169,23 +1169,23 @@ GALLINACMO=tools/gallina_lexer.cmo tools/gallina.cmo
 
 $(GALLINA): $(GALLINACMO)
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ $(GALLINACMO)
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ $(GALLINACMO)
 
 BEFOREDEPEND+= tools/gallina_lexer.ml
 
 $(COQMAKEFILE): tools/coq_makefile.cmo
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ tools/coq_makefile.cmo
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ tools/coq_makefile.cmo
 
 $(COQTEX): tools/coq-tex.cmo
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ str.cma tools/coq-tex.cmo
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ str.cma tools/coq-tex.cmo
 
 BEFOREDEPEND+= tools/coqwc.ml
 
 $(COQWC): tools/coqwc.cmo
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ tools/coqwc.cmo
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ tools/coqwc.cmo
 
 BEFOREDEPEND+= tools/coqdoc/pretty.ml tools/coqdoc/index.ml
 
@@ -1195,7 +1195,7 @@ COQDOCCMO=$(CONFIG) tools/coqdoc/cdglobals.cmo tools/coqdoc/alpha.cmo \
 
 $(COQDOC): $(COQDOCCMO)
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ str.cma unix.cma $(COQDOCCMO)
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ str.cma unix.cma $(COQDOCCMO)
 
 clean::
 	rm -f tools/coqdep_lexer.ml tools/gallina_lexer.ml
@@ -1264,6 +1264,8 @@ install-tools::
 LIBFILES=$(THEORIESVO) $(CONTRIBVO)
 LIBFILESLIGHT=$(THEORIESLIGHTVO)
 
+
+GRAMMARCMA=parsing/grammar.cma
 OBJECTCMA=lib/lib.cma kernel/kernel.cma library/library.cma \
         pretyping/pretyping.cma interp/interp.cma proofs/proofs.cma \
         parsing/parsing.cma tactics/tactics.cma toplevel/toplevel.cma \
@@ -1280,7 +1282,7 @@ install-library:
 	$(MKDIR) $(FULLCOQLIB)/states
 	cp states/*.coq $(FULLCOQLIB)/states
 	$(MKDIR) $(FULLCOQLIB)/user-contrib
-	cp $(OBJECTCMA) $(OBJECTCMXA) $(FULLCOQLIB)
+	cp $(OBJECTCMA) $(OBJECTCMXA) $(GRAMMARCMA) $(FULLCOQLIB)
 
 install-library-light:
 	$(MKDIR) $(FULLCOQLIB)
@@ -1758,7 +1760,7 @@ depend: dependp4 ml4filesml $(BEFOREDEPEND)
 	for f in $(ML4FILES); do \
 	  bn=`dirname $$f`/`basename $$f .ml4`; \
 	  deps=`$(CAMLP4DEPS) $$f`; \
-	  if [[ $${deps} != "" ]]; then \
+	  if [ -n "$${deps}" ]; then \
 	    /bin/mv -f .depend .depend.tmp; \
 	    sed -e "\|^$${bn}.cmo|s|^$${bn}.cmo: \(.*\)$$|$${bn}.cmo: $${deps} \1|" \
 	        -e "\|^$${bn}.cmx|s|^$${bn}.cmx: \(.*\)$$|$${bn}.cmx: $${deps} \1|" \
