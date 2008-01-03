@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqc.ml 7747 2005-12-28 10:28:41Z herbelin $ *)
+(* $Id: coqc.ml 10235 2007-10-18 12:25:03Z notin $ *)
 
 (* Afin de rendre Coq plus portable, ce programme Caml remplace le script
    coqc. 
@@ -161,7 +161,10 @@ let parse_args () =
     | ("-v"|"--version") :: _ ->
         Usage.version ()
     | "-where" :: _ -> 
-	print_endline Coq_config.coqlib; exit 0
+	let coqlib =
+	  try Sys.getenv "COQLIB" with Not_found -> Coq_config.coqlib 
+	in
+	  print_endline coqlib; exit 0
     | f :: rem -> 
 	if Sys.file_exists f then
 	  parse (f::cfiles,args) rem
