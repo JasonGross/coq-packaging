@@ -1,8 +1,13 @@
-coq (8.1.pl2+dfsg-4) UNRELEASED; urgency=low
+coq (8.1.pl3+dfsg-1) UNRELEASED; urgency=low
 
+  [ Stefano Zacchiroli ]
   * fix vcs-svn field to point just above the debian/ dir
 
- -- Stefano Zacchiroli <zack@debian.org>  Mon, 31 Dec 2007 16:49:55 +0100
+  [ Samuel Mimram ]
+  * New upstream release.
+  * Updated watch file.
+
+ -- Samuel Mimram <smimram@debian.org>  Thu, 03 Jan 2008 17:30:39 +0000
 
 coq (8.1.pl2+dfsg-3) unstable; urgency=low
 
