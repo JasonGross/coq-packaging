@@ -1,4 +1,4 @@
-coq (8.1.pl3+dfsg-1) UNRELEASED; urgency=low
+coq (8.1.pl3+dfsg-1) unstable; urgency=low
 
   [ Stefano Zacchiroli ]
   * fix vcs-svn field to point just above the debian/ dir
