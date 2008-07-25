@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: clenv.mli 9277 2006-10-25 13:02:22Z herbelin $ i*)
+(*i $Id: clenv.mli 10856 2008-04-27 16:15:34Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -18,22 +18,21 @@ open Evd
 open Evarutil
 open Mod_subst
 open Rawterm
+open Unification
 (*i*)
 
 (***************************************************************)
 (* The Type of Constructions clausale environments. *)
 
-(* [templenv] is the typing context
- * [env] is the mapping from metavar and evar numbers to their types
+(* [env] is the typing context
+ * [evd] is the mapping from metavar and evar numbers to their types
  *       and values.
  * [templval] is the template which we are trying to fill out.
  * [templtyp] is its type.
- * [namenv] is a mapping from metavar numbers to names, for
- *          use in instantiating metavars by name.
  *)
 type clausenv = {
-  templenv : env;
-  env      : evar_defs;
+  env      : env;
+  evd      : evar_defs;
   templval : constr freelisted;
   templtyp : constr freelisted }
 
@@ -54,48 +53,53 @@ val clenv_meta_type : clausenv -> metavariable -> types
 val mk_clenv_from : evar_info sigma -> constr * types -> clausenv
 val mk_clenv_from_n :
   evar_info sigma -> int option -> constr * types -> clausenv
-val mk_clenv_rename_from : evar_info sigma -> constr * types -> clausenv
-val mk_clenv_rename_from_n :
-  evar_info sigma -> int option -> constr * types -> clausenv
 val mk_clenv_type_of : evar_info sigma -> constr -> clausenv
+val mk_clenv_from_env : env -> evar_map -> int option -> constr * types -> clausenv
 
 (***************************************************************)
 (* linking of clenvs *)
 
 val connect_clenv : evar_info sigma -> clausenv -> clausenv
-val clenv_fchain : metavariable -> clausenv -> clausenv -> clausenv
+val clenv_fchain : 
+  ?allow_K:bool -> ?flags:unify_flags -> metavariable -> clausenv -> clausenv -> clausenv
 
 (***************************************************************)
 (* Unification with clenvs *)
 
 (* Unifies two terms in a clenv. The boolean is [allow_K] (see [Unification]) *)
 val clenv_unify : 
-  bool -> conv_pb -> constr -> constr -> clausenv -> clausenv
+  bool -> ?flags:unify_flags -> conv_pb -> constr -> constr -> clausenv -> clausenv
 
 (* unifies the concl of the goal with the type of the clenv *)
 val clenv_unique_resolver :
-  bool -> clausenv -> evar_info sigma -> clausenv
+  bool -> ?flags:unify_flags -> clausenv -> evar_info sigma -> clausenv
 
 (* same as above ([allow_K=false]) but replaces remaining metas
-   with fresh evars *)
+   with fresh evars if [evars_flag] is [true] *)
 val evar_clenv_unique_resolver :
-  clausenv -> evar_info sigma -> clausenv
+  bool -> ?flags:unify_flags -> clausenv -> evar_info sigma -> clausenv
+
+val clenv_dependent : bool -> clausenv -> metavariable list
+
+val clenv_pose_metas_as_evars : clausenv -> metavariable list -> clausenv
 
 (***************************************************************)
 (* Bindings *)
 
+type arg_bindings = open_constr explicit_bindings
+
 (* bindings where the key is the position in the template of the
    clenv (dependent or not). Positions can be negative meaning to
    start from the rightmost argument of the template. *)
-type arg_bindings = (int * constr) list
-
 val clenv_independent : clausenv -> metavariable list
 val clenv_missing : clausenv -> metavariable list
 
+val clenv_constrain_last_binding : constr -> clausenv -> clausenv
+
 (* defines metas corresponding to the name of the bindings *)
-val clenv_match_args :
-  constr explicit_bindings -> clausenv -> clausenv
-val clenv_constrain_with_bindings : arg_bindings -> clausenv -> clausenv
+val clenv_match_args : arg_bindings -> clausenv -> clausenv
+
+val clenv_unify_meta_types : ?flags:unify_flags -> clausenv -> clausenv
 
 (* start with a clenv to refine with a given term with bindings *)
 
@@ -103,10 +107,10 @@ val clenv_constrain_with_bindings : arg_bindings -> clausenv -> clausenv
 (* the optional int tells how many prods of the lemma have to be used *)
 (* use all of them if None *)
 val make_clenv_binding_apply :
-  evar_info sigma -> int option -> constr * constr -> constr bindings ->
+  evar_info sigma -> int option -> constr * constr -> open_constr bindings ->
    clausenv
 val make_clenv_binding :
-  evar_info sigma -> constr * constr -> constr bindings -> clausenv
+  evar_info sigma -> constr * constr -> open_constr bindings -> clausenv
 
 (* [clenv_environments sigma n t] returns [sigma',lmeta,ccl] where
    [lmetas] is a list of metas to be applied to a proof of [t] so that
@@ -124,6 +128,10 @@ val clenv_environments :
    a list of Evar's defined in [env] and extends [sigma] accordingly *)
 val clenv_environments_evars :
  env -> evar_defs -> int option -> types -> evar_defs * constr list * types
+
+(* [clenv_conv_leq env sigma t c n] looks for c1...cn s.t. [t <= c c1...cn] *)
+val clenv_conv_leq :
+ env -> evar_map -> types -> constr -> int -> constr list
 
 (* if the clause is a product, add an extra meta for this product *)
 exception NotExtensibleClause

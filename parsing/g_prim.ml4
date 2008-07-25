@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: g_prim.ml4 7922 2006-01-23 19:11:11Z herbelin $ i*)
+(*i camlp4use: "pa_extend.cmo" i*)
+
+(*i $Id: g_prim.ml4 10155 2007-09-28 22:36:35Z glondu $ i*)
 
 open Pcoq
 open Names
@@ -25,12 +27,18 @@ GEXTEND Gram
   GLOBAL: 
     bigint natural integer identref name ident var preident
     fullyqualid qualid reference dirpath
-    ne_string string;
+    ne_string string pattern_ident pattern_identref;
   preident:
     [ [ s = IDENT -> s ] ]
   ;
   ident:
     [ [ s = IDENT -> id_of_string s ] ]
+  ;
+  pattern_ident:
+    [ [ s = PATTERNIDENT -> id_of_string s ] ]
+  ;
+  pattern_identref:
+    [ [ id = pattern_ident -> (loc, id) ] ]
   ;
   var: (* as identref, but interpret as a term identifier in ltac *)
     [ [ id = ident -> (loc,id) ] ]

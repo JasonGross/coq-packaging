@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: modintern.ml 6582 2005-01-13 14:28:56Z sacerdot $ *)
+(* $Id: modintern.ml 11127 2008-06-14 15:39:46Z herbelin $ *)
 
 open Pp
 open Util
@@ -60,20 +60,50 @@ let lookup_qualid (modtype:bool) qid =
 
 *)
 
+
+let split_modpath mp =
+  let rec aux = function
+    | MPfile dp -> dp, []
+    | MPbound mbid -> 
+	Lib.library_dp (), [id_of_mbid mbid]
+    | MPself msid -> Lib.library_dp (), [id_of_msid msid]
+    | MPdot (mp,l) -> let (mp', lab) = aux mp in
+			(mp', id_of_label l :: lab)
+  in 
+  let (mp, l) = aux mp in
+    mp, l
+			
+let dump_moddef loc mp ty =
+  if !Flags.dump then
+    let (dp, l) = split_modpath mp in
+    let mp = string_of_dirpath (make_dirpath l) in
+      Flags.dump_string (Printf.sprintf "%s %d %s %s\n" ty (fst (unloc loc)) "<>" mp)
+
+let rec drop_last = function [] -> assert false | hd :: [] -> [] | hd :: tl -> hd :: drop_last tl
+
+let dump_modref loc mp ty =
+  if !Flags.dump then
+    let (dp, l) = split_modpath mp in
+    let fp = string_of_dirpath dp in
+    let mp = string_of_dirpath (make_dirpath (drop_last l)) in
+      Flags.dump_string (Printf.sprintf "R%d %s %s %s %s\n" 
+			    (fst (unloc loc)) fp mp "<>" ty)
+
 (* Search for the head of [qid] in [binders]. 
    If found, returns the module_path/kernel_name created from the dirpath
    and the basename. Searches Nametab otherwise.
 *)
-
 let lookup_module (loc,qid) =
   try
-    Nametab.locate_module qid
+    let mp = Nametab.locate_module qid in
+      dump_modref loc mp "modtype"; mp
   with
     | Not_found -> Modops.error_not_a_module_loc loc (string_of_qualid qid)
 	
 let lookup_modtype (loc,qid) =
   try
-    Nametab.locate_modtype qid
+    let mp = Nametab.locate_modtype qid in
+      dump_modref loc mp "mod"; mp
   with
     | Not_found -> 
 	Modops.error_not_a_modtype_loc loc (string_of_qualid qid)
@@ -84,20 +114,23 @@ let transl_with_decl env = function
   | CWith_Definition ((_,fqid),c) ->
       With_Definition (fqid,interp_constr Evd.empty env c)
 
-let rec interp_modtype env = function 
-  | CMTEident qid ->
-      MTEident (lookup_modtype qid)
-  | CMTEwith (mty,decl) ->
-      let mty = interp_modtype env mty in
-      let decl = transl_with_decl env decl in
-	MTEwith(mty,decl)
- 
-
 let rec interp_modexpr env = function 
   | CMEident qid ->
-      MEident (lookup_module qid)
+      MSEident (lookup_module qid)
   | CMEapply (me1,me2) ->
       let me1 = interp_modexpr env me1 in
       let me2 = interp_modexpr env me2 in
-	MEapply(me1,me2)
+	MSEapply(me1,me2)
+
+let rec interp_modtype env = function 
+  | CMTEident qid ->
+      MSEident (lookup_modtype qid)
+  | CMTEapply (mty1,me) -> 
+      let mty' = interp_modtype env mty1 in
+      let me' = interp_modexpr env me in
+	MSEapply(mty',me')
+  | CMTEwith (mty,decl) ->
+      let mty = interp_modtype env mty in
+      let decl = transl_with_decl env decl in
+	MSEwith(mty,decl)
 

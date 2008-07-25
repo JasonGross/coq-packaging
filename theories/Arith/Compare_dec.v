@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Compare_dec.v 9941 2007-07-05 12:42:35Z letouzey $ i*)
+(*i $Id: Compare_dec.v 10295 2007-11-06 22:46:21Z letouzey $ i*)
 
 Require Import Le.
 Require Import Lt.
@@ -170,7 +170,7 @@ Proof.
   exact (lt_irrefl n).
   intros.
   apply not_gt.
-  swap H.
+  contradict H.
   destruct (nat_compare_gt n m); auto.
 Qed.  
 
@@ -184,7 +184,7 @@ Proof.
   exact (lt_irrefl m).
   intros.
   apply not_lt.
-  swap H.
+  contradict H.
   destruct (nat_compare_lt n m); auto.
 Qed.  
 

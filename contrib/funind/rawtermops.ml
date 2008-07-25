@@ -12,10 +12,10 @@ let idmap_is_empty m = m = Idmap.empty
 let mkRRef ref = RRef(dummy_loc,ref)
 let mkRVar id = RVar(dummy_loc,id)
 let mkRApp(rt,rtl) = RApp(dummy_loc,rt,rtl)
-let mkRLambda(n,t,b) = RLambda(dummy_loc,n,t,b)
-let mkRProd(n,t,b) = RProd(dummy_loc,n,t,b)
+let mkRLambda(n,t,b) = RLambda(dummy_loc,n,Explicit,t,b)
+let mkRProd(n,t,b) = RProd(dummy_loc,n,Explicit,t,b)
 let mkRLetIn(n,t,b) = RLetIn(dummy_loc,n,t,b)
-let mkRCases(rto,l,brl) = RCases(dummy_loc,rto,l,brl)
+let mkRCases(rto,l,brl) = RCases(dummy_loc,Term.RegularStyle,rto,l,brl)
 let mkRSort s = RSort(dummy_loc,s)
 let mkRHole () = RHole(dummy_loc,Evd.BinderType Anonymous)
 let mkRCast(b,t) = RCast(dummy_loc,b,CastConv (Term.DEFAULTcast,t))
@@ -26,8 +26,18 @@ let mkRCast(b,t) = RCast(dummy_loc,b,CastConv (Term.DEFAULTcast,t))
 *)
 let raw_decompose_prod = 
   let rec raw_decompose_prod args = function 
-  | RProd(_,n,t,b) -> 
+  | RProd(_,n,k,t,b) -> 
       raw_decompose_prod ((n,t)::args) b 
+  | rt -> args,rt
+  in
+  raw_decompose_prod []
+
+let raw_decompose_prod_or_letin = 
+  let rec raw_decompose_prod args = function 
+  | RProd(_,n,k,t,b) -> 
+      raw_decompose_prod ((n,None,Some t)::args) b 
+  | RLetIn(_,n,t,b) -> 
+      raw_decompose_prod ((n,Some t,None)::args) b 
   | rt -> args,rt
   in
   raw_decompose_prod []
@@ -35,13 +45,35 @@ let raw_decompose_prod =
 let raw_compose_prod = 
   List.fold_left (fun b (n,t) -> mkRProd(n,t,b))
 
+let raw_compose_prod_or_letin = 
+  List.fold_left (
+      fun concl decl -> 
+	match decl with 
+	  | (n,None,Some t) -> mkRProd(n,t,concl)
+	  | (n,Some bdy,None) -> mkRLetIn(n,bdy,concl)
+	  | _ -> assert false)
+
 let raw_decompose_prod_n n = 
   let rec raw_decompose_prod i args c = 
     if i<=0 then args,c
     else
       match c with
-	| RProd(_,n,t,b) -> 
+	| RProd(_,n,_,t,b) -> 
 	    raw_decompose_prod (i-1) ((n,t)::args) b 
+	| rt -> args,rt
+  in
+  raw_decompose_prod n []
+
+
+let raw_decompose_prod_or_letin_n n = 
+  let rec raw_decompose_prod i args c = 
+    if i<=0 then args,c
+    else
+      match c with
+	| RProd(_,n,_,t,b) -> 
+	    raw_decompose_prod (i-1) ((n,None,Some t)::args) b 
+	| RLetIn(_,n,t,b) -> 
+	    raw_decompose_prod (i-1) ((n,Some t,None)::args) b 
 	| rt -> args,rt
   in
   raw_decompose_prod n []
@@ -103,15 +135,17 @@ let change_vars =
 	       change_vars mapping rt',
 	       List.map (change_vars mapping) rtl
 	      )
-      | RLambda(loc,name,t,b) -> 
+      | RLambda(loc,name,k,t,b) -> 
 	  RLambda(loc,
 		  name,
+		  k,
 		  change_vars mapping t,
 		  change_vars (remove_name_from_mapping mapping name) b
 		 )
-      | RProd(loc,name,t,b) -> 
+      | RProd(loc,name,k,t,b) -> 
 	  RProd(loc,
 		  name,
+	          k,
 		  change_vars mapping t,
 		  change_vars (remove_name_from_mapping mapping name) b
 		 )
@@ -125,12 +159,12 @@ let change_vars =
 	  let new_mapping = List.fold_left remove_name_from_mapping mapping nal in 
 	  RLetTuple(loc,
 		    nal,
-		    (na, option_map (change_vars mapping) rto), 
+		    (na, Option.map (change_vars mapping) rto), 
 		    change_vars mapping b, 
 		    change_vars new_mapping e
 		   )
-      | RCases(loc,infos,el,brl) -> 
-	  RCases(loc,
+      | RCases(loc,sty,infos,el,brl) -> 
+	  RCases(loc,sty,
 		 infos,
 		 List.map (fun (e,x) -> (change_vars mapping e,x)) el, 
 		 List.map (change_vars_br mapping) brl
@@ -138,7 +172,7 @@ let change_vars =
       | RIf(loc,b,(na,e_option),lhs,rhs) -> 
 	  RIf(loc,
 	      change_vars mapping b,
-	      (na,option_map (change_vars mapping) e_option),
+	      (na,Option.map (change_vars mapping) e_option),
 	      change_vars mapping lhs,
 	      change_vars mapping rhs
 	     )
@@ -229,21 +263,21 @@ let rec alpha_rt excluded rt =
   let new_rt = 
     match rt with   
       | RRef _ | RVar _ | REvar _ | RPatVar _ -> rt
-      | RLambda(loc,Anonymous,t,b) -> 
+      | RLambda(loc,Anonymous,k,t,b) -> 
 	  let new_id = Nameops.next_ident_away (id_of_string "_x") excluded in 
 	  let new_excluded = new_id :: excluded in 
 	  let new_t = alpha_rt new_excluded t in 
 	  let new_b = alpha_rt new_excluded b in 
-	  RLambda(loc,Name new_id,new_t,new_b)
-      | RProd(loc,Anonymous,t,b) -> 
+	  RLambda(loc,Name new_id,k,new_t,new_b)
+      | RProd(loc,Anonymous,k,t,b) -> 
 	let new_t = alpha_rt excluded t in 
 	let new_b = alpha_rt excluded b in 
-	RProd(loc,Anonymous,new_t,new_b)
+	RProd(loc,Anonymous,k,new_t,new_b)
     | RLetIn(loc,Anonymous,t,b) -> 
 	let new_t = alpha_rt excluded t in 
 	let new_b = alpha_rt excluded b in 
 	RLetIn(loc,Anonymous,new_t,new_b)
-    | RLambda(loc,Name id,t,b) -> 
+    | RLambda(loc,Name id,k,t,b) -> 
 	let new_id = Nameops.next_ident_away id excluded in 
 	let t,b = 
 	  if new_id = id 
@@ -255,8 +289,8 @@ let rec alpha_rt excluded rt =
 	let new_excluded = new_id::excluded in 
 	let new_t = alpha_rt new_excluded t in 
 	let new_b = alpha_rt new_excluded b in 
-	RLambda(loc,Name new_id,new_t,new_b)
-    | RProd(loc,Name id,t,b) -> 
+	RLambda(loc,Name new_id,k,new_t,new_b)
+    | RProd(loc,Name id,k,t,b) -> 
 	let new_id = Nameops.next_ident_away id excluded in 
 	let new_excluded = new_id::excluded in 
 	let t,b = 
@@ -268,7 +302,7 @@ let rec alpha_rt excluded rt =
 	in
 	let new_t = alpha_rt new_excluded t in 
 	let new_b = alpha_rt new_excluded b in 
-	RProd(loc,Name new_id,new_t,new_b)
+	RProd(loc,Name new_id,k,new_t,new_b)
     | RLetIn(loc,Name id,t,b) -> 
 	let new_id = Nameops.next_ident_away id excluded in 
 	let t,b = 
@@ -306,20 +340,20 @@ let rec alpha_rt excluded rt =
 	  if idmap_is_empty mapping
 	  then rto,t,b
 	  else let replace = change_vars mapping in 
-	  (option_map replace rto, t,replace b)
+	  (Option.map replace rto, t,replace b)
 	in
 	let new_t = alpha_rt new_excluded new_t in 
 	let new_b = alpha_rt new_excluded new_b in 
-	let new_rto = option_map (alpha_rt new_excluded) new_rto  in
+	let new_rto = Option.map (alpha_rt new_excluded) new_rto  in
 	RLetTuple(loc,new_nal,(na,new_rto),new_t,new_b)
-    | RCases(loc,infos,el,brl) -> 
+    | RCases(loc,sty,infos,el,brl) -> 
 	let new_el = 
 	  List.map (function (rt,i) -> alpha_rt excluded rt, i) el 
 	in 
-	RCases(loc,infos,new_el,List.map (alpha_br excluded) brl) 
+	RCases(loc,sty,infos,new_el,List.map (alpha_br excluded) brl) 
     | RIf(loc,b,(na,e_o),lhs,rhs) -> 
 	RIf(loc,alpha_rt excluded b,
-	    (na,option_map (alpha_rt excluded) e_o),
+	    (na,Option.map (alpha_rt excluded) e_o),
 	    alpha_rt excluded lhs,
 	    alpha_rt excluded rhs
 	   )
@@ -357,17 +391,16 @@ let is_free_in id =
     | REvar _ -> false
     | RPatVar _ -> false
     | RApp(_,rt,rtl) -> List.exists is_free_in (rt::rtl)
-    | RLambda(_,n,t,b) | RProd(_,n,t,b) | RLetIn(_,n,t,b) ->
+    | RLambda(_,n,_,t,b) | RProd(_,n,_,t,b) | RLetIn(_,n,t,b) ->
 	let check_in_b =
 	  match n with
 	    | Name id' -> id_ord id' id <> 0
 	    | _ -> true
 	in
 	is_free_in t || (check_in_b && is_free_in b)
-    | RCases(_,_,el,brl) ->
+    | RCases(_,_,_,el,brl) ->
 	(List.exists (fun (e,_) -> is_free_in e) el) ||
 	  List.exists is_free_in_br brl
-
     | RLetTuple(_,nal,_,b,t) -> 
 	let check_in_nal = 
 	  not (List.exists (function Name id' -> id'= id | _ -> false) nal) 
@@ -428,17 +461,19 @@ let replace_var_by_term x_id term =
 	       replace_var_by_pattern rt',
 	       List.map replace_var_by_pattern rtl
 	      )
-      | RLambda(_,Name id,_,_) when id_ord id x_id == 0 -> rt
-      | RLambda(loc,name,t,b) -> 
+      | RLambda(_,Name id,_,_,_) when id_ord id x_id == 0 -> rt
+      | RLambda(loc,name,k,t,b) -> 
 	  RLambda(loc,
 		  name,
+		  k,
 		  replace_var_by_pattern t,
 		  replace_var_by_pattern b
 		 )
-      | RProd(_,Name id,_,_) when id_ord id x_id == 0 -> rt
-      | RProd(loc,name,t,b) -> 
+      | RProd(_,Name id,_,_,_) when id_ord id x_id == 0 -> rt
+      | RProd(loc,name,k,t,b) -> 
 	  RProd(loc,
 		  name,
+	          k,
 		  replace_var_by_pattern t,
 		  replace_var_by_pattern b
 		 )
@@ -455,19 +490,19 @@ let replace_var_by_term x_id term =
       | RLetTuple(loc,nal,(na,rto),def,b) -> 
 	  RLetTuple(loc,
 		    nal,
-		    (na,option_map replace_var_by_pattern rto),
+		    (na,Option.map replace_var_by_pattern rto),
 		    replace_var_by_pattern def,
 		    replace_var_by_pattern b
 		   )
-      | RCases(loc,infos,el,brl) -> 
-	  RCases(loc,
+      | RCases(loc,sty,infos,el,brl) -> 
+	  RCases(loc,sty,
 		 infos,
 		 List.map (fun (e,x) -> (replace_var_by_pattern e,x)) el, 
 		 List.map replace_var_by_pattern_br brl
 		)
       | RIf(loc,b,(na,e_option),lhs,rhs) -> 
 	  RIf(loc, replace_var_by_pattern b,
-	      (na,option_map replace_var_by_pattern e_option),
+	      (na,Option.map replace_var_by_pattern e_option),
 	      replace_var_by_pattern lhs,
 	      replace_var_by_pattern rhs
 	     )
@@ -558,15 +593,15 @@ let ids_of_rawterm c =
       | RVar (_,id) -> id::acc
       | RApp (loc,g,args) -> 
           ids_of_rawterm [] g @ List.flatten (List.map (ids_of_rawterm []) args) @ acc
-      | RLambda (loc,na,ty,c) -> idof na :: ids_of_rawterm [] ty @ ids_of_rawterm [] c @ acc
-      | RProd (loc,na,ty,c) -> idof na :: ids_of_rawterm [] ty @ ids_of_rawterm [] c @ acc
+      | RLambda (loc,na,k,ty,c) -> idof na :: ids_of_rawterm [] ty @ ids_of_rawterm [] c @ acc
+      | RProd (loc,na,k,ty,c) -> idof na :: ids_of_rawterm [] ty @ ids_of_rawterm [] c @ acc
       | RLetIn (loc,na,b,c) -> idof na :: ids_of_rawterm [] b @ ids_of_rawterm [] c @ acc
       | RCast (loc,c,CastConv(k,t)) -> ids_of_rawterm [] c @ ids_of_rawterm [] t @ acc
       | RCast (loc,c,CastCoerce) -> ids_of_rawterm [] c @ acc
       | RIf (loc,c,(na,po),b1,b2) -> ids_of_rawterm [] c @ ids_of_rawterm [] b1 @ ids_of_rawterm [] b2 @ acc
       | RLetTuple (_,nal,(na,po),b,c) -> 
           List.map idof nal @ ids_of_rawterm [] b @ ids_of_rawterm [] c @ acc
-      | RCases (loc,rtntypopt,tml,brchl) -> 
+      | RCases (loc,sty,rtntypopt,tml,brchl) -> 
 	  List.flatten (List.map (fun (_,idl,patl,c) -> idl @ ids_of_rawterm [] c) brchl)
       | RRec _ -> failwith "Fix inside a constructor branch"
       | (RSort _ | RHole _ | RRef _ | REvar _ | RPatVar _ | RDynamic _) -> []
@@ -590,15 +625,17 @@ let zeta_normalize =
 	       zeta_normalize_term rt',
 	       List.map zeta_normalize_term rtl
 	      )
-      | RLambda(loc,name,t,b) -> 
+      | RLambda(loc,name,k,t,b) -> 
 	  RLambda(loc,
 		  name,
+		  k,
 		  zeta_normalize_term t,
 		  zeta_normalize_term b
 		 )
-      | RProd(loc,name,t,b) -> 
+      | RProd(loc,name,k,t,b) -> 
 	  RProd(loc,
-		name, 		  
+		name, 		
+	        k,
 		zeta_normalize_term t,
 		zeta_normalize_term b
 		 )
@@ -608,19 +645,19 @@ let zeta_normalize =
       | RLetTuple(loc,nal,(na,rto),def,b) -> 
 	  RLetTuple(loc,
 		    nal,
-		    (na,option_map zeta_normalize_term rto),
+		    (na,Option.map zeta_normalize_term rto),
 		    zeta_normalize_term def,
 		    zeta_normalize_term b
 		   )
-      | RCases(loc,infos,el,brl) -> 
-	  RCases(loc,
+      | RCases(loc,sty,infos,el,brl) -> 
+	  RCases(loc,sty,
 		 infos,
 		 List.map (fun (e,x) -> (zeta_normalize_term e,x)) el, 
 		 List.map zeta_normalize_br brl
 		)
       | RIf(loc,b,(na,e_option),lhs,rhs) -> 
 	  RIf(loc, zeta_normalize_term b,
-	      (na,option_map zeta_normalize_term e_option),
+	      (na,Option.map zeta_normalize_term e_option),
 	      zeta_normalize_term lhs,
 	      zeta_normalize_term rhs
 	     )
@@ -659,24 +696,23 @@ let expand_as =
 	    with Not_found -> rt 
 	  end
       | RApp(loc,f,args) -> RApp(loc,expand_as map f,List.map (expand_as map) args)
-      | RLambda(loc,na,t,b) -> RLambda(loc,na,expand_as map t, expand_as map b)
-      | RProd(loc,na,t,b) -> RProd(loc,na,expand_as map t, expand_as map b)
+      | RLambda(loc,na,k,t,b) -> RLambda(loc,na,k,expand_as map t, expand_as map b)
+      | RProd(loc,na,k,t,b) -> RProd(loc,na,k,expand_as map t, expand_as map b)
       | RLetIn(loc,na,v,b) -> RLetIn(loc,na, expand_as map v,expand_as map b)
       | RLetTuple(loc,nal,(na,po),v,b) ->
-	  RLetTuple(loc,nal,(na,option_map (expand_as map) po),
+	  RLetTuple(loc,nal,(na,Option.map (expand_as map) po),
 		    expand_as map v, expand_as map b)
       | RIf(loc,e,(na,po),br1,br2) ->
-	  RIf(loc,expand_as map e,(na,option_map (expand_as map) po),
+	  RIf(loc,expand_as map e,(na,Option.map (expand_as map) po),
 	      expand_as map br1, expand_as map br2)
       | RRec _ ->  error "Not handled RRec"
       | RDynamic _ -> error "Not handled RDynamic"
       | RCast(loc,b,CastConv(kind,t)) -> RCast(loc,expand_as map b,CastConv(kind,expand_as map t))
       | RCast(loc,b,CastCoerce) -> RCast(loc,expand_as map b,CastCoerce)
-      | RCases(loc,po,el,brl) ->
-	  RCases(loc, option_map (expand_as map) po, List.map (fun (rt,t) -> expand_as map rt,t) el,
+      | RCases(loc,sty,po,el,brl) ->
+	  RCases(loc, sty, Option.map (expand_as map) po, List.map (fun (rt,t) -> expand_as map rt,t) el,
 		List.map (expand_as_br map) brl)
-	    
   and expand_as_br map (loc,idl,cpl,rt) = 
-    (loc,idl,cpl,    expand_as (List.fold_left add_as map cpl) rt)
+    (loc,idl,cpl, expand_as (List.fold_left add_as map cpl) rt)
   in
   expand_as Idmap.empty 

@@ -151,7 +151,7 @@ let pp_string x =
 let unify_e_resolve  (c,clenv) gls = 
   let clenv' = connect_clenv gls clenv in
   let _ = clenv_unique_resolver false clenv' gls in
-  vernac_e_resolve_constr c gls
+    Hiddentac.h_simplest_eapply c gls
 
 let rec e_trivial_fail_db db_list local_db goal =
   let tacl = 
@@ -161,33 +161,36 @@ let rec e_trivial_fail_db db_list local_db goal =
 	  let d = pf_last_hyp g' in
 	  let hintl = make_resolve_hyp (pf_env g') (project g') d in
           (e_trivial_fail_db db_list
-	     (Hint_db.add_list hintl local_db) g'))) ::
+	     (add_hint_list hintl local_db) g'))) ::
     (List.map fst (e_trivial_resolve db_list local_db (pf_concl goal)) )
   in 
   tclFIRST (List.map tclCOMPLETE tacl) goal 
 
 and e_my_find_search db_list local_db hdc concl = 
   let hdc = head_of_constr_reference hdc in
+  let flags = Auto.auto_unif_flags in
   let hintl =
     if occur_existential concl then 
-      list_map_append (Hint_db.map_all hdc) (local_db::db_list)
+      list_map_append (fun (st, db) -> List.map (fun x -> ({flags with Unification.modulo_delta = st}, x))
+	(Hint_db.map_all hdc db)) (local_db::db_list)
     else 
-      list_map_append (Hint_db.map_auto (hdc,concl)) (local_db::db_list)
+      list_map_append (fun (st, db) -> List.map (fun x -> ({flags with Unification.modulo_delta = st}, x)) 
+	(Hint_db.map_auto (hdc,concl) db)) (local_db::db_list)
   in 
   let tac_of_hint = 
-    fun ({pri=b; pat = p; code=t} as _patac) -> 
+    fun (st, ({pri=b; pat = p; code=t} as _patac)) -> 
       (b, 
        let tac =
 	 match t with
-	   | Res_pf (term,cl) -> unify_resolve (term,cl)
+	   | Res_pf (term,cl) -> unify_resolve st (term,cl)
 	   | ERes_pf (term,cl) -> unify_e_resolve (term,cl)
 	   | Give_exact (c) -> e_give_exact_constr c
 	   | Res_pf_THEN_trivial_fail (term,cl) ->
                tclTHEN (unify_e_resolve (term,cl)) 
 		 (e_trivial_fail_db db_list local_db)
-	   | Unfold_nth c -> unfold_in_concl [[],c]
+	   | Unfold_nth c -> unfold_in_concl [all_occurrences,c]
 	   | Extern tacast -> Auto.conclPattern concl 
-	       (out_some p) tacast
+	       (Option.get p) tacast
        in 
        (free_try tac,fmt_autotactic t))
        (*i
@@ -227,8 +230,8 @@ module MySearchProblem = struct
     depth : int; (*r depth of search before failing *)
     tacres : goal list sigma * validation;
     last_tactic : std_ppcmds;
-    dblist : Auto.Hint_db.t list;
-    localdb :  Auto.Hint_db.t list }
+    dblist : Auto.hint_db list;
+    localdb :  Auto.hint_db list }
 		 
   let success s = (sig_it (fst s.tacres)) = []
 
@@ -241,9 +244,6 @@ module MySearchProblem = struct
 	  ((lgls,v'),pptac) :: filter_tactics (glls,v) tacl
 	with e when Logic.catchable_exception e ->
 	  filter_tactics (glls,v) tacl
-
-  let rec list_addn n x l = 
-    if n = 0 then l else x :: (list_addn (pred n) x l)
 
   (* Ordering of states is lexicographic on depth (greatest first) then
      number of remaining goals. *)
@@ -279,7 +279,7 @@ module MySearchProblem = struct
 	     let hintl = 
 	       make_resolve_hyp (pf_env g') (project g') (pf_last_hyp g')
 	     in
-             let ldb = Hint_db.add_list hintl (List.hd s.localdb) in
+             let ldb = add_hint_list hintl (List.hd s.localdb) in
 	     { depth = s.depth; tacres = res; 
 	       last_tactic = pp; dblist = s.dblist;
 	       localdb = ldb :: List.tl s.localdb })
@@ -337,7 +337,7 @@ let e_breadth_search debug n db_list local_db gl =
   with Not_found -> error "EAuto: breadth first search failed"
 
 let e_search_auto debug (n,p) db_list gl = 
-  let local_db = make_local_hint_db [] gl in 
+  let local_db = make_local_hint_db true [] gl in 
   if n = 0 then 
     e_depth_search debug p db_list local_db gl
   else 
@@ -357,7 +357,7 @@ let full_eauto debug n gl =
   let dbnames = current_db_names () in
   let dbnames =  list_subtract dbnames ["v62"] in
   let db_list = List.map searchtable_map dbnames in
-  let _local_db = make_local_hint_db [] gl in
+  let _local_db = make_local_hint_db true [] gl in
   tclTRY (e_search_auto debug n db_list) gl
 
 let my_full_eauto n gl = full_eauto false (n,0) gl
@@ -375,7 +375,7 @@ let rec trivial_fail_db db_list local_db gl =
     tclTHEN intro 
       (fun g'->
 	 let hintl = make_resolve_hyp (pf_env g') (project g') (pf_last_hyp g')
-	 in trivial_fail_db db_list (Hint_db.add_list hintl local_db) g')
+	 in trivial_fail_db db_list (add_hint_list hintl local_db) g')
   in
   tclFIRST 
     (assumption::intro_tac::
@@ -383,27 +383,29 @@ let rec trivial_fail_db db_list local_db gl =
 	(trivial_resolve db_list local_db (pf_concl gl)))) gl
 
 and my_find_search db_list local_db hdc concl =
+  let flags = Auto.auto_unif_flags in
   let tacl = 
     if occur_existential concl then 
-      list_map_append (fun db -> Hint_db.map_all hdc db) (local_db::db_list)
+      list_map_append (fun (st, db) -> List.map (fun x -> {flags with Unification.modulo_delta = st}, x) 
+	(Hint_db.map_all hdc db)) (local_db::db_list)
     else 
-      list_map_append (fun db -> Hint_db.map_auto (hdc,concl) db)
-      	(local_db::db_list)
+      list_map_append (fun (st, db) -> List.map (fun x -> {flags with Unification.modulo_delta = st}, x)
+	(Hint_db.map_auto (hdc,concl) db)) (local_db::db_list)
   in
   List.map 
-    (fun ({pri=b; pat=p; code=t} as _patac) -> 
+    (fun (st, {pri=b; pat=p; code=t} as _patac) -> 
        (b,
 	match t with
-	  | Res_pf (term,cl)  -> unify_resolve (term,cl)
+	  | Res_pf (term,cl)  -> unify_resolve st (term,cl)
 	  | ERes_pf (_,c) -> (fun gl -> error "eres_pf")
 	  | Give_exact c  -> exact_check c
 	  | Res_pf_THEN_trivial_fail (term,cl) -> 
 	      tclTHEN 
-		(unify_resolve (term,cl)) 
+		(unify_resolve st (term,cl)) 
 		(trivial_fail_db db_list local_db)
-	  | Unfold_nth c -> unfold_in_concl [[],c]
+	  | Unfold_nth c -> unfold_in_concl [all_occurrences,c]
 	  | Extern tacast -> 
-	      conclPattern concl (out_some p) tacast))
+	      conclPattern concl (Option.get p) tacast))
     tacl
 
 and trivial_resolve db_list local_db cl = 
@@ -470,11 +472,12 @@ let rec search_gen decomp n db_list local_db extra_sign goal =
 	   try 
 	     [make_apply_entry (pf_env g') (project g')
 		(true,false) 
-		(mkVar hid,body_of_type htyp)]
+		None
+		(mkVar hid,htyp)]
 	   with Failure _ -> [] 
 	 in
          (free_try
-	  (search_gen decomp n db_list (Hint_db.add_list hintl local_db) [d])
+	  (search_gen decomp n db_list (add_hint_list hintl local_db) [d])
 	  g'))
   in
   let rec_tacs = 
@@ -497,7 +500,7 @@ let full_auto n gl =
   let dbnames = list_subtract dbnames ["v62"] in
   let db_list = List.map searchtable_map dbnames in
   let hyps = pf_hyps gl in
-  tclTRY (search n db_list (make_local_hint_db [] gl) hyps) gl
+  tclTRY (search n db_list (make_local_hint_db false [] gl) hyps) gl
   
 let default_full_auto gl = full_auto !default_search_depth gl
 (************************************************************************)

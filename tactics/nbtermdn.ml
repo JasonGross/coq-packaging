@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: nbtermdn.ml 8752 2006-04-27 19:37:33Z herbelin $ *)
+(* $Id: nbtermdn.ml 10346 2007-12-05 21:11:19Z aspiwack $ *)
 
 open Util
 open Names
@@ -43,14 +43,14 @@ let get_dn dnm hkey =
   try Gmap.find hkey dnm with Not_found -> Btermdn.create ()
 
 let add dn (na,(pat,valu)) =
-  let hkey = option_map fst (Termdn.constr_pat_discr pat) in 
+  let hkey = Option.map fst (Termdn.constr_pat_discr pat) in 
   dn.table <- Gmap.add na (pat,valu) dn.table;
   let dnm = dn.patterns in
   dn.patterns <- Gmap.add hkey (Btermdn.add (get_dn dnm hkey) (pat,valu)) dnm
     
 let rmv dn na =
   let (pat,valu) = Gmap.find na dn.table in
-  let hkey = option_map fst (Termdn.constr_pat_discr pat) in 
+  let hkey = Option.map fst (Termdn.constr_pat_discr pat) in 
   dn.table <- Gmap.remove na dn.table;
   let dnm = dn.patterns in
   dn.patterns <- Gmap.add hkey (Btermdn.rmv (get_dn dnm hkey) (pat,valu)) dnm
@@ -62,7 +62,7 @@ let remap ndn na (pat,valu) =
   add ndn (na,(pat,valu))
 
 let lookup dn valu =
-  let hkey = option_map fst (Termdn.constr_val_discr valu) in 
+  let hkey = Option.map fst (Termdn.constr_val_discr valu) in 
   try Btermdn.lookup (Gmap.find hkey  dn.patterns) valu with Not_found -> []
 
 let app f dn = Gmap.iter f dn.table

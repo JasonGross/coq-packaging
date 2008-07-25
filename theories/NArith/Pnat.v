@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Pnat.v 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: Pnat.v 9883 2007-06-07 18:44:59Z letouzey $ i*)
 
 Require Import BinPos.
 
@@ -14,7 +14,7 @@ Require Import BinPos.
 (** Properties of the injection from binary positive numbers to Peano 
     natural numbers *)
 
-(** Original development by Pierre Crégut, CNET, Lannion, France *)
+(** Original development by Pierre CrÃ©gut, CNET, Lannion, France *)
 
 Require Import Le.
 Require Import Lt.

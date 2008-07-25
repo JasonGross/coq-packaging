@@ -6,8 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Zmisc.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Zmisc.v 11072 2008-06-08 16:13:37Z herbelin $ i*)
 
+Require Import Wf_nat.
 Require Import BinInt.
 Require Import Zcompare.
 Require Import Zorder.
@@ -18,37 +19,23 @@ Open Local Scope Z_scope.
 (** Iterators *)
 
 (** [n]th iteration of the function [f] *)
-Fixpoint iter_nat (n:nat) (A:Set) (f:A -> A) (x:A) {struct n} : A :=
-  match n with
-    | O => x
-    | S n' => f (iter_nat n' A f x)
-  end.
 
-Fixpoint iter_pos (n:positive) (A:Set) (f:A -> A) (x:A) {struct n} : A :=
+Fixpoint iter_pos (n:positive) (A:Type) (f:A -> A) (x:A) {struct n} : A :=
   match n with
     | xH => f x
     | xO n' => iter_pos n' A f (iter_pos n' A f x)
     | xI n' => f (iter_pos n' A f (iter_pos n' A f x))
   end.
 
-Definition iter (n:Z) (A:Set) (f:A -> A) (x:A) :=
+Definition iter (n:Z) (A:Type) (f:A -> A) (x:A) :=
   match n with
     | Z0 => x
     | Zpos p => iter_pos p A f x
     | Zneg p => x
   end.
 
-Theorem iter_nat_plus :
-  forall (n m:nat) (A:Set) (f:A -> A) (x:A),
-    iter_nat (n + m) A f x = iter_nat n A f (iter_nat m A f x).
-Proof.    
-  simple induction n;
-    [ simpl in |- *; auto with arith
-      | intros; simpl in |- *; apply f_equal with (f := f); apply H ].  
-Qed.
-
 Theorem iter_nat_of_P :
-  forall (p:positive) (A:Set) (f:A -> A) (x:A),
+  forall (p:positive) (A:Type) (f:A -> A) (x:A),
     iter_pos p A f x = iter_nat (nat_of_P p) A f x.
 Proof.    
   intro n; induction n as [p H| p H| ];
@@ -63,7 +50,7 @@ Proof.
 Qed.
 
 Theorem iter_pos_plus :
-  forall (p q:positive) (A:Set) (f:A -> A) (x:A),
+  forall (p q:positive) (A:Type) (f:A -> A) (x:A),
     iter_pos (p + q) A f x = iter_pos p A f (iter_pos q A f x).
 Proof.    
   intros n m; intros.
@@ -78,7 +65,7 @@ Qed.
     then the iterates of [f] also preserve it. *)
 
 Theorem iter_nat_invariant :
-  forall (n:nat) (A:Set) (f:A -> A) (Inv:A -> Prop),
+  forall (n:nat) (A:Type) (f:A -> A) (Inv:A -> Prop),
     (forall x:A, Inv x -> Inv (f x)) ->
     forall x:A, Inv x -> Inv (iter_nat n A f x).
 Proof.    
@@ -89,7 +76,7 @@ Proof.
 Qed.
 
 Theorem iter_pos_invariant :
-  forall (p:positive) (A:Set) (f:A -> A) (Inv:A -> Prop),
+  forall (p:positive) (A:Type) (f:A -> A) (Inv:A -> Prop),
     (forall x:A, Inv x -> Inv (f x)) ->
     forall x:A, Inv x -> Inv (iter_pos p A f x).
 Proof.    

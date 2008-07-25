@@ -1,3 +1,4 @@
+(* -*- compile-command: "make -C ../.. bin/coqdoc" -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -6,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: index.mll 9204 2006-10-04 13:05:58Z notin $ i*)
+(*i $Id: index.mll 11065 2008-06-06 22:39:43Z msozeau $ i*)
 
 {
 
@@ -25,30 +26,48 @@ type entry_type =
   | Inductive
   | Constructor
   | Lemma
+  | Record
+  | Projection
+  | Instance
+  | Class
+  | Method
   | Variable
   | Axiom
   | TacticDefinition
+  | Abbreviation
+  | Notation
+  | Section
 
 type index_entry = 
   | Def of string * entry_type
-  | Ref of coq_module * string
+  | Ref of coq_module * string * entry_type
   | Mod of coq_module * string
 
 let current_type = ref Library
 let current_library = ref ""
-  (** referes to the file being parsed *)
+  (** refers to the file being parsed *)
 
 let table = Hashtbl.create 97
   (** [table] is used to store references and definitions *)
 
-let add_def loc ty id = Hashtbl.add table (!current_library, loc) (Def (id, ty))
+let full_ident sp id =
+  if sp <> "<>" then 
+    if id <> "<>" then 
+      sp ^ "." ^ id 
+    else sp 
+  else if id <> "<>" 
+  then id 
+  else ""
+    
+let add_def loc ty sp id = 
+  Hashtbl.add table (!current_library, loc) (Def (full_ident sp id, ty))
 
-let add_ref m loc m' id = Hashtbl.add table (m, loc) (Ref (m', id))
-
+let add_ref m loc m' sp id ty = 
+  Hashtbl.add table (m, loc) (Ref (m', full_ident sp id, ty))
+    
 let add_mod m loc m' id = Hashtbl.add table (m, loc) (Mod (m', id))
 
 let find m l = Hashtbl.find table (m, l)
-
 
 (*s Manipulating path prefixes *) 
 
@@ -99,14 +118,15 @@ let make_fullid id =
     else 
       id
 
+
 (* Coq modules *)
 
 let split_sp s = 
   try
     let i = String.rindex s '.' in
-    String.sub s 0 i, String.sub s (i + 1) (String.length s - i - 1)
-  with Not_found -> 
-    "", s
+      String.sub s 0 i, String.sub s (i + 1) (String.length s - i - 1)
+  with 
+      Not_found -> "", s
 
 let modules = Hashtbl.create 97
 let local_modules = Hashtbl.create 97
@@ -118,8 +138,7 @@ let add_module m =
 
 type module_kind = Local | Coqlib | Unknown
 
-let coq_module m =
-  String.length m >= 4 && String.sub m 0 4 = "Coq."
+let coq_module m = String.length m >= 4 && String.sub m 0 4 = "Coq."
 
 let find_module m =
   if Hashtbl.mem local_modules m then 
@@ -129,14 +148,6 @@ let find_module m =
   else
     Unknown
 
-let ref_module loc s =
-  try
-    let n = String.length s in
-    let i = String.rindex s ' ' in 
-    let id = String.sub s (i+1) (n-i-1) in
-      add_mod !current_library (loc+i+1) (Hashtbl.find modules id) id
-  with Not_found -> 
-    ()
 
 (* Building indexes *)
 
@@ -181,10 +192,18 @@ let type_name = function
   | Inductive -> "inductive"
   | Constructor -> "constructor"
   | Lemma -> "lemma"
+  | Record -> "record"
+  | Projection -> "projection"
+  | Instance -> "instance"
+  | Class -> "class"
+  | Method -> "method"
   | Variable -> "variable"
   | Axiom -> "axiom"
   | TacticDefinition -> "tactic"
-      
+  | Abbreviation -> "abbreviation"
+  | Notation -> "notation"
+  | Section -> "section"
+
 let all_entries () =
   let gl = ref [] in
   let add_g s m t = gl := (s,(m,t)) :: !gl in
@@ -209,6 +228,8 @@ let all_entries () =
 }
 
 (*s Shortcuts for regular expressions. *)
+let digit = ['0'-'9']
+let num = digit+
 
 let space = 
   [' ' '\010' '\013' '\009' '\012']
@@ -225,16 +246,18 @@ let end_hide = "(*" space* "end" space+ "hide" space* "*)"
 (*s Indexing entry point. *)
   
 rule traverse = parse
-  | "Definition" space
+  | ("Program" space+)? "Definition" space
       { current_type := Definition; index_ident lexbuf; traverse lexbuf }
   | "Tactic" space+ "Definition" space
       { current_type := TacticDefinition; index_ident lexbuf; traverse lexbuf }
   | ("Axiom" | "Parameter") space 
       { current_type := Axiom; index_ident lexbuf; traverse lexbuf }
-  | "Fixpoint" space
+  | ("Program" space+)? "Fixpoint" space
       { current_type := Definition; index_ident lexbuf; fixpoint lexbuf;
 	traverse lexbuf }
-  | ("Lemma" | "Theorem") space
+  | ("Program" space+)? ("Lemma" | "Theorem") space
+      { current_type := Lemma; index_ident lexbuf; traverse lexbuf }
+  | "Obligation" space num ("of" ident)?
       { current_type := Lemma; index_ident lexbuf; traverse lexbuf }
   | "Inductive" space
       { current_type := Inductive; 
@@ -247,8 +270,8 @@ rule traverse = parse
   | "Variable" 's'? space
       { current_type := Variable; index_idents lexbuf; traverse lexbuf }
 ***i*)
-  | "Require" (space+ ("Export"|"Import"))? space+ ident
-      { ref_module (lexeme_start lexbuf) (lexeme lexbuf); traverse lexbuf }
+  | "Require" (space+ ("Export"|"Import"))? 
+      { module_refs lexbuf; traverse lexbuf }
   | "End" space+ 
       { end_ident lexbuf; traverse lexbuf }
   | begin_hide 
@@ -277,7 +300,7 @@ and index_ident = parse
 	      | Lemma -> make_fullid id
 	      | _ -> id 
 	in 
-	  add_def (lexeme_start lexbuf) !current_type fullid }
+	  add_def (lexeme_start lexbuf) !current_type "" fullid }
   | eof    
       { () }
   | _      
@@ -289,7 +312,7 @@ and index_idents = parse
   | space+ | ','
       { index_idents lexbuf }
   | ident  
-      { add_def (lexeme_start lexbuf) !current_type (lexeme lexbuf);
+      { add_def (lexeme_start lexbuf) !current_type "" (lexeme lexbuf);
 	index_idents lexbuf }
   | eof    
       { () }
@@ -369,14 +392,52 @@ and module_ident = parse
       { () }
   | ident
       { let id = lexeme lexbuf in
-	  begin_module id; add_def (lexeme_start lexbuf) !current_type id }
+	  begin_module id; add_def (lexeme_start lexbuf) !current_type "" id }
   | eof
       { () }
   | _
       { () }
 
+(*s parse module names *)
+
+and module_refs = parse
+  | space+ 
+      { module_refs lexbuf }
+  | ident  
+      { let id =  lexeme lexbuf in
+	  (try
+	      add_mod !current_library (lexeme_start lexbuf) (Hashtbl.find modules id) id
+	    with
+		Not_found -> ()
+	  ); 
+	module_refs lexbuf }
+  | eof    
+      { () }
+  | _      
+      { () }
+
 {
-  
+  let type_of_string = function
+    | "def" | "coe" | "subclass" | "canonstruc" 
+    | "ex" | "scheme" -> Definition
+    | "prf" | "thm" -> Lemma
+    | "ind" | "coind" -> Inductive
+    | "constr" -> Constructor
+    | "rec" | "corec" -> Record
+    | "proj" -> Projection
+    | "class" -> Class
+    | "meth" -> Method
+    | "inst" -> Instance
+    | "var" -> Variable
+    | "defax" | "prfax" | "ax" -> Axiom
+    | "syndef" -> Abbreviation
+    | "not" -> Notation
+    | "lib" -> Library
+    | "mod" | "modtype" -> Module
+    | "tac" -> TacticDefinition
+    | "sec" -> Section
+    | s -> raise (Invalid_argument ("type_of_string:" ^ s))
+	
   let read_glob f = 
     let c = open_in f in
     let cur_mod = ref "" in
@@ -387,22 +448,22 @@ and module_ident = parse
 	if n > 0 then begin
 	  match s.[0] with
 	    | 'F' -> 
-		cur_mod := String.sub s 1 (n - 1)
+		cur_mod := String.sub s 1 (n - 1);
+		current_library := !cur_mod
 	    | 'R' ->
 		(try
-		   let i = String.index s ' ' in
-		   let j = String.index_from s (i+1) ' ' in 
-		   let loc = int_of_string (String.sub s 1 (i - 1)) in
-		   let lib_dp = String.sub s (i + 1) (j - i - 1) in
-		   let full_id = String.sub s (j + 1) (n - j - 1) in
-		     add_ref !cur_mod loc lib_dp full_id
-		 with Not_found -> 
-		   ())
-	    | _ -> ()
+		    Scanf.sscanf s "R%d %s %s %s %s"
+		      (fun loc lib_dp sp id ty ->
+			add_ref !cur_mod loc lib_dp sp id (type_of_string ty))
+		  with _ -> ())
+	    | _ -> 
+		try Scanf.sscanf s "%s %d %s %s"
+		  (fun ty loc sp id -> add_def loc (type_of_string ty) sp id)
+		with Scanf.Scan_failure _ -> ()
 	end
-      done
+      done; assert false
     with End_of_file -> 
-      close_in c
+      close_in c; !cur_mod
 	
   let scan_file f m = 
     init_stack (); current_library := m;

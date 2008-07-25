@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: BinNat.v 8771 2006-04-29 11:55:57Z letouzey $ i*)
+(*i $Id: BinNat.v 10806 2008-04-16 23:51:06Z letouzey $ i*)
 
 Require Import BinPos.
 Unset Boxed Definitions.
@@ -59,6 +59,16 @@ Definition Nsucc n :=
   | Npos p => Npos (Psucc p)
   end.
 
+(** Predecessor *)
+
+Definition Npred (n : N) := match n with
+| N0 => N0
+| Npos p => match p with
+  | xH => N0
+  | _ => Npos (Ppred p)
+  end
+end.
+
 (** Addition *)
 
 Definition Nplus n m :=
@@ -69,6 +79,21 @@ Definition Nplus n m :=
   end.
 
 Infix "+" := Nplus : N_scope.
+
+(** Subtraction *)
+
+Definition Nminus (n m : N) :=
+match n, m with
+| N0, _ => N0
+| n, N0 => n
+| Npos n', Npos m' =>
+  match Pminus_mask n' m' with
+  | IsPos p => Npos p
+  | _ => N0
+  end
+end.
+
+Infix "-" := Nminus : N_scope.
 
 (** Multiplication *)
 
@@ -92,6 +117,28 @@ Definition Ncompare n m :=
   end.
 
 Infix "?=" := Ncompare (at level 70, no associativity) : N_scope.
+
+Definition Nlt (x y:N) := (x ?= y) = Lt.
+Definition Ngt (x y:N) := (x ?= y) = Gt.
+Definition Nle (x y:N) := (x ?= y) <> Gt.
+Definition Nge (x y:N) := (x ?= y) <> Lt.
+
+Infix "<=" := Nle : N_scope.
+Infix "<" := Nlt : N_scope.
+Infix ">=" := Nge : N_scope.
+Infix ">" := Ngt : N_scope.
+
+(** Min and max *)
+
+Definition Nmin (n n' : N) := match Ncompare n n' with 
+ | Lt | Eq => n
+ | Gt => n'
+ end.
+
+Definition Nmax (n n' : N) := match Ncompare n n' with 
+ | Lt | Eq => n'
+ | Gt => n
+ end.
 
 (** convenient induction principles *)
 
@@ -123,15 +170,48 @@ Qed.
 
 (** Peano induction on binary natural numbers *)
 
-Theorem Nind :
- forall P:N -> Prop,
-   P N0 -> (forall n:N, P n -> P (Nsucc n)) -> forall n:N, P n.
+Definition Nrect
+  (P : N -> Type) (a : P N0)
+    (f : forall n : N, P n -> P (Nsucc n)) (n : N) : P n :=
+let f' (p : positive) (x : P (Npos p)) := f (Npos p) x in
+let P' (p : positive) := P (Npos p) in
+match n return (P n) with
+| N0 => a
+| Npos p => Prect P' (f N0 a) f' p
+end.
+
+Theorem Nrect_base : forall P a f, Nrect P a f N0 = a.
 Proof.
-destruct n.
-  assumption.
-  apply Pind with (P := fun p => P (Npos p)).
-exact (H0 N0 H).
-intro p'; exact (H0 (Npos p')).
+intros P a f; simpl; reflexivity.
+Qed.
+
+Theorem Nrect_step : forall P a f n, Nrect P a f (Nsucc n) = f n (Nrect P a f n).
+Proof.
+intros P a f; destruct n as [| p]; simpl;
+[rewrite Prect_base | rewrite Prect_succ]; reflexivity.
+Qed.
+
+Definition Nind (P : N -> Prop) := Nrect P.
+
+Definition Nrec (P : N -> Set) := Nrect P.
+
+Theorem Nrec_base : forall P a f, Nrec P a f N0 = a.
+Proof.
+intros P a f; unfold Nrec; apply Nrect_base.
+Qed.
+
+Theorem Nrec_step : forall P a f n, Nrec P a f (Nsucc n) = f n (Nrec P a f n).
+Proof.
+intros P a f; unfold Nrec; apply Nrect_step.
+Qed.
+
+(** Properties of successor and predecessor *)
+
+Theorem Npred_succ : forall n : N, Npred (Nsucc n) = n.
+Proof.
+destruct n as [| p]; simpl. reflexivity.
+case_eq (Psucc p); try (intros q H; rewrite <- H; now rewrite Ppred_succ).
+intro H; false_hyp H Psucc_not_one.
 Qed.
 
 (** Properties of addition *)
@@ -171,6 +251,11 @@ destruct n; destruct m.
   simpl in |- *; rewrite Pplus_succ_permute_l; reflexivity.
 Qed.
 
+Theorem Nsucc_0 : forall n : N, Nsucc n <> N0.
+Proof.
+intro n; elim n; simpl Nsucc; intros; discriminate.
+Qed.
+
 Theorem Nsucc_inj : forall n m:N, Nsucc n = Nsucc m -> n = m.
 Proof.
 destruct n; destruct m; simpl in |- *; intro H; reflexivity || injection H;
@@ -188,11 +273,49 @@ intro n; pattern n in |- *; apply Nind; clear n; simpl in |- *.
   apply IHn; apply Nsucc_inj; assumption.
 Qed.
 
+(** Properties of subtraction. *)
+
+Lemma Nminus_N0_Nle : forall n n' : N, n - n' = N0 <-> n <= n'.
+Proof.
+destruct n as [| p]; destruct n' as [| q]; unfold Nle; simpl;
+split; intro H; try discriminate; try reflexivity.
+now elim H.
+intro H1; apply Pminus_mask_Gt in H1. destruct H1 as [h [H1 _]].
+rewrite H1 in H; discriminate.
+case_eq (Pcompare p q Eq); intro H1; rewrite H1 in H; try now elim H.
+assert (H2 : p = q); [now apply Pcompare_Eq_eq |]. now rewrite H2, Pminus_mask_diag.
+now rewrite Pminus_mask_Lt.
+Qed.
+
+Theorem Nminus_0_r : forall n : N, n - N0 = n.
+Proof.
+now destruct n.
+Qed.
+
+Theorem Nminus_succ_r : forall n m : N, n - (Nsucc m) = Npred (n - m).
+Proof.
+destruct n as [| p]; destruct m as [| q]; try reflexivity.
+now destruct p.
+simpl. rewrite Pminus_mask_succ_r, Pminus_mask_carry_spec.
+now destruct (Pminus_mask p q) as [| r |]; [| destruct r |].
+Qed.
+
 (** Properties of multiplication *)
+
+Theorem Nmult_0_l : forall n:N, N0 * n = N0.
+Proof.
+reflexivity.
+Qed.
 
 Theorem Nmult_1_l : forall n:N, Npos 1 * n = n.
 Proof.
 destruct n; reflexivity.
+Qed.
+
+Theorem Nmult_Sn_m : forall n m : N, (Nsucc n) * m = m + n * m.
+Proof.
+destruct n as [| n]; destruct m as [| m]; simpl; auto.
+rewrite Pmult_Sn_m; reflexivity.
 Qed.
 
 Theorem Nmult_1_r : forall n:N, n * Npos 1%positive = n.
@@ -233,12 +356,13 @@ destruct n; destruct m; reflexivity || (try discriminate H).
 injection H; clear H; intro H; rewrite Pmult_reg_r with (1 := H); reflexivity.
 Qed. 
 
-Theorem Nmult_0_l : forall n:N, N0 * n = N0.
-Proof.
-reflexivity.
-Qed.
-
 (** Properties of comparison *)
+
+Lemma Ncompare_refl : forall n, (n ?= n) = Eq.
+Proof.
+destruct n; simpl; auto.
+apply Pcompare_refl.
+Qed.
 
 Theorem Ncompare_Eq_eq : forall n m:N, (n ?= m) = Eq -> n = m.
 Proof.
@@ -247,16 +371,40 @@ destruct n as [| n]; destruct m as [| m]; simpl in |- *; intro H;
   rewrite (Pcompare_Eq_eq n m H); reflexivity.
 Qed.
 
-Lemma Ncompare_refl : forall n, (n ?= n) = Eq.
+Theorem Ncompare_eq_correct : forall n m:N, (n ?= m) = Eq <-> n = m.
 Proof.
-destruct n; simpl; auto.
-apply Pcompare_refl.
+split; intros; 
+ [ apply Ncompare_Eq_eq; auto | subst; apply Ncompare_refl ].
 Qed.
 
 Lemma Ncompare_antisym : forall n m, CompOpp (n ?= m) = (m ?= n).
 Proof.
 destruct n; destruct m; simpl; auto.
 exact (Pcompare_antisym p p0 Eq).
+Qed.
+
+Theorem Nlt_irrefl : forall n : N, ~ n < n.
+Proof.
+intro n; unfold Nlt; now rewrite Ncompare_refl.
+Qed.
+
+Theorem Ncompare_n_Sm :
+  forall n m : N, Ncompare n (Nsucc m) = Lt <-> Ncompare n m = Lt \/ n = m.
+Proof.
+intros n m; split; destruct n as [| p]; destruct m as [| q]; simpl; auto.
+destruct p; simpl; intros; discriminate.
+pose proof (proj1 (Pcompare_p_Sq p q));
+assert (p = q <-> Npos p = Npos q); [split; congruence | tauto].
+intros H; destruct H; discriminate.
+pose proof (proj2 (Pcompare_p_Sq p q));
+assert (p = q <-> Npos p = Npos q); [split; congruence | tauto].
+Qed.
+
+(** 0 is the least natural number *)
+
+Theorem Ncompare_0 : forall n : N, Ncompare n N0 <> Lt.
+Proof.
+destruct n; discriminate.
 Qed.
 
 (** Dividing by 2 *)

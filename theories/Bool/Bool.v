@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Bool.v 9246 2006-10-17 14:01:18Z herbelin $ i*)
+(*i $Id: Bool.v 10812 2008-04-17 16:42:37Z letouzey $ i*)
 
 (** The type [bool] is defined in the prelude as
     [Inductive bool : Set := true : bool | false : bool] *)
@@ -126,9 +126,8 @@ Proof.
   destruct a; destruct b; simpl in |- *; intro; discriminate H || reflexivity.
 Qed.
 
-
 (************************)
-(** * Logical combinators *)
+(** * A synonym of [if] on [bool] *)
 (************************)
  
 Definition ifb (b1 b2 b3:bool) : bool :=
@@ -137,30 +136,7 @@ Definition ifb (b1 b2 b3:bool) : bool :=
     | false => b3
   end.
 
-Definition andb (b1 b2:bool) : bool := ifb b1 b2 false.
-
-Definition orb (b1 b2:bool) : bool := ifb b1 true b2.
-
-Definition implb (b1 b2:bool) : bool := ifb b1 b2 true.
-
-Definition xorb (b1 b2:bool) : bool :=
-  match b1, b2 with
-    | true, true => false
-    | true, false => true
-    | false, true => true
-    | false, false => false
-  end.
-
-Definition negb (b:bool) := if b then false else true.
-
-Infix "||" := orb (at level 50, left associativity) : bool_scope.
-Infix "&&" := andb (at level 40, left associativity) : bool_scope.
-
 Open Scope bool_scope.
-
-Delimit Scope bool_scope with bool.
-
-Bind Scope bool_scope with bool.
 
 (****************************)
 (** * De Morgan laws          *)
@@ -220,7 +196,7 @@ Qed.
 
 
 Lemma if_negb :
-  forall (A:Set) (b:bool) (x y:A),
+  forall (A:Type) (b:bool) (x y:A),
     (if negb b then x else y) = (if b then y else x).
 Proof.
   destruct b; trivial.
@@ -332,25 +308,17 @@ Hint Resolve orb_comm orb_assoc: bool v62.
 (** * Properties of [andb]     *)
 (*******************************)
 
-Lemma andb_prop : forall a b:bool, a && b = true -> a = true /\ b = true.
+Lemma andb_true_iff : 
+  forall b1 b2:bool, b1 && b2 = true <-> b1 = true /\ b2 = true.
 Proof.
-  destruct a; destruct b; simpl in |- *; try (intro H; discriminate H);
-    auto with bool.
+ destruct b1; destruct b2; intuition.
 Qed.
-Hint Resolve andb_prop: bool v62.
 
 Lemma andb_true_eq :
   forall a b:bool, true = a && b -> true = a /\ true = b.
 Proof.
   destruct a; destruct b; auto.
 Defined.
-
-Lemma andb_true_intro :
-  forall b1 b2:bool, b1 = true /\ b2 = true -> b1 && b2 = true.
-Proof.
-  destruct b1; destruct b2; simpl in |- *; tauto || auto with bool.
-Qed.
-Hint Resolve andb_true_intro: bool v62.
 
 Lemma andb_false_intro1 : forall b1 b2:bool, b1 = false -> b1 && b2 = false.
 Proof.
@@ -715,3 +683,43 @@ Lemma negb_prop_involutive : forall b, Is_true b -> ~ Is_true (negb b).
 Proof.
   destruct b; intuition.
 Qed.
+
+(** Rewrite rules about andb, orb and if (used in romega) *)
+
+Lemma andb_if : forall (A:Type)(a a':A)(b b' : bool), 
+  (if b && b' then a else a') = 
+  (if b then if b' then a else a' else a').
+Proof.
+ destruct b; destruct b'; auto.
+Qed.
+
+Lemma negb_if : forall (A:Type)(a a':A)(b:bool), 
+ (if negb b then a else a') = 
+ (if b then a' else a).
+Proof.
+ destruct b; auto.
+Qed.
+
+(*****************************************)
+(** * Alternative versions of [andb] and [orb] 
+    with lazy behavior (for vm_compute)  *)
+(*****************************************)
+
+Notation "a &&& b" := (if a then b else false) 
+ (at level 40, left associativity) : lazy_bool_scope.
+Notation "a ||| b" := (if a then true else b)
+ (at level 50, left associativity) : lazy_bool_scope.
+
+Open Local Scope lazy_bool_scope.
+
+Lemma andb_lazy_alt : forall a b : bool, a && b = a &&& b.
+Proof.
+ unfold andb; auto.
+Qed.
+
+Lemma orb_lazy_alt : forall a b : bool, a || b = a ||| b.
+Proof.
+ unfold orb; auto.
+Qed.
+
+

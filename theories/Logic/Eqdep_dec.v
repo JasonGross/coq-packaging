@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Eqdep_dec.v 9597 2007-02-06 19:44:05Z herbelin $ i*)
+(*i $Id: Eqdep_dec.v 10144 2007-09-26 15:12:17Z vsiles $ i*)
 
 (** We prove that there is only one proof of [x=x], i.e [refl_equal x].
     This holds if the equality upon the set of [x] is decidable.
@@ -158,6 +158,13 @@ Proof.
   apply (Streicher_K__eq_rect_eq A (K_dec_type eq_dec)).
 Qed.
 
+(** We deduce the injectivity of dependent equality for decidable types *)
+Theorem eq_dep_eq_dec :
+  forall A:Type,
+    (forall x y:A, {x = y} + {x <> y}) ->
+     forall (P:A->Type) (p:A) (x y:P p), eq_dep A P p x p y -> x = y.
+Proof (fun A eq_dec => eq_rect_eq__eq_dep_eq A (eq_rect_eq_dec eq_dec)).
+
 Unset Implicit Arguments.
 
 (************************************************************************)
@@ -229,7 +236,7 @@ Module DecidableEqDep (M:DecidableType).
 End DecidableEqDep.
 
 (************************************************************************)
-(** ** B Definition of the functor that builds properties of dependent equalities on decidable sets in Set *)
+(** ** Definition of the functor that builds properties of dependent equalities on decidable sets in Set *)
 
 (** The signature of decidable sets in [Set] *)
 
@@ -296,3 +303,15 @@ Module DecidableEqDepSet (M:DecidableSet).
   Notation inj_pairT2 := inj_pair2.
 
 End DecidableEqDepSet.
+
+  (** From decidability to inj_pair2 **)
+Lemma inj_pair2_eq_dec : forall A:Type, (forall x y:A, {x=y}+{x<>y}) ->
+   ( forall (P:A -> Type) (p:A) (x y:P p), existT P p x = existT P p y -> x = y ).
+Proof. 
+  intros A eq_dec.
+  apply eq_dep_eq__inj_pair2.
+  apply eq_rect_eq__eq_dep_eq.
+  unfold Eq_rect_eq. 
+  apply eq_rect_eq_dec.
+  apply eq_dec.
+Qed.

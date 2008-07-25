@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: global.mli 8723 2006-04-16 15:51:02Z herbelin $ i*)
+(*i $Id: global.mli 10664 2008-03-14 11:27:37Z soubiran $ i*)
 
 (*i*)
 open Names
@@ -50,7 +50,9 @@ val add_mind        :
   dir_path -> identifier -> mutual_inductive_entry -> kernel_name
 
 val add_module      : identifier -> module_entry -> module_path
-val add_modtype     : identifier -> module_type_entry -> kernel_name
+val add_modtype     : identifier -> module_struct_entry -> module_path
+val add_include : module_struct_entry -> unit
+val add_alias : identifier -> module_path -> module_path
 
 val add_constraints : constraints -> unit
 
@@ -64,12 +66,13 @@ val set_engagement : engagement -> unit
    of the started module / module type *)
 
 val start_module : identifier -> module_path
-val end_module : identifier -> module_type_entry option -> module_path
+val end_module : identifier -> module_struct_entry option -> module_path
 
-val add_module_parameter : mod_bound_id -> module_type_entry -> unit
+val add_module_parameter : mod_bound_id -> module_struct_entry -> unit
 
 val start_modtype : identifier -> module_path
-val end_modtype : identifier -> kernel_name
+val end_modtype : identifier -> module_path
+
 
 
 (* Queries *)
@@ -78,7 +81,7 @@ val lookup_constant  : constant -> constant_body
 val lookup_inductive : inductive -> mutual_inductive_body * one_inductive_body
 val lookup_mind      : mutual_inductive -> mutual_inductive_body
 val lookup_module    : module_path -> module_body
-val lookup_modtype   : kernel_name -> module_type_body
+val lookup_modtype   : module_path -> module_type_body
 
 (* Compiled modules *)
 val start_library : dir_path -> module_path
@@ -91,3 +94,6 @@ val import : compiled_library -> Digest.t -> module_path
 val type_of_global : Libnames.global_reference -> types
 val env_of_context : Environ.named_context_val -> Environ.env
 
+
+(* spiwack: register/unregister function for retroknowledge *)
+val register : Retroknowledge.field -> constr -> constr -> unit

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pp.mli 8748 2006-04-27 16:01:26Z courtieu $ i*)
+(*i $Id: pp.mli 10803 2008-04-16 09:30:05Z cek $ i*)
 
 (*i*)
 open Pp_control
@@ -16,6 +16,7 @@ open Pp_control
    chars inserted at some places). This function should called once in
    module [Options], that's all. *)
 val make_pp_emacs:unit -> unit
+val make_pp_nonemacs:unit -> unit
 
 (* Pretty-printers. *)
 
@@ -34,6 +35,7 @@ val fnl : unit -> std_ppcmds
 val pifb : unit -> std_ppcmds
 val ws : int -> std_ppcmds
 val mt : unit -> std_ppcmds
+val ismt : std_ppcmds -> bool
 
 val comment : int -> std_ppcmds
 val comments : ((int * int) * string) list ref
@@ -52,6 +54,10 @@ val real : float -> std_ppcmds
 val bool : bool -> std_ppcmds
 val qstring : string -> std_ppcmds
 val qs : string -> std_ppcmds
+val quote : std_ppcmds -> std_ppcmds
+val strbrk : string -> std_ppcmds
+
+val xmlescape : ppcmd -> ppcmd
 
 (*s Boxing commands. *)
 
@@ -78,6 +84,8 @@ val ppnl_with : Format.formatter -> std_ppcmds -> unit
 val warning_with : Format.formatter -> string -> unit
 val warn_with : Format.formatter -> std_ppcmds -> unit
 val pp_flush_with : Format.formatter -> unit -> unit
+
+val set_warning_function : (Format.formatter -> std_ppcmds -> unit) -> unit 
 
 (*s Pretty-printing functions \emph{with flush}. *)
 

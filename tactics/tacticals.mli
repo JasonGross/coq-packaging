@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacticals.mli 9211 2006-10-05 12:38:33Z letouzey $ i*)
+(*i $Id: tacticals.mli 10785 2008-04-13 21:41:54Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -24,6 +24,7 @@ open Tacexpr
 
 (* Tacticals i.e. functions from tactics to tactics. *)
 
+val tclNORMEVAR      : tactic
 val tclIDTAC         : tactic
 val tclIDTAC_MESSAGE : std_ppcmds -> tactic
 val tclORELSE        : tactic -> tactic -> tactic
@@ -57,6 +58,7 @@ val tclTHENTRY       : tactic -> tactic -> tactic
 val tclNTH_HYP       : int -> (constr -> tactic) -> tactic
 val tclMAP           : ('a -> tactic) -> 'a list -> tactic
 val tclLAST_HYP      : (constr -> tactic) -> tactic
+val tclLAST_NHYPS    : int -> (identifier list -> tactic) -> tactic
 val tclTRY_sign      : (constr -> tactic) -> named_context -> tactic
 val tclTRY_HYPS      : (constr -> tactic) -> tactic
 
@@ -136,9 +138,9 @@ val elimination_sort_of_goal : goal sigma -> sorts_family
 val elimination_sort_of_hyp  : identifier -> goal sigma -> sorts_family
 
 val general_elim_then_using :
-  constr -> (* isrec: *) bool -> intro_pattern_expr ->
+  (inductive -> goal sigma -> constr) -> rec_flag -> intro_pattern_expr ->
     (branch_args -> tactic) -> constr option -> 
-      (arg_bindings * arg_bindings) -> constr -> tactic
+      (arg_bindings * arg_bindings) -> inductive -> clausenv -> tactic
 	  
 val elimination_then_using :
   (branch_args -> tactic) -> constr option -> 
@@ -150,11 +152,13 @@ val elimination_then :
 
 val case_then_using :
   intro_pattern_expr -> (branch_args -> tactic) -> 
-    constr option -> (arg_bindings * arg_bindings) -> constr -> tactic
+    constr option -> (arg_bindings * arg_bindings) ->
+      inductive -> clausenv -> tactic
 
 val case_nodep_then_using :
   intro_pattern_expr -> (branch_args -> tactic) -> 
-    constr option -> (arg_bindings * arg_bindings) -> constr -> tactic
+    constr option -> (arg_bindings * arg_bindings) -> 
+      inductive -> clausenv -> tactic
 
 val simple_elimination_then :
   (branch_args -> tactic) -> constr -> tactic

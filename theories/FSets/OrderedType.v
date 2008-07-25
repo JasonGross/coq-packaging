@@ -6,32 +6,25 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: OrderedType.v 8834 2006-05-20 00:41:35Z letouzey $ *)
+(* $Id: OrderedType.v 10616 2008-03-04 17:33:35Z letouzey $ *)
 
 Require Export SetoidList.
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-(* TODO concernant la tactique order: 
-   * propagate_lt n'est sans doute pas complet
-   * un propagate_le
-   * exploiter les hypotheses negatives restant a la fin
-   * faire que ca marche meme quand une hypothese depend d'un eq ou lt.
-*) 
-
 (** * Ordered types *)
 
-Inductive Compare (X : Set) (lt eq : X -> X -> Prop) (x y : X) : Set :=
+Inductive Compare (X : Type) (lt eq : X -> X -> Prop) (x y : X) : Type :=
   | LT : lt x y -> Compare lt eq x y
   | EQ : eq x y -> Compare lt eq x y
   | GT : lt y x -> Compare lt eq x y.
 
 Module Type OrderedType.
 
-  Parameter t : Set.
+  Parameter Inline t : Type.
 
-  Parameter eq : t -> t -> Prop.
-  Parameter lt : t -> t -> Prop.
+  Parameter Inline eq : t -> t -> Prop.
+  Parameter Inline lt : t -> t -> Prop.
 
   Axiom eq_refl : forall x : t, eq x x.
   Axiom eq_sym : forall x y : t, eq x y -> eq y x.
@@ -122,6 +115,13 @@ Module OrderedTypeFacts (O: OrderedType).
    intuition.
   Qed.
 
+(* TODO concernant la tactique order: 
+   * propagate_lt n'est sans doute pas complet
+   * un propagate_le
+   * exploiter les hypotheses negatives restant a la fin
+   * faire que ca marche meme quand une hypothese depend d'un eq ou lt.
+*) 
+
 Ltac abstraction := match goal with 
  (* First, some obvious simplifications *)
  | H : False |- _ => elim H
@@ -137,9 +137,9 @@ Ltac abstraction := match goal with
  | H1: ~lt ?x ?y, H2: ~eq ?y ?x |- _ => 
      generalize (le_neq H1 (neq_sym H2)); clear H1 H2; intro; abstraction
  (* Then, we generalize all interesting facts *)
- | H : lt ?x ?y |- _ => revert H; abstraction
- | H : ~lt ?x ?y |- _ => revert H; abstraction  
  | H : ~eq ?x ?y |- _ =>  revert H; abstraction
+ | H : ~lt ?x ?y |- _ => revert H; abstraction  
+ | H : lt ?x ?y |- _ => revert H; abstraction
  | H : eq ?x ?y |- _ =>  revert H; abstraction
  | _ => idtac
 end.
@@ -192,7 +192,7 @@ Ltac do_lt x y LT := match goal with
  | |- lt ?z x -> _ => let H := fresh "H" in 
      (intro H; generalize (lt_trans H LT); intro); do_lt x y LT
  | |- lt _ _ -> _ => intro; do_lt x y LT
- (* Ge *)
+ (* GE *)
  | |- ~lt y x -> _ => intros _; do_lt x y LT
  | |- ~lt x ?z -> _ => let H := fresh "H" in 
      (intro H; generalize (le_lt_trans H LT); intro); do_lt x y LT
@@ -296,12 +296,12 @@ Ltac false_order := elimtype False; order.
   Lemma eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
   Proof.
    intros; elim (compare x y); [ right | left | right ]; auto.
-  Qed.
+  Defined.
  
   Lemma lt_dec : forall x y : t, {lt x y} + {~ lt x y}.
   Proof.
    intros; elim (compare x y); [ left | right | right ]; auto.
-  Qed.
+  Defined.
 
   Definition eqb x y : bool := if eq_dec x y then true else false.
 
@@ -361,7 +361,7 @@ Module KeyOrderedType(O:OrderedType).
  Import MO.
 
  Section Elt.
- Variable elt : Set.
+ Variable elt : Type.
  Notation key:=t.
 
   Definition eqk (p p':key*elt) := eq (fst p) (fst p').

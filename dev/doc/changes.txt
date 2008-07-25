@@ -1,4 +1,37 @@
 =========================================
+= CHANGES BETWEEN COQ V8.1 AND COQ V8.2 =
+=========================================
+
+A few differences in Coq ML interfaces between Coq V8.1 and V8.2
+================================================================
+
+** Datatypes
+
+List of occurrences moved from "int list" to "Termops.occurrences" (an
+alias to "bool * int list").
+
+** Functions
+
+Eauto: e_resolve_constr, vernac_e_resolve_constr -> simplest_eapply
+Tactics: apply_with_bindings -> apply_with_bindings_wo_evars
+Eauto.simplest_apply -> Hiddentac.h_simplest_apply
+Evarutil.define_evar_as_arrow -> define_evar_as_product
+
+** Universe names (univ.mli)
+
+ base_univ -> type0_univ  (* alias of Set is the Type hierarchy *)
+ prop_univ -> type1_univ  (* the type of Set in the Type hierarchy *)
+ neutral_univ -> lower_univ (* semantic alias of Prop in the Type hierarchy *)
+ is_base_univ -> is_type1_univ
+ is_empty_univ -> is_lower_univ
+
+** Sort names (term.mli)
+
+  mk_Set -> set_sort
+  mk_Prop -> prop_sort
+  type_0 -> type1_sort
+
+=========================================
 = CHANGES BETWEEN COQ V8.0 AND COQ V8.1 =
 =========================================
 

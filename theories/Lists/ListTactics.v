@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ListTactics.v 9551 2007-01-29 15:13:35Z bgregoir $ i*)
+(*i $Id: ListTactics.v 9427 2006-12-11 18:46:35Z bgregoir $ i*)
 
 Require Import BinPos.
 Require Import List.

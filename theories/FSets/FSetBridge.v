@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetBridge.v 8834 2006-05-20 00:41:35Z letouzey $ *)
+(* $Id: FSetBridge.v 10601 2008-02-28 00:20:33Z letouzey $ *)
 
 (** * Finite sets library *)
 
@@ -27,7 +27,7 @@ Module DepOfNodep (M: S) <: Sdep with Module E := M.E.
    
   Definition empty : {s : t | Empty s}.
   Proof. 
-    exists empty; auto.
+    exists empty; auto with set.
   Qed.
 
   Definition is_empty : forall s : t, {Empty s} + {~ Empty s}.
@@ -66,12 +66,12 @@ Module DepOfNodep (M: S) <: Sdep with Module E := M.E.
     {s' : t | forall y : elt, In y s' <-> ~ E.eq x y /\ In y s}.
   Proof.
     intros; exists (remove x s); intuition.
-    absurd (In x (remove x s)); auto.
+    absurd (In x (remove x s)); auto with set.
     apply In_1 with y; auto. 
     elim (ME.eq_dec x y); intros; auto.
-    absurd (In x (remove x s)); auto.
+    absurd (In x (remove x s)); auto with set.
     apply In_1 with y; auto. 
-    eauto.
+    eauto with set.
   Qed.
 
   Definition union :
@@ -83,14 +83,14 @@ Module DepOfNodep (M: S) <: Sdep with Module E := M.E.
   Definition inter :
     forall s s' : t, {s'' : t | forall x : elt, In x s'' <-> In x s /\ In x s'}.
   Proof. 
-    intros; exists (inter s s'); intuition; eauto.
+    intros; exists (inter s s'); intuition; eauto with set.
   Qed.
 
   Definition diff :
     forall s s' : t, {s'' : t | forall x : elt, In x s'' <-> In x s /\ ~ In x s'}.
   Proof. 
-    intros; exists (diff s s'); intuition; eauto. 
-    absurd (In x s'); eauto. 
+    intros; exists (diff s s'); intuition; eauto with set. 
+    absurd (In x s'); eauto with set. 
   Qed. 
  
   Definition equal : forall s s' : t, {Equal s s'} + {~ Equal s s'}.
@@ -115,7 +115,7 @@ Module DepOfNodep (M: S) <: Sdep with Module E := M.E.
    Defined. 
 
   Definition fold :
-    forall (A : Set) (f : elt -> A -> A) (s : t) (i : A),
+    forall (A : Type) (f : elt -> A -> A) (s : t) (i : A),
     {r : A |   let (l,_) := elements s in 
                   r = fold_left (fun a e => f e a) l i}.
   Proof. 
@@ -150,7 +150,7 @@ Module DepOfNodep (M: S) <: Sdep with Module E := M.E.
     exists (filter (fdec Pdec) s).
     intro H; assert (compat_bool E.eq (fdec Pdec)); auto.
     intuition.
-    eauto.
+    eauto with set.
     generalize (filter_2 H0 H1).
     unfold fdec in |- *.
     case (Pdec x); intuition.
@@ -226,7 +226,7 @@ Module DepOfNodep (M: S) <: Sdep with Module E := M.E.
     generalize H4; unfold For_all, Equal in |- *; intuition.
     elim (H0 x); intros.
     assert (fdec Pdec x = true).
-     eauto.      
+     eapply filter_2; eauto with set.
     generalize H8; unfold fdec in |- *; case (Pdec x); intuition.
     inversion H9.
     generalize H; unfold For_all, Equal in |- *; intuition.
@@ -238,8 +238,8 @@ Module DepOfNodep (M: S) <: Sdep with Module E := M.E.
     set (b := fdec Pdec x) in *; generalize (refl_equal b);
      pattern b at -1 in |- *; case b; unfold b in |- *; 
      [ left | right ].
-    elim (H4 x); intros _ B; apply B; auto.
-    elim (H x); intros _ B; apply B; auto.
+    elim (H4 x); intros _ B; apply B; auto with set.
+    elim (H x); intros _ B; apply B; auto with set.
     apply filter_3; auto.
     rewrite H5; auto.
     eapply (filter_1 (s:=s) (x:=x) H2); elim (H4 x); intros B _; apply B;
@@ -247,12 +247,63 @@ Module DepOfNodep (M: S) <: Sdep with Module E := M.E.
     eapply (filter_1 (s:=s) (x:=x) H3); elim (H x); intros B _; apply B; auto.
   Qed. 
 
+  Definition choose_aux: forall s : t, 
+    { x : elt | M.choose s = Some x } + { M.choose s = None }.
+  Proof.
+   intros.
+   destruct (M.choose s); [left | right]; auto.
+   exists e; auto.
+  Qed.
+ 
   Definition choose : forall s : t, {x : elt | In x s} + {Empty s}.
-  Proof.  
-    intros.
-    generalize (choose_1 (s:=s)) (choose_2 (s:=s)).
-    case (choose s); [ left | right ]; auto.
-    exists e; auto.    
+  Proof.
+   intros; destruct (choose_aux s) as [(x,Hx)|H].
+   left; exists x; apply choose_1; auto.
+   right; apply choose_2; auto.
+  Defined.
+
+  Lemma choose_ok1 : 
+   forall s x, M.choose s = Some x <-> exists H:In x s, 
+      choose s = inleft _ (exist (fun x => In x s) x H).
+  Proof.
+    intros s x.
+    unfold choose; split; intros. 
+    destruct (choose_aux s) as [(y,Hy)|H']; try congruence.
+    replace x with y in * by congruence.
+    exists (choose_1 Hy); auto.
+    destruct H.
+    destruct (choose_aux s) as [(y,Hy)|H']; congruence.
+  Qed.
+
+  Lemma choose_ok2 : 
+   forall s, M.choose s = None <-> exists H:Empty s, 
+      choose s = inright _ H.
+  Proof. 
+    intros s.
+    unfold choose; split; intros.
+    destruct (choose_aux s) as [(y,Hy)|H']; try congruence.
+    exists (choose_2 H'); auto.
+    destruct H.
+    destruct (choose_aux s) as [(y,Hy)|H']; congruence.
+  Qed.
+
+  Lemma choose_equal : forall s s', Equal s s' -> 
+     match choose s, choose s' with 
+       | inleft (exist x _), inleft (exist x' _) => E.eq x x'
+       | inright _, inright _  => True
+       | _, _                        => False
+     end.
+  Proof.
+   intros.
+   generalize (@M.choose_1 s)(@M.choose_2 s)
+              (@M.choose_1 s')(@M.choose_2 s')(@M.choose_3 s s')
+              (choose_ok1 s)(choose_ok2 s)(choose_ok1 s')(choose_ok2 s').
+   destruct (choose s) as [(x,Hx)|Hx]; destruct (choose s') as [(x',Hx')|Hx']; auto; intros.
+   apply H4; auto.
+   rewrite H5; exists Hx; auto.
+   rewrite H7; exists Hx'; auto.
+   apply Hx' with x; unfold Equal in H; rewrite <-H; auto.
+   apply Hx with x'; unfold Equal in H; rewrite H; auto.
   Qed.
 
   Definition min_elt :
@@ -391,6 +442,15 @@ Module NodepOfDep (M: Sdep) <: S with Module E := M.E.
     intro s; unfold choose in |- *; case (M.choose s); auto.
     simple destruct s0; intros; discriminate H.
   Qed.
+ 
+  Lemma choose_3 : forall s s' x x', 
+   choose s = Some x -> choose s' = Some x' -> Equal s s' -> E.eq x x'.
+  Proof.
+  unfold choose; intros.
+  generalize (M.choose_equal H1); clear H1.
+  destruct (M.choose s) as [(?,?)|?]; destruct (M.choose s') as [(?,?)|?]; 
+   simpl; auto; congruence.
+  Qed.
 
   Definition elements (s : t) : list elt := let (l, _) := elements s in l. 
  
@@ -408,6 +468,10 @@ Module NodepOfDep (M: Sdep) <: S with Module E := M.E.
   Proof. 
     intros; unfold elements in |- *; case (M.elements s); firstorder.
   Qed.
+  Hint Resolve elements_3.
+ 
+  Lemma elements_3w : forall s : t, NoDupA E.eq (elements s).
+  Proof. auto. Qed.
 
   Definition min_elt (s : t) : option elt :=
     match min_elt s with
@@ -578,11 +642,11 @@ Module NodepOfDep (M: Sdep) <: S with Module E := M.E.
     destruct (M.elements s); auto.
   Qed.
 
-  Definition fold (B : Set) (f : elt -> B -> B) (i : t) 
+  Definition fold (B : Type) (f : elt -> B -> B) (i : t) 
     (s : B) : B := let (fold, _) := fold f i s in fold.
 
   Lemma fold_1 :
-   forall (s : t) (A : Set) (i : A) (f : elt -> A -> A),
+   forall (s : t) (A : Type) (i : A) (f : elt -> A -> A),
    fold f s i = fold_left (fun a e => f e a) (elements s) i.
   Proof.
     intros; unfold fold in |- *; case (M.fold f s i); unfold elements in *; 

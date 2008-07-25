@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libobject.mli 9488 2007-01-17 11:11:58Z herbelin $ i*)
+(*i $Id: libobject.mli 10840 2008-04-23 21:29:34Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -51,6 +51,14 @@ open Mod_subst
      this function should be declared for substitutive objects 
      only (see obove)
 
+   * a discharge function, that is applied at section closing time to
+     collect the data necessary to rebuild the discharged form of the
+     non volatile objects
+
+   * a rebuild function, that is applied after section closing to
+     rebuild the non volatile content of a section from the data
+     collected by the discharge function
+
    * an export function, to enable optional writing of its contents 
      to disk (.vo). This function is also the oportunity to remove 
      redundant information in order to keep .vo size small 
@@ -63,6 +71,8 @@ open Mod_subst
 type 'a substitutivity = 
     Dispose | Substitute of 'a | Keep of 'a | Anticipate of 'a
 
+type discharge_info = (identifier * bool * bool) list
+
 type 'a object_declaration = {
   object_name : string;
   cache_function : object_name * 'a -> unit;
@@ -71,7 +81,7 @@ type 'a object_declaration = {
   classify_function : object_name * 'a -> 'a substitutivity;
   subst_function : object_name * substitution * 'a -> 'a;
   discharge_function : object_name * 'a -> 'a option;
-  rebuild_function : 'a -> 'a;
+  rebuild_function : discharge_info * 'a -> 'a;
   export_function : 'a -> 'a option }
 
 (* The default object is a "Keep" object with empty methods. 
@@ -106,5 +116,5 @@ val subst_object : object_name * substitution * obj -> obj
 val classify_object : object_name * obj -> obj substitutivity
 val export_object : obj -> obj option
 val discharge_object : object_name * obj -> obj option
-val rebuild_object : obj -> obj
+val rebuild_object : discharge_info * obj -> obj
 val relax : bool -> unit

@@ -6,14 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: PermutEq.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: PermutEq.v 10739 2008-04-01 14:45:20Z herbelin $ i*)
 
-Require Import Omega.
-Require Import Relations.
-Require Import Setoid.
-Require Import List.
-Require Import Multiset.
-Require Import Permutation. 
+Require Import Omega Relations Setoid List Multiset Permutation.
 
 Set Implicit Arguments.
 
@@ -25,7 +20,7 @@ Set Implicit Arguments.
 
 Section Perm.
   
-  Variable A : Set.
+  Variable A : Type.
   Hypothesis eq_dec : forall x y:A, {x=y} + {~ x=y}.
   
   Notation permutation := (permutation _ eq_dec).
@@ -214,7 +209,7 @@ Section Perm.
     apply permut_remove_hd with a; auto.
   Qed.
 
-  Variable B : Set.
+  Variable B : Type.
   Variable eqB_dec : forall x y:B, { x=y }+{ ~x=y }. 
 
   (** Permutation is compatible with map. *)

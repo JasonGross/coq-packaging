@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: goptions.ml 9060 2006-07-27 15:30:35Z notin $ *)
+(* $Id: goptions.ml 10348 2007-12-06 17:36:14Z aspiwack $ *)
 
 (* This module manages customization parameters at the vernacular level     *)
 
@@ -25,10 +25,12 @@ open Mod_subst
 type option_name =
   | PrimaryTable of string
   | SecondaryTable of string * string
+  | TertiaryTable of string * string * string
 
 let nickname = function
   | PrimaryTable s         -> s
   | SecondaryTable (s1,s2) -> s1^" "^s2
+  | TertiaryTable (s1,s2,s3) -> s1^" "^s2^" "^s3
 
 let error_undeclared_key key =
   error ((nickname key)^": no table or option of this type")
@@ -206,7 +208,7 @@ module MakeRefTable =
   functor (A : RefConvertArg) -> MakeTable (RefConvert(A))
 
 (****************************************************************************)
-(* 2- Options                                                               *)
+(* 2- Flags.                                                              *)
 
 type 'a option_sig = {
   optsync  : bool;

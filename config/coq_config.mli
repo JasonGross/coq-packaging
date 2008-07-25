@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coq_config.mli 10185 2007-10-06 18:05:13Z herbelin $ i*)
+(*i $Id: coq_config.mli 10122 2007-09-15 10:35:59Z letouzey $ i*)
 
 val local : bool        (* local use (no installation) *)
 

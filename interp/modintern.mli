@@ -6,19 +6,26 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modintern.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: modintern.mli 11065 2008-06-06 22:39:43Z msozeau $ i*)
 
 (*i*)
 open Declarations
 open Environ
 open Entries
+open Util
+open Libnames
+open Names
 open Topconstr
 (*i*)
 
 (* Module expressions and module types are interpreted relatively to 
    eventual functor or funsig arguments. *)
 
-val interp_modtype : env -> module_type_ast -> module_type_entry
+val interp_modtype : env -> module_type_ast -> module_struct_entry
 
-val interp_modexpr : env -> module_ast -> module_expr
+val interp_modexpr : env -> module_ast -> module_struct_entry
 
+val lookup_module : qualid located -> module_path
+
+val dump_moddef : loc -> module_path -> string -> unit
+val dump_modref : loc -> module_path -> string -> unit

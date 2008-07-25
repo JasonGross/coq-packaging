@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: termops.ml 9429 2006-12-12 08:01:03Z herbelin $ *)
+(* $Id: termops.ml 11166 2008-06-22 13:23:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -160,18 +160,22 @@ let new_Type_sort () = Type (new_univ ())
 (* This refreshes universes in types; works only for inferred types (i.e. for
    types of the form (x1:A1)...(xn:An)B with B a sort or an atom in
    head normal form) *)
-let refresh_universes t =
+let refresh_universes_gen strict t =
   let modified = ref false in
   let rec refresh t = match kind_of_term t with
-    | Sort (Type _) -> modified := true; new_Type ()
+    | Sort (Type u) when strict or u <> Univ.type0m_univ ->
+	modified := true; new_Type ()
     | Prod (na,u,v) -> mkProd (na,u,refresh v)
     | _ -> t in
   let t' = refresh t in
   if !modified then t' else t
 
+let refresh_universes = refresh_universes_gen false
+let refresh_universes_strict = refresh_universes_gen true
+
 let new_sort_in_family = function 
-  | InProp -> mk_Prop
-  | InSet -> mk_Set
+  | InProp -> prop_sort
+  | InSet -> set_sort
   | InType -> Type (new_univ ())
 
 
@@ -214,7 +218,7 @@ let push_named_rec_types (lna,typarray,_) env =
     array_map2_i
       (fun i na t ->
 	 match na with
-	   | Name id -> (id, None, type_app (lift i) t)
+	   | Name id -> (id, None, lift i t)
 	   | Anonymous -> anomaly "Fix declarations must be named")
       lna typarray in
   Array.fold_left
@@ -271,6 +275,11 @@ let rec strip_head_cast c = match kind_of_term c with
   | Cast (c,_,_) -> strip_head_cast c
   | _ -> c
 
+(* Get the last arg of an application *)
+let last_arg c = match kind_of_term c with
+  | App (f,cl) -> array_last cl
+  | _ -> anomaly "last_arg"
+
 (* [map_constr_with_named_binders g f l c] maps [f l] on the immediate
    subterms of [c]; it carries an extra data [l] (typically a name
    list) which is processed by [g na] (which typically cons [na] to
@@ -305,11 +314,8 @@ let map_constr_with_named_binders g f l c = match kind_of_term c with
    (co-)fixpoint) *)
 
 let fold_rec_types g (lna,typarray,_) e =
-  let ctxt =
-    array_map2_i
-      (fun i na t -> (na, None, type_app (lift i) t)) lna typarray in
-  Array.fold_left
-    (fun e assum -> g assum e) e ctxt
+  let ctxt = array_map2_i (fun i na t -> (na, None, lift i t)) lna typarray in
+  Array.fold_left (fun e assum -> g assum e) e ctxt
 
 
 let map_constr_with_binders_left_to_right g f l c = match kind_of_term c with
@@ -514,6 +520,16 @@ let free_rels m =
   in 
   frec 1 Intset.empty m
 
+(* collects all metavar occurences, in left-to-right order, preserving
+ * repetitions and all. *)
+
+let collect_metas c = 
+  let rec collrec acc c =
+    match kind_of_term c with
+      | Meta mv -> list_add_set mv acc
+      | _       -> fold_constr collrec acc c
+  in
+  List.rev (collrec [] c)
 
 (* (dependent M N) is true iff M is eq_term with a subterm of N 
    M is appropriately lifted through abstractions of N *)
@@ -610,32 +626,34 @@ let subst_term = subst_term_gen eq_constr
 
 let replace_term = replace_term_gen eq_constr
 
-(* Substitute only a list of locations locs, the empty list is
-   interpreted as substitute all, if 0 is in the list then no
-   bindings is done. The list may contain only negative occurrences
-   that will not be substituted. *)
+(* Substitute only at a list of locations or excluding a list of
+   locations; in the occurrences list (b,l), b=true means no
+   occurrence except the ones in l and b=false, means all occurrences
+   except the ones in l *)
+
+type occurrences = bool * int list
+let all_occurrences = (false,[])
+let no_occurrences_in_set = (true,[])
 
 let error_invalid_occurrence l =
+  let l = list_uniquize (List.sort Pervasives.compare l) in
   errorlabstrm ""
     (str ("Invalid occurrence " ^ plural (List.length l) "number" ^": ") ++ 
      prlist_with_sep spc int l)
 
-let subst_term_occ_gen locs occ c t =
+let subst_term_occ_gen (nowhere_except_in,locs) occ c t =
   let maxocc = List.fold_right max locs 0 in
   let pos = ref occ in
-  let except = List.exists (fun n -> n<0) locs in
-  if except & (List.exists (fun n -> n>=0) locs) 
-  then error "mixing of positive and negative occurences"
-  else
-   let rec substrec (k,c as kc) t =
-    if (not except) & (!pos > maxocc) then t
+  assert (List.for_all (fun x -> x >= 0) locs);
+  let rec substrec (k,c as kc) t =
+    if nowhere_except_in & !pos > maxocc then t
     else
     if eq_constr c t then
       let r = 
-	if except then 
-	  if List.mem (- !pos) locs then t else (mkRel k)
-	else 
+	if nowhere_except_in then
 	  if List.mem !pos locs then (mkRel k) else t
+	else 
+	  if List.mem !pos locs then t else (mkRel k)
       in incr pos; r
     else
       map_constr_with_binders_left_to_right
@@ -645,40 +663,33 @@ let subst_term_occ_gen locs occ c t =
   let t' = substrec (1,c) t in
   (!pos, t')
 
-let subst_term_occ locs c t = 
-  if locs = [] then subst_term c t
-  else if List.mem 0 locs then 
-    t
+let subst_term_occ (nowhere_except_in,locs as plocs) c t = 
+  if locs = [] then if nowhere_except_in then t else subst_term c t
   else 
-    let (nbocc,t') = subst_term_occ_gen locs 1 c t in
-    let rest = List.filter (fun o -> o >= nbocc or o <= -nbocc) locs in
+    let (nbocc,t') = subst_term_occ_gen plocs 1 c t in
+    let rest = List.filter (fun o -> o >= nbocc) locs in
     if rest <> [] then error_invalid_occurrence rest;
     t'
 
-let subst_term_occ_decl locs c (id,bodyopt,typ as d) =
+let subst_term_occ_decl (nowhere_except_in,locs as plocs) c (id,bodyopt,typ as d) =
   match bodyopt with
-    | None -> (id,None,subst_term_occ locs c typ)
+    | None -> (id,None,subst_term_occ plocs c typ)
     | Some body -> 
 	if locs = [] then
-	  (id,Some (subst_term c body),type_app (subst_term c) typ)
-	else if List.mem 0 locs then 
-	  d
+	  if nowhere_except_in then d
+	  else (id,Some (subst_term c body),subst_term c typ)
 	else 
-	  let (nbocc,body') = subst_term_occ_gen locs 1 c body in
-	  let (nbocc',t') = subst_term_occ_gen locs nbocc c typ in
-	  let rest = List.filter (fun o -> o >= nbocc' or o <= -nbocc') locs in
+	  let (nbocc,body') = subst_term_occ_gen plocs 1 c body in
+	  let (nbocc',t') = subst_term_occ_gen plocs nbocc c typ in
+	  let rest = List.filter (fun o -> o >= nbocc') locs in
 	  if rest <> [] then error_invalid_occurrence rest;
 	  (id,Some body',t')
 
 
 (* First character of a constr *)
 
-let first_char id =
-  let id = string_of_id id in
-  assert (id <> "");
-  String.make 1 id.[0]
-
-let lowercase_first_char id = String.lowercase (first_char id)
+let lowercase_first_char id =
+  lowercase_first_char_utf8 (string_of_id id)
 
 let vars_of_env env =
   let s = 
@@ -707,8 +718,7 @@ let hdchar env c =
     | Cast (c,_,_)         -> hdrec k c
     | App (f,l)         -> hdrec k f
     | Const kn       ->
-	let c = lowercase_first_char (id_of_label (con_label kn)) in
-	if c = "?" then "y" else c
+	lowercase_first_char (id_of_label (con_label kn))
     | Ind ((kn,i) as x) ->
 	if i=0 then 
 	  lowercase_first_char (id_of_label (label kn))
@@ -743,20 +753,18 @@ let named_hd env a = function
   | Anonymous -> Name (id_of_string (hdchar env a)) 
   | x         -> x
 
-let named_hd_type env a = named_hd env (body_of_type a)
-
-let mkProd_name   env (n,a,b) = mkProd (named_hd_type env a n, a, b)
-let mkLambda_name env (n,a,b) = mkLambda (named_hd_type env a n, a, b)
+let mkProd_name   env (n,a,b) = mkProd (named_hd env a n, a, b)
+let mkLambda_name env (n,a,b) = mkLambda (named_hd env a n, a, b)
 
 let lambda_name = mkLambda_name
 let prod_name = mkProd_name
 
-let prod_create   env (a,b) = mkProd (named_hd_type env a Anonymous, a, b)
-let lambda_create env (a,b) =  mkLambda (named_hd_type env a Anonymous, a, b)
+let prod_create   env (a,b) = mkProd (named_hd env a Anonymous, a, b)
+let lambda_create env (a,b) =  mkLambda (named_hd env a Anonymous, a, b)
 
 let name_assumption env (na,c,t) =
   match c with
-    | None      -> (named_hd_type env t na, None, t)
+    | None      -> (named_hd env t na, None, t)
     | Some body -> (named_hd env body na, c, t)
 
 let name_context env hyps =
@@ -834,6 +842,14 @@ let is_global id =
   with Not_found -> 
     false
 
+let is_constructor id =
+  try 
+    match locate (make_short_qualid id) with 
+      | ConstructRef _ as ref -> not (is_imported_ref ref)
+      | _ -> false
+  with Not_found -> 
+    false
+
 let is_section_variable id =
   try let _ = Global.lookup_named id in true
   with Not_found -> false
@@ -858,6 +874,11 @@ let next_global_ident_away allow_secvar id avoid =
 let isGlobalRef c = 
   match kind_of_term c with
   | Const _ | Ind _ | Construct _ | Var _ -> true
+  | _ -> false
+
+let has_polymorphic_type c =
+  match (Global.lookup_constant c).Declarations.const_type with
+  | Declarations.PolymorphicArity _ -> true
   | _ -> false
 
 (* nouvelle version de renommage des variables (DEC 98) *)
@@ -898,11 +919,19 @@ let occur_id nenv id0 c =
   with Occur -> true
     | Not_found -> false (* Case when a global is not in the env *)
 
-let next_name_not_occuring is_goal_ccl name l env_names t =
+type avoid_flags = bool option
+
+let next_name_not_occuring avoid_flags name l env_names t =
   let rec next id =
     if List.mem id l or occur_id env_names id t or 
-      (* To be consistent with intro mechanism *)
-      (is_goal_ccl & is_global id & not (is_section_variable id))
+      (* Further restrictions ? *)
+      match avoid_flags with None -> false | Some not_only_cstr ->
+      (if not_only_cstr then
+	(* To be consistent with the intro mechanism *)
+	is_global id & not (is_section_variable id)
+      else
+	(* To avoid constructors in pattern-matchings *)
+	is_constructor id)
     then next (lift_ident id)
     else id
   in 
@@ -913,6 +942,22 @@ let next_name_not_occuring is_goal_ccl name l env_names t =
         (* taken into account by the function concrete_name; just in case *)
         (* invent a valid name *)
         next (id_of_string "H")
+
+let base_sort_cmp pb s0 s1 =
+  match (s0,s1) with
+    | (Prop c1, Prop c2) -> c1 = Null or c2 = Pos  (* Prop <= Set *)
+    | (Prop c1, Type u)  -> pb = Reduction.CUMUL
+    | (Type u1, Type u2) -> true
+    | _ -> false
+
+(* eq_constr extended with universe erasure *)
+let rec constr_cmp cv_pb t1 t2 =
+  (match kind_of_term t1, kind_of_term t2 with
+      Sort s1, Sort s2 -> base_sort_cmp cv_pb s1 s2
+    | _ -> false)
+  || compare_constr (constr_cmp cv_pb) t1 t2
+
+let eq_constr = constr_cmp Reduction.CONV
 
 (* On reduit une serie d'eta-redex de tete ou rien du tout  *)
 (* [x1:c1;...;xn:cn]@(f;a1...an;x1;...;xn) --> @(f;a1...an) *)
@@ -939,6 +984,7 @@ let rec eta_reduce_head c =
            | _ -> c)
     | _ -> c
 
+
 (* alpha-eta conversion : ignore print names and casts *)
 let eta_eq_constr =
   let rec aux t1 t2 =
@@ -963,14 +1009,18 @@ let assums_of_rel_context sign =
         | None -> (na, t)::l)
     sign ~init:[]
 
-let lift_rel_context n sign =
-  let rec liftrec k = function
-    | (na,c,t)::sign ->
-	(na,option_map (liftn n k) c,type_app (liftn n k) t)
-	::(liftrec (k-1) sign)
+let map_rel_context_with_binders f sign =
+  let rec aux k = function
+    | d::sign -> map_rel_declaration (f k) d :: aux (k-1) sign
     | [] -> []
   in
-  liftrec (rel_context_length sign) sign
+  aux (rel_context_length sign) sign
+
+let substl_rel_context l =
+  map_rel_context_with_binders (fun k -> substnl l (k-1))
+
+let lift_rel_context n =
+  map_rel_context_with_binders (liftn n)
 
 let fold_named_context_both_sides f l ~init = list_fold_right_and_left f l init
 
@@ -996,38 +1046,56 @@ let global_vars_set_of_decl env = function
       Idset.union (global_vars_set env t)
         (global_vars_set env c)
 
+let default_x = id_of_string "x"
+
+let rec next_name_away_in_cases_pattern id avoid =
+  let id = match id with Name id -> id | Anonymous -> default_x in
+  let rec next id =
+    if List.mem id avoid or is_constructor id then next (lift_ident id)
+    else id in
+  next id
+
 (* Remark: Anonymous var may be dependent in Evar's contexts *)
-let concrete_name is_goal_ccl l env_names n c =
+let concrete_name avoid_flags l env_names n c =
   if n = Anonymous & noccurn 1 c then
     (Anonymous,l)
   else
-    let fresh_id = next_name_not_occuring is_goal_ccl n l env_names c in
+    let fresh_id = next_name_not_occuring avoid_flags n l env_names c in
     let idopt = if noccurn 1 c then Anonymous else Name fresh_id in
     (idopt, fresh_id::l)
 
-let concrete_let_name is_goal_ccl l env_names n c =
-  let fresh_id = next_name_not_occuring is_goal_ccl n l env_names c in
+let concrete_let_name avoid_flags l env_names n c =
+  let fresh_id = next_name_not_occuring avoid_flags n l env_names c in
   (Name fresh_id, fresh_id::l)
 
-let rec rename_bound_var env l c =
-  match kind_of_term c with
-  | Prod (Name s,c1,c2)  ->
-      if noccurn 1 c2 then
-        let env' = push_rel (Name s,None,c1) env in
-	mkProd (Name s, c1, rename_bound_var env' l c2)
-      else 
-        let s' = next_ident_away s (global_vars env c2@l) in
-        let env' = push_rel (Name s',None,c1) env in
-        mkProd (Name s', c1, rename_bound_var env' (s'::l) c2)
-  | Prod (Anonymous,c1,c2) ->
-        let env' = push_rel (Anonymous,None,c1) env in
-        mkProd (Anonymous, c1, rename_bound_var env' l c2)
-  | Cast (c,k,t) -> mkCast (rename_bound_var env l c, k,t)
-  | x -> c
+let rec rename_bound_var env avoid c =
+  let env_names = names_of_rel_context env in
+  let rec rename avoid c =
+    match kind_of_term c with
+    | Prod (na,c1,c2)  ->
+	let na',avoid' = concrete_name None avoid env_names na c2 in
+	mkProd (na', c1, rename avoid' c2)
+    | LetIn (na,c1,t,c2) ->
+	let na',avoid' = concrete_let_name None avoid env_names na c2 in
+	mkLetIn (na',c1,t, rename avoid' c2)
+    | Cast (c,k,t) -> mkCast (rename avoid c, k,t)
+    | _ -> c
+  in
+  rename avoid c
 
 (* Combinators on judgments *)
 
 let on_judgment f j = { uj_val = f j.uj_val; uj_type = f j.uj_type }
 let on_judgment_value f j = { j with uj_val = f j.uj_val }
 let on_judgment_type f j = { j with uj_type = f j.uj_type }
+
+(* Cut a context ctx in 2 parts (ctx1,ctx2) with ctx1 containing k 
+     variables *)
+let context_chop k ctx =
+  let rec chop_aux acc = function
+    | (0, l2) -> (List.rev acc, l2)
+    | (n, ((_,Some _,_ as h)::t)) -> chop_aux (h::acc) (n, t)
+    | (n, (h::t)) -> chop_aux (h::acc) (pred n, t)
+    | (_, []) -> anomaly "context_chop"
+  in chop_aux [] (k,ctx)
 

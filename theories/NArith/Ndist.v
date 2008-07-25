@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i 	     $Id: Ndist.v 8733 2006-04-25 22:52:18Z letouzey $	      i*)
+(*i 	     $Id: Ndist.v 10739 2008-04-01 14:45:20Z herbelin $	      i*)
 
 Require Import Arith.
 Require Import Min.

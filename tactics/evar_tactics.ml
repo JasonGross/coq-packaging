@@ -6,13 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evar_tactics.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
+(* $Id: evar_tactics.ml 11072 2008-06-08 16:13:37Z herbelin $ *)
 
 open Term
 open Util
 open Evar_refiner
 open Tacmach
 open Tacexpr
+open Refiner
 open Proof_type
 open Evd
 open Sign
@@ -38,21 +39,24 @@ let instantiate n rawc ido gl =
 	    match hloc with
 		InHyp ->  
 		  (match decl with 
-		       (_,None,typ) -> evar_list sigma typ
-		     | _ -> error 
-			 "please be more specific : in type or value ?")
+		      (_,None,typ) -> evar_list sigma typ
+		    | _ -> error 
+			"please be more specific : in type or value ?")
 	      | InHypTypeOnly ->
 		  let (_, _, typ) = decl in evar_list sigma typ
 	      | InHypValueOnly ->
 		  (match decl with 
-		       (_,Some body,_) -> evar_list sigma body
-		     | _ -> error "not a let .. in  hypothesis") in
+		      (_,Some body,_) -> evar_list sigma body
+		    | _ -> error "not a let .. in  hypothesis") in
     if List.length evl < n then
       error "not enough uninstantiated existential variables";
     if n <= 0 then error "incorrect existential variable index";
     let ev,_ =  destEvar (List.nth evl (n-1)) in
-    let evd' = w_refine ev rawc (create_evar_defs sigma)  in
-    Refiner.tclEVARS (evars_of evd') gl
+    let evd' = w_refine ev rawc (create_goal_evar_defs sigma) in
+      tclTHEN
+        (tclEVARS (evars_of evd'))
+        tclNORMEVAR
+        gl
 	
 (*
 let pfic gls c =
@@ -68,8 +72,8 @@ let instantiate_tac = function
 *)
 
 let let_evar name typ gls =
-  let evd = Evd.create_evar_defs gls.sigma in
+  let evd = Evd.create_goal_evar_defs gls.sigma in
   let evd',evar = Evarutil.new_evar evd (pf_env gls) typ in
   Refiner.tclTHEN (Refiner.tclEVARS (evars_of evd'))
-    (Tactics.letin_tac true name evar nowhere) gls
+    (Tactics.letin_tac None name evar nowhere) gls
  

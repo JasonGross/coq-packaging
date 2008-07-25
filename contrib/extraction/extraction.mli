@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extraction.mli 6303 2004-11-16 12:37:40Z sacerdot $ i*)
+(*i $Id: extraction.mli 10497 2008-02-01 12:18:37Z soubiran $ i*)
 
 (*s Extraction from Coq terms to Miniml. *)
 
@@ -21,20 +21,12 @@ val extract_constant : env -> constant -> constant_body -> ml_decl
 
 val extract_constant_spec : env -> constant -> constant_body -> ml_spec
 
+val extract_with_type : env -> constant_body -> ( identifier list * ml_type ) option
+
 val extract_fixpoint : 
   env -> constant array -> (constr, types) prec_declaration -> ml_decl 
 
 val extract_inductive : env -> kernel_name -> ml_ind
-
-(*s ML declaration corresponding to a Coq reference. *)
-
-val extract_declaration : env -> global_reference -> ml_decl
-
-(*s Without doing complete extraction, just guess what a constant would be. *) 
-
-type kind = Logical | Term | Type 
-
-val constant_kind : env -> constant_body -> kind
 
 (*s Is a [ml_decl] or a [ml_spec] logical ? *) 
 

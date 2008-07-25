@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FMapList.v 9035 2006-07-09 15:42:09Z herbelin $ *)
+(* $Id: FMapList.v 10616 2008-03-04 17:33:35Z letouzey $ *)
 
 (** * Finite map library *)
 
@@ -14,7 +14,6 @@
  [FMapInterface.S] using lists of pairs ordered (increasing) with respect to
  left projection. *)
 
-Require Import FSetInterface. 
 Require Import FMapInterface.
 
 Set Implicit Arguments.
@@ -22,26 +21,14 @@ Unset Strict Implicit.
 
 Module Raw (X:OrderedType).
 
-Module E := X.
-Module MX := OrderedTypeFacts X.
-Module PX := KeyOrderedType X.
-Import MX. 
-Import PX. 
+Module Import MX := OrderedTypeFacts X.
+Module Import PX := KeyOrderedType X.
 
 Definition key := X.t.
-Definition t (elt:Set) := list (X.t * elt).
+Definition t (elt:Type) := list (X.t * elt).
 
 Section Elt.
-Variable elt : Set.
-
-(* Now in KeyOrderedType: 
-Definition eqk (p p':key*elt) := X.eq (fst p) (fst p').
-Definition eqke (p p':key*elt) := 
-        X.eq (fst p) (fst p') /\ (snd p) = (snd p').
-Definition ltk (p p':key*elt) := X.lt (fst p) (fst p').
-Definition MapsTo (k:key)(e:elt):= InA eqke (k,e).
-Definition In k m := exists e:elt, MapsTo k e m.
-*)
+Variable elt : Type.
 
 Notation eqk := (eqk (elt:=elt)).   
 Notation eqke := (eqke (elt:=elt)).
@@ -347,15 +334,22 @@ Proof.
  auto.
 Qed.
 
+Lemma elements_3w : forall m (Hm:Sort m), NoDupA eqk (elements m). 
+Proof. 
+ intros.
+ apply Sort_NoDupA.
+ apply elements_3; auto.
+Qed.
+
 (** * [fold] *)
 
-Function fold (A:Set)(f:key->elt->A->A)(m:t elt) (acc:A) {struct m} :  A :=
+Function fold (A:Type)(f:key->elt->A->A)(m:t elt) (acc:A) {struct m} :  A :=
   match m with
    | nil => acc
    | (k,e)::m' => fold f m' (f k e acc)
   end.
 
-Lemma fold_1 : forall m (A:Set)(i:A)(f:key->elt->A->A),
+Lemma fold_1 : forall m (A:Type)(i:A)(f:key->elt->A->A),
   fold f m i = fold_left (fun a p => f (fst p) (snd p) a) (elements m) i.
 Proof. 
  intros; functional induction (fold f m i); auto.
@@ -374,29 +368,24 @@ Function equal (cmp:elt->elt->bool)(m m' : t elt) { struct m } : bool :=
    | _, _ => false 
   end.
 
-Definition Equal cmp m m' := 
+Definition Equivb cmp m m' := 
   (forall k, In k m <-> In k m') /\ 
   (forall k e e', MapsTo k e m -> MapsTo k e' m' -> cmp e e' = true).  
 
 Lemma equal_1 : forall m (Hm:Sort m) m' (Hm': Sort m') cmp, 
-  Equal cmp m m' -> equal cmp m m' = true. 
+  Equivb cmp m m' -> equal cmp m m' = true. 
 Proof. 
  intros m Hm m' Hm' cmp; generalize Hm Hm'; clear Hm Hm'.
- functional induction (equal cmp m m'); simpl; subst;auto; unfold Equal;
- intuition; subst;   match goal with 
-     | [H: X.compare _ _ = _ |- _ ] => clear H
-     | _ => idtac
-   end.
-
-
-
+ functional induction (equal cmp m m'); simpl; subst;auto; unfold Equivb;
+ intuition; subst.
+ match goal with H: X.compare _ _ = _ |- _ => clear H end.
  assert (cmp_e_e':cmp e e' = true).
   apply H1 with x; auto.
  rewrite cmp_e_e'; simpl.
  apply IHb; auto.
  inversion_clear Hm; auto.
  inversion_clear Hm'; auto.
- unfold Equal; intuition.
+ unfold Equivb; intuition.
  destruct (H0 k).
  assert (In k ((x,e) ::l)).
   destruct H as (e'', hyp); exists e''; auto.
@@ -459,14 +448,12 @@ Qed.
 
 
 Lemma equal_2 : forall m (Hm:Sort m) m' (Hm:Sort m') cmp, 
-  equal cmp m m' = true -> Equal cmp m m'.
+  equal cmp m m' = true -> Equivb cmp m m'.
 Proof.
  intros m Hm m' Hm' cmp; generalize Hm Hm'; clear Hm Hm'.
- functional induction (equal cmp m m'); simpl; subst;auto; unfold Equal; 
-  intuition; try discriminate; subst; match goal with 
-     | [H: X.compare _ _ = _ |- _ ] => clear H
-     | _ => idtac
-   end. 
+ functional induction (equal cmp m m'); simpl; subst;auto; unfold Equivb; 
+  intuition; try discriminate; subst; 
+  try match goal with H: X.compare _ _ = _ |- _ => clear H end.
 
  inversion H0.
 
@@ -502,13 +489,13 @@ Proof.
  elim (Sort_Inf_NotIn H2 H3).
  exists e0; apply MapsTo_eq with k; auto; order.
  apply H8 with k; auto.
-Qed. 
+Qed.
 
-(** This lemma isn't part of the spec of [Equal], but is used in [FMapAVL] *)
+(** This lemma isn't part of the spec of [Equivb], but is used in [FMapAVL] *)
 
 Lemma equal_cons : forall cmp l1 l2 x y, Sort (x::l1) -> Sort (y::l2) ->
   eqk x y -> cmp (snd x) (snd y) = true -> 
-  (Equal cmp l1 l2 <-> Equal cmp (x :: l1) (y :: l2)).
+  (Equivb cmp l1 l2 <-> Equivb cmp (x :: l1) (y :: l2)).
 Proof.
  intros.
  inversion H; subst.
@@ -527,7 +514,7 @@ Proof.
  rewrite H2; simpl; auto.
 Qed.
 
-Variable elt':Set.
+Variable elt':Type.
 
 (** * [map] and [mapi] *)
   
@@ -548,7 +535,7 @@ Section Elt2.
 (* A new section is necessary for previous definitions to work 
    with different [elt], especially [MapsTo]... *)
   
-Variable elt elt' : Set.
+Variable elt elt' : Type.
 
 (** Specification of [map] *)
 
@@ -684,10 +671,10 @@ Section Elt3.
 
 (** * [map2] *)
 
-Variable elt elt' elt'' : Set.
+Variable elt elt' elt'' : Type.
 Variable f : option elt -> option elt' -> option elt''.
 
-Definition option_cons (A:Set)(k:key)(o:option A)(l:list (key*A)) := 
+Definition option_cons (A:Type)(k:key)(o:option A)(l:list (key*A)) := 
   match o with 
    | Some e => (k,e)::l
    | None => l
@@ -739,7 +726,7 @@ Fixpoint combine (m : t elt) : t elt' -> t oee' :=
         end
   end. 
 
-Definition fold_right_pair (A B C:Set)(f: A->B->C->C)(l:list (A*B))(i:C) := 
+Definition fold_right_pair (A B C:Type)(f: A->B->C->C)(l:list (A*B))(i:C) := 
   List.fold_right (fun p => f (fst p) (snd p)) i l.
 
 Definition map2_alt m m' := 
@@ -1038,12 +1025,12 @@ Module E := X.
 
 Definition key := E.t.
 
-Record slist (elt:Set) : Set :=  
+Record slist (elt:Type) :=  
   {this :> Raw.t elt; sorted : sort (@Raw.PX.ltk elt) this}.
-Definition t (elt:Set) : Set := slist elt. 
+Definition t (elt:Type) : Type := slist elt. 
 
 Section Elt. 
- Variable elt elt' elt'':Set. 
+ Variable elt elt' elt'':Type. 
 
  Implicit Types m : t elt.
  Implicit Types x y : key. 
@@ -1060,13 +1047,19 @@ Section Elt.
  Definition map2 f m (m':t elt') : t elt'' := 
    Build_slist (Raw.map2_sorted f m.(sorted) m'.(sorted)).
  Definition elements m : list (key*elt) := @Raw.elements elt m.(this).
- Definition fold (A:Set)(f:key->elt->A->A) m (i:A) : A := @Raw.fold elt A f m.(this) i.
+ Definition cardinal m := length m.(this).
+ Definition fold (A:Type)(f:key->elt->A->A) m (i:A) : A := @Raw.fold elt A f m.(this) i.
  Definition equal cmp m m' : bool := @Raw.equal elt cmp m.(this) m'.(this).
 
  Definition MapsTo x e m : Prop := Raw.PX.MapsTo x e m.(this).
  Definition In x m : Prop := Raw.PX.In x m.(this).
  Definition Empty m : Prop := Raw.Empty m.(this).
- Definition Equal cmp m m' : Prop := @Raw.Equal elt cmp m.(this) m'.(this).
+
+ Definition Equal m m' := forall y, find y m = find y m'.
+ Definition Equiv (eq_elt:elt->elt->Prop) m m' := 
+         (forall k, In k m <-> In k m') /\ 
+         (forall k e e', MapsTo k e m -> MapsTo k e' m' -> eq_elt e e').  
+ Definition Equivb cmp m m' : Prop := @Raw.Equivb elt cmp m.(this) m'.(this).
 
  Definition eq_key : (key*elt) -> (key*elt) -> Prop := @Raw.PX.eqk elt.
  Definition eq_key_elt : (key*elt) -> (key*elt) -> Prop:= @Raw.PX.eqke elt.
@@ -1113,34 +1106,39 @@ Section Elt.
  Proof. intros m; exact (@Raw.elements_2 elt m.(this)). Qed.
  Lemma elements_3 : forall m, sort lt_key (elements m).  
  Proof. intros m; exact (@Raw.elements_3 elt m.(this) m.(sorted)). Qed.
+ Lemma elements_3w : forall m, NoDupA eq_key (elements m).  
+ Proof. intros m; exact (@Raw.elements_3w elt m.(this) m.(sorted)). Qed.
 
- Lemma fold_1 : forall m (A : Set) (i : A) (f : key -> elt -> A -> A),
+ Lemma cardinal_1 : forall m, cardinal m = length (elements m).
+ Proof. intros; reflexivity. Qed.
+
+ Lemma fold_1 : forall m (A : Type) (i : A) (f : key -> elt -> A -> A),
         fold f m i = fold_left (fun a p => f (fst p) (snd p) a) (elements m) i.
  Proof. intros m; exact (@Raw.fold_1 elt m.(this)). Qed.
 
- Lemma equal_1 : forall m m' cmp, Equal cmp m m' -> equal cmp m m' = true. 
+ Lemma equal_1 : forall m m' cmp, Equivb cmp m m' -> equal cmp m m' = true. 
  Proof. intros m m'; exact (@Raw.equal_1 elt m.(this) m.(sorted) m'.(this) m'.(sorted)). Qed.
- Lemma equal_2 : forall m m' cmp, equal cmp m m' = true -> Equal cmp m m'.
+ Lemma equal_2 : forall m m' cmp, equal cmp m m' = true -> Equivb cmp m m'.
  Proof. intros m m'; exact (@Raw.equal_2 elt m.(this) m.(sorted) m'.(this) m'.(sorted)). Qed.
 
  End Elt.
  
- Lemma map_1 : forall (elt elt':Set)(m: t elt)(x:key)(e:elt)(f:elt->elt'), 
+ Lemma map_1 : forall (elt elt':Type)(m: t elt)(x:key)(e:elt)(f:elt->elt'), 
         MapsTo x e m -> MapsTo x (f e) (map f m).
  Proof. intros elt elt' m; exact (@Raw.map_1 elt elt' m.(this)). Qed.
- Lemma map_2 : forall (elt elt':Set)(m: t elt)(x:key)(f:elt->elt'), 
+ Lemma map_2 : forall (elt elt':Type)(m: t elt)(x:key)(f:elt->elt'), 
         In x (map f m) -> In x m. 
  Proof. intros elt elt' m; exact (@Raw.map_2 elt elt' m.(this)). Qed.
 
- Lemma mapi_1 : forall (elt elt':Set)(m: t elt)(x:key)(e:elt)
+ Lemma mapi_1 : forall (elt elt':Type)(m: t elt)(x:key)(e:elt)
         (f:key->elt->elt'), MapsTo x e m -> 
         exists y, E.eq y x /\ MapsTo x (f y e) (mapi f m).
  Proof. intros elt elt' m; exact (@Raw.mapi_1 elt elt' m.(this)). Qed.
- Lemma mapi_2 : forall (elt elt':Set)(m: t elt)(x:key)
+ Lemma mapi_2 : forall (elt elt':Type)(m: t elt)(x:key)
         (f:key->elt->elt'), In x (mapi f m) -> In x m.
  Proof. intros elt elt' m; exact (@Raw.mapi_2 elt elt' m.(this)). Qed.
 
- Lemma map2_1 : forall (elt elt' elt'':Set)(m: t elt)(m': t elt')
+ Lemma map2_1 : forall (elt elt' elt'':Type)(m: t elt)(m': t elt')
 	(x:key)(f:option elt->option elt'->option elt''), 
 	In x m \/ In x m' -> 
         find x (map2 f m m') = f (find x m) (find x m').       
@@ -1148,7 +1146,7 @@ Section Elt.
  intros elt elt' elt'' m m' x f; 
  exact (@Raw.map2_1 elt elt' elt'' f m.(this) m.(sorted) m'.(this) m'.(sorted) x).
  Qed.
- Lemma map2_2 : forall (elt elt' elt'':Set)(m: t elt)(m': t elt')
+ Lemma map2_2 : forall (elt elt' elt'':Type)(m: t elt)(m': t elt')
 	(x:key)(f:option elt->option elt'->option elt''), 
         In x (map2 f m m') -> In x m \/ In x m'.
  Proof. 
@@ -1229,7 +1227,7 @@ Proof.
  unfold equal, eq in H6; simpl in H6; auto.
 Qed.
 
-Lemma eq_1 : forall m m', Equal cmp m m' -> eq m m'.
+Lemma eq_1 : forall m m', Equivb cmp m m' -> eq m m'.
 Proof.
  intros.
  generalize (@equal_1 D.t m m' cmp).
@@ -1237,7 +1235,7 @@ Proof.
  intuition.
 Qed.
 
-Lemma eq_2 : forall m m', eq m m' -> Equal cmp m m'.
+Lemma eq_2 : forall m m', eq m m' -> Equivb cmp m m'.
 Proof.
  intros.
  generalize (@equal_2 D.t m m' cmp).

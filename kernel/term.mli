@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: term.mli 9303 2006-10-27 21:50:17Z herbelin $ i*)
+(*i $Id: term.mli 10859 2008-04-27 16:46:15Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -21,9 +21,9 @@ type sorts =
   | Prop of contents       (* Prop and Set *)
   | Type of Univ.universe  (* Type *)
 
-val mk_Set  : sorts
-val mk_Prop : sorts
-val type_0  : sorts
+val set_sort  : sorts
+val prop_sort : sorts
+val type1_sort  : sorts
 
 (*s The sorts family of CCI. *)
 
@@ -40,12 +40,10 @@ type existential_key = int
 type metavariable = int
 
 (*s Case annotation *)
-type pattern_source = DefaultPat of int | RegularPat
-type case_style = LetStyle | IfStyle | MatchStyle | RegularStyle
+type case_style = LetStyle | IfStyle | LetPatternStyle | MatchStyle | RegularStyle
 type case_printing =
   { ind_nargs : int; (* number of real args of the inductive type *)
-    style     : case_style;
-    source    : pattern_source array }
+    style     : case_style }
 (* the integer is the number of real args, needed for reduction *)
 type case_info =
   { ci_ind        : inductive;
@@ -63,17 +61,12 @@ type constr
    and application grouping *)
 val eq_constr : constr -> constr -> bool
 
-(* [types] is the same as [constr] but is intended to be used where a
-   {\em type} in CCI sense is expected (Rem:plurial form since [type] is a
-   reserved ML keyword) *)
+(* [types] is the same as [constr] but is intended to be used for
+   documentation to indicate that such or such function specifically works
+   with {\em types} (i.e. terms of type a sort). 
+   (Rem:plurial form since [type] is a reserved ML keyword) *)
 
 type types = constr
-
-(*s Functions about [types] *)
-
-val type_app : (constr -> constr) -> types -> types
-
-val body_of_type : types -> constr
 
 (*s Functions for dealing with constr terms.
   The following functions are intended to simplify and to uniform the 
@@ -236,6 +229,7 @@ val isMeta : constr -> bool
 val isSort : constr -> bool
 val isCast : constr -> bool
 val isApp : constr -> bool
+val isLambda : constr -> bool
 val isProd : constr -> bool
 val isConst : constr -> bool
 val isConstruct : constr -> bool
@@ -445,8 +439,8 @@ val noccurn : int -> constr -> bool
 val noccur_between : int -> int -> constr -> bool
 
 (* Checking function for terms containing existential- or
-   meta-variables.  The function [noccur_with_meta] considers only
-   meta-variable applied to some terms (intented to be its local
+   meta-variables.  The function [noccur_with_meta] does not consider
+   meta-variables applied to some terms (intented to be its local
    context) (for existential variables, it is necessarily the case) *)
 val noccur_with_meta : int -> int -> constr -> bool
 
@@ -455,7 +449,7 @@ val noccur_with_meta : int -> int -> constr -> bool
 (* [exliftn el c] lifts [c] with lifting [el] *)
 val exliftn : Esubst.lift -> constr -> constr
 
-(* [liftn n k c] lifts by [n] indexes above [k] in [c] *)
+(* [liftn n k c] lifts by [n] indexes above or equal to [k] in [c] *)
 val liftn : int -> int -> constr -> constr
 
 (* [lift n c] lifts by [n] the positive indexes in [c] *)
@@ -479,10 +473,10 @@ val replace_vars : (identifier * constr) list -> constr -> constr
 val subst_var : identifier -> constr -> constr
 
 (* [subst_vars [id1;...;idn] t] substitute [VAR idj] by [Rel j] in [t]
-   if two names are identical, the one of least indice is keeped *)
+   if two names are identical, the one of least indice is kept *)
 val subst_vars : identifier list -> constr -> constr
 (* [substn_vars n [id1;...;idn] t] substitute [VAR idj] by [Rel j+n-1] in [t]
-   if two names are identical, the one of least indice is keeped *)
+   if two names are identical, the one of least indice is kept *)
 val substn_vars : int -> identifier list -> constr -> constr
 
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: nametab.ml 10270 2007-10-29 14:48:33Z notin $ *)
+(* $Id: nametab.ml 10664 2008-03-14 11:27:37Z soubiran $ *)
 
 open Util
 open Pp
@@ -107,7 +107,7 @@ struct
 	      | Absolute (n,_) -> 
 		  (* This is an absolute name, we must keep it 
 		     otherwise it may become unaccessible forever *)
-		  Options.if_verbose
+		  Flags.if_verbose
 		    warning ("Trying to mask the absolute name \"" 
 			     ^ U.to_string n ^ "\"!"); 
 		  current
@@ -147,7 +147,7 @@ let rec push_exactly uname o level (current,dirmap) = function
 	      | Absolute (n,_) -> 
 		  (* This is an absolute name, we must keep it 
 		     otherwise it may become unaccessible forever *)
-		  Options.if_verbose
+		  Flags.if_verbose
 		    warning ("Trying to mask the absolute name \""
   			     ^ U.to_string n ^ "\"!");
 		  current
@@ -263,8 +263,10 @@ type ccitab = extended_global_reference SpTab.t
 let the_ccitab = ref (SpTab.empty : ccitab)
 
 type kntab = kernel_name SpTab.t
-let the_modtypetab = ref (SpTab.empty : kntab)
 let the_tactictab = ref (SpTab.empty : kntab)
+
+type mptab = module_path SpTab.t
+let the_modtypetab = ref (SpTab.empty : mptab)
 
 type objtab = unit SpTab.t
 let the_objtab = ref (SpTab.empty : objtab)
@@ -299,8 +301,10 @@ let the_globrevtab = ref (Globrevtab.empty : globrevtab)
 type mprevtab = dir_path MPmap.t
 let the_modrevtab = ref (MPmap.empty : mprevtab)
 
+type mptrevtab = section_path MPmap.t
+let the_modtyperevtab = ref (MPmap.empty : mptrevtab)
+
 type knrevtab = section_path KNmap.t
-let the_modtyperevtab = ref (KNmap.empty : knrevtab)
 let the_tacticrevtab = ref (KNmap.empty : knrevtab)
 
 
@@ -314,7 +318,10 @@ let push_xref visibility sp xref =
   the_ccitab := SpTab.push visibility sp xref !the_ccitab;
   match visibility with
     | Until _ -> 
-	the_globrevtab := Globrevtab.add xref sp !the_globrevtab
+	if Globrevtab.mem xref !the_globrevtab then
+	  ()
+	else
+	  the_globrevtab := Globrevtab.add xref sp !the_globrevtab
     | _ -> ()
 
 let push_cci visibility sp ref =
@@ -328,7 +335,7 @@ let push = push_cci
 
 let push_modtype vis sp kn = 
   the_modtypetab := SpTab.push vis sp kn !the_modtypetab;
-  the_modtyperevtab := KNmap.add kn sp !the_modtyperevtab
+  the_modtyperevtab := MPmap.add kn sp !the_modtyperevtab
 
 (* This is for tactic definition names *)
 
@@ -427,7 +434,7 @@ let global r =
     | TrueGlobal ref -> ref
     | SyntacticDef _ -> 
         user_err_loc (loc,"global",
-          str "Unexpected reference to a syntactic definition: " ++
+          str "Unexpected reference to a notation: " ++
           pr_qualid qid)
   with Not_found ->
     error_global_not_found_loc loc qid
@@ -483,7 +490,7 @@ let shortest_qualid_of_module mp =
     DirTab.shortest_qualid Idset.empty dir !the_dirtab
 
 let shortest_qualid_of_modtype kn =
-  let sp = KNmap.find kn !the_modtyperevtab in
+  let sp = MPmap.find kn !the_modtyperevtab in
     SpTab.shortest_qualid Idset.empty sp !the_modtypetab
 
 let shortest_qualid_of_tactic kn =
@@ -497,12 +504,13 @@ let pr_global_env env ref =
   let s = string_of_qualid (shortest_qualid_of_global env ref) in
   (str s)
 
-let global_inductive r =
+let inductive_of_reference r =
   match global r with
   | IndRef ind -> ind
   | ref ->
       user_err_loc (loc_of_reference r,"global_inductive",
         pr_reference r ++ spc () ++ str "is not an inductive type")
+
 
 (********************************************************************)
 
@@ -520,8 +528,9 @@ let init () =
   the_tactictab := SpTab.empty;
   the_globrevtab := Globrevtab.empty;
   the_modrevtab := MPmap.empty;
-  the_modtyperevtab := KNmap.empty;
+  the_modtyperevtab := MPmap.empty;
   the_tacticrevtab := KNmap.empty
+
 
 
 let freeze () =

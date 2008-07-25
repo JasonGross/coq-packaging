@@ -11,16 +11,16 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: FSetToFiniteSet.v 8876 2006-05-30 13:43:15Z letouzey $ *)
+(* $Id: FSetToFiniteSet.v 10739 2008-04-01 14:45:20Z herbelin $ *)
 
 Require Import Ensembles Finite_sets.
-Require Import FSetInterface FSetProperties OrderedTypeEx.
+Require Import FSetInterface FSetProperties OrderedTypeEx DecidableTypeEx.
 
-(** * Going from [FSets] with usual equality 
-    to the old [Ensembles] and [Finite_sets] theory. *)
+(** * Going from [FSets] with usual Leibniz equality 
+    to the good old [Ensembles] and [Finite_sets] theory. *)
 
-Module S_to_Finite_set (U:UsualOrderedType)(M:S with Module E := U).
- Module MP:= Properties(M).
+Module WS_to_Finite_set (U:UsualDecidableType)(M: WSfun U).
+ Module MP:= WProperties U M.
  Import M MP FM Ensembles Finite_sets.
 
  Definition mkEns : M.t -> Ensemble M.elt := 
@@ -82,7 +82,7 @@ Module S_to_Finite_set (U:UsualOrderedType)(M:S with Module E := U).
  Lemma add_Add : forall x s, !!(add x s) === Add _ (!!s) x.
  Proof.
  unfold Same_set, Included, mkEns, In.
- split; intro; set_iff; inversion 1; unfold E.eq; auto with sets.
+ split; intro; set_iff; inversion 1; auto with sets.
  inversion H0.
  constructor 2; constructor.
  constructor 1; auto.
@@ -97,7 +97,7 @@ Module S_to_Finite_set (U:UsualOrderedType)(M:S with Module E := U).
  inversion H0.
  constructor 2; constructor.
  constructor 1; auto.
- red in H; rewrite H; unfold E.eq in *.
+ red in H; rewrite H.
  inversion H0; auto.
  inversion H1; auto.
  Qed.
@@ -105,10 +105,10 @@ Module S_to_Finite_set (U:UsualOrderedType)(M:S with Module E := U).
  Lemma remove_Subtract : forall x s, !!(remove x s) === Subtract _ (!!s) x.
  Proof.
  unfold Same_set, Included, mkEns, In.
- split; intro; set_iff; inversion 1; unfold E.eq in *; auto with sets.
+ split; intro; set_iff; inversion 1; auto with sets.
  split; auto.
- swap H1.
- inversion H2; auto.
+ contradict H1.
+ inversion H1; auto.
  Qed.
 
  Lemma mkEns_Finite : forall s, Finite _ (!!s).
@@ -136,4 +136,28 @@ Module S_to_Finite_set (U:UsualOrderedType)(M:S with Module E := U).
  apply Add_Add; auto.
  Qed.
 
+ (** we can even build a function from Finite Ensemble to FSet 
+     ... at least in Prop. *)
+
+ Lemma Ens_to_FSet : forall e : Ensemble M.elt, Finite _ e -> 
+   exists s:M.t, !!s === e.
+ Proof.
+ induction 1.
+ exists M.empty.
+ apply empty_Empty_Set.
+ destruct IHFinite as (s,Hs).
+ exists (M.add x s).
+ apply Extensionality_Ensembles in Hs. 
+ rewrite <- Hs.
+ apply add_Add.
+ Qed.
+
+End WS_to_Finite_set.
+
+
+Module S_to_Finite_set (U:UsualOrderedType)(M: Sfun U).
+  Module D := OT_as_DT U.
+  Include WS_to_Finite_set D M.
 End S_to_Finite_set.
+
+

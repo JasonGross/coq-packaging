@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: proof_trees.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
+(* $Id: proof_trees.ml 10124 2007-09-17 18:40:21Z herbelin $ *)
 
 open Closure
 open Util
@@ -35,6 +35,7 @@ let is_bind = function
 
 let mk_goal hyps cl extra = 
   { evar_hyps = hyps; evar_concl = cl; 
+    evar_filter = List.map (fun _ -> true) (named_context_of_val hyps);
     evar_body = Evar_empty; evar_extra = extra }
 
 (* Functions on proof trees *)

@@ -6,22 +6,6 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: scheme.mli 7632 2005-12-01 14:35:21Z letouzey $ i*)
+(*i $Id: scheme.mli 10232 2007-10-17 12:32:10Z letouzey $ i*)
 
-(*s Some utility functions to be reused in module [Haskell]. *)
-
-open Pp
-open Miniml
-open Names
-
-val keywords : Idset.t
-
-val preamble : 
-  extraction_params -> module_path list -> bool*bool*bool -> bool -> std_ppcmds
-
-module Make : functor(P : Mlpp_param) -> Mlpp
-
-
-
-
-
+val scheme_descr : Miniml.language_descr 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(*i $Id: decl_interp.ml 10739 2008-04-01 14:45:20Z herbelin $ i*)
 
 open Util
 open Names
@@ -25,10 +25,10 @@ open Pp
 let raw_app (loc,hd,args) = if args =[] then hd else RApp(loc,hd,args) 
 
 let intern_justification_items globs = 
-  option_map (List.map (intern_constr globs))
+  Option.map (List.map (intern_constr globs))
 
 let intern_justification_method globs = 
-  option_map (intern_tactic globs)
+  Option.map (intern_tactic globs)
 
 let intern_statement intern_it globs st =
   {st_label=st.st_label;
@@ -52,7 +52,7 @@ let add_name nam globs=
 
 let intern_hyp iconstr globs = function 
     Hvar (loc,(id,topt)) -> add_var id globs,
-      Hvar (loc,(id,option_map (intern_constr globs) topt))
+      Hvar (loc,(id,Option.map (intern_constr globs) topt))
   | Hprop st -> add_name st.st_label globs,
       Hprop (intern_statement iconstr globs st)
 
@@ -73,7 +73,7 @@ let intern_casee globs = function
 let intern_hyp_list args globs =
   let intern_one globs (loc,(id,opttyp)) =
     (add_var id globs),
-    (loc,(id,option_map (intern_constr globs) opttyp)) in
+    (loc,(id,Option.map (intern_constr globs) opttyp)) in
   list_fold_map intern_one globs args 
 
 let intern_suffices_clause globs (hyps,c) = 
@@ -141,7 +141,7 @@ let rec intern_proof_instr globs instr=
 (* INTERP *)
 
 let interp_justification_items sigma env =
-    option_map (List.map (fun c ->understand sigma env (fst c)))
+    Option.map (List.map (fun c ->understand sigma env (fst c)))
 
 let interp_constr check_sort sigma env c = 
   if check_sort then 
@@ -153,7 +153,7 @@ let special_whd env =
   let infos=Closure.create_clos_infos Closure.betadeltaiota env in
     (fun t -> Closure.whd_val infos (Closure.inject t))
 
-let _eq = Libnames.constr_of_reference (Coqlib.glob_eq)
+let _eq = Libnames.constr_of_global (Coqlib.glob_eq)
 
 let decompose_eq env id =
   let typ = Environ.named_type id env in
@@ -166,11 +166,7 @@ let decompose_eq env id =
       | _ -> error "previous step is not an equality"
 
 let get_eq_typ info env =
-  let last_id = 	    
-    match info.pm_last with
-	None -> error "no previous equality"
-      | Some (id,_) -> id in
-  let typ = decompose_eq env last_id in  
+  let typ = decompose_eq env (get_last env) in  
     typ
 
 let interp_constr_in_type typ sigma env c =
@@ -186,17 +182,17 @@ let interp_constr_or_thesis check_sort sigma env = function
 
 let type_tester_var body typ = 
   raw_app(dummy_loc,
-       RLambda(dummy_loc,Anonymous,typ,
+       RLambda(dummy_loc,Anonymous,Explicit,typ,
 	       RSort (dummy_loc,RProp Null)),body)
 
 let abstract_one_hyp inject h raw = 
   match h with 
       Hvar (loc,(id,None)) ->  
-	RProd (dummy_loc,Name id, RHole (loc,Evd.BinderType (Name id)), raw)
+	RProd (dummy_loc,Name id, Explicit, RHole (loc,Evd.BinderType (Name id)), raw)
     | Hvar (loc,(id,Some typ)) ->  
-	RProd (dummy_loc,Name id,fst typ, raw)
+	RProd (dummy_loc,Name id, Explicit, fst typ, raw)
     | Hprop st -> 
-	RProd (dummy_loc,st.st_label,inject st.st_it, raw)
+	RProd (dummy_loc,st.st_label, Explicit, inject st.st_it, raw)
 
 let rawconstr_of_hyps inject hyps head = 
   List.fold_right (abstract_one_hyp inject) hyps head
@@ -258,18 +254,18 @@ let rec raw_of_pat =
 let prod_one_hyp = function
     (loc,(id,None)) ->
       (fun raw ->  
-	 RProd (dummy_loc,Name id, 
+	 RProd (dummy_loc,Name id, Explicit,
 		RHole (loc,Evd.BinderType (Name id)), raw))
   | (loc,(id,Some typ)) -> 
       (fun raw ->  
-	 RProd (dummy_loc,Name id,fst typ, raw))
+	 RProd (dummy_loc,Name id, Explicit, fst typ, raw))
 
 let prod_one_id (loc,id) raw =
-  RProd (dummy_loc,Name id,
+  RProd (dummy_loc,Name id, Explicit,
 	 RHole (loc,Evd.BinderType (Name id)), raw)
 
 let let_in_one_alias (id,pat) raw =
-  RLetIn (dummy_loc,Name id,raw_of_pat pat, raw)
+  RLetIn (dummy_loc,Name id, raw_of_pat pat, raw)
 
 let rec bind_primary_aliases map pat =
   match pat with 
@@ -352,8 +348,6 @@ let interp_cases info sigma env params (pat:cases_pattern_expr) hyps =
   let pat_vars,aliases,patt = interp_pattern env pat in
   let inject = function
       Thesis (Plain) -> Rawterm.RSort(dummy_loc,RProp Null)
-    | Thesis (Sub n) ->
-	error "thesis[_] is not allowed here"
     | Thesis (For rec_occ) ->
 	if not (List.mem rec_occ pat_vars) then 
 	  errorlabstrm "suppose it is" 
@@ -405,7 +399,7 @@ let interp_suffices_clause sigma env (hyps,cot)=
 	This (c,_) -> 
 	  let nhyps,nc = interp_hyps_gen fst (fun x _ -> x) sigma env hyps c in
 	  nhyps,This nc
-      | Thesis (Plain| Sub _) as th  -> interp_hyps sigma env hyps,th
+      | Thesis Plain as th  -> interp_hyps sigma env hyps,th
       | Thesis (For n) -> error "\"thesis for\" is not applicable here" in
   let push_one hyp env0 =
     match hyp with
@@ -423,11 +417,11 @@ let interp_casee sigma env = function
 let abstract_one_arg = function
     (loc,(id,None)) ->
       (fun raw ->  
-	 RLambda (dummy_loc,Name id, 
+	 RLambda (dummy_loc,Name id, Explicit, 
 		RHole (loc,Evd.BinderType (Name id)), raw))
   | (loc,(id,Some typ)) -> 
       (fun raw ->  
-	 RLambda (dummy_loc,Name id,fst typ, raw))
+	 RLambda (dummy_loc,Name id, Explicit, fst typ, raw))
 
 let rawconstr_of_fun args body = 
   List.fold_right abstract_one_arg args (fst body)

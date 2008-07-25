@@ -6,11 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: R_sqrt.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: R_sqrt.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
-Require Import Rsqrt_def. Open Local Scope R_scope.
+Require Import Rsqrt_def.
+Open Local Scope R_scope.
 
 (** * Continuous extension of Rsqrt on R *)
 Definition sqrt (x:R) : R :=

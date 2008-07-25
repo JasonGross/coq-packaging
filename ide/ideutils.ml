@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ideutils.ml 9263 2006-10-23 12:08:08Z barras $ *)
+(* $Id: ideutils.ml 11093 2008-06-10 18:41:33Z barras $ *)
 
 
 open Preferences
@@ -25,7 +25,7 @@ let set_location = ref  (function s -> failwith "not ready")
 let pulse = ref (function () -> failwith "not ready")
 
 
-let debug = Options.debug
+let debug = Flags.debug
 
 let prerr_endline s =
   if !debug then (prerr_endline s;flush stderr)
@@ -35,7 +35,7 @@ let prerr_string s =
 let lib_ide_file f =
   let coqlib =
     System.getenv_else "COQLIB"
-      (if Coq_config.local || !Options.boot then Coq_config.coqtop
+      (if Coq_config.local || !Flags.boot then Coq_config.coqtop
        else Coq_config.coqlib) in
   Filename.concat (Filename.concat coqlib "ide") f
   
@@ -148,44 +148,83 @@ let set_highlight_timer f =
 
 
 (* Get back the standard coq out channels *)
-let read_stdout,clear_stdout =
+let init_stdout,read_stdout,clear_stdout =
   let out_buff = Buffer.create 100 in
-  Pp_control.std_ft := Format.formatter_of_buffer out_buff;
-  (fun () -> Format.pp_print_flush !Pp_control.std_ft (); 
+  let out_ft = Format.formatter_of_buffer out_buff in
+  let deep_out_ft = Format.formatter_of_buffer out_buff in
+  let _ = Pp_control.set_gp deep_out_ft Pp_control.deep_gp in
+  (fun () -> 
+    Pp_control.std_ft := out_ft;
+    Pp_control.err_ft := out_ft;
+    Pp_control.deep_ft := deep_out_ft;
+),
+  (fun () -> Format.pp_print_flush out_ft (); 
      let r = Buffer.contents out_buff in
+     prerr_endline "Output from Coq is: "; prerr_endline r;
      Buffer.clear out_buff; r),
   (fun () -> 
-     Format.pp_print_flush !Pp_control.std_ft (); Buffer.clear out_buff)
+     Format.pp_print_flush out_ft (); Buffer.clear out_buff)
 
 
 let last_dir = ref ""
-let select_file ~title ?(dir = last_dir) ?(filename="") () =
-  let fs =
-    if Filename.is_relative filename then begin
-      if !dir <> "" then
-        let filename = Filename.concat !dir filename in 
-        GWindow.file_selection ~show_fileops:true ~modal:true ~title ~filename ()
-      else
-        GWindow.file_selection ~show_fileops:true ~modal:true ~title ()
-    end else begin
-      dir := Filename.dirname filename;
-      GWindow.file_selection ~show_fileops:true ~modal:true ~title ~filename ()
-    end
-  in
-  fs#complete ~filter:"";
-  ignore (fs#connect#destroy ~callback: GMain.Main.quit);
-  let file = ref None in 
-  ignore (fs#ok_button#connect#clicked ~callback:
-    begin fun () ->
-      file := Some fs#filename; 
-      dir := Filename.dirname fs#filename;
-      fs#destroy ()
-    end);
-  ignore (fs # cancel_button # connect#clicked ~callback:fs#destroy);
-  fs # show ();
-  GMain.Main.main ();
-  !file
 
+let filter_all_files () = GFile.filter 
+  ~name:"All" 
+  ~patterns:["*"] () 
+  
+let filter_coq_files () =  GFile.filter 
+  ~name:"Coq source code" 
+  ~patterns:[ "*.v"] ()
+
+let select_file_for_open ~title ?(dir = last_dir) ?(filename="") () =
+  let file = ref None in 
+  let file_chooser = GWindow.file_chooser_dialog ~action:`OPEN ~modal:true ~title () in
+    file_chooser#add_button_stock `CANCEL `CANCEL ;
+    file_chooser#add_select_button_stock `OPEN `OPEN ;
+    file_chooser#add_filter (filter_coq_files ());
+    file_chooser#add_filter (filter_all_files ());
+    file_chooser#set_default_response `OPEN;
+    ignore (file_chooser#set_current_folder !dir);
+    begin match file_chooser#run () with
+      | `OPEN -> 
+	  begin 
+	    file := file_chooser#filename;
+	    match !file with
+		None -> ()
+	      | Some s -> dir := Filename.dirname s;
+	  end
+      | `DELETE_EVENT | `CANCEL -> ()
+    end ;
+    file_chooser#destroy ();	    
+    !file
+
+
+let select_file_for_save ~title ?(dir = last_dir) ?(filename="") () =
+  let file = ref None in 
+  let file_chooser = GWindow.file_chooser_dialog ~action:`SAVE ~modal:true ~title () in
+    file_chooser#add_button_stock `CANCEL `CANCEL ;
+    file_chooser#add_select_button_stock `SAVE `SAVE ;
+    file_chooser#add_filter (filter_coq_files ());
+    file_chooser#add_filter (filter_all_files ());
+  (* this line will be used when a lablgtk >= 2.10.0 is the default on most distributions  
+       file_chooser#set_do_overwrite_confirmation true;
+     *)
+    file_chooser#set_default_response `SAVE;
+    ignore (file_chooser#set_current_folder !dir);
+    ignore (file_chooser#set_current_name filename);
+    
+    begin match file_chooser#run () with
+      | `SAVE -> 
+	  begin 
+	    file := file_chooser#filename;
+	    match !file with
+		None -> ()
+	      | Some s -> dir := Filename.dirname s;
+	  end
+      | `DELETE_EVENT | `CANCEL -> ()
+    end ;
+    file_chooser#destroy ();	    
+    !file
 
 let find_tag_start (tag :GText.tag) (it:GText.iter) =
   let it = it#copy in
@@ -252,10 +291,8 @@ let run_command f c =
   let buffe = String.make 127 ' ' in
   let n = ref 0 in
   let ne = ref 0 in
-
-  while n:= input cin buff 0 127 ; ne := input cerr buffe 0 127 ; 
-    !n+ !ne <> 0
-  do 
+  while n:= input cin buff 0 127 ; ne := input cerr buffe 0 127 ; !n+ !ne <> 0
+  do
     let r = try_convert (String.sub buff 0 !n) in 
     f r;
     Buffer.add_string result r;
@@ -266,9 +303,11 @@ let run_command f c =
   (Unix.close_process_full (cin,cout,cerr),  Buffer.contents result)
 
 let browse f url =
-  let l,r = !current.cmd_browse in
-  let (_s,_res) = run_command f (l ^ url ^ r) in
-  ()
+  let com = Flags.subst_command_placeholder !current.cmd_browse url in
+  let s = Sys.command com in
+  if s = 127 then
+    f ("Could not execute\n\""^com^
+       "\"\ncheck your preferences for setting a valid browser command\n")
 
 let url_for_keyword =
   let ht = Hashtbl.create 97 in
@@ -293,7 +332,7 @@ let url_for_keyword =
 
 let browse_keyword f text = 
   try let u = url_for_keyword text in browse f (!current.doc_url ^ u) 
-  with _ -> ()
+  with Not_found -> f ("No documentation found for "^text)
 
 
 let underscore = Glib.Utf8.to_unichar "_" (ref 0)

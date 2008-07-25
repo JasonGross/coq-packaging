@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Even.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Even.v 10410 2007-12-31 13:11:55Z msozeau $ i*)
 
 (** Here we define the predicates [even] and [odd] by mutual induction
     and we prove the decidability and the exclusion of those predicates.
@@ -40,7 +40,7 @@ Proof.
   induction n.
     auto with arith.
     elim IHn; auto with arith.
-Qed.
+Defined.
 
 Lemma not_even_and_odd : forall n, even n -> odd n -> False.
 Proof.

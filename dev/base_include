@@ -19,6 +19,7 @@
 
 #install_printer  (* identifier *) ppid;;
 #install_printer  (* identifier *) ppidset;;
+#install_printer  (* Intset.t *) ppintset;;
 #install_printer  (* label *) pplab;;
 #install_printer  (* mod_self_id *) ppmsid;;
 #install_printer  (* mod_bound_id *) ppmbid;;
@@ -31,6 +32,9 @@
 #install_printer  (* constr *)  print_pure_constr;; 
 #install_printer  (* patch *) ppripos;;
 #install_printer  (* values *) ppvalues;;
+#install_printer  (* Idpred.t *) pp_idpred;;
+#install_printer  (* Cpred.t *) pp_cpred;;
+#install_printer  (* transparent_state *) pp_transparent_state;;
 #install_printer ppzipper;;
 #install_printer ppstack;;
 #install_printer ppatom;;
@@ -38,6 +42,7 @@
 #install_printer ppvblock;;
 #install_printer  (* bigint *) ppbigint;;
 #install_printer  (* loc *) pploc;;
+#install_printer  (* substitution *) prsubst;;
 
 (* Open main files *)
 
@@ -63,12 +68,14 @@ open Pattern
 open Cbv
 open Classops
 open Pretyping
+open Pretyping.Default
+open Pretyping.Default.Cases
 open Cbv
 open Classops
-open Pretyping
 open Clenv
 open Rawterm
 open Coercion
+open Coercion.Default
 open Recordops
 open Detyping
 open Reductionops
@@ -82,6 +89,7 @@ open Indrec
 open Typing
 open Inductiveops
 open Unification
+open Matching
 
 open Constrextern
 open Constrintern
@@ -167,7 +175,7 @@ open Declarations;;
 
 let constbody_of_string s =
   let b = Global.lookup_constant (Nametab.locate_constant (qualid_of_sp (path_of_string s))) in
-  Util.out_some b.const_body;;
+  Option.get b.const_body;;
 
 (* Get the current goal *)
 

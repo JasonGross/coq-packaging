@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Fourier_util.v 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id: Fourier_util.v 10710 2008-03-23 09:24:09Z herbelin $ *)
 
 Require Export Rbase.
 Comments "Lemmas used by the tactic Fourier".
@@ -152,7 +152,7 @@ apply Rlt_irrefl.
 ring.
 Qed.
  
-Lemma Rlt_not_le : forall n d:R, 0 < n * / d -> ~ 0 <= - n * / d.
+Lemma Rlt_not_le_frac_opp : forall n d:R, 0 < n * / d -> ~ 0 <= - n * / d.
 intros n d H; try assumption.
 apply Rgt_not_le.
 replace 0 with (-0).

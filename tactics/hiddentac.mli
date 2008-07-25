@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: hiddentac.mli 9551 2007-01-29 15:13:35Z bgregoir $ i*)
+(*i $Id: hiddentac.mli 11072 2008-06-08 16:13:37Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -16,6 +16,8 @@ open Tacmach
 open Genarg
 open Tacexpr
 open Rawterm
+open Evd
+open Clenv
 (*i*)
 
 (* Tactics for the interpreter. They left a trace in the proof tree
@@ -32,24 +34,28 @@ val h_exact           : constr -> tactic
 val h_exact_no_check  : constr -> tactic
 val h_vm_cast_no_check  : constr -> tactic
 
-val h_apply           : constr with_bindings -> tactic
+val h_apply           : advanced_flag -> evars_flag -> 
+                        constr with_ebindings -> tactic
 
-val h_elim            : constr with_bindings ->
-                        constr with_bindings option -> tactic
+val h_elim            : evars_flag -> constr with_ebindings ->
+                        constr with_ebindings option -> tactic
 val h_elim_type       : constr -> tactic
-val h_case            : constr with_bindings -> tactic
+val h_case            : evars_flag -> constr with_ebindings -> tactic
 val h_case_type       : constr -> tactic
 
-val h_mutual_fix      : identifier -> int ->
+val h_mutual_fix      : hidden_flag -> identifier -> int ->
                         (identifier * int * constr) list -> tactic
 val h_fix             : identifier option -> int -> tactic
-val h_mutual_cofix    : identifier -> (identifier * constr) list -> tactic
+val h_mutual_cofix    : hidden_flag -> identifier -> 
+                        (identifier * constr) list -> tactic
 val h_cofix           : identifier option -> tactic
 
 val h_cut             : constr -> tactic 
 val h_generalize      : constr list -> tactic 
+val h_generalize_gen  : (constr with_occurrences * name) list -> tactic 
 val h_generalize_dep  : constr -> tactic 
-val h_let_tac         : name -> constr -> Tacticals.clause -> tactic
+val h_let_tac         : letin_flag -> name -> constr -> 
+                        Tacticals.clause -> tactic
 val h_instantiate     : int -> Rawterm.rawconstr ->
   (identifier * hyp_location_flag, unit) location -> tactic
 
@@ -58,12 +64,14 @@ val h_instantiate     : int -> Rawterm.rawconstr ->
 val h_simple_induction   : quantified_hypothesis -> tactic
 val h_simple_destruct    : quantified_hypothesis -> tactic
 val h_new_induction   :
-  constr induction_arg list -> constr with_bindings option ->
-  intro_pattern_expr -> tactic
+  evars_flag -> constr with_ebindings induction_arg list ->
+    constr with_ebindings option -> intro_pattern_expr ->
+      Tacticals.clause option -> tactic
 val h_new_destruct    :
-  constr induction_arg list -> constr with_bindings option -> 
-  intro_pattern_expr -> tactic
-val h_specialize      : int option -> constr with_bindings -> tactic
+  evars_flag -> constr with_ebindings induction_arg list ->
+    constr with_ebindings option -> intro_pattern_expr ->
+      Tacticals.clause option -> tactic
+val h_specialize      : int option -> constr with_ebindings -> tactic
 val h_lapply          : constr -> tactic
 
 (* Automation tactic : see Auto *)
@@ -73,14 +81,14 @@ val h_lapply          : constr -> tactic
 val h_clear           : bool -> identifier list -> tactic
 val h_clear_body      : identifier list -> tactic
 val h_move            : bool -> identifier -> identifier -> tactic
-val h_rename          : identifier -> identifier -> tactic
-
+val h_rename          : (identifier*identifier) list -> tactic
+val h_revert          : identifier list -> tactic
 
 (* Constructors *)
-val h_constructor     : int -> constr bindings -> tactic
-val h_left            : constr bindings -> tactic
-val h_right           : constr bindings -> tactic
-val h_split           : constr bindings -> tactic
+val h_constructor     : evars_flag -> int -> open_constr bindings -> tactic
+val h_left            : evars_flag -> open_constr bindings -> tactic
+val h_right           : evars_flag -> open_constr bindings -> tactic
+val h_split           : evars_flag -> open_constr bindings -> tactic
 
 val h_one_constructor : int -> tactic
 val h_simplest_left   : tactic
@@ -98,6 +106,7 @@ val h_symmetry        : Tacticals.clause -> tactic
 val h_transitivity    : constr -> tactic
 
 val h_simplest_apply  : constr -> tactic 
+val h_simplest_eapply : constr -> tactic 
 val h_simplest_elim   : constr -> tactic
 val h_simplest_case   : constr -> tactic
 

@@ -1,4 +1,3 @@
-(* -*- coding: utf-8 -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -7,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ChoiceFacts.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: ChoiceFacts.v 10756 2008-04-04 17:10:45Z herbelin $ i*)
 
 (** Some facts and definitions concerning choice and description in
        intuitionistic logic.
@@ -30,7 +29,7 @@ description principles
 
 - OAC_rel = "omniscient" relational form of the (non extensional) axiom of choice
 - OAC_fun = "omniscient" functional form of the (non extensional) axiom of choice
-            (called AC* in Bell [Bell])
+            (called AC* in Bell [[Bell]])
 - OAC!
 
 - ID_iota    = intuitionistic definite description
@@ -44,13 +43,15 @@ description principles
             (an unconstrained generalisation of the constructive principle of
              independence of premises)
 - Drinker = drinker's paradox (small form)
-            (called Ex in Bell [Bell])  
+            (called Ex in Bell [[Bell]])
 
 We let also
 
-IPL_2^2 = 2nd-order impredicative, 2nd-order functional minimal predicate logic
-IPL_2   = 2nd-order impredicative minimal predicate logic
+IPL_2   = 2nd-order impredicative minimal predicate logic (with ex. quant.)
 IPL^2   = 2nd-order functional minimal predicate logic (with ex. quant.)
+IPL_2^2 = 2nd-order impredicative, 2nd-order functional minimal pred. logic (with ex. quant.)
+
+with no prerequisite on the non-emptyness of domains
 
 Table of contents
 
@@ -58,24 +59,26 @@ Table of contents
 
 2. IPL_2^2 |- AC_rel + AC! = AC_fun
 
-3. 1. AC_rel + PI -> GAC_rel  and  PL_2 |- AC_rel + IGP -> GAC_rel and GAC_rel = OAC_rel
+3.1. typed IPL_2 + Sigma-types + PI |- AC_rel = GAC_rel  and  IPL_2 |- AC_rel + IGP -> GAC_rel and IPL_2 |- GAC_rel = OAC_rel
 
-4. 2. IPL^2 |- AC_fun + IGP = GAC_fun = OAC_fun = AC_fun + Drinker
+3.2. IPL^2 |- AC_fun + IGP = GAC_fun = OAC_fun = AC_fun + Drinker
 
-5. Derivability of choice for decidable relations with well-ordered codomain
+3.3. D_iota -> ID_iota  and  D_epsilon <-> ID_epsilon + Drinker
 
-6. Equivalence of choices on dependent or non dependent functional types
+4. Derivability of choice for decidable relations with well-ordered codomain
 
-7. Non contradiction of constructive descriptions wrt functional choices
+5. Equivalence of choices on dependent or non dependent functional types
 
-8. Definite description transports classical logic to the computational world
+6. Non contradiction of constructive descriptions wrt functional choices
+
+7. Definite description transports classical logic to the computational world
 
 References:
 
-[Bell] John L. Bell, Choice principles in intuitionistic set theory,
+[[Bell]] John L. Bell, Choice principles in intuitionistic set theory,
 unpublished.
 
-[Bell93] John L. Bell, Hilbert's Epsilon Operator in Intuitionistic
+[[Bell93]] John L. Bell, Hilbert's Epsilon Operator in Intuitionistic
 Type Theories, Mathematical Logic Quarterly, volume 39, 1993.
 
 [Carlstrøm05] Jesper Carlstrøm, Interpreting descriptions in
@@ -83,8 +86,6 @@ intentional type theory, Journal of Symbolic Logic 70(2):488-514, 2005.
 *)
 
 Set Implicit Arguments.
-
-Notation Local "'inhabited' A" := A (at level 10, only parsing).
 
 (**********************************************************************)
 (** * Definitions *)
@@ -95,9 +96,9 @@ Section ChoiceSchemes.
 
 Variables A B :Type.
 
-Variables P:A->Prop.
+Variable P:A->Prop.
 
-Variables R:A->B->Prop.
+Variable R:A->B->Prop.
 
 (** ** Constructive choice and description *)
 
@@ -183,15 +184,15 @@ Definition OmniscientFunctionalChoice_on :=
 
 (** D_epsilon *)
 
-Definition ClassicalIndefiniteDescription := 
+Definition EpsilonStatement_on := 
   forall P:A->Prop,
-    A -> { x:A | (exists x, P x) -> P x }.
+    inhabited A -> { x:A | (exists x, P x) -> P x }.
 
 (** D_iota *)
 
-Definition ClassicalDefiniteDescription := 
+Definition IotaStatement_on := 
   forall P:A->Prop,
-    A -> { x:A | (exists! x, P x) -> P x }.
+    inhabited A -> { x:A | (exists! x, P x) -> P x }.
 
 End ChoiceSchemes.
 
@@ -223,6 +224,11 @@ Notation ConstructiveDefiniteDescription :=
 Notation ConstructiveIndefiniteDescription := 
   (forall A, ConstructiveIndefiniteDescription_on A).
 
+Notation IotaStatement := 
+  (forall A, IotaStatement_on A).
+Notation EpsilonStatement := 
+  (forall A, EpsilonStatement_on A).
+
 (** Subclassical schemes *)
 
 Definition ProofIrrelevance :=
@@ -238,16 +244,17 @@ Definition SmallDrinker'sParadox :=
     exists x, (exists x, P x) -> P x.
 
 (**********************************************************************)
-(** * AC_rel + PDP = AC_fun
+(** * AC_rel + AC! = AC_fun
 
    We show that the functional formulation of the axiom of Choice
    (usual formulation in type theory) is equivalent to its relational
-   formulation (only formulation of set theory) + the axiom of
-   (parametric) definite description (aka axiom of unique choice) *)
+   formulation (only formulation of set theory) + functional relation
+   reification (aka axiom of unique choice, or, principle of (parametric)
+   definite descriptions) *)
 
 (** This shows that the axiom of choice can be assumed (under its
    relational formulation) without known inconsistency with classical logic,
-   though definite description conflicts with classical logic *)
+   though functional relation reification conflicts with classical logic *)
 
 Lemma description_rel_choice_imp_funct_choice :
   forall A B : Type,
@@ -289,7 +296,7 @@ Proof.
   exists f; exact H0.
 Qed.
 
-Theorem FunChoice_Equiv_RelChoice_and_ParamDefinDescr :
+Corollary FunChoice_Equiv_RelChoice_and_ParamDefinDescr :
   forall A B, FunctionalChoice_on A B <-> 
     RelationalChoice_on A B /\ FunctionalRelReification_on A B.
 Proof.
@@ -301,11 +308,13 @@ Proof.
 Qed.
 
 (**********************************************************************)
-(** * Connection between the guarded, non guarded and descriptive choices and *)
+(** * Connection between the guarded, non guarded and omniscient choices *)
 
-(** We show that the guarded relational formulation of the axiom of Choice
-   comes from the non guarded formulation in presence either of the
-   independance of premises or proof-irrelevance *)
+(** We show that the guarded formulations of the axiom of choice
+   are equivalent to their "omniscient" variant and comes from the non guarded
+   formulation in presence either of the independance of general premises 
+   or subset types (themselves derivable from subtypes thanks to proof-
+   irrelevance) *)
 
 (**********************************************************************)
 (** ** AC_rel + PI -> GAC_rel and AC_rel + IGP -> GAC_rel and GAC_rel = OAC_rel *)
@@ -352,9 +361,17 @@ Proof.
   exists R'; firstorder.
 Qed.
 
+Lemma subset_types_imp_guarded_rel_choice_iff_rel_choice :
+  ProofIrrelevance -> (GuardedRelationalChoice <-> RelationalChoice).
+Proof.
+  auto decomp using
+    guarded_rel_choice_imp_rel_choice,
+    rel_choice_and_proof_irrel_imp_guarded_rel_choice.
+Qed.
+
 (** OAC_rel = GAC_rel *)
 
-Lemma guarded_iff_omniscient_rel_choice :
+Corollary guarded_iff_omniscient_rel_choice :
   GuardedRelationalChoice <-> OmniscientRelationalChoice.
 Proof.
   split.
@@ -378,6 +395,7 @@ Proof.
   exists (f tt); auto.
 Qed.
 
+
 Lemma guarded_fun_choice_imp_fun_choice :
   GuardedFunctionalChoice -> FunctionalChoiceOnInhabitedSet.
 Proof.
@@ -396,9 +414,19 @@ Proof.
   intro x; apply IndPrem; eauto.
 Qed.
 
+Corollary fun_choice_and_indep_general_prem_iff_guarded_fun_choice :
+  FunctionalChoiceOnInhabitedSet /\ IndependenceOfGeneralPremises
+  <-> GuardedFunctionalChoice.
+Proof.
+  auto decomp using
+    guarded_fun_choice_imp_indep_of_general_premises,
+    guarded_fun_choice_imp_fun_choice,
+    fun_choice_and_indep_general_prem_imp_guarded_fun_choice.
+Qed.
+
 (** AC_fun + Drinker = OAC_fun *)
 
-(** This was already observed by Bell [Bell] *)
+(** This was already observed by Bell [[Bell]] *)
 
 Lemma omniscient_fun_choice_imp_small_drinker :
   OmniscientFunctionalChoice -> SmallDrinker'sParadox.
@@ -427,12 +455,22 @@ Proof.
   exists f; assumption.
 Qed.
 
+Corollary fun_choice_and_small_drinker_iff_omniscient_fun_choice :
+  FunctionalChoiceOnInhabitedSet /\ SmallDrinker'sParadox 
+  <-> OmniscientFunctionalChoice.
+Proof.
+  auto decomp using 
+    omniscient_fun_choice_imp_small_drinker,
+    omniscient_fun_choice_imp_fun_choice,
+    fun_choice_and_small_drinker_imp_omniscient_fun_choice.
+Qed.
+
 (** OAC_fun = GAC_fun *)
 
 (** This is derivable from the intuitionistic equivalence between IGP and Drinker
 but we give a direct proof *)
 
-Lemma guarded_iff_omniscient_fun_choice :
+Theorem guarded_iff_omniscient_fun_choice :
   GuardedFunctionalChoice <-> OmniscientFunctionalChoice.
 Proof.
   split.
@@ -441,6 +479,57 @@ Proof.
   intros OAC_fun A B P R Inh H.
   destruct (OAC_fun A B R Inh) as (f,Hf).
   exists f; firstorder.
+Qed.
+
+(**********************************************************************)
+(** ** D_iota -> ID_iota  and  D_epsilon <-> ID_epsilon + Drinker *)
+
+(** D_iota -> ID_iota *)
+
+Lemma iota_imp_constructive_definite_description :
+  IotaStatement -> ConstructiveDefiniteDescription.
+Proof.
+  intros D_iota A P H.
+  destruct D_iota with (P:=P) as (x,H1).
+  destruct H; red in H; auto.
+  exists x; apply H1; assumption.
+Qed.
+
+(** ID_epsilon + Drinker <-> D_epsilon *)
+
+Lemma epsilon_imp_constructive_indefinite_description:
+  EpsilonStatement -> ConstructiveIndefiniteDescription.
+Proof.
+  intros D_epsilon A P H.
+  destruct D_epsilon with (P:=P) as (x,H1).
+  destruct H; auto.
+  exists x; apply H1; assumption.
+Qed.
+
+Lemma constructive_indefinite_description_and_small_drinker_imp_epsilon :
+  SmallDrinker'sParadox -> ConstructiveIndefiniteDescription ->
+  EpsilonStatement.
+Proof.
+  intros Drinkers D_epsilon A P Inh; 
+  apply D_epsilon; apply Drinkers; assumption.
+Qed.
+
+Lemma epsilon_imp_small_drinker :
+  EpsilonStatement -> SmallDrinker'sParadox.
+Proof.
+  intros D_epsilon A P Inh; edestruct D_epsilon; eauto.
+Qed.
+
+Theorem constructive_indefinite_description_and_small_drinker_iff_epsilon :
+  (SmallDrinker'sParadox * ConstructiveIndefiniteDescription ->
+  EpsilonStatement) *
+  (EpsilonStatement ->
+   SmallDrinker'sParadox * ConstructiveIndefiniteDescription).
+Proof.
+  auto decomp using
+    epsilon_imp_constructive_indefinite_description,
+    constructive_indefinite_description_and_small_drinker_imp_epsilon,
+    epsilon_imp_small_drinker.
 Qed.
 
 (**********************************************************************)
@@ -457,45 +546,7 @@ Qed.
 *)
 
 Require Import Wf_nat.
-Require Import Compare_dec.
 Require Import Decidable.
-Require Import Arith.
-
-Definition has_unique_least_element (A:Type) (R:A->A->Prop) (P:A->Prop) :=
-  exists! x, P x /\ forall x', P x' -> R x x'.
-
-Lemma dec_inh_nat_subset_has_unique_least_element :
-  forall P:nat->Prop, (forall n, P n \/ ~ P n) ->
-    (exists n, P n) -> has_unique_least_element le P.
-Proof.
-  intros P Pdec (n0,HPn0).
-  assert
-    (forall n, (exists n', n'<n /\ P n' /\ forall n'', P n'' -> n'<=n'')
-      \/(forall n', P n' -> n<=n')).
-  induction n.
-  right.
-  intros n' Hn'.
-  apply le_O_n.
-  destruct IHn.
-  left; destruct H as (n', (Hlt', HPn')).
-  exists n'; split.
-  apply lt_S; assumption.
-  assumption.
-  destruct (Pdec n).
-  left; exists n; split.
-  apply lt_n_Sn.
-  split; assumption.
-  right.
-  intros n' Hltn'.
-  destruct (le_lt_eq_dec n n') as [Hltn|Heqn].
-  apply H; assumption.
-  assumption.
-  destruct H0.
-  rewrite Heqn; assumption.
-  destruct (H n0) as [(n,(Hltn,(Hmin,Huniqn)))|]; [exists n | exists n0];
-    repeat split;
-      assumption || intros n' (HPn',Hminn'); apply le_antisym; auto.
-Qed.
 
 Definition FunctionalChoice_on_rel (A B:Type) (R:A->B->Prop) :=
   (forall x:A, exists y : B, R x y) ->
@@ -614,16 +665,24 @@ Proof.
   destruct Heq using eq_indd; trivial.
 Qed.
 
+Corollary dep_iff_non_dep_functional_rel_reification : 
+  FunctionalRelReification <-> DependentFunctionalRelReification.
+Proof.
+  auto decomp using
+    non_dep_dep_functional_rel_reification,
+    dep_non_dep_functional_rel_reification.
+Qed.
+
 (**********************************************************************)
 (** * Non contradiction of constructive descriptions wrt functional axioms of choice *)
 
 (** ** Non contradiction of indefinite description *)
 
-Lemma relative_non_contradiction_of_indefinite_desc :
-  (ConstructiveIndefiniteDescription -> False)
-  -> (FunctionalChoice -> False).
+Lemma relative_non_contradiction_of_indefinite_descr :
+  forall C:Prop, (ConstructiveIndefiniteDescription -> C)
+  -> (FunctionalChoice -> C).
 Proof.
-  intros H AC_fun.
+  intros C H AC_fun.
   assert (AC_depfun := non_dep_dep_functional_choice AC_fun).
   pose (A0 := { A:Type & { P:A->Prop & exists x, P x }}).
   pose (B0 := fun x:A0 => projT1 x).
@@ -632,11 +691,8 @@ Proof.
   destruct (AC_depfun A0 B0 R0 H0) as (f, Hf).
   apply H.
   intros A P H'.
-  exists (f (existT (fun _ => sigT _) A
-    (existT (fun P => exists x, P x) P H'))).
-  pose (Hf' := 
-    Hf (existT (fun _ => sigT _) A
-      (existT (fun P => exists x, P x) P H'))).
+  exists (f (existT _ A (existT _ P H'))).
+  pose (Hf' := Hf (existT _ A (existT _ P H'))).
   assumption.
 Qed.
 
@@ -652,10 +708,10 @@ Qed.
 (** ** Non contradiction of definite description *)
 
 Lemma relative_non_contradiction_of_definite_descr :
-  (ConstructiveDefiniteDescription -> False)
-  -> (FunctionalRelReification -> False).
+  forall C:Prop, (ConstructiveDefiniteDescription -> C)
+  -> (FunctionalRelReification -> C).
 Proof.
-  intros H FunReify.
+  intros C H FunReify.
   assert (DepFunReify := non_dep_dep_functional_rel_reification FunReify).
   pose (A0 := { A:Type & { P:A->Prop & exists! x, P x }}).
   pose (B0 := fun x:A0 => projT1 x).
@@ -664,11 +720,8 @@ Proof.
   destruct (DepFunReify A0 B0 R0 H0) as (f, Hf).
   apply H.
   intros A P H'.
-  exists (f (existT (fun _ => sigT _) A
-    (existT (fun P => exists! x, P x) P H'))).
-  pose (Hf' := 
-    Hf (existT (fun _ => sigT _) A
-      (existT (fun P => exists! x, P x) P H'))).
+  exists (f (existT _ A (existT _ P H'))).
+  pose (Hf' := Hf (existT _ A (existT _ P H'))).
   assumption.
 Qed.
 
@@ -681,20 +734,37 @@ Proof.
   apply (proj2_sig (DefDescr B (R x) (H x))).
 Qed.
 
+(** Remark, the following corollaries morally hold:
+
+Definition In_propositional_context (A:Type) := forall C:Prop, (A -> C) -> C.
+
+Corollary constructive_definite_descr_in_prop_context_iff_fun_reification :
+   In_propositional_context ConstructiveIndefiniteDescription
+   <-> FunctionalChoice.
+
+Corollary constructive_definite_descr_in_prop_context_iff_fun_reification :
+   In_propositional_context ConstructiveDefiniteDescription
+   <-> FunctionalRelReification.
+
+but expecting [FunctionalChoice] (resp. [FunctionalRelReification]) to
+be applied on the same Type universes on both sides of the first
+(resp. second) equivalence breaks the stratification of universes.
+*)
+
 (**********************************************************************)
 (** * Excluded-middle + definite description => computational excluded-middle *)
 
-(** The idea for the following proof comes from [ChicliPottierSimpson02] *)
+(** The idea for the following proof comes from [[ChicliPottierSimpson02]] *)
 
 (** Classical logic and axiom of unique choice (i.e. functional
-    relation reification), as shown in [ChicliPottierSimpson02],
+    relation reification), as shown in [[ChicliPottierSimpson02]],
     implies the double-negation of excluded-middle in [Set] (which is
     incompatible with the impredicativity of [Set]).
 
     We adapt the proof to show that constructive definite description
     transports excluded-middle from [Prop] to [Set].
 
-    [ChicliPottierSimpson02] Laurent Chicli, Loïc Pottier, Carlos
+    [[ChicliPottierSimpson02]] Laurent Chicli, Loïc Pottier, Carlos
     Simpson, Mathematical Quotients and Quotient Types in Coq,
     Proceedings of TYPES 2002, Lecture Notes in Computer Science 2646,
     Springer Verlag.  *)
@@ -717,3 +787,13 @@ Proof.
   left; trivial.
   right; trivial.
 Qed.  
+
+Corollary fun_reification_descr_computational_excluded_middle_in_prop_context :
+  FunctionalRelReification ->
+  (forall P:Prop, P \/ ~ P) -> 
+  forall C:Prop, ((forall P:Prop, {P} + {~ P}) -> C) -> C.
+Proof.
+  intros FunReify EM C; auto decomp using
+    constructive_definite_descr_excluded_middle,
+    (relative_non_contradiction_of_definite_descr (C:=C)).
+Qed.

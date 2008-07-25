@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rstar.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Rstar.v 9642 2007-02-12 10:31:53Z herbelin $ i*)
 
 (** Properties of a binary relation [R] on type [A] *)
 
@@ -87,7 +87,7 @@ Section Rstar.
 
   (** Property of Commutativity of two relations *)
   
-  Definition commut (A:Set) (R1 R2:A -> A -> Prop) :=
+  Definition commut (A:Type) (R1 R2:A -> A -> Prop) :=
     forall x y:A,
       R1 y x -> forall z:A, R2 z y ->  exists2 y' : A, R2 y' x & R1 z y'.
 

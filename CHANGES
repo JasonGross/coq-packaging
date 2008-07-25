@@ -1,41 +1,418 @@
-Changes from V8.1pl2 to V8.1pl3
-===============================
+Changes from V8.1 to V8.2
+=========================
 
-Bug fixes 
+Language
 
-- A critical bug and a few other bugs have been fixed.
+- If a fixpoint is not written with an explicit { struct ... }, then 
+  all arguments are tried successively (from left to right) until one is 
+  found that satisfies the structural decreasing condition.
+- New experimental typeclass system giving ad-hoc polymorphism and 
+  overloading based on dependent records and implicit arguments.
+- New syntax "let 'pat := b in c" for let-binding using irrefutable patterns.
+- New syntax "forall {A}, T" for specifying maximally inserted implicit 
+  arguments in terms.
+- Sort of Record/Structure, Inductive and CoInductive defaults to Type
+  if omitted.
+- Record/Structure now usable for defining coinductive types
+  (e.g. "Record stream := { hd : nat; tl : stream }.")
+- New syntax "Theorem id1:t1 ... with idn:tn" for proving mutually dependent
+  statements.
+- Support for sort-polymorphism on constants denoting inductive types.
+- Several evolutions of the module system (handling of module aliases, 
+  functorial module types, an Include feature, etc). (TODO: Say more!)
+- Prop now a subtype of Set (predicative and impredicative forms).
 
-Changes from V8.1pl1 to V8.1pl2
-===============================
+Vernacular commands
 
-Installation
+- Added option Global to "Arguments Scope" for section surviving. (DOC TODO)
+- Added option "Unset Elimination Schemes" to deactivate the automatic
+  generation of elimination schemes.
+- Modification of the Scheme command so you can ask for the name to be
+  automatically computed (e.g. Scheme Induction for nat Sort Set).
+- New command "Combined Scheme" to build combined mutual induction
+  principles from existing mutual induction principles. 
+- New command "Scheme Equality" to build a decidable (boolean) equality 
+  for simple inductive datatypes and a decision property over this equality
+  (e.g.  Scheme Equality for nat).
+- Added option "Set Equality Scheme" to make automatic the declaration 
+  of the boolean equality when possible.
+- Source of universe inconsistencies now printed when option 
+  "Set Printing Universes" is activated.
+- New option "Set Printing Existential Instances" for making the display of
+  existential variable instances explicit.
+- Support for option "[id1 ... idn]", and "-[id1 ... idn]", for the 
+  "compute"/"cbv" reduction strategy, respectively meaning reduce only, or 
+  everything but, the constants id1 ... idn. "lazy" alone or followed by
+  "[id1 ... idn]", and "-[id1 ... idn]" also supported, meaning apply
+  all of beta-iota-zeta-delta, possibly restricting delta.
+- New command "Strategy" to control the expansion of constants during
+  conversion tests. It generalizes commands Opaque and Transparent by
+  introducing a range of levels. Lower levels are assigned to constants
+  that should be expanded first.
+- New command "Print Assumptions" to display all variables, parameters
+  or axioms a theorem or definition relies on.
 
-- Support for compilation with ocaml 3.10 and (transitional) camlp5.
+Libraries (DOC TO CHECK)
 
-Bug fixes 
-
-- Many bugs have been fixed (cf coq-bugs web page)
-
-Changes from V8.1 to V8.1pl1
-============================
-
-Bug fixes 
-
-- Many bugs have been fixed (cf coq-bugs web page)
-
-Tactics
- 
-- All known failures of ROmega have been fixed. It should now be a 
-  faithful and quicker replacement for Omega (except when nat parts
-  are involved). ROmega and Omega now handle <->. 
-
-Libraries
-
+- Several parts of the libraries are now in Type, in particular FSets,
+  SetoidList, ListSet, Sorting, Zmisc. This may induce a few
+  incompatibilities. In case of trouble while fixing existing development,
+  it may help to simply declare Set as an alias for Type (see file
+  SetIsType). 
+- New arithmetical library in theories/Numbers. It contains: 
+  * an abstract modular development of natural and integer arithmetics 
+    in Numbers/Natural/Abstract and Numbers/Integer/Abstract
+  * an implementation of efficient computational bounded and unbounded 
+    integers that can be mapped to processor native arithmetics.
+    See Numbers/Cyclic/Int31 for 31-bit integers and Numbers/Natural/BigN 
+    for unbounded natural numbers and Numbers/Integer/BigZ for unbounded
+    integers. 
+  * some proofs that both older libraries Arith, ZArith and NArith and
+    newer BigN and BigZ implement the abstract modular development.
+    This allows in particular BigN and BigZ to already come with a 
+    large database of basic lemmas and some generic tactics (ring),
+  This library has still an experimental status, as well as the
+  processor-acceleration mechanism, but both its abstract and its
+  concrete parts are already quite usable and could challenge the use
+  of nat, N and Z in actual developments. Moreover, an extension of 
+  this framework to rational numbers is ongoing, and an efficient
+  Q structure is already provided (see Numbers/Rational/BigQ), but 
+  this part is currently incomplete (no abstract layer and generic 
+  lemmas).
+- Many changes in FSets/FMaps. In practice, compatibility with earlier
+  version should be fairly good, but some adaptations may be required.
+  * Interfaces of unordered ("weak") and ordered sets have been factorized
+    thanks to new features of Coq modules (in particular Include), see
+    FSetInterface. Same for maps. Hints in these interfaces have been
+    reworked (they are now placed in a "set" database). 
+  * FSetDecide, contributed by Aaron Bohannon, contains a decision
+    procedure allowing to solve basic set-related goals (for instance, 
+    is a point in a particular set ?). See FSetProperties for examples.
+  * Functors of properties have been improved, especially the ones about
+    maps, that now propose some induction principles. Some properties 
+    of fold need less hypothesis. 
+  * More uniformity in implementations of sets and maps: they all use
+    implicit arguments, and no longer export unnecessary scopes (see 
+    bug #1347)
+  * Internal parts of the implementations based on AVL have evolved a
+    lot. The main files FSetAVL and FMapAVL are now much more
+    lightweight now. In particular, minor changes in some functions
+    has allowed to fully separate the proofs of operational
+    correctness from the proofs of well-balancing: well-balancing is
+    critical for efficiency, but not anymore for proving that these
+    trees implement our interfaces, hence we have moved these proofs
+    into appendix files FSetFullAVL and FMapFullAVL. Moreover, a few
+    functions like union and compare have been modified in order to be
+    structural yet efficient. The appendix files also contains
+    alternative versions of these few functions, much closer to the
+    initial Ocaml code and written via the Function framework.
+- Library IntMap, subsumed by FSets/FMaps, has been removed from 
+  Coq Standard Library and moved into a user contribution Cachan/IntMap
 - Better computational behavior of some constants (eq_nat_dec and 
   le_lt_dec more efficient, Z_lt_le_dec and Positive_as_OT.compare 
-  transparent) [exceptionally source of incompatibilities].
-- Loading FSets/FMap used to open unwanted scopes of integer datatypes 
-  (see bug #1347). These scopes may need to be manually opened now.
+  transparent, ...) (exceptional source of incompatibilities).
+- Boolean operators moved from module Bool to module Datatypes (may need
+  to rename qualified references in script and force notations || and &&
+  to be at levels 50 and 40 respectively).
+- The constructors xI and xO of type positive now have postfix notations 
+  "~1" and "~0", allowing to write numbers in binary form easily, for instance 
+  6 is 1~1~0 and 4*p is p~0~0 (see BinPos.v).
+- Improvements to NArith (Nminus, Nmin, Nmax), and to QArith (in particular 
+  a better power function).
+- Changes in ZArith: several additional lemmas (used in theories/Numbers), 
+  especially in Zdiv, Znumtheory, Zpower. Moreover, many results in
+  Zdiv have been generalized: the divisor may simply be non-null
+  instead of strictly positive (see lemmas with name ending by
+  "_full"). An alternative file ZOdiv proposes a different behavior
+  (the one of Ocaml) when dividing by negative numbers.
+- Changes in Arith: EqNat and Wf_nat now exported from Arith, some 
+  constructions on nat that were outside Arith are now in (e.g. iter_nat).
+- In SetoidList, eqlistA now expresses that two lists have similar elements 
+  at the same position, while the predicate previously called eqlistA 
+  is now equivlistA (this one only states that the lists contain the same 
+  elements, nothing more). 
+- Changes in Reals:
+  * Most statement in "sigT" (including the
+    completeness axiom) are now in "sig" (in case of incompatibility,
+    use proj1_sig instead of projT1, sig instead of sigT, etc).
+  * More uniform naming scheme (identifiers in French moved to English,
+    consistent use of 0 -- zero -- instead of O -- letter O --, etc).
+  * Lemma on prod_f_SO is now on prod_f_R0.
+  * Useless hypothesis of ln_exists1 dropped.
+  * New Rlogic.v states a few logical properties about R axioms.
+  * RIneq.v extended and made cleaner.
+- Slight restructuration of the Logic library regarding choice and classical
+  logic. Addition of files providing intuitionistic axiomatizations of
+  descriptions: Epsilon.v, Description.v and IndefiniteDescription.v.
+- Definition of pred and minus made compatible with the structural
+  decreasing criterion for use in fixpoints.
+
+Notations, coercions, implicit arguments and type inference
+
+- More automation in the inference of the return clause of dependent
+  pattern-matching problems.
+- Experimental allowance for omission of the clauses easily detectable as
+  impossible in pattern-matching problems.
+- Improved inference of implicit arguments.
+- New options "Set Maximal Implicit Insertion", "Set Reversible Pattern
+  Implicit", "Set Strongly Strict Implicit" and "Set Printing Implicit
+  Defensive" for controlling inference and use of implicit arguments.
+- New modifier in "Implicit Arguments" to force an implicit argument to
+  be maximally inserted.
+- New modifier of "Implicit Arguments" to enrich the set of implicit arguments.
+  (DOC TODO?)
+- New options Global and Local to "Implicit Arguments" for section
+  surviving or non export outside module.
+- Level "constr" moved from 9 to 8. (DOC TODO?)
+- Structure/Record now printed as Record (unless option Printing All is set).
+- Support for parametric notations defining constants.
+- Insertion of coercions below product types refrains to unfold
+  constants (possible source of incompatibility).
+- New support for fix/cofix in notations.
+
+Tactic Language
+
+- Second-order pattern-matching now working in Ltac "match" clauses
+  (syntax for second-order unification variable is "@?X").
+- Ltac accepts integer arguments (syntax is "ltac:nnn" for nnn an integer).
+- The general sequence tactical "expr_0 ; [ expr_1 | ... | expr_n ]"
+  is extended so that at most one expr_i may have the form "expr .."
+  or just "..". Also, n can be different from the number of subgoals
+  generated by expr_0. In this case, the value of expr (or idtac in
+  case of just "..") is applied to the intermediate subgoals to make
+  the number of tactics equal to the number of subgoals. (DOC TODO)
+- A name used as the name of the parameter of a lemma (like f in
+  "apply f_equal with (f:=t)") is now interpreted as a ltac variable
+  if such a variable exists (this is a possible source of
+  incompatibility and it can be fixed by renaming the variables of a
+  ltac function into names that do not clash with the lemmas
+  parameter names used in the tactic).
+- New syntax "Ltac tac ::= ..." to rebind a tactic to a new expression.
+- "let rec ... in ... " now supported for expressions without explicit
+  parameters; interpretation is lazy to the contrary of "let ... in ...";
+  hence, the "rec" keyword can be used to turn the argument of a
+  "let ... in ..." into a lazy one.
+- Patterns for hypotheses types in "match goal" are now interpreted in
+  type_scope.
+
+Tactics
+
+- New tactics "apply -> term", "apply <- term", "apply -> term in
+  ident", "apply <- term in ident" for applying equivalences (iff). (DOC TODO)
+- Slight improvement of the hnf and simpl tactics when applied on
+  expressions with explicit occurrences of match or fix.
+- New tactics "eapply in", "erewrite", "erewrite in".
+- New tactics "ediscriminate", "einjection", "esimplify_eq".
+- Tactics "discriminate", "injection", "simplify_eq" now support any
+  term as argument. Clause "with" is also supported.
+- Unfoldable references can be given by notation's string rather than by name 
+  in unfold.
+- The "with" arguments are now typed using informations from the current goal:
+  allows support for coercions and more inference of implicit arguments.
+- Application of "f_equal"-style lemmas works better.
+- Tactics elim, case, destruct and induction now support variants eelim,
+  ecase, edestruct and einduction.
+- Tactics destruct and induction now support the "with" option and the
+  "in" clause option. If the option "in" is used, an equality is added
+  to remember the term to which the induction or case analysis applied
+  (possible source of parsing incompatibilities when destruct or induction is
+   part of a let-in expression in Ltac; extra parentheses are then required).
+- Some new intro patterns: 
+  * intro pattern "?A" genererates a fresh name based on A. 
+    Caveat about a slight loss of compatibility:
+    Some intro patterns don't need space between them. In particular
+    intros ?a?b used to be legal and equivalent to intros ? a ? b. Now it
+    is still legal but equivalent to intros ?a ?b.
+  * intro pattern "(A & ... & Y & Z)" synonym to "(A,....,(Y,Z)))))"
+    for right-associative constructs like /\ or exists.
+- Several syntax extensions concerning "rewrite": (DOC TODO)
+  * "rewrite A,B,C" can be used to rewrite A, then B, then C. These rewrites
+    occur only on the first subgoal: in particular, side-conditions of the 
+    "rewrite A" are not concerned by the "rewrite B,C".
+  * "rewrite A by tac" allows to apply tac on all side-conditions generated by 
+    the "rewrite A".
+  * "rewrite A at n" allows to select occurrences to rewrite: rewrite only 
+    happen at the n-th exact occurrence of the first successful matching of
+    A in the goal. 
+  * "rewrite 3 A" or "rewrite 3!A" is equivalent to "rewrite A,A,A".
+  * "rewrite !A" means rewriting A as long as possible (and at least once).
+  * "rewrite 3?A" means rewriting A at most three times.
+  * "rewrite ?A" means rewriting A as long as possible (possibly never).
+  * many of the above extensions can be combined with each other.  
+- New syntax "rename a into b, c into d" for "rename a into b; rename c into d"
+- New tactics "dependent induction/destruction H [ generalizing id_1 .. id_n ]"
+  to do induction-inversion on instantiated inductive families à la BasicElim.
+- Tactic "apply" now able to reason modulo unfolding of constants
+  (possible source of incompatibility in situations where apply may fail, 
+  e.g. as argument of a try or a repeat and in a ltac function);
+  version of apply that does not unfold is renamed into "simple apply"
+  (usable for compatibility or for automation).
+- Tactic "apply" now able to traverse conjunctions and to select the first 
+  matching lemma among the components of the conjunction; tactic apply also
+  able to apply lemmas of conclusion an empty type.
+- Tactics "set" and "pose" can set functions using notation "(f x1..xn := c)".
+- New tactic "instantiate" (without argument).
+- Tactic firstorder "with" and "using" options have their meaning swapped for
+  consistency with auto/eauto (source of incompatibility).
+- Tactic "generalize" now supports "at" options to specify occurrences
+  and "as" options to name the hypothesis.
+- New tactic "specialize H with a" or "specialize (H a)" allows to transform
+  in-place a universally-quantified hypothesis (H : forall x, T x) into its 
+  instantiated form (H : T a). Nota: "specialize" was in fact there in earlier
+  versions of Coq, but was undocumented, and had a slightly different behavior.
+- New tactic "contradict H" can be used to solve any kind of goal as long as
+  the user can provide afterwards a proof of the negation of the hypothesis H.
+  If H is already a negation, say ~T, then a proof of T is asked.
+  If the current goal is a negation, say ~U, then U is saved in H afterwards,
+  hence this new tactic "contradict" extends earlier tactic "swap", which is 
+  now obsolete.
+- Tactics f_equal is now done in ML instead of Ltac: it now works on any 
+  equality of functions, regardless of the arity of the function.
+- Some more debug of reflexive omega (romega), and internal clarifications. 
+  Moreover, romega now has a variant "romega with *" that can be also used
+  on non-Z goals (nat, N, positive) via a call to a translation tactic named
+  zify (its purpose is to Z-ify your goal...). This zify may also be used
+  independantly of romega. 
+- Tactic "remember" now supports an "in" clause to remember only selected 
+  occurrences of a term.
+
+Program
+
+- Moved useful tactics in theories/Program and documented them.
+- Add Program.Basics which contains standard definitions for functional 
+  programming (id, apply, flip...)
+- More robust obligation handling, dependent pattern-matching and
+  well-founded definitions.
+- New syntax " dest term as pat in term " for destructing objects using
+  an irrefutable pattern while keeping equalities (use this instead of 
+  "let" in Programs).
+- Program CoFixpoint is accepted, Program Fixpoint uses the new way to infer 
+  which argument decreases structurally.
+- Program Lemma, Axiom etc... now permit to have obligations in the statement 
+  iff they can be automatically solved by the default tactic.
+- New command "Preterm [ of id ]" to see the actual term fed to Coq for
+  debugging purposes.
+- New option "Transparent Obligations" to control the declaration of 
+  obligations as transparent or opaque. All obligations are now transparent 
+  by default, otherwise the system declares them opaque if possible.
+- Changed the notations "left" and "right" to "in_left" and "in_right" to hide 
+  the proofs in standard disjunctions, to avoid breaking existing scripts when 
+  importing Program. Also, put them in program_scope.
+
+Type Classes
+
+- New "Class", "Instance" and "Program Instance" commands to define
+  classes and instances documented in the reference manual.  
+- New binding construct " [ Class_1 param_1 .. param_n, Class_2 ... ] " 
+  for binding type classes, usable everywhere.  
+- New command " Print Classes " and " Print Instances some_class " to
+  print tables for typeclasses.  
+- New default eauto hint database "typeclass_instances" used by the default
+  typeclass instance search tactic.  
+- New theories directory "theories/Classes" for standard typeclasses 
+  declarations. Module Classes.RelationClasses is a typeclass port of 
+  Relation_Definitions plus a generic development of algebra on 
+  n-ary heterogeneous predicates.
+  
+Setoid rewriting
+
+- Complete (and still experimental) rewrite of the tactic
+  based on typeclasses. The old interface and semantics are
+  almost entirely respected, except:
+
+  - Import Setoid is now mandatory to be able to call setoid_replace
+  and declare morphisms.
+
+  - "-->", "++>" and "==>" are now right associative notations
+  declared at level 55 in scope signature_scope.
+  Their introduction may break existing scripts that defined 
+  them as notations with different levels.
+  
+  - One needs to use [Typeclasses unfold [cst]] if [cst] is used
+  as an abbreviation hiding products in types of morphisms,
+  e.g. if ones redefines [relation] and declares morphisms 
+  whose type mentions [relation].
+
+  - The [setoid_rewrite]'s semantics change when rewriting with
+  a lemma: it can rewrite two different instantiations of the lemma
+  at once. Use [setoid_rewrite H at 1] for (almost) the usual semantics.
+  [setoid_rewrite] will also try to rewrite under binders now, and can
+  succeed on different terms than before. In particular, it will unify under 
+  let-bound variables. When called through [rewrite], the semantics are
+  unchanged though.
+
+  - [Add Morphism term : id] has different semantics when used with
+  parametric morphism: it will try to find a relation on the parameters
+  too. The behavior has also changed with respect to default relations:
+  the most recently declared Setoid/Relation will be used, the documentation
+  explains how to customize this behavior.
+
+  - Parametric Relation and Morphism are declared differently, using the
+  new [Add Parametric] commands, documented in the manual.
+
+  - Setoid_Theory is now an alias to Equivalence, scripts building objects
+  of type Setoid_Theory need to unfold (or "red") the definitions
+  of Reflexive, Symmetric and Transitive in order to get the same goals 
+  as before. Scripts which introduced variables explicitely will not break.
+
+  - The order of subgoals when doing [setoid_rewrite] with side-conditions
+  is always the same: first the new goal, then the conditions.
+
+- New standard library modules Classes.Morphisms declares
+  standard morphisms on refl/sym/trans relations.
+  Classes.Morphisms_Prop declares morphisms on propositional 
+  connectives and Classes.Morphisms_Relations on generalized predicate
+  connectives. Classes.Equivalence declares notations and tactics
+  related to equivalences and Classes.SetoidTactics defines the
+  setoid_replace tactics and some support for the "Add *" interface,
+  notably the tactic applied automatically before each "Add Morphism"
+  proof.
+
+- User-defined subrelations are supported, as well as higher-order morphisms
+  and rewriting under binders. The tactic is also extensible entirely in Ltac.
+  The documentation has been updated to cover these features.
+
+- [setoid_rewrite] and [rewrite] now support the [at] modifier to select 
+  occurrences to rewrite, and both use the [setoid_rewrite] code, even when
+  rewriting with leibniz equality if occurrences are specified.
+
+Extraction
+
+- Improved behavior of the Caml extraction of modules: name clashes should 
+  not happen anymore. 
+- The command Extract Inductive has now a syntax for infix notations. This
+  allows in particular to map Coq lists and pairs onto Caml ones:  
+    Extract Inductive list => list [ "[]" "(::)" ].
+    Extract Inductive prod => "(*)" [ "(,)" ].
+- In pattern matchings, a default pattern "| _ -> ..." is now used whenever 
+  possible if several branches are identical. For instance, functions
+  corresponding to decidability of equalities are now linear instead of 
+  quadratic.
+
+CoqIDE
+
+- CoqIDE font defaults to monospace so as indentation to be meaningful.
+- CoqIDE supports nested goals and any other kind of declaration in the middle 
+  of a proof.
+- Undoing non-tactic commands in CoqIDE works faster.
+- New CoqIDE menu for activating display of various implicit informations.
+- Added the possibility to choose the location of tabs in coqide:
+  (in Edit->Preferences->Misc)
+- New Open and Save As dialogs in CoqIDE which filter *.v files.
+
+Tools
+
+- New stand-alone .vo files verifier "coqchk".
+
+Miscellaneous
+
+- Coq installation provides enough files so that Ocaml's extensions need not
+  the Coq sources to be compiled (this assumes O'Caml 3.10 and Camlp5).
+- New commands "Set Whelp Server" and "Set Whelp Getter" to customize the
+  Whelp search tool.
+- Syntax of "Test Printing Let ref" and "Test Printing If ref" changed into
+  "Test Printing Let for ref" and "Test Printing If for ref".
+- An overhauled build system (new Makefiles); see dev/doc/build-system.txt
 
 Changes from V8.1gamma to V8.1
 ==============================
@@ -71,7 +448,7 @@ Syntax
 
 Language and commands
 
-- Added sort-polymorphism for definitions in Type.
+- Added sort-polymorphism for definitions in Type (but finally abandonned).
 - Support for implicit arguments in the types of parameters in
   (co-)fixpoints and (co-)inductive declarations.
 - Improved type inference: use as much of possible general information.
@@ -137,7 +514,7 @@ Vernacular commands
 
 Ltac and tactic syntactic extensions
 
-- New primitive "external" for communication with tool external to Coq.
+- New primitive "external" for communication with tool external to Coq
 - New semantics for "match t with": if a clause returns a
   tactic, it is now applied to the current goal. If it fails, the next
   clause or next matching subterm is tried (i.e. it behaves as "match
@@ -188,6 +565,13 @@ Tactics
 - Tactic "assert" now accepts "as" intro patterns and "by" tactic clauses.
 - New tactic "pose proof" that generalizes "assert (id:=p)" with intro patterns.
 - New introduction pattern "?" for letting Coq choose a name.
+- Introduction patterns now support side hypotheses (e.g. intros [|] on 
+  "(nat -> nat) -> nat" works).
+- New introduction patterns "->" and "<-" for immediate rewriting of
+  introduced hypotheses.
+- Introduction patterns coming after non trivial introduction patterns now
+  force full introduction of the first pattern (e.g. "intros [[|] p]" on
+  "nat->nat->nat" now behaves like "intros [[|?] p]")
 - Added "eassumption".
 - Added option 'using lemmas' to auto, trivial and eauto.
 - Tactic "congruence" is now complete for its intended scope (ground
@@ -230,7 +614,7 @@ Modules
   "Module Type M(Export/Import X Y: T)"
   (only for interactive definitions)
 - Construct "with" generalized to module paths:
-   T with (Definition|Module) M1.M2....Mn.l := l' (doc TODO).
+   T with (Definition|Module) M1.M2....Mn.l := l'.
 
 Notations
 
@@ -256,7 +640,8 @@ Libraries
   digit 0; weaken premises in Z_lt_induction).
 - Restructuration of Eqdep_dec.v and Eqdep.v: more lemmas in Type.
 - Znumtheory now contains a gcd function that can compute within Coq.
-- More lemmas stated on Type in Wf.v, removal of redundant Fix_F.
+- More lemmas stated on Type in Wf.v, removal of redundant Acc_iter and 
+  Acc_iter2.
 - Change of the internal names of lemmas in OmegaLemmas.
 - Acc in Wf.v and clos_refl_trans in Relation_Operators.v now rely on
   the allowance for recursively non uniform parameters (possible

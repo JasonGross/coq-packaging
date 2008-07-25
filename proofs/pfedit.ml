@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pfedit.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
+(* $Id: pfedit.ml 10850 2008-04-25 18:07:44Z herbelin $ *)
 
 open Pp
 open Util
@@ -33,6 +33,7 @@ open Safe_typing
 
 type proof_topstate = {
   mutable top_end_tac : tactic option;
+  top_init_tac : tactic option;
   top_goal : goal;
   top_strength : Decl_kinds.goal_kind;
   top_hook : declaration_hook }
@@ -118,8 +119,6 @@ let delete_proof (loc,id) =
     user_err_loc
       (loc,"Pfedit.delete_proof",str"No such proof" ++ msg_proofs false)
       
-let init_proofs () = Edit.clear proof_edits
-		       
 let mutate f =
   try 
     Edit.mutate proof_edits (fun _ pfs -> f pfs)
@@ -128,7 +127,8 @@ let mutate f =
       (str"No focused proof" ++ msg_proofs true)
 
 let start (na,ts) =
-  let pfs = mk_pftreestate ts.top_goal in 
+  let pfs = mk_pftreestate ts.top_goal in
+  let pfs = Option.fold_right solve_pftreestate ts.top_init_tac pfs in
   add_proof(na,pfs,ts)
     
 let restart_proof () =
@@ -204,13 +204,14 @@ let current_proof_depth() =
 let xml_cook_proof = ref (fun _ -> ())
 let set_xml_cook_proof f = xml_cook_proof := f
 
-let cook_proof () =
+let cook_proof k =
   let (pfs,ts) = get_state() 
   and ident = get_current_proof_name () in
   let {evar_concl=concl} = ts.top_goal 
   and strength = ts.top_strength in
   let pfterm = extract_pftreestate pfs in
   !xml_cook_proof (strength,pfs);
+  k pfs;
   (ident,
    ({ const_entry_body = pfterm;
       const_entry_type = Some concl;
@@ -237,7 +238,7 @@ let check_no_pending_proofs () =
 
 let delete_current_proof () = delete_proof_gen (get_current_proof_name ())
 
-let delete_all_proofs = init_proofs
+let delete_all_proofs () = Edit.clear proof_edits
 
 (*********************************************************************)
 (*   Modifying the end tactic of the current profftree               *)
@@ -250,10 +251,11 @@ let set_end_tac tac =
 (*              Modifying the current prooftree                      *)
 (*********************************************************************)
 
-let start_proof na str sign concl hook =
+let start_proof na str sign concl ?init_tac hook =
   let top_goal = mk_goal sign concl None in
   let ts = { 
     top_end_tac = None;
+    top_init_tac = init_tac;
     top_goal = top_goal;
     top_strength = str;
     top_hook = hook}

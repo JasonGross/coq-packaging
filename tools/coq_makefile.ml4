@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq_makefile.ml4 10185 2007-10-06 18:05:13Z herbelin $ *)
+(* $Id: coq_makefile.ml4 11136 2008-06-18 10:41:34Z herbelin $ *)
 
 (* créer un Makefile pour un développement Coq automatiquement *)
 
@@ -81,21 +81,10 @@ coq_makefile [subdirectory] .... [file.v] ... [file.ml] ... [-custom
 
 let standard sds sps =
   print "byte:\n";
-  print "\t$(MAKE) all \"OPT=\"\n\n";
+  print "\t$(MAKE) all \"OPT:=-byte\"\n\n";
   print "opt:\n";
   if !opt = "" then print "\t@echo \"WARNING: opt is disabled\"\n";
-  print "\t$(MAKE) all \"OPT="; print !opt; print "\"\n\n";
-  if !some_file then print "include .depend\n\n";
-  print ".depend depend:\n";
-  if !some_file then begin
-    print "\trm -f .depend\n";
-    print "\t$(COQDEP) -i $(COQLIBS) $(VFILES) *.ml *.mli >.depend\n";
-    print "\t$(COQDEP) $(COQLIBS) -suffix .html $(VFILES) >>.depend\n";
-  end;
-  List.iter
-    (fun x -> print "\t(cd "; print x; print " ; $(MAKE) depend)\n")
-    sds;
-  print "\n";
+  print "\t$(MAKE) all \"OPT:="; print !opt; print "\"\n\n";
   print "install:\n";
   print "\tmkdir -p `$(COQC) -where`/user-contrib\n";
   if !some_vfile then print "\tcp -f $(VOFILES) `$(COQC) -where`/user-contrib\n";
@@ -116,7 +105,11 @@ let standard sds sps =
   end;
   print "clean:\n";
   print "\trm -f *.cmo *.cmi *.cmx *.o $(VOFILES) $(VIFILES) $(GFILES) *~\n";
-  print "\trm -f all.ps all-gal.ps $(HTMLFILES) $(GHTMLFILES)\n";
+  print "\trm -f all.ps all-gal.ps all.glob $(VFILES:.v=.glob) $(HTMLFILES) \
+         $(GHTMLFILES) $(VFILES:.v=.tex) $(VFILES:.v=.g.tex) $(VFILES:.v=.v.d)\n";
+  if !some_mlfile then
+    print "\trm -f $(CMOFILES) $(MLFILES:.ml=.cmi) $(MLFILES:.ml=.ml.d)\n";
+  print "\t- rm -rf html\n";
   List.iter
     (fun (file,_,_) -> print "\t- rm -f "; print file; print "\n")
     sps;
@@ -129,44 +122,32 @@ let standard sds sps =
   List.iter
     (fun x -> print "\t(cd "; print x; print " ; $(MAKE) archclean)\n")
     sds;
-  print "\n";
-  print "html:\n";
-  List.iter
-    (fun x -> print "\t(cd "; print x; print " ; $(MAKE) html)\n")
-    sds;
-  print "\n"
+  print "\n\n"
+
+let includes () =
+  if !some_vfile then print "-include $(VFILES:.v=.v.d)\n.SECONDARY: $(VFILES:.v=.v.d)\n\n";
+  if !some_mlfile then print "-include $(MLFILES:.ml=.ml.d)\n.SECONDARY: $(MLFILES:.ml=.ml.d)\n\n"
 
 let implicit () =
   let ml_rules () =
-    print ".mli.cmi:\n\t$(CAMLC) $(ZDEBUG) $(ZFLAGS) $<\n\n";
-    print ".ml.cmo:\n\t$(CAMLC) $(ZDEBUG) $(ZFLAGS) $(PP) $<\n\n";
-    print ".ml.cmx:\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $(PP) $<\n\n";
+    print "%.cmi: %.mli\n\t$(CAMLC) $(ZDEBUG) $(ZFLAGS) $<\n\n";
+    print "%.cmo: %.ml\n\t$(CAMLC) $(ZDEBUG) $(ZFLAGS) $(PP) $<\n\n";
+    print "%.cmx: %.ml\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $(PP) $<\n\n";
+    print "%.ml.d: %.ml\n";
+    print "\t$(CAMLBIN)ocamldep -slash $(ZFLAGS) $(PP) \"$<\" > \"$@\"\n\n"
   and v_rule () =
-    print ".v.vo:\n\t$(COQC) $(COQDEBUG) $(COQFLAGS) $*\n\n";
-    print ".v.vi:\n\t$(COQC) -i $(COQDEBUG) $(COQFLAGS) $*\n\n";
-    print ".v.g:\n\t$(GALLINA) $<\n\n";
-    print ".v.tex:\n\t$(COQDOC) -latex $< -o $@\n\n";
-    print ".v.html:\n\t$(COQDOC) -html $< -o $@\n\n";
-    print ".v.g.tex:\n\t$(COQDOC) -latex -g $< -o $@\n\n";
-    print ".v.g.html:\n\t$(COQDOC) -html -g $< -o $@\n\n"
-  and ml_suffixes =
-    if !some_mlfile then 
-      [ ".mli"; ".ml"; ".cmo"; ".cmi"; ".cmx" ]
-    else 
-      []
-  and v_suffixes =
-    if !some_vfile then 
-      [ ".v"; ".vo"; ".vi"; ".g"; ".html"; ".tex"; ".g.tex"; ".g.html" ] 
-    else 
-      []
+    print "%.vo %.glob: %.v\n\t$(COQC) -dump-glob $*.glob $(COQDEBUG) $(COQFLAGS) $*\n\n";
+    print "%.vi: %.v\n\t$(COQC) -i $(COQDEBUG) $(COQFLAGS) $*\n\n";
+    print "%.g: %.v\n\t$(GALLINA) $<\n\n";
+    print "%.tex: %.v\n\t$(COQDOC) -latex $< -o $@\n\n";
+    print "%.html: %.v %.glob\n\t$(COQDOC) -glob-from $*.glob  -html $< -o $@\n\n";
+    print "%.g.tex: %.v\n\t$(COQDOC) -latex -g $< -o $@\n\n";
+    print "%.g.html: %.v %.glob\n\t$(COQDOC) -glob-from $*.glob -html -g $< -o $@\n\n";
+    print "%.v.d: %.v\n";
+    print "\t$(COQDEP) -glob -slash $(COQLIBS) \"$<\" > \"$@\" || ( RV=$$?; rm -f \"$@\"; exit $${RV} )\n\n"
   in
-  let suffixes = ml_suffixes @ v_suffixes in
-  if suffixes <> [] then begin
-    print ".SUFFIXES: "; print_list " " suffixes;
-    print "\n\n"
-  end;
-  if !some_mlfile then ml_rules ();
-  if !some_vfile then v_rule ()
+    if !some_mlfile then ml_rules ();
+    if !some_vfile then v_rule ()
 
 let variables l =
   let rec var_aux = function
@@ -174,71 +155,122 @@ let variables l =
     | Def(v,def) :: r -> print v; print "="; print def; print "\n"; var_aux r
     | _ :: r -> var_aux r
   in
-  section "Variables definitions.";
-  print "CAMLP4LIB=`camlp5 -where 2> /dev/null || camlp4 -where`\n";
-  print "CAMLP4=`basename $CAMLP4LIB`\n"; 
-  print "COQSRC=-I $(COQTOP)/kernel -I $(COQTOP)/lib \\
+    section "Variables definitions.";
+    print "CAMLP4LIB:=$(shell $(CAMLBIN)camlp5 -where 2> /dev/null || $(CAMLBIN)camlp4 -where)\n";
+    print "CAMLP4:=$(notdir $(CAMLP4LIB))\n"; 
+    if Coq_config.local then
+      (print "COQSRC:=$(COQTOP)\n";
+       print "COQSRCLIBS:=-I $(COQTOP)/kernel -I $(COQTOP)/lib \\
   -I $(COQTOP)/library -I $(COQTOP)/parsing \\
   -I $(COQTOP)/pretyping -I $(COQTOP)/interp \\
-  -I $(COQTOP)/proofs -I $(COQTOP)/syntax -I $(COQTOP)/tactics \\
-  -I $(COQTOP)/toplevel -I $(COQTOP)/contrib/correctness \\
-  -I $(COQTOP)/contrib/extraction -I $(COQTOP)/contrib/field \\
-  -I $(COQTOP)/contrib/fourier -I $(COQTOP)/contrib/graphs \\
+  -I $(COQTOP)/proofs -I $(COQTOP)/tactics \\
+  -I $(COQTOP)/toplevel -I $(COQTOP)/contrib/cc \\
+  -I $(COQTOP)/contrib/dp -I $(COQTOP)/contrib/extraction \\
+  -I $(COQTOP)/contrib/field -I $(COQTOP)/contrib/firstorder \\
+  -I $(COQTOP)/contrib/fourier -I $(COQTOP)/contrib/funind \\
   -I $(COQTOP)/contrib/interface -I $(COQTOP)/contrib/jprover \\
-  -I $(COQTOP)/contrib/omega -I $(COQTOP)/contrib/romega \\
-  -I $(COQTOP)/contrib/ring -I $(COQTOP)/contrib/xml \\
-  -I $(CAMLP4LIB)\n";
-  print "ZFLAGS=$(OCAMLLIBS) $(COQSRC)\n";
-  if !opt = "-byte" then 
-    print "override OPT=-byte\n"
-  else
-    print "OPT=\n";
-  if !impredicative_set = true then print "OTHERFLAGS=-impredicative-set\n";
-  print "COQFLAGS=-q $(OPT) $(COQLIBS) $(OTHERFLAGS) $(COQ_XML)\n";
-  print "COQC=$(COQBIN)coqc\n";
-  print "GALLINA=gallina\n";
-  print "COQDOC=$(COQBIN)coqdoc\n";
-  print "CAMLC=ocamlc -c\n";
-  print "CAMLOPTC=ocamlopt -c\n";
-  print "CAMLLINK=ocamlc\n";
-  print "CAMLOPTLINK=ocamlopt\n";
-  print "COQDEP=$(COQBIN)coqdep -c\n";
-  print "GRAMMARS=grammar.cma\n";
-  print "CAMLP4EXTEND=pa_extend.cmo pa_macro.cmo q_MLast.cmo\n";
-  print "PP=-pp \"$(CAMLP4)o -I . -I $(COQTOP)/parsing $(CAMLP4EXTEND) $(GRAMMARS) -impl\"\n";
-  var_aux l;
-  print "\n"
+  -I $(COQTOP)/contrib/micromega -I $(COQTOP)/contrib/omega \\
+  -I $(COQTOP)/contrib/ring -I $(COQTOP)/contrib/romega \\
+  -I $(COQTOP)/contrib/rtauto -I $(COQTOP)/contrib/setoid_ring \\
+  -I $(COQTOP)/contrib/subtac -I $(COQTOP)/contrib/xml \\
+  -I $(CAMLP4LIB)\n")
+    else
+      (print "COQSRC:=$(shell $(COQTOP)coqc -where)\n"; 
+       print "COQSRCLIBS:=-I $(COQSRC)\n");
+    print "ZFLAGS:=$(OCAMLLIBS) $(COQSRCLIBS)\n";
+    if !opt = "-byte" then 
+      print "override OPT:=-byte\n"
+    else
+      print "OPT:=\n";
+    if !impredicative_set = true then print "OTHERFLAGS=-impredicative-set\n";
+    (* Coq executables and relative variables *)
+    print "COQFLAGS:=-q $(OPT) $(COQLIBS) $(OTHERFLAGS) $(COQ_XML)\n";
+    print "COQC:=$(COQBIN)coqc\n";
+    print "COQDEP:=$(COQBIN)coqdep -c\n";
+    print "GALLINA:=$(COQBIN)gallina\n";
+    print "COQDOC:=$(COQBIN)coqdoc\n";
+    (* Caml executables and relative variables *)
+    printf "CAMLC:=$(CAMLBIN)ocamlc -rectypes -c\n";
+    printf "CAMLOPTC:=$(CAMLBIN)ocamlopt -rectypes -c\n";
+    printf "CAMLLINK:=$(CAMLBIN)ocamlc -rectypes\n";
+    printf "CAMLOPTLINK:=$(CAMLBIN)ocamlopt -rectypes\n";
+    print "GRAMMARS:=grammar.cma\n";
+    print "CAMLP4EXTEND:=pa_extend.cmo pa_macro.cmo q_MLast.cmo\n";
+
+    (if Coq_config.local then
+      print "PP:=-pp \"$(CAMLBIN)$(CAMLP4)o -I . -I $(COQTOP)/parsing $(CAMLP4EXTEND) $(GRAMMARS) -impl\"\n"
+    else
+      print "PP:=-pp \"$(CAMLBIN)$(CAMLP4)o -I . -I $(COQSRC) $(CAMLP4EXTEND) $(GRAMMARS) -impl\"\n"); 
+    var_aux l;
+    print "\n"
+
+let absolute_dir dir =
+  let current = Sys.getcwd () in
+    Sys.chdir dir;
+    let dir' = Sys.getcwd () in
+      Sys.chdir current;
+      dir'
+
+let is_prefix dir1 dir2 =
+  let l1 = String.length dir1 in
+  let l2 = String.length dir2 in
+    dir1 = dir2 or (l1 < l2 & String.sub dir2 0 l1 = dir1 & dir2.[l1] = '/')
+
+let is_included dir = function
+  | RInclude (dir',_) -> is_prefix (absolute_dir dir') (absolute_dir dir)
+  | Include dir' -> absolute_dir dir = absolute_dir dir'
+  | _ -> false
+
+let dir_of_target t = 
+  match t with
+    | RInclude (dir,_) -> dir
+    | Include dir -> dir
+    | _ -> assert false
 
 let include_dirs l =
-  let include_aux' includeR =
-   let rec include_aux = function
-     | [] -> []
-     | Include x :: r -> ("-I " ^ x) :: (include_aux r)
-     | RInclude (p,l) :: r when includeR ->
-        let l' = if l = "" then "\"\"" else l in
-        ("-R " ^ p ^ " " ^ l') :: (include_aux r)
-     | _ :: r -> include_aux r
-   in
-    include_aux
+  let rec split_includes l = 
+    match l with
+      | [] -> [], []
+      | Include _ as i :: rem ->
+	  let ri, rr = split_includes rem in 
+	    (i :: ri), rr
+      | RInclude _ as r :: rem -> 
+	  let ri, rr = split_includes rem in 
+	    ri, (r :: rr)
+      | _ :: rem -> split_includes rem
   in
-  let i_ocaml = "-I ." :: (include_aux' false l) in
-  let i_coq   = "-I ." :: (include_aux' true  l) in
-  section "Libraries definition.";
-  print "OCAMLLIBS="; print_list "\\\n  " i_ocaml; print "\n";
-  print "COQLIBS=";   print_list "\\\n  " i_coq; print "\n\n"
+  let rec parse_includes l = 
+    match l with
+      | [] -> []
+      | Include x :: rem -> ("-I " ^ x) :: parse_includes rem
+      | RInclude (p,l) :: rem ->
+	  let l' = if l = "" then "\"\"" else l in
+            ("-R " ^ p ^ " " ^ l') :: parse_includes rem
+      | _ :: rem -> parse_includes rem
+  in
+  let l' = if List.exists (is_included ".") l then l else Include "." :: l in
+  let inc_i, inc_r = split_includes l' in
+  let inc_i' = List.filter (fun i -> not (List.exists (fun i' -> is_included (dir_of_target i) i') inc_r)) inc_i in 
+  let str_i = parse_includes inc_i in
+  let str_i' = parse_includes inc_i' in
+  let str_r = parse_includes inc_r in
+    section "Libraries definition.";
+    print "OCAMLLIBS:="; print_list "\\\n  " str_i; print "\n";
+    print "COQLIBS:="; print_list "\\\n  " str_i'; print " "; print_list "\\\n  " str_r; print "\n";
+    print "COQDOCLIBS:=";   print_list "\\\n  " str_r; print "\n\n"
 
 let rec special = function
   | [] -> []
   | Special (file,deps,com) :: r -> (file,deps,com) :: (special r)
   | _ :: r -> special r
-
+      
 let custom sps =
   let pr_sp (file,dependencies,com) =
     print file; print ": "; print dependencies; print "\n";
     print "\t"; print com; print "\n\n"
   in
-  if sps <> [] then section "Custom targets.";
-  List.iter pr_sp sps
+    if sps <> [] then section "Custom targets.";
+    List.iter pr_sp sps
 
 let subdirs l =
   let rec subdirs_aux = function
@@ -249,69 +281,69 @@ let subdirs l =
     print s; print ":\n\tcd "; print s; print " ; $(MAKE) all\n\n"
   in
   let sds = subdirs_aux l in
-  if sds <> [] then section "Subdirectories.";
-  List.iter pr_subdir sds;
-  section "Special targets.";
-  print ".PHONY: ";
-  print_list " "
-    ("all" ::  "opt" :: "byte" :: "archclean" :: "clean" :: "install" 
-     :: "depend" :: "html" :: sds);
-  print "\n\n";
-  sds
+    if sds <> [] then section "Subdirectories.";
+    List.iter pr_subdir sds;
+    section "Special targets.";
+    print ".PHONY: ";
+    print_list " "
+      ("all" ::  "opt" :: "byte" :: "archclean" :: "clean" :: "install" 
+	:: "depend" :: "html" :: sds);
+    print "\n\n";
+    sds
 
-(* Extract gallina/html filenames (foo.v) from the list of all targets *)
-
-let rec other_files suff = function
-  | V n :: r -> 
-      let f = (Filename.chop_suffix n ".vo") ^ suff in
-      f :: (other_files suff r)
-  | _   :: r -> 
-      other_files suff r
-  | [] -> 
-      []
-
-let vfiles = other_files ".v"
-let gfiles = other_files ".g"
-let hfiles = other_files ".html"
-let tfiles = other_files ".tex"
-let vifiles = other_files ".vi"
-let gtfiles l = List.map (fun f -> f ^ ".tex") (gfiles l)
-let ghfiles l = List.map (fun f -> f ^ ".html") (gfiles l)
-let vofiles = other_files ".vo"
 
 let all_target l =
-  let rec fnames = function
-    | ML n :: r -> n :: (fnames r)
-    | Subdir n :: r -> n :: (fnames r)
-    | V n :: r -> n :: (fnames r)
-    | Special (n,_,_) :: r -> n :: (fnames r)
-    | Include _ :: r -> fnames r
-    | RInclude _ :: r -> fnames r
-    | Def _ :: r -> fnames r
-    | [] -> []
+  let rec parse_arguments l = 
+    match l with
+      | ML n :: r -> let v,m,o = parse_arguments r in (v,n::m,o)
+      | Subdir n :: r -> let v,m,o = parse_arguments r in (v,m,n::o)
+      | V n :: r -> let v,m,o = parse_arguments r in (n::v,m,o)
+      | Special (n,_,_) :: r -> let v,m,o = parse_arguments r in (v,m,n::o)
+      | Include _ :: r -> parse_arguments r
+      | RInclude _ :: r -> parse_arguments r
+      | Def _ :: r -> parse_arguments r
+      | [] -> [],[],[]
   in
-  section "Definition of the \"all\" target.";
-  print "VFILES="; print_list "\\\n  " (vfiles l); print "\n";
-  print "VOFILES=$(VFILES:.v=.vo)\n";
-  print "VIFILES=$(VFILES:.v=.vi)\n";
-  print "GFILES=$(VFILES:.v=.g)\n";
-  print "HTMLFILES=$(VFILES:.v=.html)\n";
-  print "GHTMLFILES=$(VFILES:.v=.g.html)\n";
-  print "\n";
-  print "all: "; print_list "\\\n  " (fnames l);
-  print "\n\n";
-  if !some_vfile then begin
-    print "spec: $(VIFILES)\n\n";
-    print "gallina: $(GFILES)\n\n";
-    print "html: $(HTMLFILES)\n\n";
-    print "gallinahtml: $(GHTMLFILES)\n\n";
-    print "all.ps: $(VFILES)\n";
-    print "\t$(COQDOC) -ps -o $@ `$(COQDEP) -sort -suffix .v $(VFILES)`\n\n";
-    print "all-gal.ps: $(VFILES)\n";
-    print "\t$(COQDOC) -ps -g -o $@ `$(COQDEP) -sort -suffix .v $(VFILES)`\n\n";
-    print "\n\n"
-  end
-
+  let 
+      vfiles, mlfiles, other_targets = parse_arguments l
+  in
+    section "Definition of the \"all\" target.";
+    if !some_vfile then
+      begin
+	print "VFILES:="; print_list "\\\n  " vfiles; print "\n";
+	print "VOFILES:=$(VFILES:.v=.vo)\n";
+	print "GLOBFILES:=$(VFILES:.v=.glob)\n";
+	print "VIFILES:=$(VFILES:.v=.vi)\n";
+	print "GFILES:=$(VFILES:.v=.g)\n";
+	print "HTMLFILES:=$(VFILES:.v=.html)\n";
+	print "GHTMLFILES:=$(VFILES:.v=.g.html)\n"
+      end;
+    if !some_mlfile then
+      begin
+	print "MLFILES:="; print_list "\\\n  " mlfiles; print "\n";
+	print "CMOFILES:=$(MLFILES:.ml=.cmo)\n";
+      end;
+    print "\nall: ";
+    if !some_vfile then print "$(VOFILES) ";
+    if !some_mlfile then print "$(CMOFILES) ";
+    print_list "\\\n  " other_targets; print "\n";
+    if !some_vfile then 
+      begin
+	print "spec: $(VIFILES)\n\n";
+	print "gallina: $(GFILES)\n\n";
+	print "html: $(GLOBFILES) $(VFILES)\n";
+	print "\t- mkdir html\n"; 
+	print "\t$(COQDOC) -toc -html $(COQDOCLIBS) -d html $(VFILES)\n\n";
+	print "gallinahtml: $(GLOBFILES) $(VFILES)\n";
+	print "\t- mkdir html\n"; 
+	print "\t$(COQDOC) -toc -html -g $(COQDOCLIBS) -d html $(VFILES)\n\n";
+	print "all.ps: $(VFILES)\n";
+	print "\t$(COQDOC) -toc -ps $(COQDOCLIBS) -o $@ `$(COQDEP) -sort -suffix .v $(VFILES)`\n\n";
+	print "all-gal.ps: $(VFILES)\n";
+	print "\t$(COQDOC) -toc -ps -g $(COQDOCLIBS) -o $@ `$(COQDEP) -sort -suffix .v $(VFILES)`\n\n";
+	print "\n\n"
+      end
+      
 let parse f =
   let rec string = parser 
     | [< '' ' | '\n' | '\t' >] -> ""
@@ -333,8 +365,8 @@ let parse f =
   in
   let c = open_in f in
   let res = args (Stream.of_channel c) in
-  close_in c;
-  res
+    close_in c;
+    res
 
 let rec process_cmd_line = function
   | [] -> 
@@ -348,8 +380,16 @@ let rec process_cmd_line = function
   | "-impredicative-set" :: r ->
       impredicative_set := true; process_cmd_line r
   | "-custom" :: com :: dependencies :: file :: r ->
-      some_file := true;
-      Special (file,dependencies,com) :: (process_cmd_line r)
+      let check_dep f =
+	if Filename.check_suffix f ".v" then
+          some_vfile := true
+	else if Filename.check_suffix f ".ml" then
+          some_mlfile := true
+	else
+	  () 
+      in
+	List.iter check_dep (Str.split (Str.regexp "[ \t]+") dependencies);
+	Special (file,dependencies,com) :: (process_cmd_line r)
   | "-I" :: d :: r ->
       Include d :: (process_cmd_line r)
   | "-R" :: p :: l :: r ->
@@ -369,45 +409,39 @@ let rec process_cmd_line = function
       Def (v,def) :: (process_cmd_line r)
   | f :: r ->
       if Filename.check_suffix f ".v" then begin
-        some_vfile := true; 
-	V (f^"o") :: (process_cmd_line r)
-      end else if Filename.check_suffix f ".ml" then begin
-        some_mlfile := true; 
-	ML ((Filename.chop_suffix f "ml")^"cmo") :: (process_cmd_line r)
+          some_vfile := true; 
+	  V f :: (process_cmd_line r)
+	end else if Filename.check_suffix f ".ml" then begin
+            some_mlfile := true; 
+	    ML f :: (process_cmd_line r)
       end else
-        Subdir f :: (process_cmd_line r)
-
+            Subdir f :: (process_cmd_line r)
+	      
 let banner () =
   print
-"##############################################################################
-##                 The Calculus of Inductive Constructions                  ##
-##                                                                          ##
-##                                Projet Coq                                ##
-##                                                                          ##
-##                     INRIA                        ENS-CNRS                ##
-##              Rocquencourt                        Lyon                    ##
-##                                                                          ##
-##                                  Coq V7                                  ##
-##                                                                          ##
-##                                                                          ##
-##############################################################################
+"##########################################################################
+##  v      #                  The Coq Proof Assistant                   ##
+## <O___,, # CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud ##
+##   \\VV/  #                                                            ##
+##    //   #   Makefile automagically generated by coq_makefile V8.2    ##
+##########################################################################
 
 "
 
 let warning () =
   print "# WARNING\n#\n";
-  print "# This Makefile has been automagically generated by coq_makefile\n";
+  print "# This Makefile has been automagically generated\n";
   print "# Edit at your own risks !\n";
   print "#\n# END OF WARNING\n\n"
-
+    
 let print_list l = List.iter (fun x -> print x; print " ") l
-
+  
 let command_line args =
   print "#\n# This Makefile was generated by the command line :\n";
   print "# coq_makefile ";
   print_list args;
   print "\n#\n\n"
-
+    
 let directories_deps l =
   let print_dep f dep = 
     if dep <> [] then begin print f; print ": "; print_list dep; print "\n" end
@@ -426,32 +460,33 @@ let directories_deps l =
     | _ :: l -> 
 	iter acc l
   in
-  iter ([],[]) l
+    iter ([],[]) l
 
 let do_makefile args =
   let l = process_cmd_line args in
-  banner ();
-  warning ();
-  command_line args;
-  variables l;
-  include_dirs l;
-  all_target l;
-  let sps = special  l in
-  custom sps;
-  let sds = subdirs l in
-  implicit ();
-  standard sds sps;
-  (* TEST directories_deps l; *)
-  warning ();
-  if not (!output_channel == stdout) then close_out !output_channel;
-  exit 0
-
+    banner ();
+    warning ();
+    command_line args;
+    include_dirs l;
+    variables l;
+    all_target l;
+    let sps = special  l in
+      custom sps;
+      let sds = subdirs l in
+	implicit ();
+	standard sds sps;
+	(* TEST directories_deps l; *)
+	includes ();
+	warning ();
+	if not (!output_channel == stdout) then close_out !output_channel;
+	exit 0
+	  
 let main () =
   let args =
     if Array.length Sys.argv = 1 then usage ();
     List.tl (Array.to_list Sys.argv)
   in
-  do_makefile args
-
+    do_makefile args
+      
 let _ = Printexc.catch main ()
 

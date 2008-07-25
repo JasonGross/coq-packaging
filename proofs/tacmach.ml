@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacmach.ml 9511 2007-01-22 08:27:31Z herbelin $ *)
+(* $Id: tacmach.ml 10544 2008-02-09 11:31:35Z herbelin $ *)
 
 open Util
 open Names
@@ -205,8 +205,11 @@ let thin_body_no_check ids gl =
 let move_hyp_no_check with_dep id1 id2 gl = 
   refiner (Prim (Move (with_dep,id1,id2))) gl
 
-let rename_hyp_no_check id1 id2 gl = 
-  refiner (Prim (Rename (id1,id2))) gl
+let rec rename_hyp_no_check l gl = match l with 
+  | [] -> tclIDTAC gl 
+  | (id1,id2)::l -> 
+      tclTHEN (refiner (Prim (Rename (id1,id2)))) 
+	(rename_hyp_no_check l) gl
 
 let mutual_fix f n others gl = 
   with_check (refiner (Prim (FixRule (f,n,others)))) gl
@@ -214,14 +217,6 @@ let mutual_fix f n others gl =
 let mutual_cofix f others gl = 
   with_check (refiner (Prim (Cofix (f,others)))) gl
     
-let rename_bound_var_goal gls =
-  let { evar_hyps = sign; evar_concl = cl } = sig_it gls in 
-  let ids = ids_of_named_context (named_context_of_val sign) in
-  convert_concl_no_check 
-    (rename_bound_var (Global.env()) ids cl) DEFAULTcast gls 
-
-
-
 (* Versions with consistency checks *)
 
 let introduction id    = with_check (introduction_no_check id) 
@@ -234,8 +229,8 @@ let convert_hyp d      = with_check (convert_hyp_no_check d)
 let thin l             = with_check (thin_no_check l)
 let thin_body c        = with_check (thin_body_no_check c)
 let move_hyp b id id'  = with_check (move_hyp_no_check b id id') 
-let rename_hyp id id'  = with_check (rename_hyp_no_check id id')
-    
+let rename_hyp l       = with_check (rename_hyp_no_check l)
+
 (* Pretty-printers *)
 
 open Pp

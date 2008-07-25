@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: String.v 8026 2006-02-11 19:40:49Z herbelin $ *)
+(* $Id: String.v 10855 2008-04-27 11:16:15Z msozeau $ *)
 
 (** Contributed by Laurent Théry (INRIA);
     Adapted to Coq V8 by the Coq Development Team *)
@@ -110,8 +110,8 @@ Proof.
 intros s1; elim s1; simpl in |- *; auto.
 intros s2 n; rewrite plus_comm; simpl in |- *; auto.
 intros a s1' Rec s2 n; case n; simpl in |- *; auto.
-generalize (Rec s2 0); simpl in |- *; auto.
-intros n0; rewrite <- Plus.plus_Snm_nSm; auto.
+generalize (Rec s2 0); simpl in |- *; auto. intros.
+rewrite <- Plus.plus_Snm_nSm; auto.
 Qed.
 
 (** *** Substrings *)

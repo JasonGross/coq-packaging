@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Mult.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Mult.v 11015 2008-05-28 20:06:42Z herbelin $ i*)
 
 Require Export Plus.
 Require Export Minus.
@@ -103,6 +103,43 @@ Proof.
   auto with arith.
 Qed.
 Hint Resolve mult_assoc: arith v62.
+
+(** ** Inversion lemmas *)
+
+Lemma mult_is_O : forall n m, n * m = 0 -> n = 0 \/ m = 0.
+Proof.
+  destruct n as [| n]. 
+    intros; left; trivial.
+
+    simpl; intros m H; right. 
+    assert (H':m = 0 /\ n * m = 0) by apply (plus_is_O _ _ H).
+    destruct H'; trivial.
+Qed.
+
+Lemma mult_is_one : forall n m, n * m = 1 -> n = 1 /\ m = 1.
+Proof.
+  destruct n as [|n].
+    simpl; intros m H; elim (O_S _ H).
+
+    simpl; intros m H.
+    destruct (plus_is_one _ _ H) as [[Hm Hnm] | [Hm Hnm]].
+      rewrite Hm in H; simpl in H; rewrite mult_0_r in H; elim (O_S _ H).
+      rewrite Hm in Hnm; rewrite mult_1_r in Hnm; auto. 
+Qed.
+
+(** ** Multiplication and successor *)
+
+Lemma mult_succ_l : forall n m:nat, S n * m = n * m + m.
+Proof.
+  intros; simpl. rewrite plus_comm. reflexivity.
+Qed.
+
+Lemma mult_succ_r : forall n m:nat, n * S m = n * m + n.
+Proof.
+  induction n as [| p H]; intro m; simpl.
+  reflexivity.
+  rewrite H, <- plus_n_Sm; apply f_equal; rewrite plus_assoc; reflexivity.
+Qed.
 
 (** * Compatibility with orders *)
 

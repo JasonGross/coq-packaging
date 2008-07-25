@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cooking.ml 9320 2006-10-30 16:53:43Z barras $ i*)
+(*i $Id: cooking.ml 10877 2008-04-30 21:58:41Z herbelin $ i*)
 
 open Pp
 open Util
@@ -113,7 +113,7 @@ type recipe = {
   d_modlist : work_list }
 
 let on_body f = 
-  option_map (fun c -> Declarations.from_val (f (Declarations.force c)))
+  Option.map (fun c -> Declarations.from_val (f (Declarations.force c)))
 
 let cook_constant env r =
   let cb = r.d_from in
@@ -129,6 +129,8 @@ let cook_constant env r =
     | PolymorphicArity (ctx,s) ->
 	let t = mkArity (ctx,Type s.poly_level) in
 	let typ = abstract_constant_type (expmod_constr r.d_modlist t) hyps in
-	Typeops.make_polymorphic_if_arity env typ in
+	let j = make_judge (force (Option.get body)) typ in
+	Typeops.make_polymorphic_if_constant_for_ind env j
+  in
   let boxed = Cemitcodes.is_boxed cb.const_body_code in
-  (body, typ, cb.const_constraints, cb.const_opaque, boxed)
+  (body, typ, cb.const_constraints, cb.const_opaque, boxed,false)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: inductiveops.mli 9194 2006-10-01 09:25:19Z herbelin $ i*)
+(*i $Id: inductiveops.mli 9707 2007-03-15 16:36:15Z herbelin $ i*)
 
 open Names
 open Term
@@ -105,9 +105,11 @@ val arity_of_case_predicate :
 val type_case_branches_with_names :
   env -> inductive * constr list -> unsafe_judgment -> constr ->
     types array * types
-val make_case_info :
-  env -> inductive -> case_style -> pattern_source array -> case_info
+val make_case_info : env -> inductive -> case_style -> case_info
+
+(*i Compatibility 
 val make_default_case_info : env -> case_style -> inductive -> case_info
+i*)
 
 (********************)
 val control_only_guard : env -> types -> unit

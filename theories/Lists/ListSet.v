@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ListSet.v 6844 2005-03-16 13:09:55Z herbelin $ i*)
+(*i $Id: ListSet.v 10616 2008-03-04 17:33:35Z letouzey $ i*)
 
 (** A Library for finite sets, implemented as lists *)
 
@@ -20,7 +20,7 @@ Set Implicit Arguments.
 
 Section first_definitions.
 
-  Variable A : Set.
+  Variable A : Type.
   Hypothesis Aeq_dec : forall x y:A, {x = y} + {x <> y}.
 
   Definition set := list A.
@@ -100,7 +100,7 @@ Section first_definitions.
   Qed.
 
   Lemma set_mem_ind :
-   forall (B:Set) (P:B -> Prop) (y z:B) (a:A) (x:set),
+   forall (B:Type) (P:B -> Prop) (y z:B) (a:A) (x:set),
      (set_In a x -> P y) -> P z -> P (if set_mem a x then y else z).
 
   Proof.
@@ -110,7 +110,7 @@ Section first_definitions.
   Qed.
 
   Lemma set_mem_ind2 :
-   forall (B:Set) (P:B -> Prop) (y z:B) (a:A) (x:set),
+   forall (B:Type) (P:B -> Prop) (y z:B) (a:A) (x:set),
      (set_In a x -> P y) ->
      (~ set_In a x -> P z) -> P (if set_mem a x then y else z).
 
@@ -373,7 +373,7 @@ End first_definitions.
 
 Section other_definitions.
 
-  Variables A B : Set.
+  Variables A B : Type.
 
   Definition set_prod : set A -> set B -> set (A * B) :=
     list_prod (A:=A) (B:=B).

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: rawterm.mli 9976 2007-07-12 11:58:30Z msozeau $ i*)
+(*i $Id: rawterm.mli 11094 2008-06-10 19:35:23Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -40,6 +40,8 @@ type rawsort = RProp of Term.contents | RType of Univ.universe option
 
 type binder_kind = BProd | BLambda | BLetIn
 
+type binding_kind = Explicit | Implicit
+
 type quantified_hypothesis = AnonHyp of int | NamedHyp of identifier
 
 type 'a explicit_bindings = (loc * quantified_hypothesis * 'a) list
@@ -61,10 +63,10 @@ type rawconstr =
   | REvar of loc * existential_key * rawconstr list option
   | RPatVar of loc * (bool * patvar) (* Used for patterns only *)
   | RApp of loc * rawconstr * rawconstr list
-  | RLambda of loc * name * rawconstr * rawconstr
-  | RProd of loc * name * rawconstr * rawconstr
+  | RLambda of loc * name * binding_kind *  rawconstr * rawconstr
+  | RProd of loc * name * binding_kind * rawconstr * rawconstr
   | RLetIn of loc * name * rawconstr * rawconstr
-  | RCases of loc * rawconstr option * tomatch_tuple * cases_clauses
+  | RCases of loc * case_style * rawconstr option * tomatch_tuples * cases_clauses
   | RLetTuple of loc * name list * (name * rawconstr option) * 
       rawconstr * rawconstr
   | RIf of loc * rawconstr * (name * rawconstr option) * rawconstr * rawconstr
@@ -75,7 +77,7 @@ type rawconstr =
   | RCast of loc * rawconstr * rawconstr cast_type
   | RDynamic of loc * Dyn.t
 
-and rawdecl = name * rawconstr option * rawconstr
+and rawdecl = name * binding_kind * rawconstr option * rawconstr
 
 and fix_recursion_order = RStructRec | RWfRec of rawconstr | RMeasureRec of rawconstr
 
@@ -86,12 +88,15 @@ and fix_kind =
 and predicate_pattern =
     name * (loc * inductive * int * name list) option
 
-and tomatch_tuple = (rawconstr * predicate_pattern) list
+and tomatch_tuple = (rawconstr * predicate_pattern)
 
-and cases_clauses =
-    (loc * identifier list * cases_pattern list * rawconstr) list
+and tomatch_tuples = tomatch_tuple list
 
-val cases_predicate_names : tomatch_tuple -> name list
+and cases_clause = (loc * identifier list * cases_pattern list * rawconstr)
+
+and cases_clauses = cases_clause list
+
+val cases_predicate_names : tomatch_tuples -> name list
 
 (*i - if PRec (_, names, arities, bodies) is in env then arities are
    typed in env too and bodies are typed in env enriched by the
@@ -141,7 +146,14 @@ val all_flags : 'a raw_red_flag
 
 type 'a or_var = ArgArg of 'a | ArgVar of identifier located
 
-type 'a with_occurrences = int or_var list * 'a
+type occurrences_expr = bool * int or_var list
+
+val all_occurrences_expr_but : int or_var list -> occurrences_expr
+val no_occurrences_expr_but : int or_var list -> occurrences_expr
+val all_occurrences_expr : occurrences_expr
+val no_occurrences_expr : occurrences_expr
+
+type 'a with_occurrences = occurrences_expr * 'a
 
 type ('a,'b) red_expr_gen =
   | Red of bool

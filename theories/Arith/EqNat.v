@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: EqNat.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: EqNat.v 9966 2007-07-10 23:54:53Z letouzey $ i*)
 
 (** Equality on natural numbers *)
 
@@ -89,3 +89,13 @@ Proof.
     intros n H1 H2. discriminate H2.
     intros n H1 z H2 H3. case (H2 _ H3). reflexivity.
 Defined.
+
+Lemma beq_nat_true : forall x y, beq_nat x y = true -> x=y.
+Proof.
+ induction x; destruct y; simpl; auto; intros; discriminate.
+Qed.
+
+Lemma beq_nat_false : forall x y, beq_nat x y = false -> x<>y.
+Proof.
+ induction x; destruct y; simpl; auto; intros; discriminate.
+Qed.

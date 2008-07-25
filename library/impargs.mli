@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: impargs.mli 9488 2007-01-17 11:11:58Z herbelin $ i*)
+(*i $Id: impargs.mli 10741 2008-04-02 15:47:07Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -21,11 +21,17 @@ open Nametab
 
 val make_implicit_args : bool -> unit
 val make_strict_implicit_args : bool -> unit
+val make_strongly_strict_implicit_args : bool -> unit
+val make_reversible_pattern_implicit_args : bool -> unit
 val make_contextual_implicit_args : bool -> unit
+val make_maximal_implicit_args : bool -> unit
 
 val is_implicit_args : unit -> bool
 val is_strict_implicit_args : unit -> bool
+val is_strongly_strict_implicit_args : unit -> bool
+val is_reversible_pattern_implicit_args : unit -> bool
 val is_contextual_implicit_args : unit -> bool
+val is_maximal_implicit_args : unit -> bool
 
 type implicits_flags
 val with_implicits : implicits_flags -> ('a -> 'b) -> 'a -> 'b
@@ -35,15 +41,26 @@ val with_implicits : implicits_flags -> ('a -> 'b) -> 'a -> 'b
 type implicit_status
 type implicits_list = implicit_status list
 
+type implicit_explanation
+
 val is_status_implicit : implicit_status -> bool
 val is_inferable_implicit : bool -> int -> implicit_status -> bool
 val name_of_implicit : implicit_status -> identifier
+val maximal_insertion_of : implicit_status -> bool
+val forced_implicit : implicit_status -> bool
 
 val positions_of_implicits : implicits_list -> int list
 
 (* Computation of the positions of arguments automatically inferable
    for an object of the given type in the given env *)
 val compute_implicits : env -> types -> implicits_list
+
+(* A [manual_explicitation] is a tuple of a positional or named explicitation with
+   maximal insertion and forcing flags. *)
+type manual_explicitation = Topconstr.explicitation * (bool * bool)
+
+val compute_implicits_with_manual : env -> types -> bool -> 
+  manual_explicitation list -> implicits_list
 
 (*s Computation of implicits (done using the global environment). *)
 
@@ -53,8 +70,16 @@ val declare_mib_implicits : mutual_inductive -> unit
 
 val declare_implicits : bool -> global_reference -> unit
 
-(* Manual declaration of which arguments are expected implicit *)
-val declare_manual_implicits : bool -> global_reference -> 
-  Topconstr.explicitation list -> unit
+(* [declare_manual_implicits local ref enriching l]
+   Manual declaration of which arguments are expected implicit.
+   Unsets implicits if [l] is empty. *)
+
+val declare_manual_implicits : bool -> global_reference -> bool ->
+  manual_explicitation list -> unit
+
+(* If the list is empty, do nothing, otherwise declare the implicits. *)
+
+val maybe_declare_manual_implicits : bool -> global_reference -> bool ->
+  manual_explicitation list -> unit
 
 val implicits_of_global : global_reference -> implicits_list

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: leminv.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
+(* $Id: leminv.ml 10348 2007-12-06 17:36:14Z aspiwack $ *)
 
 open Pp
 open Util
@@ -249,7 +249,7 @@ let add_inversion_lemma name env sigma t sort dep inv_op =
        { const_entry_body = invProof;
          const_entry_type = None;
          const_entry_opaque = false;
-	 const_entry_boxed = true && (Options.boxed_definitions())}, 
+	 const_entry_boxed = true && (Flags.boxed_definitions())}, 
      IsProof Lemma)
   in ()
 
@@ -292,7 +292,7 @@ let add_inversion_lemma_exn na com comsort bool tac =
 let lemInv id c gls =
   try
     let clause = mk_clenv_type_of gls c in
-    let clause = clenv_constrain_with_bindings [(-1,mkVar id)] clause in
+    let clause = clenv_constrain_last_binding (mkVar id) clause in
     Clenvtac.res_pf clause ~allow_K:true gls
   with 
     |  UserError (a,b) -> 

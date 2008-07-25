@@ -6,9 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Max.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Max.v 9883 2007-06-07 18:44:59Z letouzey $ i*)
 
-Require Import Arith.
+Require Import Le.
 
 Open Local Scope nat_scope.
 
@@ -28,6 +28,13 @@ Fixpoint max n m {struct n} : nat :=
 Lemma max_SS : forall n m, S (max n m) = max (S n) (S m).
 Proof.
   auto with arith.
+Qed.
+
+Theorem max_assoc : forall m n p : nat, max m (max n p) = max (max m n) p.
+Proof.
+  induction m; destruct n; destruct p; trivial.
+  simpl.
+  auto using IHm.
 Qed.
 
 Lemma max_comm : forall n m, max n m = max m n.

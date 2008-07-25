@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mlutil.ml 8886 2006-06-01 13:53:45Z letouzey $ i*)
+(*i $Id: mlutil.ml 10329 2007-11-21 21:21:36Z letouzey $ i*)
 
 (*i*)
 open Pp
@@ -573,14 +573,20 @@ let eta_red e =
   if n = 0 then e 
   else match t with 
     | MLapp (f,a) -> 
-	let m = (List.length a) - n in 
-	if m < 0 then e 
-	else
-	  let a1,a2 = list_chop m a in 
-	  let f = if m = 0 then f else MLapp (f,a1) in 
-	  if test_eta_args_lift 0 n a2 && not (ast_occurs_itvl 1 n f)
-	  then ast_lift (-n) f
-	  else e 
+	let m = List.length a in 
+	let ids,body,args = 
+	  if m = n then 
+	    [], f, a
+	  else if m < n then 
+	    snd (list_chop (n-m) ids), f, a 
+	  else (* m > n *)
+	    let a1,a2 = list_chop (m-n) a in 
+	    [], MLapp (f,a1), a2
+	in 
+	let p = List.length args in  
+	if test_eta_args_lift 0 p args && not (ast_occurs_itvl 1 p body)
+	then named_lams ids (ast_lift (-p) body)
+	else e
     | _ -> e
 
 (*s Computes all head linear beta-reductions possible in [(t a)].
@@ -658,20 +664,27 @@ let check_generalizable_case unsafe br =
     if check_and_generalize br.(i) <> f then raise Impossible 
   done; f
 
-(*s Do all branches correspond to the same thing? *)
+(*s Detecting similar branches of a match *)
 
-let check_constant_case br = 
-  if Array.length br = 0 then raise Impossible; 
-  let (r,l,t) = br.(0) in
-  let n = List.length l in 
-  if ast_occurs_itvl 1 n t then raise Impossible; 
-  let cst = ast_lift (-n) t in 
-  for i = 1 to Array.length br - 1 do 
-    let (r,l,t) = br.(i) in
-    let n = List.length l in
-    if (ast_occurs_itvl 1 n t) || (cst <> (ast_lift (-n) t)) 
-    then raise Impossible
-  done; cst
+(* If several branches of a match are equal (and independent from their 
+   patterns) we will print them using a _ pattern. If _all_ branches 
+   are equal, we remove the match.
+*)
+
+let common_branches br = 
+  let tab = Hashtbl.create 13 in 
+  for i = 0 to Array.length br - 1 do 
+    let (r,ids,t) = br.(i) in 
+    let n = List.length ids in 
+    if not (ast_occurs_itvl 1 n t) then 
+       let t = ast_lift (-n) t in 
+       let l = try Hashtbl.find tab t with Not_found -> [] in 
+       Hashtbl.replace tab t (i::l)
+  done; 
+  let best = ref [] in 
+  Hashtbl.iter 
+    (fun _ l -> if List.length l > List.length !best then best := l) tab; 
+  if List.length !best < 2 then [] else !best
 
 (*s If all branches are functions, try to permut the case and the functions. *)
 
@@ -805,18 +818,20 @@ and simpl_case o i br e =
       let f = check_generalizable_case o.opt_case_idg br in 
       simpl o (MLapp (MLlam (anonymous,f),[e]))
     with Impossible -> 
-      try (* Is each branch independant of [e] ? *) 
-	if not o.opt_case_cst then raise Impossible;
-	check_constant_case br 
-      with Impossible ->
+      (* Detect common branches *)
+      let common_br = if not o.opt_case_cst then [] else common_branches br in
+      if List.length common_br = Array.length br && br <> [||] then 
+	let (_,ids,t) = br.(0) in ast_lift (-List.length ids) t
+      else 
+	let new_i = (fst i, common_br) in 
 	(* Swap the case and the lam if possible *)
 	if o.opt_case_fun 
 	then 
 	  let ids,br = permut_case_fun br [] in 
 	  let n = List.length ids in 
-	  if n <> 0 then named_lams ids (MLcase (i,ast_lift n e, br))
-	  else MLcase (i,e,br) 
-	else MLcase (i,e,br)
+	  if n <> 0 then named_lams ids (MLcase (new_i,ast_lift n e, br))
+	  else MLcase (new_i,e,br) 
+	else MLcase (new_i,e,br)
 
 let rec post_simpl = function 
   | MLletin(_,c,e) when (is_atomic (eta_red c)) -> 
@@ -1122,13 +1137,15 @@ let is_not_strict t =
    Futhermore we don't expand fixpoints. *)
 
 let inline_test t = 
-  not (is_fix (eta_red t)) && (ml_size t < 12 && is_not_strict t)
+  let t1 = eta_red t in 
+  let t2 = snd (collect_lams t1) in
+  not (is_fix t2) && ml_size t < 12 && is_not_strict t
 
 let manual_inline_list = 
   let mp = MPfile (dirpath_of_string "Coq.Init.Wf") in 
   List.map (fun s -> (make_con mp empty_dirpath (mk_label s)))
     [ "well_founded_induction_type"; "well_founded_induction"; 
-      "Acc_rect"; "Acc_rec" ; "Acc_iter" ]
+      "Acc_rect"; "Acc_rec" ; "Acc_iter" ; "Fix" ]
 
 let manual_inline = function 
   | ConstRef c -> List.mem c manual_inline_list

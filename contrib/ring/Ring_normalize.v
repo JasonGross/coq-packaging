@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Ring_normalize.v 9179 2006-09-26 12:13:06Z barras $ *)
+(* $Id: Ring_normalize.v 10913 2008-05-09 14:40:04Z herbelin $ *)
 
 Require Import LegacyRing_theory.
 Require Import Quote.
@@ -774,7 +774,7 @@ Variable T : Ring_Theory Aplus Amult Aone Azero Aopp Aeq.
 Hint Resolve (Th_plus_comm T).
 Hint Resolve (Th_plus_assoc T).
 Hint Resolve (Th_plus_assoc2 T).
-Hint Resolve (Th_mult_sym T).
+Hint Resolve (Th_mult_comm T).
 Hint Resolve (Th_mult_assoc T).
 Hint Resolve (Th_mult_assoc2 T).
 Hint Resolve (Th_plus_zero_left T).
@@ -897,6 +897,6 @@ End rings.
 Infix "+" := Pplus : ring_scope.
 Infix "*" := Pmult : ring_scope.
 Notation "- x" := (Popp x) : ring_scope.
-Notation "[ x ]" := (Pvar x) (at level 1) : ring_scope.
+Notation "[ x ]" := (Pvar x) (at level 0) : ring_scope.
 
 Delimit Scope ring_scope with ring.

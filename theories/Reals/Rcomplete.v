@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rcomplete.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Rcomplete.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -24,7 +24,7 @@ Open Local Scope R_scope.
 (****************************************************)
 
 Theorem R_complete :
-  forall Un:nat -> R, Cauchy_crit Un -> sigT (fun l:R => Un_cv Un l).
+  forall Un:nat -> R, Cauchy_crit Un -> { l:R | Un_cv Un l } .
 Proof.
   intros.
   set (Vn := sequence_minorant Un (cauchy_min Un H)).
@@ -37,7 +37,7 @@ Proof.
   elim H1; intros.
   cut (x = x0).
   intros.
-  apply existT with x.
+  exists x.
   rewrite <- H2 in p0.
   unfold Un_cv in |- *.
   intros.

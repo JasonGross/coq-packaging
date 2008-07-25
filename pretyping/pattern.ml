@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pattern.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
+(* $Id: pattern.ml 10785 2008-04-13 21:41:54Z herbelin $ *)
 
 open Util
 open Names
@@ -92,7 +92,7 @@ let head_of_constr_reference c = match kind_of_term c with
 let rec pattern_of_constr t =
   match kind_of_term t with
     | Rel n  -> PRel n
-    | Meta n -> PMeta (Some (id_of_string (string_of_int n)))
+    | Meta n -> PMeta (Some (id_of_string ("META" ^ string_of_int n)))
     | Var id -> PVar id
     | Sort (Prop c) -> PSort (RProp c)
     | Sort (Type _) -> PSort (RType None)
@@ -185,7 +185,7 @@ let rec subst_pattern subst pat = match pat with
 	if c' == c && c1' == c1 && c2' == c2 then pat else
 	  PIf (c',c1',c2')
   | PCase ((a,b,ind,n as cs),typ,c,branches) ->
-      let ind' = option_smartmap (Inductiveops.subst_inductive subst) ind in
+      let ind' = Option.smartmap (Inductiveops.subst_inductive subst) ind in
       let typ' = subst_pattern subst typ in 
       let c' = subst_pattern subst c in
       let branches' = array_smartmap (subst_pattern subst) branches in
@@ -216,14 +216,14 @@ let rec pat_of_raw metas vars = function
       PRef r
   (* Hack pour ne pas réécrire une interprétation complète des patterns*)
   | RApp (_, RPatVar (_,(true,n)), cl) ->
-      PSoApp (n, List.map (pat_of_raw metas vars) cl)
+      metas := n::!metas; PSoApp (n, List.map (pat_of_raw metas vars) cl)
   | RApp (_,c,cl) -> 
       PApp (pat_of_raw metas vars c,
 	    Array.of_list (List.map (pat_of_raw metas vars) cl))
-  | RLambda (_,na,c1,c2) ->
+  | RLambda (_,na,bk,c1,c2) ->
       PLambda (na, pat_of_raw metas vars c1,
 	       pat_of_raw metas (na::vars) c2)
-  | RProd (_,na,c1,c2) ->
+  | RProd (_,na,bk,c1,c2) ->
       PProd (na, pat_of_raw metas vars c1,
 	       pat_of_raw metas (na::vars) c2)
   | RLetIn (_,na,c1,c2) ->
@@ -234,18 +234,18 @@ let rec pat_of_raw metas vars = function
   | RHole _ ->
       PMeta None
   | RCast (_,c,_) ->
-      Options.if_verbose
+      Flags.if_verbose
         Pp.warning "Cast not taken into account in constr pattern";
       pat_of_raw metas vars c
   | RIf (_,c,(_,None),b1,b2) ->
       PIf (pat_of_raw metas vars c,
            pat_of_raw metas vars b1,pat_of_raw metas vars b2)
   | RLetTuple (loc,nal,(_,None),b,c) ->
-      let mkRLambda c na = RLambda (loc,na,RHole (loc,Evd.InternalHole),c) in
+      let mkRLambda c na = RLambda (loc,na,Explicit,RHole (loc,Evd.InternalHole),c) in
       let c = List.fold_left mkRLambda c nal in
       PCase ((LetStyle,[|1|],None,None),PMeta None,pat_of_raw metas vars b,
              [|pat_of_raw metas vars c|])
-  | RCases (loc,p,[c,(na,indnames)],brs) ->
+  | RCases (loc,sty,p,[c,(na,indnames)],brs) ->
       let pred,ind_nargs, ind = match p,indnames with
 	| Some p, Some (_,ind,n,nal) ->
 	    rev_it_mkPLambda nal (mkPLambda na (pat_of_raw metas vars p)),
@@ -259,7 +259,7 @@ let rec pat_of_raw metas vars = function
 	Array.init (List.length brs) (pat_of_raw_branch loc metas vars ind brs)
       in
       let cstr_nargs,brs = (Array.map fst cbrs, Array.map snd cbrs) in
-      PCase ((RegularStyle,cstr_nargs,ind,ind_nargs), pred,
+      PCase ((sty,cstr_nargs,ind,ind_nargs), pred,
              pat_of_raw metas vars c, brs)
              
   | r ->

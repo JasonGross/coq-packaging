@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: contradiction.ml 9269 2006-10-24 13:01:55Z herbelin $ *)
+(* $Id: contradiction.ml 10169 2007-10-03 12:31:45Z herbelin $ *)
 
 open Util
 open Term
@@ -24,7 +24,7 @@ open Rawterm
 let absurd c gls =
   let env = pf_env gls and sigma = project gls in
   let _,j = Coercion.Default.inh_coerce_to_sort dummy_loc env
-    (Evd.create_evar_defs sigma) (Retyping.get_judgment_of env sigma c) in
+    (Evd.create_goal_evar_defs sigma) (Retyping.get_judgment_of env sigma c) in
   let c = j.Environ.utj_val in
   (tclTHENS
      (tclTHEN (elim_type (build_coq_False ())) (cut c)) 
@@ -77,7 +77,7 @@ let contradiction_term (c,lbind as cl) gl =
   let typ = pf_type_of gl c in
   let _, ccl = splay_prod env sigma typ in
   if is_empty_type ccl then
-    tclTHEN (elim cl None) (tclTRY assumption) gl
+    tclTHEN (elim false cl None) (tclTRY assumption) gl
   else
     try
       if lbind = NoBindings then

@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* $Id: coq_omega.ml 9963 2007-07-09 14:02:20Z letouzey $ *)
+(* $Id: coq_omega.ml 11094 2008-06-10 19:35:23Z herbelin $ *)
 
 open Util
 open Pp
@@ -128,12 +128,12 @@ let intern_id,unintern_id =
     
 let mk_then = tclTHENLIST
 
-let exists_tac c = constructor_tac (Some 1) 1 (Rawterm.ImplicitBindings [c])
+let exists_tac c = constructor_tac false (Some 1) 1 (Rawterm.ImplicitBindings [c])
 
 let generalize_tac t = generalize_time (generalize t)
 let elim t = elim_time (simplest_elim t)
 let exact t = exact_time (Tactics.refine t)
-let unfold s = Tactics.unfold_in_concl [[], Lazy.force s]
+let unfold s = Tactics.unfold_in_concl [all_occurrences, Lazy.force s]
  
 let rev_assoc k =
   let rec loop = function
@@ -180,8 +180,6 @@ let coq_Zneg = lazy (constant "Zneg")
 let coq_Z = lazy (constant "Z")
 let coq_comparison = lazy (constant "comparison")
 let coq_Gt = lazy (constant "Gt")
-let coq_INFEEIEUR = lazy (constant "Lt")
-let coq_Eq = lazy (constant "Eq")
 let coq_Zplus = lazy (constant "Zplus")
 let coq_Zmult = lazy (constant "Zmult")
 let coq_Zopp = lazy (constant "Zopp")
@@ -1227,7 +1225,7 @@ let replay_history tactic_normalisation =
 	      (clear [aux]);
 	      (intros_using [id]);
 	      (loop l) ];
-            tclTHEN (exists_tac eq1) reflexivity ]
+            tclTHEN (exists_tac (inj_open eq1)) reflexivity ]
       | SPLIT_INEQ(e,(e1,act1),(e2,act2)) :: l ->
 	  let id1 = new_identifier () 
 	  and id2 = new_identifier () in

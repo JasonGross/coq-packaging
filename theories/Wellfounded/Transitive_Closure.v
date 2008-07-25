@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Transitive_Closure.v 9597 2007-02-06 19:44:05Z herbelin $ i*)
+(*i $Id: Transitive_Closure.v 9598 2007-02-06 19:45:52Z herbelin $ i*)
 
 (** Author: Bruno Barras *)
 

@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i $Id: Zmax.v 9302 2006-10-27 21:21:17Z barras $ i*)
+(*i $Id: Zmax.v 10291 2007-11-06 02:18:53Z letouzey $ i*)
 
 Require Import Arith_base.
 Require Import BinInt.
@@ -36,6 +36,28 @@ Proof.
   intros n m P H1 H2; unfold Zmax, Zle, Zge in *.
   rewrite <- (Zcompare_antisym n m) in H1.
   destruct (n ?= m); (apply H1|| apply H2); discriminate. 
+Qed.
+
+Lemma Zmax_spec : forall x y:Z, 
+  x >= y /\ Zmax x y = x  \/
+  x < y /\ Zmax x y = y.
+Proof.
+ intros; unfold Zmax, Zlt, Zge.
+ destruct (Zcompare x y); [ left | right | left ]; split; auto; discriminate.
+Qed.
+
+Lemma Zmax_left : forall n m:Z, n>=m -> Zmax n m = n.
+Proof.
+  intros n m; unfold Zmax, Zge; destruct (n ?= m); auto.
+  intro H; elim H; auto.
+Qed.
+
+Lemma Zmax_right : forall n m:Z, n<=m -> Zmax n m = m.
+Proof.
+  intros n m; unfold Zmax, Zle.
+  generalize (Zcompare_Eq_eq n m).
+  destruct (n ?= m); auto.
+  intros _ H; elim H; auto.
 Qed.
 
 (** * Least upper bound properties of max *)
@@ -106,3 +128,39 @@ Proof.
     rewrite (Zcompare_plus_compat x y n).
   case (x ?= y); apply Zplus_comm.
 Qed.
+
+(** * Maximum and Zpos *)
+
+Lemma Zpos_max : forall p q, Zpos (Pmax p q) = Zmax (Zpos p) (Zpos q).
+Proof.
+  intros; unfold Zmax, Pmax; simpl; generalize (Pcompare_Eq_eq p q).
+  destruct Pcompare; auto.
+  intro H; rewrite H; auto.
+Qed.
+
+Lemma Zpos_max_1 : forall p, Zmax 1 (Zpos p) = Zpos p.
+Proof.
+  intros; unfold Zmax; simpl; destruct p; simpl; auto.
+Qed.
+
+(** * Characterization of Pminus in term of Zminus and Zmax *)
+
+Lemma Zpos_minus : forall p q, Zpos (Pminus p q) = Zmax 1 (Zpos p - Zpos q).
+Proof.
+  intros.
+  case_eq (Pcompare p q Eq).
+  intros H; rewrite (Pcompare_Eq_eq _ _ H).
+  rewrite Zminus_diag.
+  unfold Zmax; simpl.
+  unfold Pminus; rewrite Pminus_mask_diag; auto.
+  intros; rewrite Pminus_Lt; auto.
+  destruct (Zmax_spec 1 (Zpos p - Zpos q)) as [(H1,H2)|(H1,H2)]; auto.
+  elimtype False; clear H2.
+  assert (H1':=Zlt_trans 0 1 _ Zlt_0_1 H1).
+  generalize (Zlt_0_minus_lt _ _ H1').
+  unfold Zlt; simpl.
+  rewrite (ZC2 _ _ H); intro; discriminate.
+  intros; simpl; rewrite H.
+  symmetry; apply Zpos_max_1.
+Qed.
+

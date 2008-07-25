@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: term.ml 9303 2006-10-27 21:50:17Z herbelin $ *)
+(* $Id: term.ml 10859 2008-04-27 16:46:15Z herbelin $ *)
 
 (* This module instantiates the structure of generic deBruijn terms to Coq *)
 
@@ -24,12 +24,10 @@ type metavariable = int
 (* This defines the strategy to use for verifiying a Cast *)
 
 (* This defines Cases annotations *)
-type pattern_source = DefaultPat of int | RegularPat
-type case_style = LetStyle | IfStyle | MatchStyle | RegularStyle
+type case_style = LetStyle | IfStyle | LetPatternStyle | MatchStyle | RegularStyle
 type case_printing =
   { ind_nargs : int; (* number of real args of the inductive type *)
-    style     : case_style;
-    source    : pattern_source array }
+    style     : case_style }
 type case_info =
   { ci_ind        : inductive;
     ci_npar       : int;
@@ -45,8 +43,9 @@ type sorts =
   | Prop of contents                      (* proposition types *)
   | Type of universe
       
-let mk_Set  = Prop Pos
-let mk_Prop = Prop Null
+let prop_sort = Prop Null
+let set_sort = Prop Pos
+let type1_sort = Type type1_univ
 
 type sorts_family = InProp | InSet | InType
 
@@ -390,7 +389,9 @@ let destApplication = destApp
 
 let isApp c = match kind_of_term c with App _ -> true | _ -> false
 
-let isProd c = match kind_of_term c with | Prod(_) -> true | _ -> false
+let isProd c = match kind_of_term c with | Prod _ -> true | _ -> false
+
+let isLambda c = match kind_of_term c with | Lambda _ -> true | _ -> false
 
 (* Destructs a constant *)
 let destConst c = match kind_of_term c with
@@ -636,17 +637,13 @@ type types = constr
 
 type strategy = types option 
 
-let type_app f tt = f tt
-
-let body_of_type ty = ty
-
 type named_declaration = identifier * constr option * types
 type rel_declaration = name * constr option * types
 
-let map_named_declaration f (id, v, ty) = (id, option_map f v, f ty)
+let map_named_declaration f (id, v, ty) = (id, Option.map f v, f ty)
 let map_rel_declaration = map_named_declaration
 
-let fold_named_declaration f (_, v, ty) a = f ty (option_fold_right f v a)
+let fold_named_declaration f (_, v, ty) a = f ty (Option.fold_right f v a)
 let fold_rel_declaration = fold_named_declaration
 
 (****************************************************************************)
@@ -777,7 +774,7 @@ let substl laml = substnl laml 0
 let subst1 lam = substl [lam]
 
 let substnl_decl laml k (id,bodyopt,typ) =
-  (id,option_map (substnl laml k) bodyopt,substnl laml k typ)
+  (id,Option.map (substnl laml k) bodyopt,substnl laml k typ)
 let substl_decl laml = substnl_decl laml 0
 let subst1_decl lam = substl_decl [lam]
 let subst1_named_decl = subst1_decl
@@ -834,17 +831,13 @@ let mkMeta = mkMeta
 let mkVar = mkVar
 
 (* Construct a type *)
-let mkProp   = mkSort mk_Prop
-let mkSet    = mkSort mk_Set
+let mkProp   = mkSort prop_sort
+let mkSet    = mkSort set_sort
 let mkType u = mkSort (Type u)
 let mkSort   = function
   | Prop Null -> mkProp (* Easy sharing *)
   | Prop Pos -> mkSet
   | s -> mkSort s
-
-let prop = mk_Prop
-and spec = mk_Set
-and type_0 = Type prop_univ
 
 (* Constructs the term t1::t2, i.e. the term t1 casted with the type t2 *)
 (* (that means t2 is declared as the type of t1) *)
@@ -1181,6 +1174,3 @@ let (hcons1_constr, hcons1_types) = hcons_constr (hcons_names())
 (*******)
 (* Type of abstract machine values *)
 type values
-
-
-

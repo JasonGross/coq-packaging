@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extraction.ml 10195 2007-10-08 01:47:55Z letouzey $ i*)
+(*i $Id: extraction.ml 10497 2008-02-01 12:18:37Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -310,7 +310,7 @@ and extract_ind env kn = (* kn is supposed to be in long form *)
   with Not_found -> 
     (* First, if this inductive is aliased via a Module, *)
     (* we process the original inductive. *)
-    option_iter (fun kn -> ignore (extract_ind env kn)) mib.mind_equiv; 
+    Option.iter (fun kn -> ignore (extract_ind env kn)) mib.mind_equiv; 
     (* Everything concerning parameters. *)
     (* We do that first, since they are common to all the [mib]. *)
     let mip0 = mib.mind_packets.(0) in 
@@ -337,7 +337,10 @@ and extract_ind env kn = (* kn is supposed to be in long form *)
       {ind_info = Standard; 
        ind_nparams = npar; 
        ind_packets = packets; 
-       ind_equiv = mib.mind_equiv };
+       ind_equiv = match mib.mind_equiv with 
+         | None -> NoEquiv 
+	 | Some kn -> Equiv kn
+      };
     (* Second pass: we extract constructors *)
     for i = 0 to mib.mind_ntypes - 1 do
       let p = packets.(i) in 
@@ -410,7 +413,7 @@ and extract_ind env kn = (* kn is supposed to be in long form *)
             (Inductive.type_of_inductive env (mib,mip0))
 	  in
 	  List.iter 
-	    (option_iter 
+	    (Option.iter 
 	       (fun kn -> if Cset.mem kn !projs then add_projection n kn))
 	    (lookup_projections ip)
 	with Not_found -> ()
@@ -421,7 +424,9 @@ and extract_ind env kn = (* kn is supposed to be in long form *)
     let i = {ind_info = ind_info; 
 	     ind_nparams = npar; 
 	     ind_packets = packets; 
-	     ind_equiv = mib.mind_equiv}
+	     ind_equiv = match mib.mind_equiv with 
+	       | None -> NoEquiv
+	       | Some kn -> Equiv kn }
     in
     add_ind kn mib i; 
     i
@@ -750,7 +755,7 @@ and extract_case env mle ((kn,i) as ip,c,br) mlt =
 	end 
       else 
 	(* Standard case: we apply [extract_branch]. *)
-	MLcase (mi.ind_info, a, Array.init br_size extract_branch)
+	MLcase ((mi.ind_info,[]), a, Array.init br_size extract_branch)
   
 (*s Extraction of a (co)-fixpoint. *)
 
@@ -828,18 +833,18 @@ let extract_constant env kn cb =
     | None -> (* A logical axiom is risky, an informative one is fatal. *) 
         (match flag_of_type env typ with
 	   | (Info,TypeScheme) -> 
-	       if not (is_custom r) then warning_info_ax r; 
+	       if not (is_custom r) then add_info_axiom r; 
 	       let n = type_scheme_nb_args env typ in 
 	       let ids = iterate (fun l -> anonymous::l) n [] in 
 	       Dtype (r, ids, Taxiom) 
            | (Info,Default) -> 
-	       if not (is_custom r) then warning_info_ax r; 
+	       if not (is_custom r) then add_info_axiom r; 
 	       let t = snd (record_constant_type env kn (Some typ)) in 
 	       Dterm (r, MLaxiom, type_expunge env t) 
            | (Logic,TypeScheme) -> 
-	       warning_log_ax r; Dtype (r, [], Tdummy Ktype)
+	       add_log_axiom r; Dtype (r, [], Tdummy Ktype)
 	   | (Logic,Default) -> 
-	       warning_log_ax r; Dterm (r, MLdummy, Tdummy Kother))
+	       add_log_axiom r; Dterm (r, MLdummy, Tdummy Kother))
     | Some body ->
 	(match flag_of_type env typ with
 	   | (Logic, Default) -> Dterm (r, MLdummy, Tdummy Kother)
@@ -871,6 +876,20 @@ let extract_constant_spec env kn cb =
 	let t = snd (record_constant_type env kn (Some typ)) in 
 	Sval (r, type_expunge env t)
 
+let extract_with_type env cb = 
+  let typ = Typeops.type_of_constant_type env cb.const_type in 
+  match flag_of_type env typ with 
+    | (_ , Default) -> None
+    | (Logic, TypeScheme) ->Some ([],Tdummy Ktype)
+    | (Info, TypeScheme) -> 
+	let s,vl = type_sign_vl env typ in 
+	  (match cb.const_body with 
+	  | None -> assert false
+	  | Some body -> 
+	      let db = db_from_sign s in 
+	      let t = extract_type_scheme env db (force body) (List.length s)
+	      in Some ( vl, t) )
+		   
 let extract_inductive env kn = 
   let ind = extract_ind env kn in 
   add_recursors env kn; 
@@ -879,24 +898,6 @@ let extract_inductive env kn =
     Array.map (fun p -> { p with ip_types = Array.map f p.ip_types }) 
       ind.ind_packets
   in { ind with ind_packets = packets }
-
-(*s From a global reference to a ML declaration. *)
-
-let extract_declaration env r = match r with
-  | ConstRef kn -> extract_constant env kn (Environ.lookup_constant kn env)
-  | IndRef (kn,_) -> Dind (kn, extract_inductive env kn)
-  | ConstructRef ((kn,_),_) -> Dind (kn, extract_inductive env kn)
-  | VarRef kn -> assert false
-
-(*s Without doing complete extraction, just guess what a constant would be. *) 
-
-type kind = Logical | Term | Type 
-    
-let constant_kind env cb = 
-  match flag_of_type env (Typeops.type_of_constant_type env cb.const_type) with 
-    | (Logic,_) -> Logical
-    | (Info,TypeScheme) -> Type
-    | (Info,Default) -> Term
 
 (*s Is a [ml_decl] logical ? *) 
 
@@ -916,9 +917,3 @@ let logical_spec = function
   | Sval (_,Tdummy _) -> true
   | Sind (_,i) -> array_for_all (fun ip -> ip.ip_logical) i.ind_packets
   | _ -> false
-
-  
-
-
-
-

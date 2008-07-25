@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq-tex.ml4 9551 2007-01-29 15:13:35Z bgregoir $ *)
+(* $Id: coq-tex.ml4 9532 2007-01-24 16:04:29Z bgregoir $ *)
 
 (* coq-tex
  * JCF, 16/1/98

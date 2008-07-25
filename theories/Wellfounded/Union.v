@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Union.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Union.v 9642 2007-02-12 10:31:53Z herbelin $ i*)
 
 (** Author: Bruno Barras *)
 
@@ -15,7 +15,7 @@ Require Import Relation_Definitions.
 Require Import Transitive_Closure.
 
 Section WfUnion.
-  Variable A : Set.
+  Variable A : Type.
   Variables R1 R2 : relation A.
   
   Notation Union := (union A R1 R2).

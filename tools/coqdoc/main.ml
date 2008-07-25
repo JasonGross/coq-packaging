@@ -1,3 +1,4 @@
+(* -*- compile-command: "make -C ../.. bin/coqdoc" -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -6,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: main.ml 8777 2006-05-02 10:14:39Z notin $ i*)
+(*i $Id: main.ml 11024 2008-05-30 12:41:39Z msozeau $ i*)
 
 (* Modified by Lionel Elie Mamane <lionel@mamane.lu> on 9 & 10 Mar 2004:
  *  - handling of absolute filenames (function coq_module)
@@ -19,49 +20,52 @@
  *)
 
 open Cdglobals
-open Filename
 open Printf
-open Output
-open Pretty
 
 (*s \textbf{Usage.} Printed on error output. *)
 
 let usage () =
   prerr_endline "";
   prerr_endline "Usage: coqdoc <options and files>";
-  prerr_endline "  --html              produce a HTML document (default)";
-  prerr_endline "  --latex             produce a LaTeX document";
-  prerr_endline "  --texmacs           produce a TeXmacs document";
-  prerr_endline "  --dvi               output the DVI";
-  prerr_endline "  --ps                output the PostScript";
-  prerr_endline "  --stdout            write output to stdout";
-  prerr_endline "  -o <file>           write output in file <file>";
-  prerr_endline "  -d <dir>            output files into directory <dir>";
-  prerr_endline "  -g                  (gallina) skip proofs";
-  prerr_endline "  -s                  (short) no titles for files";
-  prerr_endline "  -l                  light mode (only defs and statements)";
-  prerr_endline "  -t <string>         give a title to the document";
-  prerr_endline "  --body-only         suppress LaTeX/HTML header and trailer";
-  prerr_endline "  --no-index          do not output the index";
-  prerr_endline "  --multi-index       index split in multiple files";
-  prerr_endline "  --toc               output a table of contents";
-  prerr_endline "  --vernac <file>     consider <file> as a .v file";
-  prerr_endline "  --tex <file>        consider <file> as a .tex file";
-  prerr_endline "  -p <string>         insert <string> in LaTeX preamble";
-  prerr_endline "  --files-from <file> read file names to process in <file>";
-  prerr_endline "  --quiet             quiet mode";
-  prerr_endline "  --glob-from <file>  read Coq globalizations from file <file>";
-  prerr_endline "  --no-externals      no links to Coq standard library";
-  prerr_endline "  --coqlib <url>      set URL for Coq standard library";
-  prerr_endline "                      (default is http://coq.inria.fr/library/)";
-  prerr_endline "  --coqlib_path <dir> set the path where Coq files are installed";
-  prerr_endline "  -R <dir> <coqdir>   map physical dir to Coq dir";
-  prerr_endline "  --latin1            set ISO-8859-1 input language";
-  prerr_endline "  --utf8              set UTF-8 input language";
-  prerr_endline "  --charset <string>  set HTML charset";
-  prerr_endline "  --inputenc <string> set LaTeX input encoding";
+  prerr_endline "  --html               produce a HTML document (default)";
+  prerr_endline "  --latex              produce a LaTeX document";
+  prerr_endline "  --texmacs            produce a TeXmacs document";
+  prerr_endline "  --dvi                output the DVI";
+  prerr_endline "  --ps                 output the PostScript";
+  prerr_endline "  --pdf                output the Pdf";
+  prerr_endline "  --stdout             write output to stdout";
+  prerr_endline "  -o <file>            write output in file <file>";
+  prerr_endline "  -d <dir>             output files into directory <dir>";
+  prerr_endline "  -g                   (gallina) skip proofs";
+  prerr_endline "  -s                   (short) no titles for files";
+  prerr_endline "  -l                   light mode (only defs and statements)";
+  prerr_endline "  -t <string>          give a title to the document";
+  prerr_endline "  --body-only          suppress LaTeX/HTML header and trailer";
+  prerr_endline "  --with-header <file> prepend <file> as html reader";
+  prerr_endline "  --with-footer <file> append <file> as html footer";
+  prerr_endline "  --no-index           do not output the index";
+  prerr_endline "  --multi-index        index split in multiple files";
+  prerr_endline "  --toc                output a table of contents";
+  prerr_endline "  --vernac <file>      consider <file> as a .v file";
+  prerr_endline "  --tex <file>         consider <file> as a .tex file";
+  prerr_endline "  -p <string>          insert <string> in LaTeX preamble";
+  prerr_endline "  --files-from <file>  read file names to process in <file>";
+  prerr_endline "  --quiet              quiet mode (default)";
+  prerr_endline "  --verbose            verbose mode";  
+  prerr_endline "  --no-externals       no links to Coq standard library";
+  prerr_endline "  --coqlib <url>       set URL for Coq standard library";
+  prerr_endline "                       (default is http://coq.inria.fr/library/)";
+  prerr_endline "  --coqlib_path <dir>  set the path where Coq files are installed";
+  prerr_endline "  -R <dir> <coqdir>    map physical dir to Coq dir";
+  prerr_endline "  --latin1             set ISO-8859-1 input language";
+  prerr_endline "  --utf8               set UTF-8 input language";
+  prerr_endline "  --charset <string>   set HTML charset";
+  prerr_endline "  --inputenc <string>  set LaTeX input encoding";
   prerr_endline "";
   exit 1
+
+let obsolete s =
+  eprintf "Warning: option %s is now obsolete; please update your scripts\n" s
 
 (*s \textbf{Banner.} Always printed. Notice that it is printed on error
     output, so that when the output of [coqdoc] is redirected this header
@@ -74,7 +78,7 @@ let banner () =
   flush stderr
     
 let target_full_name f = 
-  match !target_language with
+  match !Cdglobals.target_language with
     | HTML -> f ^ ".html"
     | _ -> f ^ ".tex"
 	
@@ -88,95 +92,70 @@ let check_if_file_exists f =
     eprintf "\ncoqdoc: %s: no such file\n" f;
     exit 1
   end
-    
+
+
+(*s Manipulations of paths and path aliases *) 
+
+let normalize_path p =
+  (* We use the Unix subsystem to normalize a physical path (relative
+     or absolute) and get rid of symbolic links, relative links (like
+     ./ or ../ in the middle of the path; it's tricky but it
+     works... *)
+  (* Rq: Sys.getcwd () returns paths without '/' at the end *)
+  let orig = Sys.getcwd () in
+    Sys.chdir p;
+    let res = Sys.getcwd () in
+      Sys.chdir orig; 
+      res
+
+let normalize_filename f =
+  let basename = Filename.basename f in
+  let dirname = Filename.dirname f in
+    Filename.concat (normalize_path dirname) basename
+
+(* [paths] maps a physical path to a name *)
 let paths = ref []
   
-let add_path m l = paths := (m,l) :: !paths
+let add_path dir name = 
+  (* if dir is relative we add both the relative and absolute name *)
+  let p = normalize_path dir in
+    paths := (p,name) :: !paths
   
-let exists_dir dir =
-  try let _ = Unix.opendir dir in true with Unix.Unix_error _ -> false
-
-let add_rec_path f l =
-  let rec traverse abs rel =
-    add_path abs rel;
-    let dirh = Unix.opendir abs in
-      try
-	while true do
-	  let f = Unix.readdir dirh in
-	    if f <> "" && f.[0] <> '.' && f <> "CVS" then
-	      let abs' = Filename.concat abs f in
-		try 
-		  if exists_dir abs' then  traverse abs' (rel ^ "." ^ f)
-		with Unix.Unix_error _ -> 
-		  ()
-	done
-      with End_of_file ->
-	Unix.closedir dirh
-  in
-    if exists_dir f then traverse f l
-
 (* turn A/B/C into A.B.C *)
-let make_path = Str.global_replace (Str.regexp "/") ".";;
+let name_of_path = Str.global_replace (Str.regexp "/") ".";;
 
-let coq_module file = 
-  (* TODO
-   * LEM:
-   * We should also remove things like "/./" in the middle of the filename,
-   * rewrite "/foo/../bar" to "/bar", recognise different paths that lead
-   * to the same file / directory (via symlinks), etc. The best way to do
-   * all this would be to use the libc function realpath() on _both_ p and
-   * file / f before comparing them.
-   *
-   * The semantics of realpath() on file symlinks might not be what we
-   * want... (But it is what we want on directory symlinks.) So, we would
-   * have to cook up our own version of realpath()?
-   *
-   * Do all target platforms have realpath()?
-   *)
-  let f = chop_extension file in
-    (* remove leading ./ and any number of slashes after *)
-  let f = Str.replace_first (Str.regexp "^\\./+") "" f in
-    if (Str.string_before f 1) = "/" then
-      (* f is an absolute path. Prefixes must be matched with the beginning of f,
-       * not prepended
-       *)
-      let rec trypath = function
-	| [] -> make_path f
-	| (p, lg) :: r ->
-            (* make sure p ends with a single '/'
-             * This guarantees that we don't match a file whose name is
-             * of the form p ^ "foo". It means we may miss p itself,
-             * but this does not matter: coqdoc doesn't do anything
-             * of a directory anyway. *)
-            let p = (Str.replace_first (Str.regexp "/*$") "/" p) in
-            let p_quoted = (Str.quote p) in
-              if (Str.string_match (Str.regexp p_quoted) f 0) then
-		make_path (Filename.concat lg (Str.replace_first (Str.regexp (p_quoted ^ "/*")) "" f))
-              else
-		trypath r
-      in trypath !paths
-    else (* f is a relative path *)
-      let rec trypath = function
-	| [] -> 
-	    make_path f
-	| (p,lg) :: r ->
-	    let p_file = Filename.concat p file in
-	      if Sys.file_exists p_file then
-		make_path (Filename.concat lg f)
-	      else
-		trypath r
-      in trypath !paths;;
+let coq_module filename = 
+  let bfname = Filename.chop_extension filename in
+  let nfname = normalize_filename bfname in
+  let rec change_prefix map f = 
+    match map with
+      | [] -> 
+	  (* There is no prefix alias; 
+	     we just cut the name wrt current working directory *)
+	  let cwd = Sys.getcwd () in
+	  let exp = Str.regexp (Str.quote (cwd ^ "/")) in
+	    if (Str.string_match exp f 0) then
+	      name_of_path (Str.replace_first exp "" f)
+	    else
+	      name_of_path f
+      | (p, name) :: rem ->
+          let expp = Str.regexp (Str.quote p) in
+	    if (Str.string_match expp f 0) then
+	      let newp = Str.replace_first expp name f in
+		name_of_path newp
+            else
+	      change_prefix rem f
+  in
+    change_prefix !paths nfname
 
 let what_file f =
   check_if_file_exists f;
-  if check_suffix f ".v" || check_suffix f ".g" then
+  if Filename.check_suffix f ".v" || Filename.check_suffix f ".g" then
     Vernac_file (f, coq_module f)
-  else if check_suffix f ".tex" then
+  else if Filename.check_suffix f ".tex" then
     Latex_file f
-  else begin
-    eprintf "\ncoqdoc: don't know what to do with %s\n" f;
-    exit 1
-  end
+  else 
+     (eprintf "\ncoqdoc: don't know what to do with %s\n" f; exit 1)
     
 (*s \textbf{Reading file names from a file.} 
  *  File names may be given
@@ -214,9 +193,9 @@ let files_from_file f =
       
 (*s \textbf{Parsing of the command line.} *)
       
-let output_file = ref ""
 let dvi = ref false
 let ps = ref false
+let pdf = ref false
 
 let parse () =
   let files = ref [] in
@@ -227,8 +206,16 @@ let parse () =
     | ("-nopreamble" | "--nopreamble" | "--no-preamble"
       |  "-bodyonly"   | "--bodyonly"   | "--body-only") :: rem ->
 	header_trailer := false; parse_rec rem
+    | ("-with-header" | "--with-header") :: f ::rem ->
+	header_trailer := true; header_file_spec := true; header_file := f; parse_rec rem
+    | ("-with-header" | "--with-header") :: [] ->
+	usage ()
+    | ("-with-footer" | "--with-footer") :: f ::rem ->
+	header_trailer := true; footer_file_spec := true; footer_file := f; parse_rec rem
+    | ("-with-footer" | "--with-footer") :: [] ->
+	usage ()
     | ("-p" | "--preamble") :: s :: rem ->
-	push_in_preamble s; parse_rec rem
+	Output.push_in_preamble s; parse_rec rem
     | ("-p" | "--preamble") :: [] ->
 	usage ()
     | ("-noindex" | "--noindex" | "--no-index") :: rem ->
@@ -259,6 +246,8 @@ let parse () =
 	usage ()
     | ("-latex" | "--latex") :: rem ->
 	Cdglobals.target_language := LaTeX; parse_rec rem
+    | ("-pdf" | "--pdf") :: rem ->
+	Cdglobals.target_language := LaTeX; pdf := true; parse_rec rem
     | ("-dvi" | "--dvi") :: rem ->
 	Cdglobals.target_language := LaTeX; dvi := true; parse_rec rem
     | ("-ps" | "--ps") :: rem ->
@@ -284,10 +273,12 @@ let parse () =
 	  
     | ("-q" | "-quiet" | "--quiet") :: rem ->
 	quiet := true; parse_rec rem
+    | ("-v" | "-verbose" | "--verbose") :: rem ->
+	quiet := false; parse_rec rem
 	  
     | ("-h" | "-help" | "-?" | "--help") :: rem ->
 	banner (); usage ()
-    | ("-v" | "-version" | "--version") :: _ ->
+    | ("-V" | "-version" | "--version") :: _ ->
 	banner (); exit 0
 
     | ("-vernac-file" | "--vernac-file") :: f :: rem -> 
@@ -309,7 +300,7 @@ let parse () =
     | "-R" :: ([] | [_]) ->
 	usage ()
     | ("-glob-from" | "--glob-from") :: f :: rem ->
-	Index.read_glob f; parse_rec rem
+	obsolete "glob-from"; parse_rec rem
     | ("-glob-from" | "--glob-from") :: [] ->
 	usage ()
     | ("--no-externals" | "-no-externals" | "-noexternals") :: rem ->
@@ -332,7 +323,7 @@ let parse () =
 (*s The following function produces the output. The default output is
     the \LaTeX\ document: in that case, we just call [Web.produce_document]. 
     If option \verb!-dvi!, \verb!-ps! or \verb!-html! is invoked, then
-    we make calls to \verb!latex! or \verb!dvips!  accordingly. *)
+    we make calls to \verb!latex! or \verb!dvips! or \verb!pdflatex! accordingly. *)
 
 let locally dir f x =
   let cwd = Sys.getcwd () in
@@ -346,8 +337,10 @@ let clean_temp_files basefile =
     remove (basefile ^ ".tex");
     remove (basefile ^ ".log");
     remove (basefile ^ ".aux");
+    remove (basefile ^ ".toc");
     remove (basefile ^ ".dvi");
     remove (basefile ^ ".ps");
+    remove (basefile ^ ".pdf");
     remove (basefile ^ ".haux");
     remove (basefile ^ ".html")
       
@@ -370,70 +363,81 @@ let copy src dst =
 
 
 (*s Functions for generating output files *)
-	
+
 let gen_one_file l =
   let file = function
     | Vernac_file (f,m) -> 
-	set_module m; coq_file f m
+	Output.set_module m; Pretty.coq_file f m
     | Latex_file _ -> ()
   in
-    if (!header_trailer) then header ();
-    if !toc then make_toc ();
+    if (!header_trailer) then Output.header ();
+    if !toc then Output.make_toc ();
     List.iter file l;
-    if !index then make_index();
-    if (!header_trailer) then trailer ()
+    if !index then Output.make_index();
+    if (!header_trailer) then Output.trailer ()
       
 let gen_mult_files l =
   let file = function
     | Vernac_file (f,m) -> 
-	set_module m;
+	Output.set_module m;
 	let hf = target_full_name m in
 	  open_out_file hf;
-	  if (!header_trailer) then header (); 
-	  if !toc then make_toc ();
-	  coq_file f m; 
-	  if (!header_trailer) then trailer ();
+	  if (!header_trailer) then Output.header (); 
+	  Pretty.coq_file f m; 
+	  if (!header_trailer) then Output.trailer ();
 	  close_out_file()
     | Latex_file _ -> ()
   in
     List.iter file l;
     if (!index && !target_language=HTML) then begin
-      if (!multi_index) then make_multi_index (); 
+      if (!multi_index) then Output.make_multi_index (); 
       open_out_file "index.html"; 
       page_title := (if !title <> "" then !title else "Index");
-      if (!header_trailer) then header (); 
-      make_index (); 
-      if (!header_trailer) then trailer ();
+      if (!header_trailer) then Output.header (); 
+      Output.make_index (); 
+      if (!header_trailer) then Output.trailer ();
       close_out_file()
     end;
     if (!toc && !target_language=HTML) then begin
       open_out_file "toc.html"; 
       page_title := (if !title <> "" then !title else "Table of contents");
-      if (!header_trailer) then header ();
+      if (!header_trailer) then Output.header ();
       if !title <> "" then printf "<h1>%s</h1>\n" !title;
-      make_toc (); 
-      if (!header_trailer) then trailer ();
+      Output.make_toc (); 
+      if (!header_trailer) then Output.trailer ();
       close_out_file()
     end 
       (* Rq: pour latex et texmacs, une toc ou un index séparé n'a pas de sens... *)
 
+let read_glob x =
+  match x with
+    | Vernac_file (f,m) ->   
+	let glob = (Filename.chop_extension f) ^ ".glob" in
+	  (try
+	      Vernac_file (f, Index.read_glob glob)
+	    with _ -> 
+	      eprintf "Warning: file %s cannot be opened; links will not be available\n" glob;
+	      x)
+  | Latex_file _ -> x
 
 let index_module = function
-  | Vernac_file (_,m) -> Index.add_module m
+  | Vernac_file (f,m) ->   
+      Index.add_module m
   | Latex_file _ -> ()
       
 let produce_document l =
-  List.iter index_module l;
   (if !target_language=HTML then
     let src = (Filename.concat !Cdglobals.coqlib_path "/tools/coqdoc/coqdoc.css") in
     let dst = if !output_dir <> "" then Filename.concat !output_dir "coqdoc.css" else "coqdoc.css" in
       copy src dst);
   (if !target_language=LaTeX then
-    let src = (Filename.concat !Cdglobals.coqlib_path "/tools/coqdoc/coqdoc.sty") in
-    let dst = if !output_dir <> "" then 
-      Filename.concat !output_dir "coqdoc.sty" 
-    else "coqdoc.sty" in
-      copy src dst);
+      let src = (Filename.concat !Cdglobals.coqlib_path "/tools/coqdoc/coqdoc.sty") in
+      let dst = if !output_dir <> "" then 
+	  Filename.concat !output_dir "coqdoc.sty" 
+	else "coqdoc.sty" in
+	copy src dst);
+  let l = List.map read_glob l in
+  List.iter index_module l;
   match !out_to with
     | StdOut -> 
 	Cdglobals.out_channel := stdout;
@@ -446,51 +450,64 @@ let produce_document l =
 	gen_mult_files l
 	  
 let produce_output fl =
-  if not (!dvi || !ps) then begin
+  if not (!dvi || !ps || !pdf) then 
     produce_document fl
-  end else begin
-    let texfile = temp_file "coqdoc" ".tex" in
-    let basefile = chop_suffix texfile ".tex" in
-      open_out_file texfile;
-      produce_document fl;
-      let command = 
-	let file = basename texfile in
-	let file = 
-	  if !quiet then sprintf "'\\nonstopmode\\input{%s}'" file else file 
+  else 
+    begin
+      let texfile = Filename.temp_file "coqdoc" ".tex" in
+      let basefile = Filename.chop_suffix texfile ".tex" in
+      let final_out_to = !out_to in
+	out_to := File texfile;
+	output_dir := (Filename.dirname texfile);
+	produce_document fl;
+	
+	let latexexe = if !pdf then "pdflatex" else "latex" in
+	let latexcmd = 
+	  let file = Filename.basename texfile in
+	  let file = 
+	    if !quiet then sprintf "'\\nonstopmode\\input{%s}'" file else file 
+	  in
+	    sprintf "%s %s && %s %s 1>&2 %s" latexexe file latexexe file (if !quiet then "> /dev/null" else "")
 	in
-	  sprintf "(latex %s && latex %s) 1>&2 %s" file file
-	    (if !quiet then "> /dev/null" else "")
-      in
-      let res = locally (dirname texfile) Sys.command command in
-	if res <> 0 then begin
-	  eprintf "Couldn't run LaTeX successfully\n"; 
-	  clean_and_exit basefile res
-	end;
-	let dvifile = basefile ^ ".dvi" in
-	  if !dvi then begin
-	    if !output_file <> "" then 
-	      (* we cannot use Sys.rename accross file systems *)
-	      copy dvifile !output_file 
-	    else 
-	      cat dvifile
-	  end;
-	  if !ps then begin
-	    let psfile = 
-	      if !output_file <> "" then !output_file else basefile ^ ".ps" 
-	    in
-	    let command = 
-	      sprintf "dvips %s -o %s %s" dvifile psfile 
-		(if !quiet then "> /dev/null 2>&1" else "")
-	    in
-	    let res = Sys.command command in
-	      if res <> 0 then begin
-		eprintf "Couldn't run dvips successfully\n"; 
-		clean_and_exit basefile res
+	let res = locally (Filename.dirname texfile) Sys.command latexcmd in
+	  if res <> 0 then begin
+	      eprintf "Couldn't run LaTeX successfully\n"; 
+	      clean_and_exit basefile res
+	    end;
+	  
+	  let dvifile = basefile ^ ".dvi" in
+	    if !dvi then 
+	      begin
+		match final_out_to with
+		  | MultFiles | StdOut -> cat dvifile
+		  | File f -> copy dvifile f
 	      end;
-	      if !output_file = "" then cat psfile
-	  end;
-	  clean_temp_files basefile
-  end
+	  let pdffile = basefile ^ ".pdf" in
+	    if !pdf then 
+            begin
+	        match final_out_to with
+		  | MultFiles | StdOut -> cat pdffile
+		  | File f -> copy pdffile f
+	    end;
+	    if !ps then begin
+	        let psfile = basefile ^ ".ps" 
+		in
+		let command = 
+		  sprintf "dvips %s -o %s %s" dvifile psfile 
+		    (if !quiet then "> /dev/null 2>&1" else "")
+		in
+		let res = Sys.command command in
+		  if res <> 0 then begin
+		      eprintf "Couldn't run dvips successfully\n"; 
+		      clean_and_exit basefile res
+		    end;
+		  match final_out_to with
+		    | MultFiles | StdOut -> cat psfile
+		    | File f -> copy psfile f
+	      end;
+	 
+	    clean_temp_files basefile
+    end
 
 
 (*s \textbf{Main program.} Print the banner, parse the command line,

@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: ppconstr.mli 8878 2006-05-30 16:44:25Z herbelin $ i*)
+(*i $Id: ppconstr.mli 11094 2008-06-10 19:35:23Z herbelin $ i*)
 
 open Pp
 open Environ
@@ -55,6 +55,8 @@ val pr_qualid : qualid -> std_ppcmds
 
 val pr_with_occurrences :
   ('a -> std_ppcmds) -> 'a with_occurrences -> std_ppcmds
+val pr_with_occurrences_with_trailer :
+  ('a -> std_ppcmds) -> 'a with_occurrences -> std_ppcmds -> std_ppcmds
 val pr_red_expr :
   ('a -> std_ppcmds) * ('a -> std_ppcmds) * ('b -> std_ppcmds) ->
     ('a,'b) red_expr_gen -> std_ppcmds
@@ -70,3 +72,13 @@ val pr_lpattern_expr : Tacexpr.pattern_expr -> std_ppcmds
 val pr_constr_expr : constr_expr -> std_ppcmds
 val pr_lconstr_expr : constr_expr -> std_ppcmds
 val pr_cases_pattern_expr : cases_pattern_expr -> std_ppcmds
+
+type term_pr = {
+  pr_constr_expr   : constr_expr -> std_ppcmds;
+  pr_lconstr_expr  : constr_expr -> std_ppcmds;
+  pr_pattern_expr  : Tacexpr.pattern_expr -> std_ppcmds;
+  pr_lpattern_expr : Tacexpr.pattern_expr -> std_ppcmds
+}
+
+val set_term_pr : term_pr -> unit
+val default_term_pr : term_pr

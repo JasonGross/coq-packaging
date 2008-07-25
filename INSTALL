@@ -1,5 +1,5 @@
 
-            INSTALLATION PROCEDURES FOR THE COQ V8.1 SYSTEM
+            INSTALLATION PROCEDURES FOR THE COQ V8.2 SYSTEM
             -----------------------------------------------
 
 WHAT DO YOU NEED ?
@@ -30,23 +30,47 @@ WHAT DO YOU NEED ?
 
      aptitude install coq
 
-   - Gentoo GNU/Linux: emerge sci-mathematics/coq
+   - Gentoo GNU/Linux: 
 
+     emerge sci-mathematics/coq
 
-   Should you need or prefer to compile Coq V8.1 yourself, you need:
+   - Mandriva GNU/Linux:
+
+     urpmi coq
+
+   Should you need or prefer to compile Coq V8.2 yourself, you need:
 
      - Objective Caml version 3.07 or later
        (available at http://caml.inria.fr/)
 
        For Ocaml version >= 3.10.0, you also need to install camlp5
-       version <= 4.08, or 5.01 transitional
-       (see http://pauillac.inria.fr/~ddr/camlp5/)
+       (version <= 4.08, or >= 5.01 transitional)
+  
 
-     - GNU Make
+     - GNU Make version 3.81 or later
+       (
+	available at http://www.gnu.org/software/make/, but also a
+        standard or optional add-on part to most Unices and Unix
+        clones, sometimes under the name "gmake".
+
+	If a new enough version is not included in your system, nor
+        easily available as an add-on, this should get you a working
+        make:
+
+	#Download it (wget is an example, use your favourite FTP or HTTP client)
+	wget http://ftp.gnu.org/pub/gnu/make/make-3.81.tar.bz2
+	bzip2 -cd make-3.81.tar.bz2 | tar x
+	#If you don't have bzip2, you can download the gzipped version instead.
+        cd make-3.81
+        ./configure --prefix=${HOME}
+	make install
+
+	Then, make sure that ${HOME}/bin is first in your $PATH.
+       )
 
      - a C compiler
 
-     - for Coqide, the Lablgtk development files, and the GTK libraries
+     - for Coqide, the Lablgtk development files, and the GTK libraries, see INSTALL.ide for more details
 
    By FTP, Coq comes as a single compressed tar-file. You have
    probably already decompressed it if you are reading this document.
@@ -99,7 +123,8 @@ INSTALLATION PROCEDURE IN DETAILS (NORMAL USERS).
    the Coq binaries, standard library, man pages, etc. It will propose
    you some default values.
 
-   The "configure" script accepts the following options:
+   For a list of options accepted by the "configure" script, run
+   "./configure -help". The main options accepted are:
 
 -prefix <dir>
 	Binaries, library, man pages and Emacs mode will be respectively
@@ -167,7 +192,7 @@ INSTALLATION PROCEDURE FOR ADVANCED USERS.
 ==========================================
 
    If you wish to write tactics (and that really means that you belong
-   to advanced users !) you *must* keep the Coq sources, without cleaning
+   to advanced users!) you *must* keep the Coq sources, without cleaning
    them. Therefore, to avoid a duplication of binaries and library, it is
    not necessary to do the installation step (6- above).
    You just have to tell it at configuration step (4- above) with the
@@ -218,9 +243,11 @@ THE AVAILABLE COMMANDS.
       command "Require". 
 
    A detailed description of these commands and of their options is given
-   in the Reference Manual (which you can get by FTP, in the doc/ directory) 
+   in the Reference Manual (which you can get by FTP, in the doc/
+   directory, or read online on http://coq.inria.fr/doc/)
    and in the corresponding manual pages.
 
+   There is also a tutorial and a FAQ; see http://coq.inria.fr/doc1-eng.html
 
 COMMON PROBLEMS.
 ================

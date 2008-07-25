@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Min.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Min.v 9660 2007-02-19 11:36:30Z notin $ i*)
 
 Require Import Le.
 
@@ -25,9 +25,26 @@ Fixpoint min n m {struct n} : nat :=
 
 (** * Simplifications of [min] *)
 
+Lemma min_0_l : forall n : nat, min 0 n = 0.
+Proof.
+  trivial. 
+Qed.
+
+Lemma min_0_r : forall n : nat, min n 0 = 0.
+Proof.
+  destruct n; trivial.
+Qed.
+
 Lemma min_SS : forall n m, S (min n m) = min (S n) (S m).
 Proof.
   auto with arith.
+Qed.
+
+Lemma min_assoc : forall m n p : nat, min m (min n p) = min (min m n) p.
+Proof.
+  induction m; destruct n; destruct p; trivial.
+  simpl.
+  auto using (IHm n p).
 Qed.
 
 Lemma min_comm : forall n m, min n m = min m n.

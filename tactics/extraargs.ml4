@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extraargs.ml4 9076 2006-08-23 15:05:54Z jforest $ *)
+(* $Id: extraargs.ml4 11094 2008-06-10 19:35:23Z herbelin $ *)
 
 open Pp
 open Pcoq
@@ -31,6 +31,70 @@ ARGUMENT EXTEND orient TYPED AS bool PRINTED BY pr_orient
 | [ "->" ] -> [ true ]
 | [ "<-" ] -> [ false ]
 | [ ] -> [ true ]
+END
+
+let pr_int_list _prc _prlc _prt l =
+  let rec aux = function
+    | i :: l -> Pp.int i ++ Pp.spc () ++ aux l
+    | [] -> Pp.mt()
+  in aux l
+
+ARGUMENT EXTEND int_nelist
+  TYPED AS int list 
+  PRINTED BY pr_int_list
+  RAW_TYPED AS int list 
+  RAW_PRINTED BY pr_int_list
+  GLOB_TYPED AS int list
+  GLOB_PRINTED BY pr_int_list
+| [ integer(x) int_nelist(l) ] -> [x::l]
+| [ integer(x) ] -> [ [x] ]
+END
+
+open Rawterm
+
+let pr_occurrences _prc _prlc _prt l =
+  match l with
+    | ArgArg x -> pr_int_list _prc _prlc _prt x
+    | ArgVar (loc, id) -> Nameops.pr_id id
+
+let coerce_to_int = function
+  | VInteger n -> n
+  | v -> raise (CannotCoerceTo "an integer")
+
+let int_list_of_VList = function
+  | VList l -> List.map (fun n -> coerce_to_int n) l
+  | _ -> raise Not_found
+      
+let interp_occs ist gl l = 
+  match l with
+    | ArgArg x -> x
+    | ArgVar (_,id as locid) -> 
+	(try int_list_of_VList (List.assoc id ist.lfun)
+	  with Not_found | CannotCoerceTo _ -> [interp_int ist locid])
+
+let glob_occs ist l = l
+
+let subst_occs evm l = l
+
+type occurrences_or_var = int list or_var
+type occurrences = int list
+
+ARGUMENT EXTEND occurrences
+  TYPED AS occurrences
+  PRINTED BY pr_int_list
+
+  INTERPRETED BY interp_occs
+  GLOBALIZED BY glob_occs
+  SUBSTITUTED BY subst_occs
+
+  RAW_TYPED AS occurrences_or_var
+  RAW_PRINTED BY pr_occurrences
+
+  GLOB_TYPED AS occurrences_or_var
+  GLOB_PRINTED BY pr_occurrences
+
+| [ int_nelist(l) ] -> [ ArgArg l ]
+| [ var(id) ] -> [ ArgVar id ]
 END
 
 (* For Setoid rewrite *)
@@ -221,18 +285,126 @@ END
 
 let gen_in_arg_hyp_to_clause trad_id (hyps ,concl) : Tacticals.clause = 
   {Tacexpr.onhyps=
-   Util.option_map 
+   Option.map 
      (fun l -> 
 	List.map 
-	  (fun id -> ( ([],trad_id id) ,Tacexpr.InHyp))
+	  (fun id -> ( (all_occurrences_expr,trad_id id) ,Tacexpr.InHyp))
 	  l
      )
      hyps;
-   Tacexpr.onconcl=concl;
-   Tacexpr.concl_occs = []}
+   Tacexpr.concl_occs = if concl then all_occurrences_expr else no_occurrences_expr}
 
 
 let raw_in_arg_hyp_to_clause = gen_in_arg_hyp_to_clause snd 
 let glob_in_arg_hyp_to_clause = gen_in_arg_hyp_to_clause (fun x -> x) 
 
 
+(* spiwack argument for the commands of the retroknowledge *)
+
+let (wit_r_nat_field, globwit_r_nat_field, rawwit_r_nat_field) =
+  Genarg.create_arg "r_nat_field"
+let (wit_r_n_field, globwit_r_n_field, rawwit_r_n_field) =
+  Genarg.create_arg "r_n_field"
+let (wit_r_int31_field, globwit_r_int31_field, rawwit_r_int31_field) =
+  Genarg.create_arg "r_int31_field"
+let (wit_r_field, globwit_r_field, rawwit_r_field) =
+  Genarg.create_arg "r_field"
+
+(* spiwack: the print functions are incomplete, but I don't know what they are
+	used for *)
+let pr_r_nat_field _ _ _ natf = 
+  str "nat " ++
+  match natf with
+    | Retroknowledge.NatType -> str "type"
+    | Retroknowledge.NatPlus -> str "plus"
+    | Retroknowledge.NatTimes -> str "times"
+
+let pr_r_n_field _ _ _ nf =
+  str "binary N " ++
+  match nf with
+    | Retroknowledge.NPositive -> str "positive"
+    | Retroknowledge.NType -> str "type"
+    | Retroknowledge.NTwice -> str "twice"
+    | Retroknowledge.NTwicePlusOne -> str "twice plus one"
+    | Retroknowledge.NPhi -> str "phi"
+    | Retroknowledge.NPhiInv -> str "phi inv"
+    | Retroknowledge.NPlus -> str "plus"
+    | Retroknowledge.NTimes -> str "times"
+
+let pr_r_int31_field _ _ _ i31f =
+  str "int31 " ++
+  match i31f with
+    | Retroknowledge.Int31Bits -> str "bits"
+    | Retroknowledge.Int31Type -> str "type"
+    | Retroknowledge.Int31Twice -> str "twice"
+    | Retroknowledge.Int31TwicePlusOne -> str "twice plus one"
+    | Retroknowledge.Int31Phi -> str "phi"
+    | Retroknowledge.Int31PhiInv -> str "phi inv"
+    | Retroknowledge.Int31Plus -> str "plus"
+    | Retroknowledge.Int31Times -> str "times"
+    | _ -> assert false	
+
+let pr_retroknowledge_field _ _ _ f =
+  match f with
+ (* | Retroknowledge.KEq -> str "equality"
+  | Retroknowledge.KNat natf -> pr_r_nat_field () () () natf
+  | Retroknowledge.KN nf -> pr_r_n_field () () () nf *)
+  | Retroknowledge.KInt31 (group, i31f) -> (pr_r_int31_field () () () i31f) ++
+                                           str "in " ++ str group 
+
+ARGUMENT EXTEND retroknowledge_nat
+TYPED AS r_nat_field
+PRINTED BY pr_r_nat_field
+| [ "nat" "type" ] -> [ Retroknowledge.NatType ]
+| [ "nat" "plus" ] -> [ Retroknowledge.NatPlus ]
+| [ "nat" "times" ] -> [ Retroknowledge.NatTimes ]
+END
+
+
+ARGUMENT EXTEND retroknowledge_binary_n
+TYPED AS r_n_field 
+PRINTED BY pr_r_n_field
+| [ "binary" "N" "positive" ] -> [ Retroknowledge.NPositive ]
+| [ "binary" "N" "type" ] -> [ Retroknowledge.NType ]
+| [ "binary" "N" "twice" ] -> [ Retroknowledge.NTwice ]
+| [ "binary" "N" "twice" "plus" "one" ] -> [ Retroknowledge.NTwicePlusOne ]
+| [ "binary" "N" "phi" ] -> [ Retroknowledge.NPhi ]
+| [ "binary" "N" "phi" "inv" ] -> [ Retroknowledge.NPhiInv ]
+| [ "binary" "N" "plus" ] -> [ Retroknowledge.NPlus ]
+| [ "binary" "N" "times" ] -> [ Retroknowledge.NTimes ]
+END
+
+ARGUMENT EXTEND retroknowledge_int31
+TYPED AS r_int31_field 
+PRINTED BY pr_r_int31_field
+| [ "int31" "bits" ] -> [ Retroknowledge.Int31Bits ]
+| [ "int31" "type" ] -> [ Retroknowledge.Int31Type ]
+| [ "int31" "twice" ] -> [ Retroknowledge.Int31Twice ]
+| [ "int31" "twice" "plus" "one" ] -> [ Retroknowledge.Int31TwicePlusOne ]
+| [ "int31" "phi" ] -> [ Retroknowledge.Int31Phi ]
+| [ "int31" "phi" "inv" ] -> [ Retroknowledge.Int31PhiInv ]
+| [ "int31" "plus" ] -> [ Retroknowledge.Int31Plus ]
+| [ "int31" "plusc" ] -> [ Retroknowledge.Int31PlusC ]
+| [ "int31" "pluscarryc" ] -> [ Retroknowledge.Int31PlusCarryC ]
+| [ "int31" "minus" ] -> [ Retroknowledge.Int31Minus ]
+| [ "int31" "minusc" ] -> [ Retroknowledge.Int31MinusC ]
+| [ "int31" "minuscarryc" ] -> [ Retroknowledge.Int31MinusCarryC ]
+| [ "int31" "times" ] -> [ Retroknowledge.Int31Times ]
+| [ "int31" "timesc" ] -> [ Retroknowledge.Int31TimesC ]
+| [ "int31" "div21" ] -> [ Retroknowledge.Int31Div21 ]
+| [ "int31" "div" ] -> [ Retroknowledge.Int31Div ]
+| [ "int31" "addmuldiv" ] -> [ Retroknowledge.Int31AddMulDiv ]
+| [ "int31" "compare" ] -> [ Retroknowledge.Int31Compare ]
+| [ "int31" "head0" ] -> [ Retroknowledge.Int31Head0 ]
+| [ "int31" "tail0" ] -> [ Retroknowledge.Int31Tail0 ]
+
+END
+
+ARGUMENT EXTEND retroknowledge_field 
+TYPED AS r_field 
+PRINTED BY pr_retroknowledge_field
+(*| [ "equality" ] -> [ Retroknowledge.KEq ]
+| [ retroknowledge_nat(n)] -> [ Retroknowledge.KNat n ]
+| [ retroknowledge_binary_n (n)] -> [ Retroknowledge.KN n ]*)
+| [ retroknowledge_int31 (i) "in" string(g)] -> [ Retroknowledge.KInt31(g,i) ]
+END

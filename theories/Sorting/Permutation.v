@@ -6,12 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Permutation.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Permutation.v 10698 2008-03-19 18:46:59Z letouzey $ i*)
 
-Require Import Relations.
-Require Import List.
-Require Import Multiset.
-Require Import Arith.
+Require Import Relations List Multiset Arith.
 
 (** This file define a notion of permutation for lists, based on multisets: 
     there exists a permutation between two lists iff every elements have 
@@ -38,7 +35,7 @@ Section defs.
 
   (** * From lists to multisets *)
 
-  Variable A : Set.
+  Variable A : Type.
   Variable eqA : relation A.
   Hypothesis eqA_dec : forall x y:A, {eqA x y} + {~ eqA x y}.
 

@@ -5,9 +5,9 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i $Id: Zmin.v 9302 2006-10-27 21:21:17Z barras $ i*)
+(*i $Id: Zmin.v 10028 2007-07-18 22:38:06Z letouzey $ i*)
 
-(** Initial version from Pierre Crégut (CNET, Lannion, France), 1996.
+(** Initial version from Pierre CrÃ©gut (CNET, Lannion, France), 1996.
     Further extensions by the Coq development team, with suggestions
     from Russell O'Connor (Radbout U., Nijmegen, The Netherlands).
  *)
@@ -41,6 +41,14 @@ Qed.
 Lemma Zmin_case : forall (n m:Z) (P:Z -> Type), P n -> P m -> P (Zmin n m).
 Proof.
   intros n m P H1 H2; unfold Zmin in |- *; case (n ?= m); auto with arith.
+Qed.
+
+Lemma Zmin_spec : forall x y:Z, 
+  x <= y /\ Zmin x y = x  \/
+  x > y /\ Zmin x y = y.
+Proof.
+ intros; unfold Zmin, Zle, Zgt.
+ destruct (Zcompare x y); [ left | left | right ]; split; auto; discriminate.
 Qed.
 
 (** * Greatest lower bound properties of min *)
@@ -128,3 +136,11 @@ Proof.
 Qed.
 
 Notation Zmin_plus := Zplus_min_distr_r (only parsing).
+
+(** * Minimum and Zpos *)
+
+Lemma Zpos_min : forall p q, Zpos (Pmin p q) = Zmin (Zpos p) (Zpos q).
+Proof.
+  intros; unfold Zmin, Pmin; simpl; destruct Pcompare; auto.
+Qed.
+

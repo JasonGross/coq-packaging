@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: environ.mli 9573 2007-01-31 20:18:18Z notin $ i*)
+(*i $Id: environ.mli 11001 2008-05-27 16:56:07Z aspiwack $ i*)
 
 (*i*)
 open Names
@@ -35,6 +35,7 @@ open Sign
 
 type env
 val pre_env : env -> Pre_env.env
+val env_of_pre_env : Pre_env.env -> env
 
 type named_context_val
 val eq_named_context_val : named_context_val -> named_context_val -> bool
@@ -72,6 +73,7 @@ val fold_rel_context :
 (* Context of variables (section variables and goal assumptions) *)
 
 val named_context_of_val : named_context_val -> named_context
+val named_vals_of_val : named_context_val -> Pre_env.named_vals
 val val_of_named_context : named_context -> named_context_val
 val empty_named_context_val : named_context_val
 
@@ -145,13 +147,17 @@ val scrape_mind : env -> mutual_inductive -> mutual_inductive
 
 (************************************************************************)
 (*s Modules *)
-val add_modtype : kernel_name -> module_type_body -> env -> env
+val add_modtype : module_path -> module_type_body -> env -> env
 
 (* [shallow_add_module] does not add module components *)
 val shallow_add_module : module_path -> module_body -> env -> env
 
 val lookup_module : module_path -> env -> module_body
-val lookup_modtype : kernel_name -> env -> module_type_body
+val lookup_modtype : module_path -> env -> module_type_body
+
+val register_alias : module_path -> module_path -> env -> env
+val lookup_alias : module_path -> env -> module_path
+val scrape_alias : module_path -> env -> module_path
 
 (************************************************************************)
 (*s Universe constraints *)
@@ -165,7 +171,6 @@ val set_engagement : engagement -> env -> env
 (* [global_vars_set env c] returns the list of [id]'s occurring as
    [VAR id] in [c] *)
 val global_vars_set : env -> constr -> Idset.t
-val global_vars_set_drop_evar : env -> constr -> Idset.t
 (* the constr must be an atomic construction *)
 val vars_of_global : env -> constr -> identifier list
 
@@ -217,5 +222,35 @@ val insert_after_hyp : named_context_val -> variable ->
   named_declaration -> 
     (named_context -> unit) -> named_context_val
 
-val remove_hyps : identifier list -> (named_declaration -> named_declaration) -> named_context_val -> named_context_val * identifier list
+val remove_hyps : identifier list -> (named_declaration -> named_declaration) -> (Pre_env.lazy_val -> Pre_env.lazy_val) -> named_context_val -> named_context_val * identifier list
+
+
+(* spiwack: functions manipulating the retroknowledge *)
+open Retroknowledge
+
+val retroknowledge : (retroknowledge->'a) -> env -> 'a
+
+val registered : env -> field -> bool
+
+val unregister : env -> field -> env
+
+val register : env -> field -> Retroknowledge.entry -> env
+
+
+
+(******************************************************************)
+(* spiwack: a few declarations for the "Print Assumption" command *)
+
+type context_object =
+  | Variable of identifier (* A section variable or a Let definition *)
+  | Axiom of constant      (* An axiom or a constant. *)
+
+(* AssumptionSet.t is a set of [assumption] *)
+module OrderedContextObject :  Set.OrderedType with type t = context_object
+module ContextObjectMap : Map.S with type key = context_object
+
+(* collects all the assumptions on which a term relies (together with
+   their type *)
+val assumptions : constr -> env -> Term.types ContextObjectMap.t
+
 

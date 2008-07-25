@@ -15,6 +15,9 @@
 #
 #############################################################################
 
+#Variable used to detect whether ./configure has run successfully.
+COQ_CONFIGURED=yes
+
 # Local use (no installation)
 LOCAL=LOCALINSTALLATION
 
@@ -27,6 +30,7 @@ LOCAL=LOCALINSTALLATION
 BINDIR="BINDIRDIRECTORY"
 COQLIB="COQLIBDIRECTORY"
 MANDIR="MANDIRDIRECTORY"
+DOCDIR="DOCDIRDIRECTORY"
 EMACSLIB="EMACSLIBDIRECTORY"
 EMACS=EMACSCOMMAND
 
@@ -52,6 +56,7 @@ MYCAMLP4LIB="CAMLP4LIBDIRECTORY"
 COQIDEINCLUDES=LABLGTKINCLUDES
 
 # Objective-Caml compile command 
+OCAML="OCAMLEXEC"
 OCAMLC="BYTECAMLC"
 OCAMLOPT="NATIVECAMLC"
 OCAMLDEP="OCAMLDEPEXEC"
@@ -67,11 +72,9 @@ CAMLMKTOP="CAMLMKTOPEXEC"
 # Caml flags
 CAMLFLAGS=-rectypes CAMLANNOTATEFLAG
 
-# Compilation debug flag
+# Compilation debug flags
 CAMLDEBUG=COQDEBUGFLAG
-
-# Inlining flag (inlining causes problems with ocaml < 3.09.x)
-INLINEFLAG=COQINLINEFLAG
+CAMLDEBUGOPT=COQDEBUGFLAGOPT
 
 # User compilation flag
 USERFLAGS=
@@ -132,6 +135,11 @@ HASCOQIDE=COQIDEOPT
 
 # Defining REVISION
 CHECKEDOUT=CHECKEDOUTSOURCETREE
+
+# Defining options to generate dependencies graphs
+DOT=dot
+DOTOPTS=-Tps
+ODOCDOTOPTS=-dot -dot-reduce
 
 # make or sed are bogus and believe lines not terminating by a return
 # are inexistent

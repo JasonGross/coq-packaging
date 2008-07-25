@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: fourierR.ml 7760 2005-12-30 10:49:13Z herbelin $ *)
+(* $Id: fourierR.ml 10790 2008-04-14 22:34:19Z herbelin $ *)
 
 
 
@@ -258,11 +258,11 @@ let fourier_lineq lineq1 =
    let nvar=ref (-1) in
    let hvar=Hashtbl.create 50 in (* la table des variables des inéquations *)
    List.iter (fun f ->
-               Hashtbl.iter (fun x c ->
-				 try (Hashtbl.find hvar x;())
-				 with _-> nvar:=(!nvar)+1;
-   				          Hashtbl.add hvar x (!nvar))
-                            f.hflin.fhom)
+		Hashtbl.iter (fun x _ -> if not (Hashtbl.mem hvar x) then begin
+				nvar:=(!nvar)+1; 
+				Hashtbl.add hvar x (!nvar)
+			      end)
+                  f.hflin.fhom)
              lineq1;
    let sys= List.map (fun h->
                let v=Array.create ((!nvar)+1) r0 in
@@ -334,7 +334,7 @@ let coq_Rfourier_le_lt = lazy (constant_fourier "Rfourier_le_lt")
 let coq_Rfourier_le_le = lazy (constant_fourier "Rfourier_le_le")
 let coq_Rnot_lt_lt = lazy (constant_fourier "Rnot_lt_lt")
 let coq_Rnot_le_le = lazy (constant_fourier "Rnot_le_le")
-let coq_Rlt_not_le = lazy (constant_fourier "Rlt_not_le")
+let coq_Rlt_not_le_frac_opp = lazy (constant_fourier "Rlt_not_le_frac_opp")
 
 (******************************************************************************
 Construction de la preuve en cas de succès de la méthode de Fourier,
@@ -404,7 +404,7 @@ let tac_zero_inf_false gl (n,d) =
 (* preuve que 0<=(-n)*(1/d) => False 
 *)
 let tac_zero_infeq_false gl (n,d) =
-     (tclTHEN (apply (get coq_Rlt_not_le))
+     (tclTHEN (apply (get coq_Rlt_not_le_frac_opp))
 	      (tac_zero_inf_pos gl (-n,d)))
 ;;
 
@@ -492,7 +492,7 @@ let rec fourier gl=
       in tac gl)
      with _ -> 
     (* les hypothèses *)
-    let hyps = List.map (fun (h,t)-> (mkVar h,(body_of_type t)))
+    let hyps = List.map (fun (h,t)-> (mkVar h,t))
                         (list_of_sign (pf_hyps gl)) in
     let lineq =ref [] in
     List.iter (fun h -> try (lineq:=(ineq1_of_constr h)@(!lineq))
@@ -503,8 +503,7 @@ let rec fourier gl=
     let res=fourier_lineq (!lineq) in
     let tac=ref tclIDTAC in
     if res=[]
-    then (print_string "Tactic Fourier fails.\n";
-		       flush stdout)
+    then Util.error "fourier failed"
     (* l'algorithme de Fourier a réussi: on va en tirer une preuve Coq *)
     else (match res with
         [(cres,sres,lc)]->

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pfedit.mli 9154 2006-09-20 17:18:18Z corbinea $ i*)
+(*i $Id: pfedit.mli 10850 2008-04-25 18:07:44Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -71,13 +71,16 @@ val current_proof_depth: unit -> int
 val set_undo : int option -> unit
 val get_undo : unit -> int option
 
-(*s [start_proof s str env t hook] starts a proof of name [s] and conclusion
-    [t]; [hook] is optionally a function to be applied at proof end (e.g. to
-    declare the built constructions as a coercion or a setoid morphism) *)
+(*s [start_proof s str env t hook tac] starts a proof of name [s] and
+    conclusion [t]; [hook] is optionally a function to be applied at
+    proof end (e.g. to declare the built constructions as a coercion
+    or a setoid morphism); init_tac is possibly a tactic to
+    systematically apply at initialization time (e.g. to start the
+    proof of mutually dependent theorems) *)
 
 val start_proof : 
-  identifier -> goal_kind -> named_context_val -> constr
-    -> declaration_hook -> unit
+  identifier -> goal_kind -> named_context_val -> constr ->
+    ?init_tac:tactic -> declaration_hook -> unit
 
 (* [restart_proof ()] restarts the current focused proof from the beginning
    or fails if no proof is focused *)
@@ -103,7 +106,7 @@ val suspend_proof : unit -> unit
     a constant with its name, kind and possible hook (see [start_proof]);
     it fails if there is no current proof of if it is not completed *)
 
-val cook_proof : unit -> 
+val cook_proof : (Refiner.pftreestate -> unit) -> 
   identifier * (Entries.definition_entry * goal_kind * declaration_hook)
 
 (* To export completed proofs to xml *)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_natsyntax.ml 7988 2006-02-04 20:28:29Z herbelin $ *)
+(* $Id: g_natsyntax.ml 10348 2007-12-06 17:36:14Z aspiwack $ *)
 
 (* This file defines the printer for natural numbers in [nat] *)
 
@@ -32,11 +32,12 @@ open Names
 
 let nat_of_int dloc n =
   if is_pos_or_zero n then begin
-      if less_than (of_string "5000") n & Options.is_verbose () then begin
-	warning ("You may experience stack overflow and segmentation fault\
-                  \nwhile parsing numbers in nat greater than 5000");
-	flush_all ()
-      end;
+      if less_than (of_string "5000") n then
+	Flags.if_warn msg_warning 
+	  (strbrk "Stack overflow or segmentation fault happens when " ++
+	   strbrk "working with large numbers in nat (observed threshold " ++
+	   strbrk "may vary from 5000 to 70000 depending on your system " ++
+	   strbrk "limits and on the command executed).");
       let ref_O = RRef (dloc, glob_O) in
       let ref_S = RRef (dloc, glob_S) in
       let rec mk_nat acc n =

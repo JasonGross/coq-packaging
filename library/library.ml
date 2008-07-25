@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: library.ml 9525 2007-01-24 08:43:01Z herbelin $ *)
+(* $Id: library.ml 11181 2008-06-27 07:35:45Z notin $ *)
 
 open Pp
 open Util
@@ -86,10 +86,10 @@ let add_load_path (phys_path,coq_path) =
 	    begin
               (* Assume the user is concerned by library naming *)
 	      if dir <> Nameops.default_root_prefix then
-		(Options.if_verbose warning (phys_path^" was previously bound to "
-					     ^(string_of_dirpath dir)
-					     ^("\nIt is remapped to "^(string_of_dirpath coq_path)));
-		 flush_all ());
+		Flags.if_warn msg_warning
+		  (str phys_path ++ strbrk " was previously bound to " ++
+		   pr_dirpath dir ++ strbrk "; it is remapped to " ++
+		   pr_dirpath coq_path);
 	      remove_load_path phys_path;
 	      load_paths := (phys_path::fst !load_paths, coq_path::snd !load_paths)
 	    end
@@ -122,7 +122,6 @@ type library_disk = {
 
 type library_t = {
   library_name : compilation_unit_name;
-  library_filename : System.physical_path;
   library_compiled : compiled_library;
   library_objects : library_objects;
   library_deps : (compilation_unit_name * Digest.t) list;
@@ -138,9 +137,14 @@ module LibraryOrdered =
   end
 
 module LibraryMap = Map.Make(LibraryOrdered)
+module LibraryFilenameMap = Map.Make(LibraryOrdered)
 
 (* This is a map from names to loaded libraries *)
 let libraries_table = ref LibraryMap.empty
+
+(* This is the map of loaded libraries filename *)
+(* (not synchronized so as not to be caught in the states on disk) *)
+let libraries_filename_table = ref LibraryFilenameMap.empty
 
 (* These are the _ordered_ sets of loaded, imported and exported libraries *)
 let libraries_loaded_list = ref []
@@ -183,7 +187,15 @@ let try_find_library dir =
   with Not_found ->
     error ("Unknown library " ^ (string_of_dirpath dir))
 
-let library_full_filename dir = (find_library dir).library_filename
+let register_library_filename dir f =
+  (* Not synchronized: overwrite the previous binding if one existed *)
+  (* from a previous play of the session *)
+  libraries_filename_table := 
+    LibraryFilenameMap.add dir f !libraries_filename_table
+
+let library_full_filename dir =
+  try LibraryFilenameMap.find dir !libraries_filename_table
+  with Not_found -> "<unavailable filename>"
 
 let library_is_loaded dir =
   try let _ = find_library dir in true
@@ -300,7 +312,7 @@ let (in_import, out_import) =
 
 (*s Loading from disk to cache (preparation phase) *)
 
-let vo_magic_number = 080992 (* V8.1 beta2 *)
+let vo_magic_number = 08193 (* v8.2beta3 *)
 
 let (raw_extern_library, raw_intern_library) =
   System.raw_extern_intern vo_magic_number ".vo"
@@ -309,7 +321,7 @@ let with_magic_number_check f a =
   try f a
   with System.Bad_magic_number fname ->
     errorlabstrm "with_magic_number_check"
-    (str"file " ++ str fname ++ spc () ++ str"has bad magic number." ++
+    (str"File " ++ str fname ++ spc () ++ str"has bad magic number." ++
     spc () ++ str"It is corrupted" ++ spc () ++
     str"or was compiled with another version of Coq.")
 
@@ -331,9 +343,9 @@ let locate_absolute_library dir =
     (dir, file)
   with Not_found ->
   (* Last chance, removed from the file system but still in memory *)
-  try
+  if library_is_loaded dir then
     (dir, library_full_filename dir)
-  with Not_found ->
+  else
     raise LibNotFound
 
 let locate_qualified_library qid =
@@ -351,10 +363,9 @@ let locate_qualified_library qid =
     let path, file = System.where_in_path loadpath name in
     let dir = extend_dirpath (find_logical_path path) base in
     (* Look if loaded *)
-    try 
-      (LibLoaded, dir, library_full_filename dir)      
-    with Not_found ->
-      (LibInPath, dir, file)
+    if library_is_loaded dir then (LibLoaded, dir, library_full_filename dir)
+    (* Otherwise, look for it in the file system *)
+    else (LibInPath, dir, file)
   with Not_found -> raise LibNotFound
 
 let explain_locate_library_error qid = function
@@ -386,11 +397,10 @@ let try_locate_qualified_library (loc,qid) =
 (* Internalise libraries *)
 
 let lighten_library m = 
-  if !Options.dont_load_proofs then lighten_library m else m
+  if !Flags.dont_load_proofs then lighten_library m else m
 
-let mk_library md f digest = {
+let mk_library md digest = {
   library_name = md.md_name;
-  library_filename = f;
   library_compiled = lighten_library md.md_compiled;
   library_objects = md.md_objects;
   library_deps = md.md_deps;
@@ -402,7 +412,8 @@ let intern_from_file f =
   let md = System.marshal_in ch in
   let digest = System.marshal_in ch in
   close_in ch;
-  mk_library md f digest
+  register_library_filename md.md_name f;
+  mk_library md digest
 
 let rec intern_library needed (dir, f) =
   (* Look if in the current logical environment *)
@@ -426,9 +437,9 @@ and intern_library_deps needed dir m =
 and intern_mandatory_library caller needed (dir,d) =
   let m,needed = intern_library needed (try_locate_absolute_library dir) in
   if d <> m.library_digest then
-    error ("compiled library "^(string_of_dirpath caller)^
-	   " makes inconsistent assumptions over library "
-	   ^(string_of_dirpath dir));
+    errorlabstrm "" (strbrk ("Compiled library "^(string_of_dirpath caller)^
+	   ".vo makes inconsistent assumptions over library "
+	   ^(string_of_dirpath dir)));
   needed
 
 let rec_intern_library needed mref =
@@ -443,17 +454,18 @@ let check_library_short_name f dir = function
   | _ -> ()
 
 let rec_intern_by_filename_only id f =
-  let m = intern_from_file f in
+  let m = try intern_from_file f with Sys_error s -> error s in
   (* Only the base name is expected to match *)
   check_library_short_name f m.library_name id;
   (* We check no other file containing same library is loaded *)
-  try
-    let m' = find_library m.library_name in
-    Options.if_verbose warning 
-      ((string_of_dirpath m.library_name)^" is already loaded from file "^
-       m'.library_filename);
-    m.library_name, []
-  with Not_found ->
+  if library_is_loaded m.library_name then
+    begin
+      Flags.if_verbose warning 
+	((string_of_dirpath m.library_name)^" is already loaded from file "^
+	library_full_filename m.library_name);
+      m.library_name, []
+    end
+ else
     let needed = intern_library_deps [] m.library_name m in
     m.library_name, needed
 
@@ -496,7 +508,7 @@ let register_library (dir,m) =
   (* [needed] is the ordered list of libraries not already loaded *)
 let cache_require (_,(needed,modl,export)) =
   List.iter register_library needed;
-  option_iter (fun exp -> open_libraries exp (List.map find_library modl))
+  Option.iter (fun exp -> open_libraries exp (List.map find_library modl))
     export
 
 let load_require  _ (_,(needed,modl,_)) =
@@ -530,13 +542,17 @@ let require_library qidl export =
   let modrefl = List.map fst modrefl in
     if Lib.is_modtype () || Lib.is_module () then begin
       add_anonymous_leaf (in_require (needed,modrefl,None));
-      option_iter (fun exp ->
+      Option.iter (fun exp ->
 	List.iter (fun dir -> add_anonymous_leaf (in_import(dir,exp))) modrefl)
 	export
     end
     else
       add_anonymous_leaf (in_require (needed,modrefl,export));
-  if !Options.xml_export then List.iter !xml_require modrefl;
+  if !Flags.dump then List.iter2 (fun (loc, _) dp -> 
+    Flags.dump_string (Printf.sprintf "R%d %s <> <> %s\n" 
+		    (fst (unloc loc)) (string_of_dirpath dp) "lib"))
+    qidl modrefl;
+  if !Flags.xml_export then List.iter !xml_require modrefl;
   add_frozen_state ()
 
 let require_library_from_file idopt file export =
@@ -544,12 +560,12 @@ let require_library_from_file idopt file export =
   let needed = List.rev needed in
   if Lib.is_modtype () || Lib.is_module () then begin
     add_anonymous_leaf (in_require (needed,[modref],None));
-    option_iter (fun exp -> add_anonymous_leaf (in_import (modref,exp)))
+    Option.iter (fun exp -> add_anonymous_leaf (in_import (modref,exp)))
       export
   end
   else
     add_anonymous_leaf (in_require (needed,[modref],export));
-  if !Options.xml_export then !xml_require modref;
+  if !Flags.xml_export then !xml_require modref;
   add_frozen_state ()
 
 (* the function called by Vernacentries.vernac_import *)
@@ -614,7 +630,7 @@ let save_library_to dir f =
     let di = Digest.file f' in
     System.marshal_out ch di;
     close_out ch
-  with e -> (warning ("Removed file "^f'); close_out ch; Sys.remove f'; raise e)
+  with e -> warning ("Removed file "^f'); close_out ch; Sys.remove f'; raise e
 
 (************************************************************************)
 (*s Display the memory use of a library. *)

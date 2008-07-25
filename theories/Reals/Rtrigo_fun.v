@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rtrigo_fun.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Rtrigo_fun.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -15,8 +15,7 @@ Open Local Scope R_scope.
 
 (*****************************************************************)
 (**           To define transcendental functions                 *)
-(**           for exponential function                           *)
-(*                                                               *)
+(**           and exponential function                           *)
 (*****************************************************************)
 
 (*********)

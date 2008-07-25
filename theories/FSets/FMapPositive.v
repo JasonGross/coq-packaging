@@ -11,11 +11,12 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: FMapPositive.v 9862 2007-05-25 16:57:06Z letouzey $ *)
+(* $Id: FMapPositive.v 10739 2008-04-01 14:45:20Z herbelin $ *)
 
 Require Import Bool.
 Require Import ZArith.
 Require Import OrderedType.
+Require Import OrderedTypeEx.
 Require Import FMapInterface.
 
 Set Implicit Arguments.
@@ -36,9 +37,12 @@ Open Local Scope positive_scope.
   usual order (see [OrderedTypeEx]), we use here a lexicographic order 
   over bits, which is more natural here (lower bits are considered first). *)
 
-Module PositiveOrderedTypeBits <: OrderedType.
+Module PositiveOrderedTypeBits <: UsualOrderedType.
   Definition t:=positive.
   Definition eq:=@eq positive.
+  Definition eq_refl := @refl_equal t.
+  Definition eq_sym := @sym_eq t.
+  Definition eq_trans := @trans_eq t.
 
   Fixpoint bits_lt (p q:positive) { struct p } : Prop := 
    match p, q with 
@@ -51,15 +55,6 @@ Module PositiveOrderedTypeBits <: OrderedType.
    end.
 
   Definition lt:=bits_lt.
-
-  Lemma eq_refl : forall x : t, eq x x.
-  Proof. red; auto. Qed.
-
-  Lemma eq_sym : forall x y : t, eq x y -> eq y x.
-  Proof. red; auto. Qed.
-
-  Lemma eq_trans : forall x y z : t, eq x y -> eq y z -> eq x z.
-  Proof. red; intros; transitivity y; auto. Qed.
 
   Lemma bits_lt_trans : forall x y z : positive, bits_lt x y -> bits_lt y z -> bits_lt x z.
   Proof.
@@ -171,17 +166,18 @@ Qed.
 Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
 
   Module E:=PositiveOrderedTypeBits.
+  Module ME:=KeyOrderedType E.
 
   Definition key := positive.
 
-  Inductive tree (A : Set) : Set :=
+  Inductive tree (A : Type) :=
     | Leaf : tree A
     | Node : tree A -> option A -> tree A -> tree A.
 
   Definition t := tree.
 
   Section A.
-  Variable A:Set.
+  Variable A:Type.
 
   Implicit Arguments Leaf [A].
 
@@ -279,6 +275,15 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
      deforestation to it, but that makes the proofs even harder. *)
 
   Definition elements (m : t A) := xelements m xH.
+
+  (** [cardinal] *)
+
+  Fixpoint cardinal (m : t A) : nat :=
+    match m with 
+      | Leaf => 0%nat 
+      | Node l None r => (cardinal l + cardinal r)%nat
+      | Node l (Some _) r => S (cardinal l + cardinal r)
+    end.
 
   Section CompcertSpec.
 
@@ -560,6 +565,16 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
     exact (xelements_complete i xH m v H).
   Qed.
 
+  Lemma cardinal_1 : 
+   forall (m: t A), cardinal m = length (elements m).
+  Proof.
+   unfold elements.
+   intros m; set (p:=1); clearbody p; revert m p.
+   induction m; simpl; auto; intros.
+   rewrite (IHm1 (append p 2)), (IHm2 (append p 3)); auto.
+   destruct o; rewrite app_length; simpl; omega.
+  Qed.
+
   End CompcertSpec.
 
   Definition MapsTo (i:positive)(v:A)(m:t A) := find i m = Some v.
@@ -793,11 +808,17 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   apply xelements_sort; auto.
   Qed.
 
+  Lemma elements_3w : NoDupA eq_key (elements m).
+  Proof.
+  change eq_key with (@ME.eqk A).
+  apply ME.Sort_NoDupA; apply elements_3; auto.
+  Qed.
+
   End FMapSpec.
 
   (** [map] and [mapi] *)
  
-  Variable B : Set.
+  Variable B : Type.
 
   Fixpoint xmapi (f : positive -> A -> B) (m : t A) (i : positive)
              {struct m} : t B :=
@@ -815,7 +836,7 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   End A.
 
   Lemma xgmapi:
-      forall (A B: Set) (f: positive -> A -> B) (i j : positive) (m: t A),
+      forall (A B: Type) (f: positive -> A -> B) (i j : positive) (m: t A),
       find i (xmapi f m j) = option_map (f (append j i)) (find i m).
   Proof.
   induction i; intros; destruct m; simpl; auto.
@@ -825,7 +846,7 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   Qed.
 
   Theorem gmapi:
-    forall (A B: Set) (f: positive -> A -> B) (i: positive) (m: t A),
+    forall (A B: Type) (f: positive -> A -> B) (i: positive) (m: t A),
     find i (mapi f m) = option_map (f i) (find i m).
   Proof.
   intros.
@@ -836,7 +857,7 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   Qed.
 
   Lemma mapi_1 : 
-    forall (elt elt':Set)(m: t elt)(x:key)(e:elt)(f:key->elt->elt'), 
+    forall (elt elt':Type)(m: t elt)(x:key)(e:elt)(f:key->elt->elt'), 
     MapsTo x e m -> 
     exists y, E.eq y x /\ MapsTo x (f y e) (mapi f m).
   Proof.
@@ -851,7 +872,7 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   Qed.
 
   Lemma mapi_2 : 
-    forall (elt elt':Set)(m: t elt)(x:key)(f:key->elt->elt'), 
+    forall (elt elt':Type)(m: t elt)(x:key)(f:key->elt->elt'), 
     In x (mapi f m) -> In x m.
   Proof.
   intros.
@@ -864,21 +885,21 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   simpl in *; discriminate.
   Qed.
 
-  Lemma map_1 : forall (elt elt':Set)(m: t elt)(x:key)(e:elt)(f:elt->elt'), 
+  Lemma map_1 : forall (elt elt':Type)(m: t elt)(x:key)(e:elt)(f:elt->elt'), 
     MapsTo x e m -> MapsTo x (f e) (map f m).
   Proof.
   intros; unfold map.
   destruct (mapi_1 (fun _ => f) H); intuition.
   Qed.
   
-  Lemma map_2 : forall (elt elt':Set)(m: t elt)(x:key)(f:elt->elt'), 
+  Lemma map_2 : forall (elt elt':Type)(m: t elt)(x:key)(f:elt->elt'), 
     In x (map f m) -> In x m.
   Proof.
   intros; unfold map in *; eapply mapi_2; eauto.
   Qed.
 
   Section map2.
-  Variable A B C : Set.
+  Variable A B C : Type.
   Variable f : option A -> option B -> option C.
   
   Implicit Arguments Leaf [A].
@@ -927,10 +948,10 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
 
   End map2.
 
-  Definition map2 (elt elt' elt'':Set)(f:option elt->option elt'->option elt'') := 
+  Definition map2 (elt elt' elt'':Type)(f:option elt->option elt'->option elt'') := 
    _map2 (fun o1 o2 => match o1,o2 with None,None => None | _, _ => f o1 o2 end).
 
-  Lemma map2_1 : forall (elt elt' elt'':Set)(m: t elt)(m': t elt')
+  Lemma map2_1 : forall (elt elt' elt'':Type)(m: t elt)(m': t elt')
     (x:key)(f:option elt->option elt'->option elt''), 
     In x m \/ In x m' -> 
     find x (map2 f m m') = f (find x m) (find x m'). 
@@ -946,7 +967,7 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   destruct H; intuition; try discriminate.
   Qed.
 
-  Lemma  map2_2 : forall (elt elt' elt'':Set)(m: t elt)(m': t elt')
+  Lemma  map2_2 : forall (elt elt' elt'':Type)(m: t elt)(m': t elt')
     (x:key)(f:option elt->option elt'->option elt''), 
     In x (map2 f m m') -> In x m \/ In x m'.
   Proof.
@@ -962,17 +983,17 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   Qed.
 
 
-  Definition fold (A B : Set) (f: positive -> A -> B -> B) (tr: t A) (v: B) :=
+  Definition fold (A : Type)(B : Type) (f: positive -> A -> B -> B) (tr: t A) (v: B) :=
      List.fold_left (fun a p => f (fst p) (snd p) a) (elements tr) v.
   
   Lemma fold_1 :
-    forall (A:Set)(m:t A)(B:Set)(i : B) (f : key -> A -> B -> B),
+    forall (A:Type)(m:t A)(B:Type)(i : B) (f : key -> A -> B -> B),
     fold f m i = fold_left (fun a p => f (fst p) (snd p) a) (elements m) i.
   Proof.
   intros; unfold fold; auto.
   Qed.
 
-  Fixpoint equal (A:Set)(cmp : A -> A -> bool)(m1 m2 : t A) {struct m1} : bool := 
+  Fixpoint equal (A:Type)(cmp : A -> A -> bool)(m1 m2 : t A) {struct m1} : bool := 
     match m1, m2 with 
       | Leaf, _ => is_empty m2
       | _, Leaf => is_empty m1
@@ -985,12 +1006,15 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
            && equal cmp l1 l2 && equal cmp r1 r2
      end.
 
-  Definition Equal (A:Set)(cmp:A->A->bool)(m m':t A) := 
+  Definition Equal (A:Type)(m m':t A) := 
+    forall y, find y m = find y m'.
+  Definition Equiv (A:Type)(eq_elt:A->A->Prop) m m' := 
     (forall k, In k m <-> In k m') /\ 
-    (forall k e e', MapsTo k e m -> MapsTo k e' m' -> cmp e e' = true).  
+    (forall k e e', MapsTo k e m -> MapsTo k e' m' -> eq_elt e e').  
+  Definition Equivb (A:Type)(cmp: A->A->bool) := Equiv (Cmp cmp).
 
-  Lemma equal_1 : forall (A:Set)(m m':t A)(cmp:A->A->bool), 
-    Equal cmp m m' -> equal cmp m m' = true. 
+  Lemma equal_1 : forall (A:Type)(m m':t A)(cmp:A->A->bool), 
+    Equivb cmp m m' -> equal cmp m m' = true. 
   Proof. 
   induction m.
   (* m = Leaf *)
@@ -1024,11 +1048,11 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   destruct H2; red in H2; simpl in H2; discriminate.
   (* m' = Node *)
   destruct 1.
-  assert (Equal cmp m1 m'1).
+  assert (Equivb cmp m1 m'1).
     split.
     intros k; generalize (H (xO k)); unfold In, MapsTo; simpl; auto.
     intros k e e'; generalize (H0 (xO k) e e'); unfold In, MapsTo; simpl; auto.
-  assert (Equal cmp m2 m'2).
+  assert (Equivb cmp m2 m'2).
     split.
     intros k; generalize (H (xI k)); unfold In, MapsTo; simpl; auto.
     intros k e e'; generalize (H0 (xI k) e e'); unfold In, MapsTo; simpl; auto.
@@ -1043,8 +1067,8 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   apply andb_true_intro; split; auto.
   Qed.
 
-  Lemma equal_2 : forall (A:Set)(m m':t A)(cmp:A->A->bool), 
-    equal cmp m m' = true -> Equal cmp m m'. 
+  Lemma equal_2 : forall (A:Type)(m m':t A)(cmp:A->A->bool), 
+    equal cmp m m' = true -> Equivb cmp m m'. 
   Proof. 
   induction m.
   (* m = Leaf *)
@@ -1103,7 +1127,7 @@ Module PositiveMapAdditionalFacts.
 
   (* Derivable from the Map interface *)
   Theorem gsspec:
-    forall (A:Set)(i j: positive) (x: A) (m: t A),
+    forall (A:Type)(i j: positive) (x: A) (m: t A),
     find i (add j x m) = if peq_dec i j then Some x else find i m.
   Proof.
     intros.
@@ -1112,7 +1136,7 @@ Module PositiveMapAdditionalFacts.
 
    (* Not derivable from the Map interface *)
   Theorem gsident:
-    forall (A:Set)(i: positive) (m: t A) (v: A),
+    forall (A:Type)(i: positive) (m: t A) (v: A),
     find i m = Some v -> add i v m = m.
   Proof.
     induction i; intros; destruct m; simpl; simpl in H; try congruence.
@@ -1121,7 +1145,7 @@ Module PositiveMapAdditionalFacts.
   Qed.
   
   Lemma xmap2_lr :
-      forall (A B : Set)(f g: option A -> option A -> option B)(m : t A),
+      forall (A B : Type)(f g: option A -> option A -> option B)(m : t A),
       (forall (i j : option A), f i j = g j i) ->
       xmap2_l f m = xmap2_r g m.
     Proof.
@@ -1132,7 +1156,7 @@ Module PositiveMapAdditionalFacts.
     Qed.
 
   Theorem map2_commut:
-    forall (A B: Set) (f g: option A -> option A -> option B),
+    forall (A B: Type) (f g: option A -> option A -> option B),
     (forall (i j: option A), f i j = g j i) ->
     forall (m1 m2: t A),
     _map2 f m1 m2 = _map2 g m2 m1.

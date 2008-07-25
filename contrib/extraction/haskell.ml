@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: haskell.ml 8930 2006-06-09 02:14:34Z letouzey $ i*)
+(*i $Id: haskell.ml 10233 2007-10-17 23:29:08Z letouzey $ i*)
 
 (*s Production of Haskell syntax. *)
 
@@ -18,7 +18,7 @@ open Libnames
 open Table
 open Miniml
 open Mlutil
-open Ocaml
+open Common
 
 (*s Haskell renaming issues. *)
 
@@ -30,22 +30,19 @@ let keywords =
     "as"; "qualified"; "hiding" ; "unit" ; "unsafeCoerce" ]
   Idset.empty
 
-let preamble prm used_modules (mldummy,tdummy,tunknown) magic =
-  let pp_mp = function 
-    | MPfile d -> pr_upper_id (List.hd (repr_dirpath d))
-    | _ -> assert false 
-  in  
-  (if not magic then mt () 
+let preamble mod_name used_modules usf =
+  let pp_import mp = str ("import qualified "^ string_of_modfile mp ^"\n")
+  in 
+  (if not usf.magic then mt () 
    else
      str "{-# OPTIONS_GHC -cpp -fglasgow-exts #-}\n" ++
      str "{- For Hugs, use the option -F\"cpp -P -traditional\" -}\n\n")
   ++
-  str "module " ++ pr_upper_id prm.mod_name ++ str " where" ++ fnl () 
-  ++ fnl() ++ 
-  str "import qualified Prelude" ++ fnl() ++
-  prlist (fun mp -> str "import qualified " ++ pp_mp mp ++ fnl ()) used_modules
-  ++ fnl () ++
-  (if not magic then mt () 
+  str "module " ++ pr_upper_id mod_name ++ str " where" ++ fnl2 () ++
+  str "import qualified Prelude" ++ fnl () ++
+  prlist pp_import used_modules ++ fnl () ++ 
+  (if used_modules = [] then mt () else fnl ()) ++
+  (if not usf.magic then mt () 
    else str "\
 #ifdef __GLASGOW_HASKELL__
 import qualified GHC.Base
@@ -54,16 +51,10 @@ unsafeCoerce = GHC.Base.unsafeCoerce#
 -- HUGS
 import qualified IOExts
 unsafeCoerce = IOExts.unsafeCoerce
-#endif")
+#endif" ++ fnl2 ())
   ++
-  fnl() ++ fnl() 
-  ++
-  (if not mldummy then mt () 
-   else
-     str "__ = Prelude.error \"Logical or arity value used\"" 
-     ++ fnl () ++ fnl())
-
-let preamble_sig prm used_modules (mldummy,tdummy,tunknown) = failwith "TODO" 
+  (if not usf.mldummy then mt () 
+   else str "__ = Prelude.error \"Logical or arity value used\"" ++ fnl2 ())
 
 let pp_abst = function
   | [] -> (mt ())
@@ -73,17 +64,11 @@ let pp_abst = function
 
 let pr_lower_id id = pr_id (lowercase_id id)
 
-(*s The pretty-printing functor. *)
+(*s The pretty-printer for haskell syntax *)
 
-module Make = functor(P : Mlpp_param) -> struct
-
-let local_mpl = ref ([] : module_path list)
-
-let pp_global r = 
+let pp_global k r = 
   if is_inline_custom r then str (find_custom r) 
-  else P.pp_global !local_mpl r
-
-let empty_env () = [], P.globals()
+  else str (Common.pp_global k r)
 
 (*s Pretty-printing of types. [par] is a boolean indicating whether parentheses
     are needed or not. *)
@@ -96,13 +81,14 @@ let rec pp_type par vl t =
   let rec pp_rec par = function
     | Tmeta _ | Tvar' _ -> assert false 
     | Tvar i -> (try pr_id (List.nth vl (pred i)) with _ -> (str "a" ++ int i))
-    | Tglob (r,[]) -> pp_global r	
+    | Tglob (r,[]) -> pp_global Type r	
     | Tglob (r,l) -> 
 	if r = IndRef (kn_sig,0) then 
 	  pp_type true vl (List.hd l)
 	else 
 	  pp_par par 
-	    (pp_global r ++ spc () ++ prlist_with_sep spc (pp_type true vl) l)
+	    (pp_global Type r ++ spc () ++ 
+	     prlist_with_sep spc (pp_type true vl) l)
     | Tarr (t1,t2) ->
 	pp_par par 
 	  (pp_rec true t1 ++ spc () ++ str "->" ++ spc () ++ pp_rec false t2)
@@ -151,20 +137,20 @@ let rec pp_expr par env args =
 		    spc () ++ str "in") ++
 		 spc () ++ hov 0 pp_a2)))
     | MLglob r -> 
-	apply (pp_global r)
+	apply (pp_global Term r)
     | MLcons (_,r,[]) ->
-	assert (args=[]); pp_global r
+	assert (args=[]); pp_global Cons r
     | MLcons (_,r,[a]) ->
 	assert (args=[]);
-	pp_par par (pp_global r ++ spc () ++ pp_expr true env [] a)
+	pp_par par (pp_global Cons r ++ spc () ++ pp_expr true env [] a)
     | MLcons (_,r,args') ->
 	assert (args=[]);
-	pp_par par (pp_global r ++ spc () ++ 
+	pp_par par (pp_global Cons r ++ spc () ++ 
 		    prlist_with_sep spc (pp_expr true env []) args')
-    | MLcase (_,t, pv) ->
+    | MLcase ((_,factors),t, pv) ->
       	apply (pp_par par' 
 		 (v 0 (str "case " ++ pp_expr false env [] t ++ str " of" ++
-		       fnl () ++ str "  " ++ pp_pat env pv)))
+		       fnl () ++ str "  " ++ pp_pat env factors pv)))
     | MLfix (i,ids,defs) ->
 	let ids',env' = push_vars (List.rev (Array.to_list ids)) env in
       	pp_fix par env' i (Array.of_list (List.rev ids'),defs) args
@@ -177,11 +163,11 @@ let rec pp_expr par env args =
 	pp_apply (str "unsafeCoerce") par (pp_expr true env [] a :: args)
     | MLaxiom -> pp_par par (str "Prelude.error \"AXIOM TO BE REALIZED\"")
 
-and pp_pat env pv = 
+and pp_pat env factors pv = 
   let pp_one_pat (name,ids,t) =
     let ids,env' = push_vars (List.rev ids) env in
     let par = expr_needs_par t in
-    hov 2 (pp_global name ++
+    hov 2 (pp_global Cons name ++
 	   (match ids with 
 	      | [] -> mt ()
 	      | _  -> (str " " ++ 
@@ -189,7 +175,18 @@ and pp_pat env pv =
 			 (fun () -> (spc ())) pr_id (List.rev ids))) ++
 	   str " ->" ++ spc () ++ pp_expr par env' [] t)
   in 
-  (prvect_with_sep (fun () -> (fnl () ++ str "  ")) pp_one_pat pv)
+  prvecti 
+    (fun i x -> if List.mem i factors then mt () else 
+       (pp_one_pat pv.(i) ++
+	if factors = [] && i = Array.length pv - 1 then mt ()
+	else fnl () ++ str "  ")) pv
+  ++
+  match factors with 
+    | [] -> mt ()
+    | i::_ -> 
+	let (_,ids,t) = pv.(i) in 
+	let t = ast_lift (-List.length ids) t in 
+	hov 2 (str "_ ->" ++ spc () ++ pp_expr (expr_needs_par t) env [] t)
 
 (*s names of the functions ([ids]) are already pushed in [env],
     and passed here just for convenience. *)
@@ -223,7 +220,7 @@ let pp_logical_ind packet =
 let pp_singleton kn packet = 
   let l = rename_tvars keywords packet.ip_vars in 
   let l' = List.rev l in 
-  hov 2 (str "type " ++ pp_global (IndRef (kn,0)) ++ spc () ++ 
+  hov 2 (str "type " ++ pp_global Type (IndRef (kn,0)) ++ spc () ++ 
 	 prlist_with_sep spc pr_id l ++
 	 (if l <> [] then str " " else mt ()) ++ str "=" ++ spc () ++
 	 pp_type false l' (List.hd packet.ip_types.(0)) ++ fnl () ++
@@ -233,7 +230,7 @@ let pp_singleton kn packet =
 let pp_one_ind ip pl cv =
   let pl = rename_tvars keywords pl in
   let pp_constructor (r,l) =
-    (pp_global r ++
+    (pp_global Cons r ++
      match l with
        | [] -> (mt ()) 
        | _  -> (str " " ++
@@ -241,7 +238,7 @@ let pp_one_ind ip pl cv =
 		  (fun () -> (str " ")) (pp_type true pl) l))
   in
   str (if Array.length cv = 0 then "type " else "data ") ++ 
-  pp_global (IndRef ip) ++ str " " ++
+  pp_global Type (IndRef ip) ++ str " " ++
   prlist_with_sep (fun () -> str " ") pr_lower_id pl ++
   (if pl = [] then mt () else str " ") ++
   if Array.length cv = 0 then str "= () -- empty inductive"
@@ -269,9 +266,7 @@ let rec pp_ind first kn i ind =
 
 let pp_string_parameters ids = prlist (fun id -> str id ++ str " ")
 
-let pp_decl mpl = 
-  local_mpl := mpl;
-  function
+let pp_decl = function
   | Dind (kn,i) when i.ind_info = Singleton -> 
       pp_singleton kn i.ind_packets.(0) ++ fnl ()
   | Dind (kn,i) -> hov 0 (pp_ind true kn 0 i)
@@ -288,38 +283,51 @@ let pp_decl mpl =
 	    if t = Taxiom then str "= () -- AXIOM TO BE REALIZED\n"
 	    else str "=" ++ spc () ++ pp_type false l t
 	in 
-	hov 2 (str "type " ++ pp_global r ++ spc () ++ st) ++ fnl () ++ fnl ()
+	hov 2 (str "type " ++ pp_global Type r ++ spc () ++ st) ++ fnl2 ()
   | Dfix (rv, defs, typs) ->
       let max = Array.length rv in 
       let rec iter i = 
 	if i = max then mt () 
 	else
-	  let e = pp_global rv.(i) in 
+	  let e = pp_global Term rv.(i) in 
 	  e ++ str " :: " ++ pp_type false [] typs.(i) ++ fnl () 
-	  ++ pp_function (empty_env ()) e defs.(i) ++ fnl () ++ fnl () 
+	  ++ pp_function (empty_env ()) e defs.(i) ++ fnl2 ()
 	  ++ iter (i+1)
       in iter 0
   | Dterm (r, a, t) ->
       if is_inline_custom r then mt () 
       else 
-	let e = pp_global r in 
+	let e = pp_global Term r in 
 	e ++ str " :: " ++ pp_type false [] t ++ fnl () ++
 	  if is_custom r then 	
-	    hov 0 (e ++ str " = " ++ str (find_custom r) ++ fnl() ++ fnl ())
+	    hov 0 (e ++ str " = " ++ str (find_custom r) ++ fnl2 ())
 	  else 
-	    hov 0 (pp_function (empty_env ()) e a ++ fnl () ++ fnl ())
+	    hov 0 (pp_function (empty_env ()) e a ++ fnl2 ())
 
-let pp_structure_elem mpl = function 
-  | (l,SEdecl d) -> pp_decl mpl d
+let pp_structure_elem = function 
+  | (l,SEdecl d) -> pp_decl d
   | (l,SEmodule m) -> 
       failwith "TODO: Haskell extraction of modules not implemented yet"
   | (l,SEmodtype m) -> 
       failwith "TODO: Haskell extraction of modules not implemented yet"
 
 let pp_struct = 
-  prlist (fun (mp,sel) -> prlist (pp_structure_elem [mp]) sel)
+  let pp_sel (mp,sel) = 
+    push_visible mp; 
+    let p = prlist_strict pp_structure_elem sel in 
+    pop_visible (); p
+  in 
+  prlist_strict pp_sel 
 
-let pp_signature s = failwith "TODO"
 
-end
-
+let haskell_descr = {
+  keywords = keywords;  
+  file_suffix = ".hs"; 
+  capital_file = true;  
+  preamble = preamble; 
+  pp_struct = pp_struct; 
+  sig_suffix = None;
+  sig_preamble = (fun _ _ _ -> mt ()); 
+  pp_sig = (fun _ -> mt ());
+  pp_decl = pp_decl; 
+}

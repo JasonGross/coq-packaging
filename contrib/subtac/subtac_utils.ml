@@ -10,10 +10,10 @@ let ($) f x = f x
 (****************************************************************************)
 (* Library linking *)
 
-let contrib_name = "subtac"
+let contrib_name = "Program"
 
 let subtac_dir = [contrib_name]
-let fix_sub_module = "FixSub"
+let fix_sub_module = "Wf"
 let utils_module = "Utils"
 let fixsub_module = subtac_dir @ [fix_sub_module]
 let utils_module = subtac_dir @ [utils_module]
@@ -28,8 +28,8 @@ let make_ref l s = lazy (init_reference l s)
 let well_founded_ref = make_ref ["Init";"Wf"] "Well_founded"
 let acc_ref = make_ref  ["Init";"Wf"] "Acc"
 let acc_inv_ref = make_ref  ["Init";"Wf"] "Acc_inv"
-let fix_sub_ref = make_ref ["subtac";"FixSub"] "Fix_sub"
-let fix_measure_sub_ref = make_ref ["subtac";"FixSub"] "Fix_measure_sub"
+let fix_sub_ref = make_ref fixsub_module "Fix_sub"
+let fix_measure_sub_ref = make_ref fixsub_module "Fix_measure_sub"
 let lt_ref = make_ref ["Init";"Peano"] "lt"
 let lt_wf_ref = make_ref ["Wf_nat"] "lt_wf"
 let refl_ref = make_ref ["Init";"Logic"] "refl_equal"
@@ -64,9 +64,15 @@ let eqdep_rec = lazy (init_constant ["Logic";"Eqdep"] "eq_dep_rec")
 let eqdep_ind_ref = lazy (init_reference [ "Logic";"Eqdep"] "eq_dep")
 let eqdep_intro_ref = lazy (init_reference [ "Logic";"Eqdep"] "eq_dep_intro")
 
-let jmeq_ind = lazy (init_constant ["Logic";"JMeq"] "JMeq")
-let jmeq_rec = lazy (init_constant ["Logic";"JMeq"] "JMeq_rec")
-let jmeq_refl = lazy (init_constant ["Logic";"JMeq"] "JMeq_refl")
+let jmeq_ind =   
+  lazy (check_required_library ["Coq";"Logic";"JMeq"]; 
+	init_constant ["Logic";"JMeq"] "JMeq")
+let jmeq_rec = 
+  lazy (check_required_library ["Coq";"Logic";"JMeq"]; 
+	init_constant ["Logic";"JMeq"] "JMeq_rec")
+let jmeq_refl = 
+  lazy (check_required_library ["Coq";"Logic";"JMeq"];
+	init_constant ["Logic";"JMeq"] "JMeq_refl")
 
 let ex_ind = lazy (init_constant ["Init"; "Logic"] "ex")
 let ex_intro = lazy (init_reference ["Init"; "Logic"] "ex_intro")
@@ -113,20 +119,20 @@ let debug_on = true
 
 let debug n s = 
   if debug_on then
-    if !Options.debug && n >= debug_level then
+    if !Flags.debug && n >= debug_level then
       msgnl s
     else ()
   else ()
 
 let debug_msg n s = 
   if debug_on then
-    if !Options.debug  && n >= debug_level then s
+    if !Flags.debug  && n >= debug_level then s
     else mt ()
   else mt ()
 
 let trace s = 
   if debug_on then
-    if !Options.debug  && debug_level > 0 then msgnl s
+    if !Flags.debug  && debug_level > 0 then msgnl s
     else ()
   else ()
 
@@ -163,7 +169,7 @@ let make_existential loc ?(opaque = true) env isevars c =
 
 let make_existential_expr loc env c =
   let key = Evarutil.new_untyped_evar () in
-  let evar = Topconstr.CEvar (loc, key) in
+  let evar = Topconstr.CEvar (loc, key, None) in
     debug 2 (str "Constructed evar " ++ int key);
     evar
 
@@ -174,6 +180,8 @@ let string_of_hole_kind = function
   | CasesType -> "CasesType"
   | InternalHole -> "InternalHole"
   | TomatchTypeParameter _ -> "TomatchTypeParameter"
+  | GoalEvar -> "GoalEvar"
+  | ImpossibleCase -> "ImpossibleCase"
 
 let evars_of_term evc init c = 
   let rec evrec acc c =
@@ -194,7 +202,7 @@ let non_instanciated_map env evd evm =
 	     QuestionMark _ -> Evd.add evm key evi
 	   | _ ->
 	       debug 2 (str " and is an implicit");
-	       Pretype_errors.error_unsolvable_implicit loc env evm k)
+	       Pretype_errors.error_unsolvable_implicit loc env evm (Evarutil.nf_evar_info evm evi) k None)
     Evd.empty (Evarutil.non_instantiated evm)
     
 let global_kind = Decl_kinds.IsDefinition Decl_kinds.Definition
@@ -231,8 +239,8 @@ let build_dependent_sum l =
 	     (tclTHENS tac
 		([intros;
 		  (tclTHENSEQ 
-		     [constructor_tac (Some 1) 1 
-			(Rawterm.ImplicitBindings [mkVar n]);
+		     [constructor_tac false (Some 1) 1 
+			(Rawterm.ImplicitBindings [inj_open (mkVar n)]);
 		      cont]);
 		 ])))
 	in
@@ -342,29 +350,44 @@ let id_of_name = function
   | Anonymous -> raise (Invalid_argument "id_of_name")
 
 let definition_message id =
-  Options.if_verbose message ((string_of_id id) ^ " is defined")
-
+  Nameops.pr_id id ++ str " is defined"
+    
 let recursive_message v =
   match Array.length v with
     | 0 -> error "no recursive definition"
-    | 1 -> (Printer.pr_global v.(0) ++ str " is recursively defined")
-    | _ -> hov 0 (prvect_with_sep pr_coma Printer.pr_global v ++
+    | 1 -> (Printer.pr_constant (Global.env ()) v.(0) ++ str " is recursively defined")
+    | _ -> hov 0 (prvect_with_sep pr_coma (Printer.pr_constant (Global.env ())) v ++
 		    spc () ++ str "are recursively defined")
+
+let print_message m =
+  Flags.if_verbose ppnl m
 
 (* Solve an obligation using tactics, return the corresponding proof term *)
 let solve_by_tac evi t =
-  debug 2 (str "Solving goal using tactics: " ++ Evd.pr_evar_info evi);
   let id = id_of_string "H" in
-  try 
+  try
     Pfedit.start_proof id goal_kind evi.evar_hyps evi.evar_concl
     (fun _ _ -> ());
-    debug 2 (str "Started proof");
     Pfedit.by (tclCOMPLETE t);
-    let _,(const,_,_) = Pfedit.cook_proof () in 
+    let _,(const,_,_) = Pfedit.cook_proof ignore in
       Pfedit.delete_current_proof (); const.Entries.const_entry_body
-  with e -> 
+  with e ->
     Pfedit.delete_current_proof();
-    raise Exit
+    raise e
+
+(* let apply_tac t goal = t goal *)
+
+(* let solve_by_tac evi t = *)
+(*   let ev = 1 in *)
+(*   let evm = Evd.add Evd.empty ev evi in *)
+(*   let goal = {it = evi; sigma = evm } in *)
+(*   let (res, valid) = apply_tac t goal in *)
+(*     if res.it = [] then *)
+(*       let prooftree = valid [] in *)
+(*       let proofterm, obls = Refiner.extract_open_proof res.sigma prooftree in *)
+(* 	if obls = [] then proofterm *)
+(* 	else raise Exit *)
+(*     else raise Exit *)
 
 let rec string_of_list sep f = function
     [] -> ""
@@ -395,7 +418,7 @@ let pr_meta_map evd =
     | (mv,Clval(na,b,_)) ->
       	hov 0 
 	  (pr_meta mv ++ pr_name na ++ str " := " ++
-             print_constr b.rebus ++ fnl ())
+             print_constr (fst b).rebus ++ fnl ())
   in
   prlist pr_meta_binding ml    
 
@@ -440,11 +463,11 @@ let pr_evar_defs evd =
       str"METAS:"++brk(0,1)++pr_meta_map evd in
   v 0 (pp_evm ++ pp_met)
 
-let subtac_utils_path =
-  make_dirpath (List.map id_of_string ["Utils";contrib_name;"Coq"])
-let utils_tac s =
-  lazy(make_kn (MPfile subtac_utils_path) (make_dirpath []) (mk_label s))
+let contrib_tactics_path =
+  make_dirpath (List.map id_of_string ["Tactics";contrib_name;"Coq"])
+let tactics_tac s =
+  lazy(make_kn (MPfile contrib_tactics_path) (make_dirpath []) (mk_label s))
 
-let utils_call tac args =
-  TacArg(TacCall(dummy_loc, ArgArg(dummy_loc, Lazy.force (utils_tac tac)),args))
+let tactics_call tac args =
+  TacArg(TacCall(dummy_loc, ArgArg(dummy_loc, Lazy.force (tactics_tac tac)),args))
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: QArith_base.v 9932 2007-07-02 14:31:33Z notin $ i*)
+(*i $Id: QArith_base.v 10765 2008-04-08 16:15:23Z msozeau $ i*)
 
 Require Export ZArith.
 Require Export ZArithRing.
@@ -79,9 +79,9 @@ Qed.
 Lemma Qge_alt : forall p q, (p>=q) <-> (p?=q <> Lt).
 Proof.
 unfold Qle, Qcompare, Zle.
-split; intros; swap H.
+split; intros; contradict H.
 rewrite Zcompare_Gt_Lt_antisym; auto.
-rewrite Zcompare_Gt_Lt_antisym in H0; auto.
+rewrite Zcompare_Gt_Lt_antisym in H; auto.
 Qed.
 
 Hint Unfold Qeq Qlt Qle: qarith.
@@ -121,7 +121,7 @@ Defined.
 
 Definition Q_Setoid : Setoid_Theory Q Qeq.
 Proof.
- split; unfold Qeq in |- *; auto; apply Qeq_trans.
+ split; red; unfold Qeq in |- *; auto; apply Qeq_trans.
 Qed.
 
 Add Setoid Q Qeq Q_Setoid as Qsetoid.
@@ -130,6 +130,12 @@ Hint Resolve (Seq_refl Q Qeq Q_Setoid): qarith.
 Hint Resolve (Seq_sym Q Qeq Q_Setoid): qarith.
 Hint Resolve (Seq_trans Q Qeq Q_Setoid): qarith.
 
+Theorem Qnot_eq_sym : forall x y, ~x == y -> ~y == x. 
+Proof.
+ auto with qarith.
+Qed.
+
+Hint Resolve Qnot_eq_sym : qarith.
 
 (** * Addition, multiplication and opposite *)
 
@@ -165,6 +171,13 @@ Infix "/" := Qdiv : Q_scope.
 
 Notation " ' x " := (Zpos x) (at level 20, no associativity) : Z_scope.
 
+Lemma Qmake_Qdiv : forall a b, a#b==inject_Z a/inject_Z ('b).
+Proof.
+intros a b.
+unfold Qeq.
+simpl.
+ring.
+Qed.
 
 (** * Setoid compatibility results *)
 
@@ -187,7 +200,7 @@ Proof.
   unfold Qeq, Qopp; simpl.
   Open Scope Z_scope.
   intros.
-  replace (- Qnum x1 * ' Qden x2) with (- (Qnum x1 * ' Qden x2)) by ring.
+  replace (- Qnum x * ' Qden y) with (- (Qnum x * ' Qden y)) by ring.
   rewrite H in |- *;  ring.
   Close Scope Z_scope.
 Qed.
@@ -416,6 +429,11 @@ Qed.
 
 (** * Inverse and division. *) 
 
+Lemma Qinv_involutive : forall q, (/ / q) == q.
+Proof.
+intros [[|n|n] d]; red; simpl; reflexivity.
+Qed.
+
 Theorem Qmult_inv_r : forall x, ~ x == 0 -> x*(/x) == 1.
 Proof.
   intros (x1, x2); unfold Qeq, Qdiv, Qmult; case x1; simpl;
@@ -473,6 +491,8 @@ Proof.
   apply Zmult_le_compat_r; auto with zarith. 
   Close Scope Z_scope.
 Qed.
+
+Hint Resolve Qle_trans : qarith.
 
 Lemma Qlt_not_eq : forall x y, x<y -> ~ x==y.
 Proof.
@@ -552,6 +572,9 @@ Proof.
   unfold Qle, Qlt, Qeq; intros; apply Zle_lt_or_eq; auto.
 Qed.
 
+Hint Resolve Qle_not_lt Qlt_not_le Qnot_le_lt Qnot_lt_le 
+ Qlt_le_weak Qlt_not_eq Qle_antisym Qle_refl: qartih.
+
 (** Some decidability results about orders. *)
 
 Lemma Q_dec : forall x y, {x<y} + {y<x} + {x==y}.
@@ -573,6 +596,8 @@ Proof.
   intros (a1,a2) (b1,b2); unfold Qle, Qlt; simpl.
   do 2 rewrite <- Zopp_mult_distr_l; omega.
 Qed.
+
+Hint Resolve Qopp_le_compat : qarith.
 
 Lemma Qle_minus_iff : forall p q, p <= q <-> 0 <= q+-p.
 Proof.
@@ -641,50 +666,136 @@ Proof.
   Close Scope Z_scope.
 Qed.
 
+Lemma Qmult_le_0_compat : forall a b, 0 <= a -> 0 <= b -> 0 <= a*b.
+Proof.
+intros a b Ha Hb.
+unfold Qle in *.
+simpl in *.
+auto with *.
+Qed.
+
+Lemma Qinv_le_0_compat : forall a, 0 <= a -> 0 <= /a.
+Proof.
+intros [[|n|n] d] Ha; assumption.
+Qed.
+
+Lemma Qle_shift_div_l : forall a b c, 
+ 0 < c -> a*c <= b -> a <= b/c.
+Proof.
+intros a b c Hc H.
+apply Qmult_lt_0_le_reg_r with (c).
+ assumption.
+setoid_replace (b/c*c) with (c*(b/c)) by apply Qmult_comm.
+rewrite Qmult_div_r; try assumption.
+auto with *.
+Qed.
+
+Lemma Qle_shift_inv_l : forall a c, 
+ 0 < c -> a*c <= 1 -> a <= /c.
+Proof.
+intros a c Hc H.
+setoid_replace (/c) with (1*/c) by (symmetry; apply Qmult_1_l).
+change (a <= 1/c).
+apply Qle_shift_div_l; assumption.
+Qed.
+
+Lemma Qle_shift_div_r : forall a b c, 
+ 0 < b -> a <= c*b -> a/b <= c.
+Proof.
+intros a b c Hc H.
+apply Qmult_lt_0_le_reg_r with b.
+ assumption.
+setoid_replace (a/b*b) with (b*(a/b)) by apply Qmult_comm.
+rewrite Qmult_div_r; try assumption.
+auto with *.
+Qed.
+
+Lemma Qle_shift_inv_r : forall b c, 
+ 0 < b -> 1 <= c*b -> /b <= c.
+Proof.
+intros b c Hc H.
+setoid_replace (/b) with (1*/b) by (symmetry; apply Qmult_1_l).
+change (1/b <= c).
+apply Qle_shift_div_r; assumption.
+Qed.
+
+Lemma Qinv_lt_0_compat : forall a, 0 < a -> 0 < /a.
+Proof.
+intros [[|n|n] d] Ha; assumption.
+Qed.
+
+Lemma Qlt_shift_div_l : forall a b c,
+ 0 < c -> a*c < b -> a < b/c.
+Proof.
+intros a b c Hc H.
+apply Qnot_le_lt.
+intros H0.
+apply (Qlt_not_le _ _ H).
+apply Qmult_lt_0_le_reg_r with (/c).
+ apply Qinv_lt_0_compat.
+ assumption.
+setoid_replace (a*c/c) with (a) by (apply Qdiv_mult_l; auto with *).
+assumption.
+Qed.
+
+Lemma Qlt_shift_inv_l : forall a c,
+ 0 < c -> a*c < 1 -> a < /c.
+Proof.
+intros a c Hc H.
+setoid_replace (/c) with (1*/c) by (symmetry; apply Qmult_1_l).
+change (a < 1/c).
+apply Qlt_shift_div_l; assumption.
+Qed.
+
+Lemma Qlt_shift_div_r : forall a b c,
+ 0 < b -> a < c*b -> a/b < c.
+Proof.
+intros a b c Hc H.
+apply Qnot_le_lt.
+intros H0.
+apply (Qlt_not_le _ _ H).
+apply Qmult_lt_0_le_reg_r with (/b).
+ apply Qinv_lt_0_compat.
+ assumption.
+setoid_replace (c*b/b) with (c) by (apply Qdiv_mult_l; auto with *).
+assumption.
+Qed.
+
+Lemma Qlt_shift_inv_r : forall b c,
+ 0 < b -> 1 < c*b -> /b < c.
+Proof.
+intros b c Hc H.
+setoid_replace (/b) with (1*/b) by (symmetry; apply Qmult_1_l).
+change (1/b < c).
+apply Qlt_shift_div_r; assumption.
+Qed.
+
 (** * Rational to the n-th power *)
 
-Fixpoint Qpower (q:Q)(n:nat) { struct n } : Q := 
-  match n with 
-    | O => 1
-    | S n => q * (Qpower q n)
-  end. 
+Definition Qpower_positive (q:Q)(p:positive) : Q := 
+ pow_pos Qmult q p.
 
-Notation " q ^ n " := (Qpower q n) : Q_scope.
-
-Lemma Qpower_1 : forall n, 1^n == 1.
+Add Morphism Qpower_positive with signature Qeq ==> @eq _ ==> Qeq as Qpower_positive_comp.
 Proof.
-  induction n; simpl; auto with qarith.
-  rewrite IHn; auto with qarith.
+intros x1 x2 Hx y.
+unfold Qpower_positive.
+induction y; simpl;
+try rewrite IHy;
+try rewrite Hx;
+reflexivity.
 Qed.
 
-Lemma Qpower_0 : forall n, n<>O -> 0^n == 0.
+Definition Qpower (q:Q) (z:Z) :=
+    match z with
+      | Zpos p => Qpower_positive q p
+      | Z0 => 1
+      | Zneg p => /Qpower_positive q p
+    end.
+
+Notation " q ^ z " := (Qpower q z) : Q_scope.
+
+Add Morphism Qpower with signature Qeq ==> @eq _ ==> Qeq as Qpower_comp.
 Proof.
-  destruct n; simpl.
-  destruct 1; auto.
-  intros. 
-  compute; auto.
+intros x1 x2 Hx [|y|y]; try reflexivity;
+simpl; rewrite Hx; reflexivity.
 Qed.
-
-Lemma Qpower_pos : forall p n, 0 <= p -> 0 <= p^n.
-Proof.
-  induction n; simpl; auto with qarith.
-  intros; compute; intro; discriminate.
-  intros.
-  apply Qle_trans with (0*(p^n)).
-  compute; intro; discriminate.
-  apply Qmult_le_compat_r; auto.
-Qed.
-
-Lemma Qinv_power_n : forall n p, (1#p)^n == /(inject_Z ('p))^n.
-Proof.
-  induction n.
-  compute; auto.
-  simpl.
-  intros; rewrite IHn; clear IHn.
-  unfold Qdiv; rewrite Qinv_mult_distr.
-  setoid_replace (1#p) with (/ inject_Z ('p)).
-  apply Qeq_refl.
-  compute; auto.
-Qed.
-
-

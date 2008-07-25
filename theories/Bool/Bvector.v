@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Bvector.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Bvector.v 11004 2008-05-28 09:09:12Z herbelin $ i*)
 
 (** Bit vectors. Contribution by Jean Duprat (ENS Lyon). *)
 
@@ -25,10 +25,10 @@ Malheureusement, cette verification a posteriori amene a faire
 de nombreux lemmes pour gerer les longueurs.
 La seconde idée est de faire un type dépendant dans lequel la
 longueur est un paramètre de construction. Cela complique un
-peu les inductions structurelles, la solution qui a ma préférence
-est alors d'utiliser un terme de preuve comme définition, car le
-mécanisme d'inférence du type du filtrage n'est pas aussi puissant que
-celui implanté par les tactiques d'élimination.
+peu les inductions structurelles et dans certains cas on
+utilisera un terme de preuve comme définition, car le
+mécanisme d'inférence du type du filtrage n'est pas toujours 
+aussi puissant que celui implanté par les tactiques d'élimination.
 *)
 
 Section VECTORS.
@@ -52,39 +52,39 @@ Inductive vector : nat -> Type :=
   | Vnil : vector 0
   | Vcons : forall (a:A) (n:nat), vector n -> vector (S n).
 
-Definition Vhead : forall n:nat, vector (S n) -> A.
-Proof.
-  intros n v; inversion v; exact a.
-Defined.
+Definition Vhead (n:nat) (v:vector (S n)) :=
+  match v with
+  | Vcons a _ _ => a
+  end.
 
-Definition Vtail : forall n:nat, vector (S n) -> vector n.
-Proof.
-  intros n v; inversion v as [|_ n0 H0 H1]; exact H0.
-Defined.
+Definition Vtail (n:nat) (v:vector (S n)) :=
+  match v with
+  | Vcons _ _ v => v
+  end.
 
 Definition Vlast : forall n:nat, vector (S n) -> A.
 Proof.
   induction n as [| n f]; intro v.
   inversion v.
   exact a.
-  
+
   inversion v as [| n0 a H0 H1].
   exact (f H0).
 Defined.
 
-Definition Vconst : forall (a:A) (n:nat), vector n.
-Proof.
-  induction n as [| n v].
-  exact Vnil.
+Fixpoint Vconst (a:A) (n:nat) :=
+  match n return vector n with
+  | O => Vnil
+  | S n => Vcons a _ (Vconst a n)
+  end.
 
-  exact (Vcons a n v).
-Defined.
+(** Shifting and truncating *)
 
 Lemma Vshiftout : forall n:nat, vector (S n) -> vector n.
 Proof.
   induction n as [| n f]; intro v.
   exact Vnil.
-  
+
   inversion v as [| a n0 H0 H1].
   exact (Vcons a n (f H0)).
 Defined.
@@ -123,25 +123,23 @@ Proof.
   auto with *.
 Defined.
 
-Lemma Vextend : forall n p:nat, vector n -> vector p -> vector (n + p).
-Proof.
-  induction n as [| n f]; intros p v v0.
-  simpl in |- *; exact v0.
-  
-  inversion v as [| a n0 H0 H1].
-  simpl in |- *; exact (Vcons a (n + p) (f p H0 v0)).
-Defined.
+(** Concatenation of two vectors *)
+
+Fixpoint Vextend n p (v:vector n) (w:vector p) : vector (n+p) :=
+  match v with
+  | Vnil => w
+  | Vcons a n' v' => Vcons a (n'+p) (Vextend n' p v' w)
+  end.
+
+(** Uniform application on the arguments of the vector *)
 
 Variable f : A -> A.
 
-Lemma Vunary : forall n:nat, vector n -> vector n.
-Proof.
-  induction n as [| n g]; intro v.
-  exact Vnil.
-  
-  inversion v as [| a n0 H0 H1].
-  exact (Vcons (f a) n (g H0)).
-Defined.
+Fixpoint Vunary n (v:vector n) : vector n :=
+  match v with
+  | Vnil => Vnil
+  | Vcons a n' v' => Vcons (f a) n' (Vunary n' v')
+  end.
 
 Variable g : A -> A -> A.
 
@@ -154,14 +152,15 @@ Proof.
   exact (Vcons (g a a0) n (h H0 H2)).
 Defined.
 
-Definition Vid : forall n:nat, vector n -> vector n.
-Proof.
-  destruct n; intro X.
-  exact Vnil.
-  exact (Vcons (Vhead _ X) _ (Vtail _ X)).
-Defined.
+(** Eta-expansion of a vector *)
 
-Lemma Vid_eq : forall (n:nat) (v:vector n), v=(Vid n v).
+Definition Vid n : vector n -> vector n :=
+  match n with
+  | O => fun _ => Vnil
+  | _ => fun v => Vcons (Vhead _ v) _ (Vtail _ v)
+  end.
+
+Lemma Vid_eq : forall (n:nat) (v:vector n), v = Vid n v.
 Proof.
   destruct v; auto.
 Qed.

@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_xml.ml4 10090 2007-08-24 10:53:53Z herbelin $ *)
+(*i camlp4use: "pa_extend.cmo" i*)
+
+(* $Id: g_xml.ml4 10727 2008-03-28 20:22:43Z msozeau $ *)
 
 open Pp
 open Util
@@ -139,12 +141,12 @@ let rec interp_xml_constr = function
   | XmlTag (loc,"LAMBDA",al,(_::_ as xl)) ->
       let body,decls = list_sep_last xl in
       let ctx = List.map interp_xml_decl decls in
-      List.fold_right (fun (na,t) b -> RLambda (loc, na, t, b))
+      List.fold_right (fun (na,t) b -> RLambda (loc, na, Explicit, t, b))
 	ctx (interp_xml_target body)
   | XmlTag (loc,"PROD",al,(_::_ as xl)) ->
       let body,decls = list_sep_last xl in
       let ctx = List.map interp_xml_decl decls in
-      List.fold_right (fun (na,t) b -> RProd (loc, na, t, b))
+      List.fold_right (fun (na,t) b -> RProd (loc, na, Explicit, t, b))
 	ctx (interp_xml_target body)
   | XmlTag (loc,"LETIN",al,(_::_ as xl)) ->
       let body,defs = list_sep_last xl in
@@ -169,7 +171,7 @@ let rec interp_xml_constr = function
       let mat = simple_cases_matrix_of_branches ind brns brs in
       let nparams,n = compute_inductive_nargs ind in
       let nal,rtn = return_type_of_predicate ind nparams n p in
-      RCases (loc,rtn,[tm,nal],mat)
+      RCases (loc,RegularStyle,rtn,[tm,nal],mat)
   | XmlTag (loc,"MUTIND",al,[]) ->
       RRef (loc, IndRef (get_xml_inductive al))
   | XmlTag (loc,"MUTCONSTRUCT",al,[]) ->

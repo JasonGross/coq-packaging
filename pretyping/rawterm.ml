@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: rawterm.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
+(* $Id: rawterm.ml 11094 2008-06-10 19:35:23Z herbelin $ *)
 
 (*i*)
 open Util
@@ -36,6 +36,8 @@ type rawsort = RProp of Term.contents | RType of Univ.universe option
 
 type binder_kind = BProd | BLambda | BLetIn
 
+type binding_kind = Explicit | Implicit
+
 type quantified_hypothesis = AnonHyp of int | NamedHyp of identifier
 
 type 'a explicit_bindings = (loc * quantified_hypothesis * 'a) list
@@ -57,10 +59,10 @@ type rawconstr =
   | REvar of loc * existential_key * rawconstr list option
   | RPatVar of loc * (bool * patvar) (* Used for patterns only *)
   | RApp of loc * rawconstr * rawconstr list
-  | RLambda of loc * name * rawconstr * rawconstr
-  | RProd of loc * name * rawconstr * rawconstr
+  | RLambda of loc * name * binding_kind * rawconstr * rawconstr
+  | RProd of loc * name * binding_kind * rawconstr * rawconstr
   | RLetIn of loc * name * rawconstr * rawconstr
-  | RCases of loc * rawconstr option * tomatch_tuple * cases_clauses
+  | RCases of loc * case_style * rawconstr option * tomatch_tuples * cases_clauses
   | RLetTuple of loc * name list * (name * rawconstr option) * 
       rawconstr * rawconstr
   | RIf of loc * rawconstr * (name * rawconstr option) * rawconstr * rawconstr
@@ -71,7 +73,7 @@ type rawconstr =
   | RCast of loc * rawconstr * rawconstr cast_type
   | RDynamic of loc * Dyn.t
 
-and rawdecl = name * rawconstr option * rawconstr
+and rawdecl = name * binding_kind * rawconstr option * rawconstr
 
 and fix_recursion_order = RStructRec | RWfRec of rawconstr | RMeasureRec of rawconstr
 
@@ -82,10 +84,13 @@ and fix_kind =
 and predicate_pattern =
     name * (loc * inductive * int * name list) option
 
-and tomatch_tuple = (rawconstr * predicate_pattern) list
+and tomatch_tuple = (rawconstr * predicate_pattern)
 
-and cases_clauses =
-    (loc * identifier list * cases_pattern list * rawconstr) list
+and tomatch_tuples = tomatch_tuple list
+
+and cases_clause = (loc * identifier list * cases_pattern list * rawconstr)
+
+and cases_clauses = cases_clause list
 
 let cases_predicate_names tml =
   List.flatten (List.map (function
@@ -101,22 +106,22 @@ let cases_predicate_names tml =
 
    - boolean in POldCase means it is recursive
 i*)
-let map_rawdecl f (na,obd,ty) = (na,option_map f obd,f ty)
+let map_rawdecl f (na,k,obd,ty) = (na,k,Option.map f obd,f ty)
 
 let map_rawconstr f = function
   | RVar (loc,id) -> RVar (loc,id)
   | RApp (loc,g,args) -> RApp (loc,f g, List.map f args)
-  | RLambda (loc,na,ty,c) -> RLambda (loc,na,f ty,f c)
-  | RProd (loc,na,ty,c) -> RProd (loc,na,f ty,f c)
+  | RLambda (loc,na,bk,ty,c) -> RLambda (loc,na,bk,f ty,f c)
+  | RProd (loc,na,bk,ty,c) -> RProd (loc,na,bk,f ty,f c)
   | RLetIn (loc,na,b,c) -> RLetIn (loc,na,f b,f c)
-  | RCases (loc,rtntypopt,tml,pl) ->
-      RCases (loc,option_map f rtntypopt,
+  | RCases (loc,sty,rtntypopt,tml,pl) ->
+      RCases (loc,sty,Option.map f rtntypopt,
         List.map (fun (tm,x) -> (f tm,x)) tml,
         List.map (fun (loc,idl,p,c) -> (loc,idl,p,f c)) pl)
   | RLetTuple (loc,nal,(na,po),b,c) ->
-      RLetTuple (loc,nal,(na,option_map f po),f b,f c)
+      RLetTuple (loc,nal,(na,Option.map f po),f b,f c)
   | RIf (loc,c,(na,po),b1,b2) ->
-      RIf (loc,f c,(na,option_map f po),f b1,f b2)
+      RIf (loc,f c,(na,Option.map f po),f b1,f b2)
   | RRec (loc,fk,idl,bl,tyl,bv) ->
       RRec (loc,fk,idl,Array.map (List.map (map_rawdecl f)) bl,
             Array.map f tyl,Array.map f bv)
@@ -149,7 +154,7 @@ let map_rawconstr_with_binders_loc loc g f e = function
       let g' id e = snd (g id e) in
       let h (_,idl,p,c) = (loc,idl,p,f (List.fold_right g' idl e) c) in
       RCases
-	(loc,option_map (f e) tyopt,List.map (f e) tml, List.map h pl)
+	(loc,Option.map (f e) tyopt,List.map (f e) tml, List.map h pl)
   | RRec (_,fk,idl,tyl,bv) ->
       let idl',e' = fold_ident g idl e in
       RRec (loc,fk,idl',Array.map (f e) tyl,Array.map (f e') bv)
@@ -166,10 +171,10 @@ let occur_rawconstr id =
   let rec occur = function
     | RVar (loc,id') -> id = id'
     | RApp (loc,f,args) -> (occur f) or (List.exists occur args)
-    | RLambda (loc,na,ty,c) -> (occur ty) or ((na <> Name id) & (occur c))
-    | RProd (loc,na,ty,c) -> (occur ty) or ((na <> Name id) & (occur c))
+    | RLambda (loc,na,bk,ty,c) -> (occur ty) or ((na <> Name id) & (occur c))
+    | RProd (loc,na,bk,ty,c) -> (occur ty) or ((na <> Name id) & (occur c))
     | RLetIn (loc,na,b,c) -> (occur b) or ((na <> Name id) & (occur c))
-    | RCases (loc,rtntypopt,tml,pl) ->
+    | RCases (loc,sty,rtntypopt,tml,pl) ->
 	(occur_option rtntypopt)
         or (List.exists (fun (tm,_) -> occur tm) tml)
 	or (List.exists occur_pattern pl)
@@ -182,7 +187,7 @@ let occur_rawconstr id =
         not (array_for_all4 (fun fid bl ty bd ->
           let rec occur_fix = function
               [] -> not (occur ty) && (fid=id or not(occur bd))
-            | (na,bbd,bty)::bl ->
+            | (na,k,bbd,bty)::bl ->
                 not (occur bty) &&
                 (match bbd with
                     Some bd -> not (occur bd)
@@ -211,11 +216,11 @@ let free_rawvars  =
   let rec vars bounded vs = function
     | RVar (loc,id') -> if Idset.mem id' bounded then vs else Idset.add id' vs
     | RApp (loc,f,args) -> List.fold_left (vars bounded) vs (f::args)
-    | RLambda (loc,na,ty,c) | RProd (loc,na,ty,c) | RLetIn (loc,na,ty,c) -> 
+    | RLambda (loc,na,_,ty,c) | RProd (loc,na,_,ty,c) | RLetIn (loc,na,ty,c) -> 
 	let vs' = vars bounded vs ty in 
 	let bounded' = add_name_to_ids bounded na in 
 	vars bounded' vs' c
-    | RCases (loc,rtntypopt,tml,pl) ->
+    | RCases (loc,sty,rtntypopt,tml,pl) ->
 	let vs1 = vars_option bounded vs rtntypopt in 
 	let vs2 = List.fold_left (fun vs (tm,_) -> vars bounded vs tm) vs1 tml in 
 	List.fold_left (vars_pattern bounded) vs2 pl
@@ -234,7 +239,7 @@ let free_rawvars  =
 	let vars_fix i vs fid = 
 	  let vs1,bounded1 = 
 	    List.fold_left 
-	      (fun (vs,bounded) (na,bbd,bty) -> 
+	      (fun (vs,bounded) (na,k,bbd,bty) -> 
 		 let vs' = vars_option bounded vs bbd in 
 		 let vs'' = vars bounded vs' bty in
 		 let bounded' = add_name_to_ids bounded na in 
@@ -272,10 +277,10 @@ let loc_of_rawconstr = function
   | REvar (loc,_,_) -> loc
   | RPatVar (loc,_) -> loc
   | RApp (loc,_,_) -> loc
-  | RLambda (loc,_,_,_) -> loc
-  | RProd (loc,_,_,_) -> loc
+  | RLambda (loc,_,_,_,_) -> loc
+  | RProd (loc,_,_,_,_) -> loc
   | RLetIn (loc,_,_,_) -> loc
-  | RCases (loc,_,_,_) -> loc
+  | RCases (loc,_,_,_,_) -> loc
   | RLetTuple (loc,_,_,_,_) -> loc
   | RIf (loc,_,_,_,_) -> loc
   | RRec (loc,_,_,_,_,_) -> loc
@@ -330,7 +335,14 @@ let all_flags =
 
 type 'a or_var = ArgArg of 'a | ArgVar of identifier located
 
-type 'a with_occurrences = int or_var list * 'a
+type occurrences_expr = bool * int or_var list
+
+let all_occurrences_expr_but l = (false,l)
+let no_occurrences_expr_but l = (true,l)
+let all_occurrences_expr = (false,[])
+let no_occurrences_expr = (true,[])
+
+type 'a with_occurrences = occurrences_expr * 'a
 
 type ('a,'b) red_expr_gen =
   | Red of bool

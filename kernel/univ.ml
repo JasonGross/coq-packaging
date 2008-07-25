@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: univ.ml 9507 2007-01-20 08:09:54Z herbelin $ *)
+(* $Id: univ.ml 11063 2008-06-06 16:03:45Z soubiran $ *)
 
 (* Initial Caml version originates from CoC 4.8 [Dec 1988] *)
 (* Extension with algebraic universes by HH [Sep 2001] *)
@@ -40,7 +40,7 @@ open Util
  *)
 
 type universe_level =
-  | Base
+  | Set
   | Level of Names.dir_path * int
 
 type universe =
@@ -53,7 +53,7 @@ module UniverseOrdered = struct
 end
 
 let string_of_univ_level = function
-  | Base -> "0"
+  | Set -> "0"
   | Level (d,n) -> Names.string_of_dirpath d^"."^string_of_int n
 
 let make_univ (m,n) = Atom (Level (m,n))
@@ -79,7 +79,7 @@ let super = function
   | Atom u -> 
       Max ([],[u])
   | Max _ ->
-      anomaly ("Cannot take the successor of a non variable universes:\n"^
+      anomaly ("Cannot take the successor of a non variable universe:\n"^
                "(maybe a bugged tactic)")
 
 (* Returns the formal universe that is greater than the universes u and v.
@@ -95,8 +95,6 @@ let sup u v =
 	let gel'' = list_union gel gel' in
 	let gtl'' = list_union gtl gtl' in
 	Max (list_subtract gel'' gtl'',gtl'')
-
-let neutral_univ = Max ([],[])
 
 (* Comparison on this type is pointer equality *)
 type canonical_arc =
@@ -126,23 +124,32 @@ let declare_univ u g =
   else
     g
 
-(* The level of Set *)
-let base_univ = Atom Base
+(* The lower predicative level of the hierarchy that contains (impredicative)
+   Prop and singleton inductive types *)
+let type0m_univ = Max ([],[])
 
-let is_base_univ = function
-  | Atom Base -> true
-  | Max ([Base],[]) -> warning "Non canonical Set"; true
+let is_type0m_univ = function
+  | Max ([],[]) -> true
+  | _ -> false
+
+(* The level of predicative Set *)
+let type0_univ = Atom Set
+
+let is_type0_univ = function
+  | Atom Set -> true
+  | Max ([Set],[]) -> warning "Non canonical Set"; true
   | u -> false
 
 let is_univ_variable = function
-  | Atom a when a<>Base -> true
+  | Atom a when a<>Set -> true
   | _ -> false
 
 (* When typing [Prop] and [Set], there is no constraint on the level,
-   hence the definition of [prop_univ], the type of [Prop] *)
+   hence the definition of [type1_univ], the type of [Prop] *)
+
+let type1_univ = Max ([],[Set])
 
 let initial_universes = UniverseMap.empty
-let prop_univ = Max ([],[Base])
 
 (* Every universe_level has a unique canonical arc representative *)
 
@@ -259,6 +266,55 @@ let compare g u v =
    Adding u>v is consistent iff compare(v,u) = NLE 
     and then it is redundant iff compare(u,v) = LT *)
 
+let compare_eq g u v =
+  let g = declare_univ u g in
+  let g = declare_univ v g in
+  repr g u == repr g v
+
+
+type check_function = universes -> universe -> universe -> bool
+
+let incl_list cmp l1 l2 =
+  List.for_all (fun x1 -> List.exists (fun x2 -> cmp x1 x2) l2) l1 
+
+let compare_list cmp l1 l2 =
+  incl_list cmp l1 l2 && incl_list cmp l2 l1
+
+let rec check_eq g u v =
+  match (u,v) with
+    | Atom ul, Atom vl -> compare_eq g ul vl
+    | Max(ule,ult), Max(vle,vlt) ->
+        (* TODO: remove elements of lt in le! *)
+        compare_list (compare_eq g) ule vle &&
+        compare_list (compare_eq g) ult vlt
+    | _ -> anomaly "check_eq" (* not complete! (Atom(u) = Max([u],[]) *)
+
+let check_eq g u v =
+  check_eq g u v
+
+let compare_greater g strict u v =
+  let g = declare_univ u g in
+  let g = declare_univ v g in
+  if not strict && compare_eq g v Set then true else
+  match compare g v u with
+    | (EQ|LE) -> not strict
+    | LT -> true
+    | NLE -> false
+(*
+let compare_greater g strict u v =
+  let b = compare_greater g strict u v in
+  ppnl(str (if b then if strict then ">" else ">=" else "NOT >="));
+  b
+*)
+let rec check_greater g strict u v =
+  match u, v with
+    | Atom ul, Atom vl -> compare_greater g strict ul vl
+    | Atom ul, Max(le,lt) ->
+        List.for_all (fun vl -> compare_greater g strict ul vl) le &&
+        List.for_all (fun vl -> compare_greater g true ul vl) lt
+    | _ -> anomaly "check_greater"
+
+let check_geq g = check_greater g false
 
 (* setlt : universe_level -> universe_level -> unit *)
 (* forces u > v *)
@@ -314,9 +370,11 @@ let merge_disc g u v =
 (* Universe inconsistency: error raised when trying to enforce a relation
    that would create a cycle in the graph of universes. *)
 
-exception UniverseInconsistency
+type order_request = Lt | Le | Eq
 
-let error_inconsistency () = raise UniverseInconsistency
+exception UniverseInconsistency of order_request * universe * universe
+
+let error_inconsistency o u v = raise (UniverseInconsistency (o,Atom u,Atom v))
 
 (* enforce_univ_leq : universe_level -> universe_level -> unit *)
 (* enforce_univ_leq u v will force u<=v if possible, will fail otherwise *)
@@ -326,7 +384,7 @@ let enforce_univ_leq u v g =
   match compare g u v with
     | NLE -> 
 	(match compare g v u with
-           | LT -> error_inconsistency()
+           | LT -> error_inconsistency Le u v
            | LE -> merge g v u
            | NLE -> setleq g u v
            | EQ -> anomaly "Univ.compare")
@@ -339,11 +397,11 @@ let enforce_univ_eq u v g =
   let g = declare_univ v g in
   match compare g u v with
     | EQ -> g
-    | LT -> error_inconsistency()
+    | LT -> error_inconsistency Eq u v
     | LE -> merge g u v
     | NLE -> 
 	(match compare g v u with
-           | LT -> error_inconsistency()
+           | LT -> error_inconsistency Eq u v
            | LE -> merge g v u
            | NLE -> merge_disc g u v
            | EQ -> anomaly "Univ.compare")
@@ -355,11 +413,11 @@ let enforce_univ_lt u v g =
   match compare g u v with
     | LT -> g
     | LE -> setlt g u v
-    | EQ -> error_inconsistency()
+    | EQ -> error_inconsistency Lt u v
     | NLE -> 
 	(match compare g v u with
            | NLE -> setlt g u v
-           | _ -> error_inconsistency())
+           | _ -> error_inconsistency Lt u v)
 
 (*
 let enforce_univ_relation g = function 
@@ -401,7 +459,7 @@ type constraint_function =
     universe -> universe -> constraints -> constraints
 
 let constraint_add_leq v u c =
-  if v = Base then c else Constraint.add (v,Leq,u) c
+  if v = Set then c else Constraint.add (v,Leq,u) c
 
 let enforce_geq u v c =
   match u, v with
@@ -440,10 +498,6 @@ let remove_large_constraint u = function
   | Atom u' as x -> if u = u' then Max ([],[]) else x
   | Max (le,lt) -> make_max (list_remove u le,lt)
 
-let is_empty_univ = function
-  | Max ([],[]) -> true
-  | _ -> false
-
 let is_direct_constraint u = function
   | Atom u' -> u = u'
   | Max (le,lt) -> List.mem u le
@@ -468,7 +522,7 @@ let is_direct_sort_constraint s v = match s with
 
 let solve_constraints_system levels level_bounds =
   let levels = 
-    Array.map (option_map (function Atom u -> u | _ -> anomaly "expects Atom"))
+    Array.map (Option.map (function Atom u -> u | _ -> anomaly "expects Atom"))
       levels in
   let v = Array.copy level_bounds in
   let nind = Array.length v in
@@ -525,7 +579,15 @@ let pr_universes g =
   let graph = UniverseMap.fold (fun k a l -> (k,a)::l) g [] in
   prlist (function (_,a) -> pr_arc a) graph
     
-
+let pr_constraints c =
+  Constraint.fold (fun (u1,op,u2) pp_std -> 
+		     let op_str = match op with 
+		       | Lt -> " < "
+		       | Leq -> " <= "
+		       | Eq -> " = "
+		     in pp_std ++  pr_uni_level u1 ++ str op_str ++
+			  pr_uni_level u2 ++ fnl () )  c (str "")
+    
 (* Dumping constrains to a file *)
 
 let dump_universes output g = 
@@ -556,7 +618,7 @@ module Huniv =
       type t = universe
       type u = Names.dir_path -> Names.dir_path
       let hash_aux hdir = function
-	| Base -> Base
+	| Set -> Set
 	| Level (d,n) -> Level (hdir d,n)
       let hash_sub hdir = function
 	| Atom u -> Atom (hash_aux hdir u)
@@ -575,3 +637,4 @@ module Huniv =
 let hcons1_univ u =
   let _,_,hdir,_,_,_ = Names.hcons_names() in
   Hashcons.simple_hcons Huniv.f hdir u
+

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modutil.mli 8724 2006-04-20 09:57:01Z letouzey $ i*)
+(*i $Id: modutil.mli 10620 2008-03-05 10:54:41Z letouzey $ i*)
 
 open Names
 open Declarations
@@ -17,29 +17,9 @@ open Mod_subst
 
 (*s Functions upon modules missing in [Modops]. *) 
 
-(* Add _all_ direct subobjects of a module, not only those exported. 
-   Build on the [Modops.add_signature] model. *)
-
-val add_structure : module_path -> module_structure_body -> env -> env 
-
-(* Apply a module path substitution on a module.
-   Build on the [Modops.subst_modtype] model. *)
-
-val subst_module : substitution -> module_body -> module_body 
-val subst_meb : substitution -> module_expr_body -> module_expr_body
-val subst_msb : substitution -> module_structure_body -> module_structure_body
-
 (* Change a msid in a module type, to follow a module expr. *)
 
-val replicate_msid : module_expr_body -> module_type_body -> module_type_body
-
-(*s More utilities concerning [module_path]. *)
-
-val mp_length : module_path -> int
-val prefixes_mp : module_path -> MPset.t
-val modfile_of_mp : module_path -> module_path
-val common_prefix_from_list : module_path -> module_path list -> module_path
-val add_labels_mp : module_path -> label list -> module_path
+val replicate_msid : struct_expr_body -> struct_expr_body -> struct_expr_body
 
 (*s Functions upon ML modules. *)
 
@@ -52,10 +32,10 @@ val decl_iter_references : do_ref -> do_ref -> do_ref -> ml_decl -> unit
 val spec_iter_references : do_ref -> do_ref -> do_ref -> ml_spec -> unit
 val struct_iter_references : do_ref -> do_ref -> do_ref -> ml_structure -> unit
 
-type 'a updown = { mutable up : 'a ; mutable down : 'a }
+type 'a kinds = { mutable typ : 'a ; mutable trm : 'a; mutable cons : 'a }
 
-val struct_get_references_set : ml_structure -> Refset.t updown
-val struct_get_references_list : ml_structure -> global_reference list updown
+val struct_get_references_set : ml_structure -> Refset.t kinds
+val struct_get_references_list : ml_structure -> global_reference list kinds
 
 val signature_of_structure : ml_structure -> ml_signature
 
@@ -65,7 +45,7 @@ val get_decl_in_structure : global_reference -> ml_structure -> ml_decl
    all beta redexes (when the argument does not occur, it is just
    thrown away; when it occurs exactly once it is substituted; otherwise
    a let-in redex is created for clarity) and iota redexes, plus some other
-   optimizations. *)
+   optimizations. The first argument is the list of objects we want to appear.
+*)
 
-val optimize_struct : 
-  extraction_params -> ml_decl list option -> ml_structure -> ml_structure
+val optimize_struct : global_reference list -> ml_structure -> ml_structure

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: system.mli 9397 2006-11-21 21:50:54Z herbelin $ i*)
+(*i $Id: system.mli 9398 2006-11-21 21:51:18Z herbelin $ i*)
 
 (*s Files and load paths. Load path entries remember the original root
     given by the user. For efficiency, we keep the full path (field

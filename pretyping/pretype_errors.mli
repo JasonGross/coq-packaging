@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pretype_errors.mli 9217 2006-10-05 17:31:23Z notin $ i*)
+(*i $Id: pretype_errors.mli 10860 2008-04-27 21:39:08Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -27,12 +27,14 @@ type pretype_error =
   (* Unification *)
   | OccurCheck of existential_key * constr
   | NotClean of existential_key * constr * Evd.hole_kind
-  | UnsolvableImplicit of Evd.hole_kind
+  | UnsolvableImplicit of Evd.evar_info * Evd.hole_kind * 
+      Evd.unsolvability_explanation option
   | CannotUnify of constr * constr
-  | CannotUnifyLocal of Environ.env * constr * constr * constr
+  | CannotUnifyLocal of constr * constr * constr
   | CannotUnifyBindingType of constr * constr
   | CannotGeneralize of constr
-  | NoOccurrenceFound of constr
+  | NoOccurrenceFound of constr * identifier option
+  | CannotFindWellTypedAbstraction of constr * constr list
   (* Pretyping *)
   | VarNotFound of identifier
   | UnexpectedType of constr * constr
@@ -93,11 +95,15 @@ val error_not_clean :
   env -> Evd.evar_map -> existential_key -> constr -> loc * Evd.hole_kind -> 'b
 
 val error_unsolvable_implicit :
-  loc -> env -> Evd.evar_map -> Evd.hole_kind -> 'b
+  loc -> env -> Evd.evar_map -> Evd.evar_info -> Evd.hole_kind -> 
+      Evd.unsolvability_explanation option -> 'b
 
 val error_cannot_unify : env -> Evd.evar_map -> constr * constr -> 'b
 
-val error_cannot_unify_local : env -> Evd.evar_map -> Environ.env * constr * constr * constr -> 'b
+val error_cannot_unify_local : env -> Evd.evar_map -> constr * constr * constr -> 'b
+
+val error_cannot_find_well_typed_abstraction : env -> Evd.evar_map ->
+      constr -> constr list -> 'b
 
 (*s Ml Case errors *)
 

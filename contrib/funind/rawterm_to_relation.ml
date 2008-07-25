@@ -368,7 +368,7 @@ let raw_push_named (na,raw_value,raw_typ) env =
   match na with 
     | Anonymous -> env 
     | Name id -> 
-	let value = Util.option_map (Pretyping.Default.understand Evd.empty env) raw_value in 
+	let value = Option.map (Pretyping.Default.understand Evd.empty env) raw_value in 
 	let typ = Pretyping.Default.understand_type Evd.empty env raw_typ in 
 	Environ.push_named (id,value,typ) env
 
@@ -398,12 +398,12 @@ let add_pat_variables pat typ env : Environ.env =
 	   | Anonymous -> assert false
 	   | Name id ->
 	       let new_t =  substl ctxt t in
-	       let new_v = option_map (substl ctxt) v in
+	       let new_v = Option.map (substl ctxt) v in
 	       observe (str "for variable " ++ Ppconstr.pr_id id ++  fnl () ++
 			  str "old type := " ++ Printer.pr_lconstr t ++ fnl () ++
 			  str "new type := " ++ Printer.pr_lconstr new_t ++ fnl () ++
-			  option_fold_right (fun v _ -> str "old value := " ++ Printer.pr_lconstr v ++ fnl ()) v (mt ()) ++
-			  option_fold_right (fun v _ -> str "new value := " ++ Printer.pr_lconstr v ++ fnl ()) new_v (mt ())
+			  Option.fold_right (fun v _ -> str "old value := " ++ Printer.pr_lconstr v ++ fnl ()) v (mt ()) ++
+			  Option.fold_right (fun v _ -> str "new value := " ++ Printer.pr_lconstr v ++ fnl ()) new_v (mt ())
 		       );
 	       (Environ.push_named (id,new_v,new_t) env,mkVar id::ctxt)
       )
@@ -446,7 +446,7 @@ let rec pattern_to_term_and_type env typ  = function
       let patl_as_term =
 	List.map2 (pattern_to_term_and_type env)  (List.rev cs_args_types)  patternl
       in
-      mkRApp(mkRRef(Libnames.ConstructRef constr),
+      mkRApp(mkRRef(ConstructRef constr),
 	     implicit_args@patl_as_term
 	    )
 
@@ -586,7 +586,7 @@ let rec build_entry_lc env funnames avoid rt  : rawconstr build_entry_return =
 	    | RProd _ -> error "Cannot apply a type"
 	end (* end of the application treatement *) 
 
-    | RLambda(_,n,t,b) ->
+    | RLambda(_,n,_,t,b) ->
 	(* we first compute the list of constructor 
 	   corresponding to the body of the function, 
 	   then the one corresponding to the type 
@@ -601,7 +601,7 @@ let rec build_entry_lc env funnames avoid rt  : rawconstr build_entry_return =
 	let new_env = raw_push_named (new_n,None,t) env in
 	let b_res = build_entry_lc new_env funnames avoid b in
 	combine_results (combine_lam new_n) t_res b_res
-    | RProd(_,n,t,b) ->
+    | RProd(_,n,_,t,b) ->
 	(* we first compute the list of constructor 
 	   corresponding to the body of the function, 
 	   then the one corresponding to the type 
@@ -627,7 +627,7 @@ let rec build_entry_lc env funnames avoid rt  : rawconstr build_entry_return =
 	in
 	let b_res = build_entry_lc new_env funnames avoid b in
 	combine_results (combine_letin n) v_res b_res
-    | RCases(_,_,el,brl) -> 
+    | RCases(_,_,_,el,brl) -> 
 	(* we create the discrimination function 
 	   and treat the case itself 
 	*)
@@ -689,7 +689,7 @@ let rec build_entry_lc env funnames avoid rt  : rawconstr build_entry_return =
 	build_entry_lc env funnames  avoid b
     | RDynamic _ -> error "Not handled RDynamic"
 and build_entry_lc_from_case env funname make_discr
-    (el:tomatch_tuple)
+    (el:tomatch_tuples)
     (brl:Rawterm.cases_clauses) avoid : 
     rawconstr build_entry_return = 
   match el with 
@@ -865,7 +865,7 @@ let is_res id =
 *)
 let rec rebuild_cons nb_args relname args crossed_types depth rt = 
   match rt with 
-    | RProd(_,n,t,b) -> 
+    | RProd(_,n,k,t,b) -> 
 	let not_free_in_t id = not (is_free_in id t) in 
 	let new_crossed_types = t::crossed_types in 
 	begin
@@ -928,7 +928,7 @@ let rec rebuild_cons nb_args relname args crossed_types depth rt =
 			(Idset.filter not_free_in_t id_to_exclude)
 		  | _ -> mkRProd(n,t,new_b),Idset.filter not_free_in_t id_to_exclude
 	end
-    | RLambda(_,n,t,b) ->
+    | RLambda(_,n,k,t,b) ->
 	begin
 	  let not_free_in_t id = not (is_free_in id t) in
 	  let new_crossed_types = t :: crossed_types in
@@ -944,7 +944,7 @@ let rec rebuild_cons nb_args relname args crossed_types depth rt =
 		then 
 		  new_b, Idset.remove id (Idset.filter not_free_in_t id_to_exclude)
 		else
-		  RProd(dummy_loc,n,t,new_b),Idset.filter not_free_in_t id_to_exclude
+		  RProd(dummy_loc,n,k,t,new_b),Idset.filter not_free_in_t id_to_exclude
 	    | _ -> anomaly "Should not have an anonymous function here" 
 		(* We have renamed all the anonymous functions during alpha_renaming phase *)
 	  
@@ -1016,11 +1016,12 @@ let rec compute_cst_params relnames params = function
       compute_cst_params_from_app [] (params,rtl)
   | RApp(_,f,args) -> 
       List.fold_left (compute_cst_params relnames) params (f::args)
-  | RLambda(_,_,t,b) | RProd(_,_,t,b) | RLetIn(_,_,t,b) | RLetTuple(_,_,_,t,b) -> 
+  | RLambda(_,_,_,t,b) | RProd(_,_,_,t,b) | RLetIn(_,_,t,b) | RLetTuple(_,_,_,t,b) -> 
       let t_params = compute_cst_params relnames params t in 
       compute_cst_params relnames t_params b
-  | RCases _ -> params  (* If there is still cases at this point they can only be 
-			discriminitation ones *)
+  | RCases _ ->
+      params  (* If there is still cases at this point they can only be 
+		 discriminitation ones *)
   | RSort _ -> params
   | RHole _ -> params
   | RIf _ | RRec _ | RCast _ | RDynamic _  ->
@@ -1153,7 +1154,7 @@ let do_build_inductive
 	 else
 	   Topconstr.CProdN
 	   (dummy_loc,
-	    [[(dummy_loc,n)],Constrextern.extern_rawconstr Idset.empty t],
+	   [[(dummy_loc,n)],Topconstr.default_binder_kind,Constrextern.extern_rawconstr Idset.empty t],
 	    acc
 	   )
       )
@@ -1173,7 +1174,7 @@ let do_build_inductive
 	   Topconstr.LocalRawDef((dummy_loc,n), Constrextern.extern_rawconstr Idset.empty t)
 	 else
 	 Topconstr.LocalRawAssum 
-	   ([(dummy_loc,n)], Constrextern.extern_rawconstr Idset.empty t)
+	   ([(dummy_loc,n)], Topconstr.default_binder_kind, Constrextern.extern_rawconstr Idset.empty t)
       )
       rels_params
   in 
@@ -1181,8 +1182,8 @@ let do_build_inductive
     Array.map (List.map 
       (fun (id,t) -> 
 	 false,((dummy_loc,id),
-		Options.with_option
-		  Options.raw_print
+		Flags.with_option
+		  Flags.raw_print
 		  (Constrextern.extern_rawtype Idset.empty) ((* zeta_normalize *) t)
 	       )
       ))
@@ -1218,7 +1219,7 @@ let do_build_inductive
 (*   in *)
   let _time2 = System.get_time () in 
   try 
-    with_full_print (Options.silently (Command.build_mutual rel_inds)) true
+    with_full_print (Flags.silently (Command.build_mutual rel_inds)) true
   with 
     | UserError(s,msg) as e ->
 	let _time3 = System.get_time () in

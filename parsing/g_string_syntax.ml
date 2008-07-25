@@ -6,6 +6,8 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
+(*i $Id: g_string_syntax.ml 10739 2008-04-01 14:45:20Z herbelin $ i*)
+
 open Pp
 open Util
 open Names

@@ -1,3 +1,4 @@
+(* -*- compile-command: "make -C ../.. bin/coqdoc" -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -6,28 +7,24 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pretty.mll 10248 2007-10-23 13:02:56Z notin $ i*)
+(*i $Id: pretty.mll 11154 2008-06-19 18:42:19Z msozeau $ i*)
 
 (*s Utility functions for the scanners *)
 
 {
-
-  open Cdglobals
   open Printf
-  open Index
   open Lexing 
-  open Output
 
   (* count the number of spaces at the beginning of a string *)
   let count_spaces s =
     let n = String.length s in
     let rec count c i = 
-      if i == n then c else match s.[i] with
+      if i == n then c,i else match s.[i] with
 	| '\t' -> count (c + (8 - (c mod 8))) (i + 1)
 	| ' ' -> count (c + 1) (i + 1)
-	| _ -> c
+	| _ -> c,i
     in
-    count 0 0
+      count 0 0
 
   let count_dashes s =
     let c = ref 0 in
@@ -52,6 +49,11 @@
     in
     count 0 (String.index s '*')
 
+  let strip_eol s =
+    let eol = s.[String.length s - 1] = '\n' in
+    (eol, if eol then String.sub s 1 (String.length s - 1) else s)
+
+
   let formatted = ref false
   let brackets = ref 0
 
@@ -69,22 +71,22 @@
   let state_stack = Stack.create ()
 
   let save_state () = 
-    Stack.push { st_gallina = !gallina; st_light = !light } state_stack
+    Stack.push { st_gallina = !Cdglobals.gallina; st_light = !Cdglobals.light } state_stack
 
   let restore_state () =
     let s = Stack.pop state_stack in
-    gallina := s.st_gallina;
-    light := s.st_light
+    Cdglobals.gallina := s.st_gallina;
+    Cdglobals.light := s.st_light
       
   let without_ref r f x = save_state (); r := false; f x; restore_state ()
 
-  let without_gallina = without_ref gallina
+  let without_gallina = without_ref Cdglobals.gallina
 
-  let without_light = without_ref light
+  let without_light = without_ref Cdglobals.light
 
   let show_all f = without_gallina (without_light f)
 
-  let begin_show () = save_state (); gallina := false; light := false
+  let begin_show () = save_state (); Cdglobals.gallina := false; Cdglobals.light := false
   let end_show () = restore_state ()
 
   (* Reset the globals *)
@@ -163,15 +165,20 @@
 
 let space = [' ' '\t']
 let space_nl = [' ' '\t' '\n' '\r']
+let nl = "\r\n" | '\n'
 
 let firstchar = 
   ['A'-'Z' 'a'-'z' '_' 
   (* iso 8859-1 accents *) 
   '\192'-'\214' '\216'-'\246' '\248'-'\255' ] |
+  '\194' '\185' |
   (* utf-8 latin 1 supplement *) 
   '\195' ['\128'-'\191'] |
   (* utf-8 letterlike symbols *) 
-  '\226' ('\132' ['\128'-'\191'] | '\133' ['\128'-'\143'])
+  '\206' ['\177'-'\183'] |
+  '\226' ('\130' [ '\128'-'\137' ] (* subscripts *)
+    | '\129' [ '\176'-'\187' ] (* superscripts *)
+    | '\132' ['\128'-'\191'] | '\133' ['\128'-'\143'])
 let identchar = 
   firstchar | ['\'' '0'-'9' '@' ]
 let id = firstchar identchar*
@@ -186,8 +193,9 @@ let symbolchar_no_brackets =
   (* utf-8 symbols *) 
   '\226' ['\134'-'\143' '\152'-'\155' '\164'-'\165' '\168'-'\171'] _
 let symbolchar = symbolchar_no_brackets | '[' | ']'
+let token_no_brackets = symbolchar_no_brackets+
 let token = symbolchar+ | '[' [^ '[' ']' ':']* ']'
-
+let printing_token = (token | id)+
 
 let thm_token = 
   "Theorem" 
@@ -202,6 +210,7 @@ let thm_token =
 let def_token = 
   "Definition" 
   | "Let" 
+  | "Class"
   | "SubClass" 
   | "Example"
   | "Local" 
@@ -209,11 +218,10 @@ let def_token =
   | "CoFixpoint" 
   | "Record" 
   | "Structure" 
+  | "Instance"
   | "Scheme"
   | "Inductive"
   | "CoInductive"
-  | "Program" space+ "Definition"
-  | "Program" space+ "Fixpoint"
 
 let decl_token = 
   "Hypothesis" 
@@ -224,6 +232,8 @@ let decl_token =
 
 let gallina_ext =
   "Module" 
+  | "Include" space+ "Type"
+  | "Include"
   | "Declare" space+ "Module"
   | "Transparent"
   | "Opaque"
@@ -235,6 +245,11 @@ let gallina_ext =
   | "Infix"
   | "Tactic" space+ "Notation"
   | "Reserved" space+ "Notation"
+  | "Section"
+  | "Context"
+  | "Variable" 's'?
+  | ("Hypothesis" | "Hypotheses")
+  | "End"
 
 let commands = 
   "Pwd"
@@ -254,12 +269,24 @@ let commands =
   | "Check"
   | "Type"
 
+  | "Section"
+  | "Chapter"
+  | "Variable" 's'?
+  | ("Hypothesis" | "Hypotheses")
+  | "End"
+
 let extraction = 
   "Extraction"
   | "Recursive" space+ "Extraction" 
   | "Extract"
 
 let gallina_kw = thm_token | def_token | decl_token | gallina_ext | commands | extraction
+
+let prog_kw =
+  "Program" space+ gallina_kw
+  | "Obligation"
+  | "Obligations"
+  | "Solve"
 
 let gallina_kw_to_hide =
   "Implicit"
@@ -275,11 +302,6 @@ let gallina_kw_to_hide =
   | "Transparent"
   | "Opaque"
   | ("Declare" space+ ("Morphism" | "Step") )
-  | "Section"
-  | "Chapter"
-  | "Variable" 's'?
-  | ("Hypothesis" | "Hypotheses")
-  | "End"
   | ("Set" | "Unset") space+ "Printing" space+ "Coercions"
   | "Declare" space+ ("Left" | "Right") space+ "Step" 
 
@@ -294,10 +316,10 @@ let section = "*" | "**" | "***" | "****"
 
 let item_space = "    "
 
-let begin_hide = "(*" space* "begin" space+ "hide" space* "*)" space* '\n'
-let end_hide = "(*" space* "end" space+ "hide" space* "*)" space* '\n'
-let begin_show = "(*" space* "begin" space+ "show" space* "*)" space* '\n'
-let end_show = "(*" space* "end" space+ "show" space* "*)" space* '\n'
+let begin_hide = "(*" space* "begin" space+ "hide" space* "*)" space* nl
+let end_hide = "(*" space* "end" space+ "hide" space* "*)" space* nl
+let begin_show = "(*" space* "begin" space+ "show" space* "*)" space* nl
+let end_show = "(*" space* "end" space+ "show" space* "*)" space* nl
 (*
 let begin_verb = "(*" space* "begin" space+ "verb" space* "*)"
 let end_verb = "(*" space* "end" space+ "verb" space* "*)"
@@ -308,16 +330,16 @@ let end_verb = "(*" space* "end" space+ "verb" space* "*)"
 (*s Scanning Coq, at beginning of line *)
 
 rule coq_bol = parse
-  | space* '\n'+
-      { empty_line_of_code (); coq_bol lexbuf }
+  | space* nl+
+      { Output.empty_line_of_code (); coq_bol lexbuf }
   | space* "(**" space_nl
-      { end_coq (); start_doc (); 
+      { Output.end_coq (); Output.start_doc (); 
 	let eol = doc_bol lexbuf in
-	  end_doc (); start_coq (); 
+	  Output.end_doc (); Output.start_coq (); 
 	  if eol then coq_bol lexbuf else coq lexbuf }
   | space* "Comments" space_nl
-      { end_coq (); start_doc (); comments lexbuf; end_doc (); 
-	start_coq (); coq lexbuf }
+      { Output.end_coq (); Output.start_doc (); comments lexbuf; Output.end_doc (); 
+	Output.start_coq (); coq lexbuf }
   | space* begin_hide
       { skip_hide lexbuf; coq_bol lexbuf }
   | space* begin_show
@@ -326,28 +348,38 @@ rule coq_bol = parse
       { end_show (); coq_bol lexbuf }
   | space* gallina_kw_to_hide
       { let s = lexeme lexbuf in
-	  if !light && section_or_end s then begin 
-	      skip_to_dot lexbuf; 
-	      coq_bol lexbuf 
-	    end else begin
-		let nbsp = count_spaces s in
-		  indentation nbsp; 
-		  let s = String.sub s nbsp (String.length s - nbsp) in
-		    ident s (lexeme_start lexbuf + nbsp); 
-		    let eol= body lexbuf in 
-		      if eol then coq_bol lexbuf else coq lexbuf
-	      end }
+	  if !Cdglobals.light && section_or_end s then 
+	    let eol = skip_to_dot lexbuf in
+	      if eol then (Output.line_break (); coq_bol lexbuf) else coq lexbuf
+	  else 
+	    begin
+	      let nbsp,isp = count_spaces s in
+		Output.indentation nbsp; 
+		let s = String.sub s isp (String.length s - isp) in
+		  Output.ident s (lexeme_start lexbuf + isp); 
+		  let eol = body lexbuf in 
+		    if eol then coq_bol lexbuf else coq lexbuf
+	    end }
   | space* gallina_kw
       { let s = lexeme lexbuf in 
-        let nbsp = count_spaces s in
-	let s = String.sub s nbsp (String.length s - nbsp)  in
-	  indentation nbsp;
-	  ident s (lexeme_start lexbuf + nbsp); 
+	let nbsp,isp = count_spaces s in
+	let s = String.sub s isp (String.length s - isp)  in
+	  Output.indentation nbsp;
+	  Output.ident s (lexeme_start lexbuf + isp); 
 	  let eol= body lexbuf in
 	    if eol then coq_bol lexbuf else coq lexbuf }
-  | space* "(**" space+ "printing" space+ (identifier | token) space+
+  | space* prog_kw
+      { let s = lexeme lexbuf in 
+	let nbsp,isp = count_spaces s in
+	  Output.indentation nbsp;
+	  let s = String.sub s isp (String.length s - isp)  in
+	    Output.ident s (lexeme_start lexbuf + isp); 
+	    let eol= body lexbuf in
+	      if eol then coq_bol lexbuf else coq lexbuf }
+
+  | space* "(**" space+ "printing" space+ printing_token space+
       { let tok = lexeme lexbuf in
-	let s = printing_token lexbuf in
+	let s = printing_token_body lexbuf in
 	  add_printing_token tok s;
 	  coq_bol lexbuf }
   | space* "(**" space+ "printing" space+
@@ -366,13 +398,13 @@ rule coq_bol = parse
 	coq_bol lexbuf }
   | space* "(*"
       { let eol = comment lexbuf in
-	  if eol then begin line_break(); coq_bol lexbuf end else coq lexbuf }
+	  if eol then coq_bol lexbuf else coq lexbuf }
   | eof 
       { () }
   | _
       { let eol = 
-	  if not !gallina then 
-	    begin backtrack lexbuf; indentation 0; body_bol lexbuf end 
+	  if not !Cdglobals.gallina then 
+	    begin backtrack lexbuf; Output.indentation 0; body_bol lexbuf end 
 	  else 
 	    skip_to_dot lexbuf 
 	in
@@ -381,141 +413,148 @@ rule coq_bol = parse
 (*s Scanning Coq elsewhere *)
 
 and coq = parse
-  | "\n" 
-      { line_break(); coq_bol lexbuf }
+  | nl 
+      { Output.line_break(); coq_bol lexbuf }
   | "(**" space_nl
-      { end_coq (); start_doc (); 
+      { Output.end_coq (); Output.start_doc (); 
 	let eol = doc_bol lexbuf in
-	  end_doc (); start_coq (); 
+	  Output.end_doc (); Output.start_coq (); 
 	  if eol then coq_bol lexbuf else coq lexbuf }
   | "(*"
       { let eol = comment lexbuf in
-	  if eol then begin line_break(); coq_bol lexbuf end 
+	  if eol then begin Output.line_break(); coq_bol lexbuf end 
           else coq lexbuf
       }
-  | '\n'+ space* "]]"
-      { if not !formatted then begin symbol (lexeme lexbuf); coq lexbuf end }
+  | nl+ space* "]]"
+      { if not !formatted then begin Output.symbol (lexeme lexbuf); coq lexbuf end }
   | eof 
       { () }
   | gallina_kw_to_hide
       { let s = lexeme lexbuf in
-	  if !light && section_or_end s then 
+	  if !Cdglobals.light && section_or_end s then 
 	    begin 
 	      let eol = skip_to_dot lexbuf in
 		if eol then coq_bol lexbuf else coq lexbuf 
 	    end 
 	  else 
 	    begin
-	      ident s (lexeme_start lexbuf); 
+	      Output.ident s (lexeme_start lexbuf); 
 	      let eol=body lexbuf in 
 		if eol then coq_bol lexbuf else coq lexbuf
 	    end }
   | gallina_kw
       { let s = lexeme lexbuf in 
-	  ident s (lexeme_start lexbuf); 
+	  Output.ident s (lexeme_start lexbuf); 
 	let eol = body lexbuf in
 	  if eol then coq_bol lexbuf else coq lexbuf }
-  | space+ { char ' '; coq lexbuf }
+  | prog_kw
+      { let s = lexeme lexbuf in 
+	  Output.ident s (lexeme_start lexbuf); 
+	let eol = body lexbuf in
+	  if eol then coq_bol lexbuf else coq lexbuf }
+  | space+ { Output.char ' '; coq lexbuf }
   | eof 
       { () }
-  | _ { let eol = 
-	  if not !gallina then 
-	    begin backtrack lexbuf; indentation 0; body lexbuf end 
+  | _ {	let eol = 
+	  if not !Cdglobals.gallina then 
+	    begin backtrack lexbuf; Output.indentation 0; body lexbuf end 
 	  else 
-	    skip_to_dot lexbuf 
+	    let eol = skip_to_dot lexbuf in
+	      if eol then Output.line_break (); eol
 	in 
 	  if eol then coq_bol lexbuf else coq lexbuf}
       
 (*s Scanning documentation, at beginning of line *)
-      
+
 and doc_bol = parse
-  | space* "\n" '\n'*
-      { paragraph (); doc_bol lexbuf }
-  | space* section [^')'] ([^'\n' '*'] | '*' [^'\n'')'])*
-{ let lev, s = sec_title (lexeme lexbuf) in 
-    section lev (fun () -> ignore (doc (from_string s))); 
-    doc lexbuf }
-| space* '-'+
-     { let n = count_dashes (lexeme lexbuf) in
-	 if n >= 4 then rule () else item n;
-	 doc lexbuf }
-| "<<" space*
-      { start_verbatim (); verbatim lexbuf; doc_bol lexbuf }
+  | space* nl+
+      { Output.paragraph (); doc_bol lexbuf }
+  | space* section space+ ([^'\n' '*'] | '*'+ [^'\n' ')' '*'])* ('*'+ '\n')?
+      { let eol, lex = strip_eol (lexeme lexbuf) in
+        let lev, s = sec_title lex in
+          Output.section lev (fun () -> ignore (doc (from_string s)));
+	  if eol then doc_bol lexbuf else doc lexbuf }
+  | space* '-'+
+      { let n = count_dashes (lexeme lexbuf) in
+	if n >= 4 then Output.rule () else Output.item n;
+        doc lexbuf }
+  | "<<" space*
+      { Output.start_verbatim (); verbatim lexbuf; doc_bol lexbuf }
   | eof 
-      { false }
+      { true }
   | _ 
       { backtrack lexbuf; doc lexbuf }
 
 (*s Scanning documentation elsewhere *)
 
 and doc = parse
-  | "\n"
-      { char '\n'; doc_bol lexbuf }
+  | nl
+      { Output.char '\n'; doc_bol lexbuf }
   | "["
       { brackets := 1; 
-	start_inline_coq (); escaped_coq lexbuf; end_inline_coq ();
+	Output.start_inline_coq (); escaped_coq lexbuf; Output.end_inline_coq ();
 	doc lexbuf }
-  | "[[" '\n' space*
-      { formatted := true; line_break (); start_inline_coq ();
-	indentation (count_spaces (lexeme lexbuf)); 
+  | "[[" nl space*
+      { formatted := true; Output.line_break (); Output.start_inline_coq ();
+	Output.indentation (fst (count_spaces (lexeme lexbuf))); 
 	let eol = body_bol lexbuf in 
-	  end_inline_coq (); formatted := false;
+	  Output.end_inline_coq (); formatted := false;
 	  if eol then doc_bol lexbuf else doc lexbuf}
-  | '*'* "*)" space* '\n'
+  | '*'* "*)" space* nl
       { true }
   | '*'* "*)"
       { false }
   | "$"
-      { start_latex_math (); escaped_math_latex lexbuf; doc lexbuf }
+      { Output.start_latex_math (); escaped_math_latex lexbuf; doc lexbuf }
   | "$$"
-      { char '$'; doc lexbuf }
+      { Output.char '$'; doc lexbuf }
   | "%"
       { escaped_latex lexbuf; doc lexbuf }
   | "%%"
-      { char '%'; doc lexbuf }
+      { Output.char '%'; doc lexbuf }
   | "#"
       { escaped_html lexbuf; doc lexbuf }
   | "##"
-      { char '#'; doc lexbuf }
+      { Output.char '#'; doc lexbuf }
   | eof 
       { false }
   | _ 
-      { char (lexeme_char lexbuf 0); doc lexbuf }
+      { Output.char (lexeme_char lexbuf 0); doc lexbuf }
 
 (*s Various escapings *)
 
 and escaped_math_latex = parse
-  | "$" { stop_latex_math () }
-  | eof { stop_latex_math () }
-  | _   { latex_char (lexeme_char lexbuf 0); escaped_math_latex lexbuf }
+  | "$" { Output.stop_latex_math () }
+  | eof { Output.stop_latex_math () }
+  | _   { Output.latex_char (lexeme_char lexbuf 0); escaped_math_latex lexbuf }
 
 and escaped_latex = parse
   | "%" { () }
   | eof { () }
-  | _   { latex_char (lexeme_char lexbuf 0); escaped_latex lexbuf }
+  | _   { Output.latex_char (lexeme_char lexbuf 0); escaped_latex lexbuf }
 
 and escaped_html = parse
   | "#" { () }
   | "&#"
-        { html_char '&'; html_char '#'; escaped_html lexbuf }
+        { Output.html_char '&'; Output.html_char '#'; escaped_html lexbuf }
   | "##"
-        { html_char '#'; escaped_html lexbuf }
+        { Output.html_char '#'; escaped_html lexbuf }
   | eof { () }
-  | _   { html_char (lexeme_char lexbuf 0); escaped_html lexbuf }
+  | _   { Output.html_char (lexeme_char lexbuf 0); escaped_html lexbuf }
 
 and verbatim = parse
-  | "\n>>" { verbatim_char '\n'; stop_verbatim () }
-  | eof { stop_verbatim () }
-  | _ { verbatim_char (lexeme_char lexbuf 0); verbatim lexbuf }
+  | nl ">>" { Output.verbatim_char '\n'; Output.stop_verbatim () }
+  | eof { Output.stop_verbatim () }
+  | _ { Output.verbatim_char (lexeme_char lexbuf 0); verbatim lexbuf }
 
 (*s Coq, inside quotations *)
 
 and escaped_coq = parse
   | "]"
       { decr brackets; 
-	if !brackets > 0 then begin char ']'; escaped_coq lexbuf end }
+	if !brackets > 0 then begin Output.char ']'; escaped_coq lexbuf end }
   | "["
-      { incr brackets; char '['; escaped_coq lexbuf }
+      { incr brackets; Output.char '['; escaped_coq lexbuf }
   | "(*"
       { ignore (comment lexbuf); escaped_coq lexbuf }
   | "*)"
@@ -524,18 +563,18 @@ and escaped_coq = parse
       { () }
   | token_brackets
       { let s = lexeme lexbuf in
-	symbol s;
+	Output.symbol s;
 	escaped_coq lexbuf }
   | (identifier '.')* identifier
-      { ident (lexeme lexbuf) (lexeme_start lexbuf); escaped_coq lexbuf }
+      { Output.ident (lexeme lexbuf) (lexeme_start lexbuf); escaped_coq lexbuf }
   | _ 
-      { char (lexeme_char lexbuf 0); escaped_coq lexbuf }
+      { Output.char (lexeme_char lexbuf 0); escaped_coq lexbuf }
 
 (*s Coq "Comments" command. *)
 
 and comments = parse
   | space_nl+ 
-      { char ' '; comments lexbuf }
+      { Output.char ' '; comments lexbuf }
   | '"' [^ '"']* '"' 
       { let s = lexeme lexbuf in
 	let s = String.sub s 1 (String.length s - 2) in
@@ -547,47 +586,65 @@ and comments = parse
   | eof 
       { () }
   | _   
-      { char (lexeme_char lexbuf 0); comments lexbuf }
+      { Output.char (lexeme_char lexbuf 0); comments lexbuf }
 
 (*s Skip comments *)
 
 and comment = parse
-  | "(*" { ignore (comment lexbuf); comment lexbuf }
-  | "*)" space* '\n'+ { true }
+  | "(*" { comment lexbuf }
+  | "*)" space* nl { true }
   | "*)" { false }
   | eof  { false }
   | _    { comment lexbuf }
 
 and skip_to_dot = parse
-  | '.' space* '\n' { true }
+  | '.' space* nl { true }
   | eof | '.' space+ { false}
   | "(*" { ignore (comment lexbuf); skip_to_dot lexbuf }
   | _ { skip_to_dot lexbuf }
 
 and body_bol = parse
   | space+
-      { indentation (count_spaces (lexeme lexbuf)); body lexbuf }
+      { Output.indentation (fst (count_spaces (lexeme lexbuf))); body lexbuf }
   | _ { backtrack lexbuf; body lexbuf }
 
 and body = parse
-  | '\n' {line_break(); body_bol lexbuf}
-  | '\n'+ space* "]]"
-      { if not !formatted then begin symbol (lexeme lexbuf); body lexbuf end else true }
+  | nl {Output.line_break(); body_bol lexbuf}
+  | nl+ space* "]]"
+      { if not !formatted then begin Output.symbol (lexeme lexbuf); body lexbuf end else true }
   | eof { false }
-  | '.' space* '\n' | '.' space* eof { char '.'; line_break(); true }      
-  | '.' space+ { char '.'; char ' '; false }
+  | '.' space* nl | '.' space* eof { Output.char '.'; Output.line_break(); true }      
+  | '.' space+ { Output.char '.'; Output.char ' '; false }
+  | '"' { Output.char '"'; ignore(notation lexbuf); body lexbuf }
   | "(*" { let eol = comment lexbuf in 
-	     if eol then begin line_break(); body_bol lexbuf end else body lexbuf }
+	     if eol 
+	     then begin Output.line_break(); body_bol lexbuf end
+	     else body lexbuf }
   | identifier 
       { let s = lexeme lexbuf in 
-	  ident s (lexeme_start lexbuf); 
+	  Output.ident s (lexeme_start lexbuf); 
 	  body lexbuf }
+  | token_no_brackets
+      { let s = lexeme lexbuf in
+	  Output.symbol s; body lexbuf }
+  | _ { let c = lexeme_char lexbuf 0 in 
+	  Output.char c; 
+          body lexbuf }
+
+and notation_bol = parse
+  | space+
+      { Output.indentation (fst (count_spaces (lexeme lexbuf))); notation lexbuf }
+  | _ { backtrack lexbuf; notation lexbuf }
+
+and notation = parse
+  | nl { Output.line_break(); notation_bol lexbuf }
+  | '"' { Output.char '"'; false }
   | token
       { let s = lexeme lexbuf in
-	  symbol s; body lexbuf }
+	  Output.symbol s; notation lexbuf }
   | _ { let c = lexeme_char lexbuf 0 in 
-	  char c; 
-          body lexbuf }
+	  Output.char c; 
+          notation lexbuf }
 
 and skip_hide = parse
   | eof | end_hide { () }
@@ -595,13 +652,13 @@ and skip_hide = parse
 
 (*s Reading token pretty-print *)
 
-and printing_token = parse
+and printing_token_body = parse
   | "*)" | eof 
 	{ let s = Buffer.contents token_buffer in 
 	  Buffer.clear token_buffer;
 	  s }
   | _   { Buffer.add_string token_buffer (lexeme lexbuf); 
-	  printing_token lexbuf }
+	  printing_token_body lexbuf }
 
 (*s Applying the scanners to files *)
 
@@ -609,11 +666,11 @@ and printing_token = parse
 
   let coq_file f m =
     reset ();
-    Index.scan_file f m;
-    start_module ();
+    Index.current_library := m;
+    Output.start_module ();
     let c = open_in f in
     let lb = from_channel c in
-    start_coq (); coq_bol lb; end_coq ();
+    Output.start_coq (); coq_bol lb; Output.end_coq ();
     close_in c
 
 }

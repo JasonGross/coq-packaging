@@ -156,29 +156,29 @@ let make_pbp_pattern x =
 let rec make_then = function
   | [] -> TacId []
   | [t] -> t
-  | t1::t2::l -> make_then (TacThen (t1,t2)::l)
+  | t1::t2::l -> make_then (TacThen (t1,[||],t2,[||])::l)
 
 let make_pbp_atomic_tactic = function
   | PbpTryAssumption None -> TacTry (TacAtom (zz, TacAssumption))
   | PbpTryAssumption (Some a) ->
       TacTry (TacAtom (zz, TacExact (make_var a)))
   | PbpExists x -> 
-      TacAtom (zz, TacSplit (true,ImplicitBindings [make_pbp_pattern x]))
+      TacAtom (zz, TacSplit (false,true,ImplicitBindings [make_pbp_pattern x]))
   | PbpGeneralize (h,args) ->
       let l = List.map make_pbp_pattern args in
-      TacAtom (zz, TacGeneralize [make_app (make_var h) l])
-  | PbpLeft -> TacAtom (zz, TacLeft NoBindings)
-  | PbpRight -> TacAtom (zz, TacRight NoBindings)
+      TacAtom (zz, TacGeneralize [((true,[]),make_app (make_var h) l),Anonymous])
+  | PbpLeft -> TacAtom (zz, TacLeft (false,NoBindings))
+  | PbpRight -> TacAtom (zz, TacRight (false,NoBindings))
   | PbpIntros l -> TacAtom (zz, TacIntroPattern l)
   | PbpLApply h -> TacAtom (zz, TacLApply (make_var h))
-  | PbpApply h -> TacAtom (zz, TacApply (make_var h,NoBindings))
+  | PbpApply h -> TacAtom (zz, TacApply (true,false,(make_var h,NoBindings)))
   | PbpElim (hyp_name, names) ->
       let bind = List.map (fun s ->(zz,NamedHyp s,make_pbp_pattern s)) names in
       TacAtom
-	(zz, TacElim ((make_var hyp_name,ExplicitBindings bind),None))
+	(zz, TacElim (false,(make_var hyp_name,ExplicitBindings bind),None))
   | PbpTryClear l -> 
       TacTry (TacAtom (zz, TacClear (false,List.map (fun s -> AI (zz,s)) l)))
-  | PbpSplit -> TacAtom (zz, TacSplit (false,NoBindings));;
+  | PbpSplit -> TacAtom (zz, TacSplit (false,false,NoBindings));;
 
 let rec make_pbp_tactic = function
   | PbpThen tl -> make_then (List.map make_pbp_atomic_tactic tl)

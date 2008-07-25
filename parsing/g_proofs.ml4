@@ -6,7 +6,10 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_proofs.ml4 9976 2007-07-12 11:58:30Z msozeau $ *)
+(*i camlp4use: "pa_extend.cmo" i*)
+
+(* $Id: g_proofs.ml4 10628 2008-03-06 14:56:08Z msozeau $ *)
+
 
 open Pcoq
 open Pp
@@ -59,6 +62,7 @@ GEXTEND Gram
       | IDENT "Proof"; c = lconstr -> VernacExactProof c
       | IDENT "Undo" -> VernacUndo 1
       | IDENT "Undo"; n = natural -> VernacUndo n
+      | IDENT "Undo"; IDENT "To"; n = natural -> VernacUndoTo n
       | IDENT "Focus" -> VernacFocus None
       | IDENT "Focus"; n = natural -> VernacFocus (Some n)
       | IDENT "Unfocus" -> VernacUnfocus
@@ -101,7 +105,8 @@ GEXTEND Gram
     [ [ IDENT "Local" -> true | -> false ] ]
   ;
   hint:
-    [ [ IDENT "Resolve"; lc = LIST1 constr -> HintsResolve lc
+    [ [ IDENT "Resolve"; lc = LIST1 constr; n = OPT [ n = natural -> n ] -> 
+          HintsResolve (List.map (fun x -> (n, x)) lc)
       | IDENT "Immediate"; lc = LIST1 constr -> HintsImmediate lc
       | IDENT "Unfold"; lqid = LIST1 global -> HintsUnfold lqid
       | IDENT "Constructors"; lc = LIST1 global -> HintsConstructors lc

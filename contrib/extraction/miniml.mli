@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: miniml.mli 9456 2006-12-17 20:08:38Z letouzey $ i*)
+(*i $Id: miniml.mli 10497 2008-02-01 12:18:37Z soubiran $ i*)
 
 (*s Target language for extraction: a core ML called MiniML. *)
 
@@ -58,6 +58,8 @@ type inductive_info =
   | Standard 
   | Record of global_reference list 
 
+type case_info = int list (* list of branches to merge in a _ pattern *)
+
 (* A [ml_ind_packet] is the miniml counterpart of a [one_inductive_body]. 
    If the inductive is logical ([ip_logical = false]), then all other fields
    are unused. Otherwise, 
@@ -76,11 +78,16 @@ type ml_ind_packet = {
 
 (* [ip_nparams] contains the number of parameters. *)
 
+type equiv = 
+  | NoEquiv
+  | Equiv of kernel_name 
+  | RenEquiv of string
+
 type ml_ind = {
   ind_info : inductive_info;
   ind_nparams : int; 	       
   ind_packets : ml_ind_packet array;
-  ind_equiv : kernel_name option
+  ind_equiv : equiv
 }
 
 (*s ML terms. *)
@@ -92,7 +99,7 @@ type ml_ast =
   | MLletin  of identifier * ml_ast * ml_ast
   | MLglob   of global_reference
   | MLcons   of inductive_info * global_reference * ml_ast list
-  | MLcase   of inductive_info * ml_ast * 
+  | MLcase   of (inductive_info*case_info) * ml_ast * 
       (global_reference * identifier list * ml_ast) array
   | MLfix    of int * identifier array * ml_ast array
   | MLexn    of string
@@ -119,9 +126,14 @@ type ml_specif =
   | Smodtype of ml_module_type
 
 and ml_module_type = 
-  | MTident of kernel_name
+  | MTident of module_path
   | MTfunsig of mod_bound_id * ml_module_type * ml_module_type
   | MTsig of mod_self_id * ml_module_sig
+  | MTwith of ml_module_type * ml_with_declaration
+
+and ml_with_declaration =  
+  | ML_With_type of identifier list * identifier list * ml_type
+  | ML_With_module of identifier list * module_path
 
 and ml_module_sig = (label * ml_specif) list
 
@@ -149,24 +161,28 @@ type ml_structure = (module_path * ml_module_structure) list
 
 type ml_signature = (module_path * ml_module_sig) list
 
-(*s Pretty-printing of MiniML in a given concrete syntax is parameterized
-    by a function [pp_global] that pretty-prints global references. 
-    The resulting pretty-printer is a module of type [Mlpp] providing
-    functions to print types, terms and declarations. *)
+type unsafe_needs = {
+  mldummy : bool; 
+  tdummy : bool; 
+  tunknown : bool; 
+  magic : bool
+}
 
-module type Mlpp_param = sig
-  val globals : unit -> Idset.t
-  val pp_global : module_path list -> global_reference -> std_ppcmds
-  val pp_module : module_path list -> module_path -> std_ppcmds
-end
+type language_descr = {
+  keywords : Idset.t; 
 
-module type Mlpp = sig
-  val pp_decl : module_path list -> ml_decl -> std_ppcmds
-  val pp_struct : ml_structure -> std_ppcmds
-  val pp_signature : ml_signature -> std_ppcmds
-end
+  (* Concerning the source file *)
+  file_suffix : string;  
+  capital_file : bool; (* should we capitalize filenames ? *)
+  preamble : identifier -> module_path list -> unsafe_needs -> std_ppcmds; 
+  pp_struct : ml_structure -> std_ppcmds; 
 
-type extraction_params =  
-  { modular : bool; 
-    mod_name : identifier; 
-    to_appear : global_reference list }
+  (* Concerning a possible interface file *)
+  sig_suffix : string option; 
+  sig_preamble : identifier -> module_path list -> unsafe_needs -> std_ppcmds;
+  pp_sig : ml_signature -> std_ppcmds; 
+
+  (* for an isolated declaration print *)
+  pp_decl : ml_decl -> std_ppcmds; 
+
+}  

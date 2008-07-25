@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pptactic.ml 9551 2007-01-29 15:13:35Z bgregoir $ *)
+(* $Id: pptactic.ml 11094 2008-06-10 19:35:23Z herbelin $ *)
 
 open Pp
 open Names
@@ -77,6 +77,10 @@ let pr_or_metaid pr = function
 
 let pr_and_short_name pr (c,_) = pr c
 
+let pr_or_by_notation f = function
+  | AN v -> f v
+  | ByNotation (_,s) -> str s
+
 let pr_located pr (loc,x) = pr x
 
 let pr_evaluable_reference = function 
@@ -129,7 +133,14 @@ let rec pr_message_token prid = function
 
 let pr_fresh_ids = prlist (fun s -> spc() ++ pr_or_var qs s)
 
-let rec pr_raw_generic prc prlc prtac prref (x:(Genarg.rlevel, Tacexpr.raw_tactic_expr) Genarg.generic_argument) =
+let with_evars ev s = if ev then "e" ^ s else s
+
+let out_bindings = function
+  | ImplicitBindings l -> ImplicitBindings (List.map snd l)
+  | ExplicitBindings l -> ExplicitBindings (List.map (fun (loc,id,c) -> (loc,id,snd c)) l)
+  | NoBindings -> NoBindings
+
+let rec pr_raw_generic prc prlc prtac prref (x:Genarg.rlevel Genarg.generic_argument) =
   match Genarg.genarg_tag x with
   | BoolArgType -> pr_arg str (if out_gen rawwit_bool x then "true" else "false")
   | IntArgType -> pr_arg int (out_gen rawwit_int x)
@@ -144,11 +155,13 @@ let rec pr_raw_generic prc prlc prtac prref (x:(Genarg.rlevel, Tacexpr.raw_tacti
   | SortArgType -> pr_arg pr_rawsort (out_gen rawwit_sort x)
   | ConstrArgType -> pr_arg prc (out_gen rawwit_constr x)
   | ConstrMayEvalArgType ->
-      pr_arg (pr_may_eval prc prlc prref) (out_gen rawwit_constr_may_eval x)
+      pr_arg (pr_may_eval prc prlc (pr_or_by_notation prref))
+        (out_gen rawwit_constr_may_eval x)
   | QuantHypArgType ->
       pr_arg pr_quantified_hypothesis (out_gen rawwit_quant_hyp x)
   | RedExprArgType ->
-      pr_arg (pr_red_expr (prc,prlc,prref)) (out_gen rawwit_red_expr x)
+      pr_arg (pr_red_expr (prc,prlc,pr_or_by_notation prref))
+        (out_gen rawwit_red_expr x)
   | OpenConstrArgType b -> pr_arg prc (snd (out_gen (rawwit_open_constr_gen b) x))
   | ConstrWithBindingsArgType -> 
       pr_arg (pr_with_bindings prc prlc) (out_gen rawwit_constr_with_bindings x)
@@ -238,10 +251,12 @@ let rec pr_generic prc prlc prtac x =
       pr_arg (pr_red_expr (prc,prlc,pr_evaluable_reference)) 
         (out_gen wit_red_expr x)
   | OpenConstrArgType b -> pr_arg prc (snd (out_gen (wit_open_constr_gen b) x))
-  | ConstrWithBindingsArgType -> 
-      pr_arg (pr_with_bindings prc prlc) (out_gen wit_constr_with_bindings x)
+  | ConstrWithBindingsArgType ->
+      let (c,b) = out_gen wit_constr_with_bindings x in
+      pr_arg (pr_with_bindings prc prlc) (c,out_bindings b)
   | BindingsArgType -> 
-      pr_arg (pr_bindings_no_with prc prlc) (out_gen wit_bindings x)
+      pr_arg (pr_bindings_no_with prc prlc)
+        (out_bindings (out_gen wit_bindings x))
   | List0ArgType _ -> 
       hov 0 (fold_list0 (fun x a -> pr_generic prc prlc prtac x ++ a) x (mt()))
   | List1ArgType _ ->
@@ -277,7 +292,7 @@ let pr_raw_extend prc prlc prtac =
 let pr_glob_extend prc prlc prtac =
   pr_extend_gen (pr_glob_generic prc prlc prtac)
 let pr_extend prc prlc prtac =
-  pr_extend_gen (pr_generic prc prlc prtac)
+  pr_extend_gen (pr_generic (fun c -> prc (Evd.empty,c)) (fun c -> prlc (Evd.empty,c)) prtac)
 
 (**********************************************************************)
 (* The tactic printer                                                 *)
@@ -289,9 +304,10 @@ let strip_prod_binders_expr n ty =
     match ty with
         Topconstr.CProdN(_,bll,a) ->
           let nb =
-            List.fold_left (fun i (nal,_) -> i + List.length nal) 0 bll in
-          if nb >= n then (List.rev (bll@acc), a)
-          else strip_ty (bll@acc) (n-nb) a
+            List.fold_left (fun i (nal,_,_) -> i + List.length nal) 0 bll in
+	  let bll = List.map (fun (x, _, y) -> x, y) bll in
+            if nb >= n then (List.rev (bll@acc)), a
+            else strip_ty (bll@acc) (n-nb) a
       | Topconstr.CArrow(_,a,b) ->
           if n=1 then
             (List.rev (([(dummy_loc,Anonymous)],a)::acc), b)
@@ -354,6 +370,13 @@ let pr_with_names = function
   | IntroAnonymous -> mt ()
   | ipat -> spc () ++ hov 1 (str "as" ++ spc () ++ pr_intro_pattern ipat)
 
+let pr_as_name = function
+  | Anonymous -> mt ()
+  | Name id -> str "as " ++ pr_lident (dummy_loc,id)
+
+let pr_pose_as_style prc na c =
+  spc() ++ prc c ++ pr_as_name na
+
 let pr_pose prlc prc na c = match na with
   | Anonymous -> spc() ++ prc c
   | Name id -> spc() ++ surround (pr_id id ++ str " :=" ++ spc() ++ prlc c)
@@ -394,14 +417,14 @@ let pr_simple_clause pr_id = function
   | l -> pr_in (spc () ++ prlist_with_sep spc pr_id l)
 
 let pr_clauses pr_id = function
-    { onhyps=None; onconcl=true; concl_occs=nl } ->
-      pr_in (pr_with_occurrences (fun () -> str " *") (nl,()))
-  | { onhyps=None; onconcl=false } -> pr_in (str " * |-")
-  | { onhyps=Some l; onconcl=true; concl_occs=nl } -> 
-      pr_in (prlist_with_sep (fun () -> str",") (pr_hyp_location pr_id) l
-             ++ pr_with_occurrences (fun () -> str" |- *") (nl,()))
-  | { onhyps=Some l; onconcl=false } ->
-      pr_in (prlist_with_sep (fun()->str",") (pr_hyp_location pr_id) l)
+  | { onhyps=None; concl_occs=occs } ->
+      if occs = no_occurrences_expr then pr_in (str " * |-")
+      else pr_in (pr_with_occurrences (fun () -> str " *") (occs,()))
+  | { onhyps=Some l; concl_occs=occs } ->
+      pr_in
+        (prlist_with_sep (fun () -> str",") (pr_hyp_location pr_id) l ++
+	 (if occs = no_occurrences_expr then mt ()
+	  else pr_with_occurrences (fun () -> str" |- *") (occs,())))
 
 let pr_clause_pattern pr_id = function
   | (None, []) -> mt ()
@@ -414,8 +437,15 @@ let pr_clause_pattern pr_id = function
 
 let pr_orient b = if b then mt () else str " <-"
 
-let pr_induction_arg prc = function
-  | ElimOnConstr c -> prc c
+let pr_multi = function 
+  | Precisely 1 -> mt ()
+  | Precisely n -> pr_int n ++ str "!"
+  | UpTo n -> pr_int n ++ str "?"
+  | RepeatStar -> str "?"
+  | RepeatPlus -> str "!"
+
+let pr_induction_arg prlc prc = function
+  | ElimOnConstr c -> pr_with_bindings prlc prc c
   | ElimOnIdent (loc,id) -> pr_with_comments loc (pr_id id)
   | ElimOnAnonHyp n -> int n
 
@@ -459,32 +489,30 @@ let pr_funvar = function
   | None -> spc () ++ str "_"
   | Some id -> spc () ++ pr_id id
 
-let pr_let_clause k pr = function
-  | (id,None,t) ->
-      hov 0 (str k ++ pr_lident id ++ str " :=" ++ brk (1,1) ++
-             pr (TacArg t))
-  | (id,Some c,t) ->
-      hv 0 (str k ++ pr_lident id ++ str" :" ++ brk(1,2) ++
-      pr c ++
-      str " :=" ++ brk (1,1) ++ pr (TacArg t))
+let pr_let_clause k pr (id,t) =
+  hov 0 (str k ++ pr_lident id ++ str " :=" ++ brk (1,1) ++ pr (TacArg t))
 
-let pr_let_clauses pr = function
+let pr_let_clauses recflag pr = function
   | hd::tl ->
       hv 0
-        (pr_let_clause "let " pr hd ++
+        (pr_let_clause (if recflag then "let rec " else "let ") pr hd ++
          prlist (fun t -> spc () ++ pr_let_clause "with " pr t) tl)
   | [] -> anomaly "LetIn must declare at least one binding"
-
-let pr_rec_clause pr (id,(l,t)) =
-  hov 0
-    (pr_lident id ++ prlist pr_funvar l ++ str " :=") ++ spc () ++ pr t
-
-let pr_rec_clauses pr l = 
-  prlist_with_sep (fun () -> fnl () ++ str "with ") (pr_rec_clause pr) l
 
 let pr_seq_body pr tl =
   hv 0 (str "[ " ++
         prlist_with_sep (fun () -> spc () ++ str "| ") pr tl ++
+        str " ]")
+
+let pr_opt_tactic pr = function
+  | TacId [] -> mt ()
+  | t -> pr t
+
+let pr_then_gen pr tf tm tl =
+  hv 0 (str "[ " ++
+        prvect_with_sep mt (fun t -> pr t ++ spc () ++ str "| ") tf ++
+	pr_opt_tactic pr tm ++ str ".." ++
+	prvect_with_sep mt (fun t -> spc () ++ str "| " ++ pr t) tl ++
         str " ]")
 
 let pr_hintbases = function
@@ -618,7 +646,8 @@ let rec pr_atom0 = function
   | TacIntroPattern [] -> str "intros"
   | TacIntroMove (None,None) -> str "intro"
   | TacAssumption -> str "assumption"
-  | TacAnyConstructor None -> str "constructor"
+  | TacAnyConstructor (false,None) -> str "constructor"
+  | TacAnyConstructor (true,None) -> str "econstructor"
   | TacTrivial ([],Some []) -> str "trivial"
   | TacAuto (None,[],Some []) -> str "auto"
   | TacReflexivity -> str "reflexivity"
@@ -653,19 +682,25 @@ and pr_atom1 = function
   | TacExact c -> hov 1 (str "exact" ++ pr_constrarg c)
   | TacExactNoCheck c -> hov 1 (str "exact_no_check" ++ pr_constrarg c)
   | TacVmCastNoCheck c -> hov 1 (str "vm_cast_no_check" ++ pr_constrarg c)
-  | TacApply cb -> hov 1 (str "apply" ++ spc () ++ pr_with_bindings cb)
-  | TacElim (cb,cbo) ->
-      hov 1 (str "elim" ++ pr_arg pr_with_bindings cb ++ 
+  | TacApply (a,ev,cb) ->
+      hov 1 ((if a then mt() else str "simple ") ++
+             str (with_evars ev "apply") ++ spc () ++ 
+             pr_with_bindings cb)
+  | TacElim (ev,cb,cbo) ->
+      hov 1 (str (with_evars ev "elim") ++ pr_arg pr_with_bindings cb ++ 
         pr_opt pr_eliminator cbo)
   | TacElimType c -> hov 1 (str "elimtype" ++ pr_constrarg c)
-  | TacCase cb -> hov 1 (str "case" ++ spc () ++ pr_with_bindings cb)
+  | TacCase (ev,cb) ->
+      hov 1 (str (with_evars ev "case") ++ spc () ++ pr_with_bindings cb)
   | TacCaseType c -> hov 1 (str "casetype" ++ pr_constrarg c)
   | TacFix (ido,n) -> hov 1 (str "fix" ++ pr_opt pr_id ido ++ pr_intarg n)
-  | TacMutualFix (id,n,l) ->
+  | TacMutualFix (hidden,id,n,l) ->
+      if hidden then str "idtac" (* should caught before! *) else
       hov 1 (str "fix" ++ spc () ++ pr_id id ++ pr_intarg n ++ spc() ++
              str"with " ++ prlist_with_sep spc pr_fix_tac l)
   | TacCofix ido -> hov 1 (str "cofix" ++ pr_opt pr_id ido)
-  | TacMutualCofix (id,l) ->
+  | TacMutualCofix (hidden,id,l) ->
+      if hidden then str "idtac" (* should be caught before! *) else
       hov 1 (str "cofix" ++ spc () ++ pr_id id ++ spc() ++
              str"with " ++ prlist_with_sep spc pr_cofix_tac l)
   | TacCut c -> hov 1 (str "cut" ++ pr_constrarg c)
@@ -678,14 +713,18 @@ and pr_atom1 = function
              pr_assertion pr_lconstr pr_constr ipat c)
   | TacGeneralize l ->
       hov 1 (str "generalize" ++ spc () ++
-             prlist_with_sep spc pr_constr l)
+             prlist_with_sep pr_coma (fun (cl,na) -> 
+	       pr_with_occurrences pr_constr cl ++ pr_as_name na)
+	     l)
   | TacGeneralizeDep c ->
       hov 1 (str "generalize" ++ spc () ++ str "dependent" ++
              pr_constrarg c)
-  | TacLetTac (na,c,cl) when cl = nowhere ->
+  | TacLetTac (na,c,cl,true) when cl = nowhere ->
       hov 1 (str "pose" ++ pr_pose pr_lconstr pr_constr na c)
-  | TacLetTac (na,c,cl) ->
-      hov 1 (str "set" ++ pr_pose pr_lconstr pr_constr na c ++
+  | TacLetTac (na,c,cl,b) ->
+      hov 1 ((if b then str "set" else str "remember") ++
+             (if b then pr_pose pr_lconstr else pr_pose_as_style)
+	        pr_constr na c ++
              pr_clauses pr_ident cl)
 (*  | TacInstantiate (n,c,ConclLocation ()) ->
       hov 1 (str "instantiate" ++ spc() ++
@@ -700,18 +739,20 @@ and pr_atom1 = function
   (* Derived basic tactics *)
   | TacSimpleInduction h ->
       hov 1 (str "simple induction" ++ pr_arg pr_quantified_hypothesis h)
-  | TacNewInduction (h,e,ids) ->
-      hov 1 (str "induction" ++ spc () ++
-	     prlist_with_sep spc (pr_induction_arg pr_constr) h ++
+  | TacNewInduction (ev,h,e,ids,cl) ->
+      hov 1 (str (with_evars ev "induction") ++ spc () ++
+	     prlist_with_sep spc (pr_induction_arg pr_lconstr pr_constr) h ++
 	     pr_with_names ids ++
-             pr_opt pr_eliminator e)
+             pr_opt pr_eliminator e ++
+             pr_opt_no_spc (pr_clauses pr_ident) cl)
   | TacSimpleDestruct h ->
       hov 1 (str "simple destruct" ++ pr_arg pr_quantified_hypothesis h)
-  | TacNewDestruct (h,e,ids) ->
-      hov 1 (str "destruct" ++ spc () ++
-             prlist_with_sep spc (pr_induction_arg pr_constr) h ++ 
+  | TacNewDestruct (ev,h,e,ids,cl) ->
+      hov 1 (str (with_evars ev "destruct") ++ spc () ++
+             prlist_with_sep spc (pr_induction_arg pr_lconstr pr_constr) h ++ 
 	     pr_with_names ids ++
-             pr_opt pr_eliminator e)
+             pr_opt pr_eliminator e ++
+             pr_opt_no_spc (pr_clauses pr_ident) cl)
   | TacDoubleInduction (h1,h2) ->
       hov 1
         (str "double induction" ++  
@@ -740,8 +781,9 @@ and pr_atom1 = function
   | TacAuto (n,lems,db) ->
       hov 0 (str "auto" ++ pr_opt (pr_or_var int) n ++ 
              pr_auto_using pr_constr lems ++ pr_hintbases db)
-  | TacDAuto (n,p) ->
-      hov 1 (str "auto" ++ pr_opt (pr_or_var int) n ++ str "decomp" ++ pr_opt int p)
+  | TacDAuto (n,p,lems) ->
+      hov 1 (str "auto" ++ pr_opt (pr_or_var int) n ++ str "decomp" ++ 
+             pr_opt int p ++ pr_auto_using pr_constr lems)
 
   (* Context management *)
   | TacClear (true,[]) as t -> pr_atom0 t
@@ -756,21 +798,28 @@ and pr_atom1 = function
       hov 1
         (str "move" ++ brk (1,1) ++ pr_ident id1 ++ spc () ++ 
 	 str "after" ++ brk (1,1) ++ pr_ident id2)
-  | TacRename (id1,id2) ->
+  | TacRename l ->
       hov 1
-        (str "rename" ++ brk (1,1) ++ pr_ident id1 ++ spc () ++ 
-	 str "into" ++ brk (1,1) ++ pr_ident id2)
+        (str "rename" ++ brk (1,1) ++
+         prlist_with_sep 
+	   (fun () -> str "," ++ brk (1,1))
+	   (fun (i1,i2) -> 
+	      pr_ident i1 ++ spc () ++ str "into" ++ spc () ++ pr_ident i2)
+	   l)
+  | TacRevert l -> 
+      hov 1 (str "revert" ++ spc () ++ prlist_with_sep spc pr_ident l) 
 
   (* Constructors *)
-  | TacLeft l -> hov 1 (str "left" ++ pr_bindings l)
-  | TacRight l -> hov 1 (str "right" ++ pr_bindings l)
-  | TacSplit (false,l) -> hov 1 (str "split" ++ pr_bindings l)
-  | TacSplit (true,l) -> hov 1 (str "exists" ++ pr_ex_bindings l)
-  | TacAnyConstructor (Some t) ->
-      hov 1 (str "constructor" ++ pr_arg (pr_tac_level (latom,E)) t)
-  | TacAnyConstructor None as t -> pr_atom0 t
-  | TacConstructor (n,l) ->
-      hov 1 (str "constructor" ++ pr_or_metaid pr_intarg n ++ pr_bindings l)
+  | TacLeft (ev,l) -> hov 1 (str (with_evars ev "left") ++ pr_bindings l)
+  | TacRight (ev,l) -> hov 1 (str (with_evars ev "right") ++ pr_bindings l)
+  | TacSplit (ev,false,l) -> hov 1 (str (with_evars ev "split") ++ pr_bindings l)
+  | TacSplit (ev,true,l) -> hov 1 (str (with_evars ev "exists") ++ pr_ex_bindings l)
+  | TacAnyConstructor (ev,Some t) ->
+      hov 1 (str (with_evars ev "constructor") ++ pr_arg (pr_tac_level (latom,E)) t)
+  | TacAnyConstructor (ev,None) as t -> pr_atom0 t
+  | TacConstructor (ev,n,l) ->
+      hov 1 (str (with_evars ev "constructor") ++ 
+             pr_or_metaid pr_intarg n ++ pr_bindings l)
 
   (* Conversion *)  
   | TacReduce (r,h) ->
@@ -780,12 +829,9 @@ and pr_atom1 = function
       hov 1 (str "change" ++ brk (1,1) ++
       (match occ with
           None -> mt()
-        | Some([],c1) -> hov 1 (pr_constr c1 ++ spc() ++ str "with ")
-        | Some(ocl,c1) ->
-            hov 1 (pr_constr c1 ++ spc() ++
-	           str "at " ++ prlist_with_sep spc (pr_or_var int) ocl) ++
-                   spc() ++
-	           str "with ") ++
+        | Some occlc ->
+	    pr_with_occurrences_with_trailer pr_constr occlc 
+	      (spc () ++ str "with ")) ++
       pr_constr c ++ pr_clauses pr_ident h)
 
   (* Equivalence relations *)
@@ -794,9 +840,15 @@ and pr_atom1 = function
   | TacTransitivity c -> str "transitivity" ++ pr_constrarg c
 
   (* Equality and inversion *)
-  | TacRewrite (b,c,cl) -> 
-      hov 1 (str "rewrite" ++ pr_orient b ++ spc() ++ pr_with_bindings c ++ 
-             pr_clauses pr_ident cl) 
+  | TacRewrite (ev,l,cl,by) -> 
+      hov 1 (str (with_evars ev "rewrite") ++ 
+	     prlist_with_sep
+	     (fun () -> str ","++spc())
+	     (fun (b,m,c) -> 
+		pr_orient b ++ spc() ++ pr_multi m ++ pr_with_bindings c)
+	     l
+	     ++ pr_clauses pr_ident cl
+	     ++	(match by with Some by -> pr_by_tactic (pr_tac_level ltop) by | None -> mt())) 
   | TacInversion (DepInversion (k,c,ids),hyp) ->
       hov 1 (str "dependent " ++ pr_induction_kind k ++ spc () ++
       pr_quantified_hypothesis hyp ++
@@ -821,15 +873,9 @@ let rec pr_tac inherited tac =
        (str "abstract (" ++ pr_tac (labstract,L) t ++ str")" ++ spc () ++
         str "using " ++ pr_id s),
       labstract
-  | TacLetRecIn (l,t) -> 
-      hv 0
-        (str "let rec " ++ pr_rec_clauses (pr_tac ltop) l ++ str " in" ++
-         fnl () ++ pr_tac (llet,E) t),
-      llet
-  | TacLetIn (llc,u) ->
+  | TacLetIn (recflag,llc,u) ->
       v 0
-       (hv 0 (pr_let_clauses (pr_tac ltop) llc
-       ++ str " in") ++
+       (hv 0 (pr_let_clauses recflag (pr_tac ltop) llc ++ str " in") ++
        fnl () ++ pr_tac (llet,E) u),
       llet
   | TacMatch (lz,t,lrul) ->
@@ -858,9 +904,13 @@ let rec pr_tac inherited tac =
       hov 1 (pr_tac (lseq,E) t ++ pr_then () ++ spc () ++
              pr_seq_body (pr_tac ltop) tl),
       lseq
-  | TacThen (t1,t2) ->
+  | TacThen (t1,[||],t2,[||]) ->
       hov 1 (pr_tac (lseq,E) t1 ++ pr_then () ++ spc () ++
              pr_tac (lseq,L) t2),
+      lseq
+  | TacThen (t1,tf,t2,tl) ->
+      hov 1 (pr_tac (lseq,E) t1 ++ pr_then () ++ spc () ++
+             pr_then_gen (pr_tac ltop) tf t2 tl),
       lseq
   | TacTry t ->
       hov 1 (str "try" ++ spc () ++ pr_tac (ltactical,E) t),
@@ -906,6 +956,7 @@ let rec pr_tac inherited tac =
       pr_may_eval pr_constr pr_lconstr pr_cst c, leval
   | TacArg(TacFreshId l) -> str "fresh" ++ pr_fresh_ids l, latom
   | TacArg(Integer n) -> int n, latom
+  | TacArg(TacCall(loc,f,[])) -> pr_ref f, latom
   | TacArg(TacCall(loc,f,l)) ->
       pr_with_comments loc
         (hov 1 (pr_ref f ++ spc () ++
@@ -919,7 +970,8 @@ let rec pr_tac inherited tac =
 and pr_tacarg = function
   | TacDynamic (loc,t) ->
       pr_with_comments loc (str ("<dynamic ["^(Dyn.tag t)^"]>"))
-  | MetaIdArg (loc,s) -> pr_with_comments loc (str ("$" ^ s))
+  | MetaIdArg (loc,true,s) -> pr_with_comments loc (str ("$" ^ s))
+  | MetaIdArg (loc,false,s) -> pr_with_comments loc (str ("constr: $" ^ s))
   | IntroPattern ipat -> str "ipattern:" ++ pr_intro_pattern ipat
   | TacVoid -> str "()"
   | Reference r -> pr_ref r
@@ -938,17 +990,17 @@ let strip_prod_binders_rawterm n (ty,_) =
   let rec strip_ty acc n ty =
     if n=0 then (List.rev acc, (ty,None)) else
       match ty with
-          Rawterm.RProd(loc,na,a,b) ->
+          Rawterm.RProd(loc,na,Explicit,a,b) ->
             strip_ty (([dummy_loc,na],(a,None))::acc) (n-1) b
         | _ -> error "Cannot translate fix tactic: not enough products" in
   strip_ty [] n ty
 
-let strip_prod_binders_constr n ty =
+let strip_prod_binders_constr n (sigma,ty) =
   let rec strip_ty acc n ty =
-    if n=0 then (List.rev acc, ty) else
+    if n=0 then (List.rev acc, (sigma,ty)) else
       match Term.kind_of_term ty with
           Term.Prod(na,a,b) ->
-            strip_ty (([dummy_loc,na],a)::acc) (n-1) b
+            strip_ty (([dummy_loc,na],(sigma,a))::acc) (n-1) b
         | _ -> error "Cannot translate fix tactic: not enough products" in
   strip_ty [] n ty
 
@@ -959,8 +1011,8 @@ let rec raw_printers =
      drop_env pr_constr_expr,
      drop_env pr_lconstr_expr,
      pr_lpattern_expr,
-     drop_env pr_reference,
-     drop_env pr_reference,
+     drop_env (pr_or_by_notation pr_reference),
+     drop_env (pr_or_by_notation pr_reference),
      pr_reference,
      pr_or_metaid pr_lident,
      pr_raw_extend,
@@ -994,8 +1046,8 @@ and pr_glob_match_rule env t =
 
 let typed_printers =
     (pr_glob_tactic_level,
-     pr_constr_env,
-     pr_lconstr_env,
+     pr_open_constr_env,
+     pr_open_lconstr_env,
      pr_lconstr_pattern,
      pr_evaluable_reference_env,
      pr_inductive,

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libnames.mli 9488 2007-01-17 11:11:58Z herbelin $ i*)
+(*i $Id: libnames.mli 10308 2007-11-09 09:40:21Z herbelin $ i*)
 
 (*i*)
 open Pp

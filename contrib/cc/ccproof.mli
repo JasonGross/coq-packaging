@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ccproof.mli 9856 2007-05-24 14:05:40Z corbinea $ *)
+(* $Id: ccproof.mli 9857 2007-05-24 14:21:08Z corbinea $ *)
 
 open Ccalgo
 open Names

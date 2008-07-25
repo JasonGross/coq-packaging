@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacinterp.mli 9178 2006-09-26 11:18:22Z barras $ i*)
+(*i $Id: tacinterp.mli 10919 2008-05-11 22:04:26Z msozeau $ i*)
 
 (*i*)
 open Dyn
@@ -35,12 +35,14 @@ type value =
   | VConstr of constr
   | VConstr_context of constr
   | VList of value list
-  | VRec of value ref
+  | VRec of (identifier*value) list ref * glob_tactic_expr
 
 (* Signature for interpretation: val\_interp and interpretation functions *)
 and interp_sign =
   { lfun : (identifier * value) list;
-    debug : debug_info }
+    avoid_ids : identifier list;
+    debug : debug_info;
+    last_loc : loc }
 
 (* Transforms an id into a constr if possible *)
 val constr_of_id : Environ.env -> identifier -> constr
@@ -61,16 +63,16 @@ val get_debug : unit -> debug_info
 
 (* Adds a definition for tactics in the table *)
 val add_tacdef :
-  bool -> (identifier Util.located * raw_tactic_expr) list -> unit
+  bool -> (Libnames.reference * bool * raw_tactic_expr) list -> unit
 val add_primitive_tactic : string -> glob_tactic_expr -> unit
 
 (* Tactic extensions *)
 val add_tactic :
-  string -> (closed_generic_argument list -> tactic) -> unit
+  string -> (typed_generic_argument list -> tactic) -> unit
 val overwriting_add_tactic :
-  string -> (closed_generic_argument list -> tactic) -> unit
+  string -> (typed_generic_argument list -> tactic) -> unit
 val lookup_tactic :
-  string -> (closed_generic_argument list) -> tactic
+  string -> (typed_generic_argument list) -> tactic
 
 (* Adds an interpretation function for extra generic arguments *)
 type glob_sign = {
@@ -83,12 +85,12 @@ val add_interp_genarg :
   string ->
     (glob_sign -> raw_generic_argument -> glob_generic_argument) *
     (interp_sign -> goal sigma -> glob_generic_argument -> 
-      closed_generic_argument) *
+      typed_generic_argument) *
     (substitution -> glob_generic_argument -> glob_generic_argument)
     -> unit
 
 val interp_genarg :
-  interp_sign -> goal sigma -> glob_generic_argument -> closed_generic_argument
+  interp_sign -> goal sigma -> glob_generic_argument -> typed_generic_argument
 
 val intern_genarg :
   glob_sign -> raw_generic_argument -> glob_generic_argument
@@ -119,7 +121,7 @@ val interp_ltac_constr : interp_sign -> goal sigma -> glob_tactic_expr ->
 val interp_redexp : Environ.env -> Evd.evar_map -> raw_red_expr -> red_expr
 
 (* Interprets tactic expressions *)
-val interp_tac_gen : (identifier * value) list -> 
+val interp_tac_gen : (identifier * value) list -> identifier list ->
                  debug_info -> raw_tactic_expr -> tactic
 
 val interp_hyp :  interp_sign -> goal sigma -> identifier located -> identifier
@@ -150,3 +152,14 @@ val declare_xml_printer :
 
 (* printing *)
 val print_ltac : Libnames.qualid -> std_ppcmds
+
+(* Internals that can be useful for syntax extensions. *)
+
+exception CannotCoerceTo of string
+
+val interp_ltac_var : (value -> 'a) -> interp_sign -> Environ.env option -> identifier located -> 'a
+
+val interp_int : interp_sign -> identifier located -> int
+
+val error_ltac_variable : loc -> identifier -> Environ.env option -> value -> string -> 'a
+

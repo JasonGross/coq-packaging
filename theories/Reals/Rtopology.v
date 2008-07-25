@@ -6,15 +6,15 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rtopology.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Rtopology.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
 Require Import Ranalysis1.
 Require Import RList.
 Require Import Classical_Prop.
-Require Import Classical_Pred_Type. Open Local Scope R_scope.
-
+Require Import Classical_Pred_Type.
+Open Local Scope R_scope.
 
 (** * General definitions and propositions *)
 

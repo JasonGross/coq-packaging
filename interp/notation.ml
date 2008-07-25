@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: notation.ml 9694 2007-03-09 18:09:53Z herbelin $ *)
+(* $Id: notation.ml 10893 2008-05-07 09:20:43Z herbelin $ *)
 
 (*i*)
 open Util
@@ -73,7 +73,7 @@ let init_scope_map () =
 let declare_scope scope =
   try let _ = Gmap.find scope !scope_map in ()
   with Not_found ->
-(*    Options.if_verbose message ("Creating scope "^scope);*)
+(*    Flags.if_verbose message ("Creating scope "^scope);*)
     scope_map := Gmap.add scope empty_scope !scope_map
 
 let find_scope scope =
@@ -133,7 +133,7 @@ let push_scopes = List.fold_right push_scope
 type local_scopes = tmp_scope_name option * scope_name list
 
 let make_current_scopes (tmp_scope,scopes) =
-  option_fold_right push_scope tmp_scope (push_scopes scopes !scope_stack)
+  Option.fold_right push_scope tmp_scope (push_scopes scopes !scope_stack)
 
 (**********************************************************************)
 (* Delimiters *)
@@ -142,16 +142,16 @@ let delimiters_map = ref Gmap.empty
 
 let declare_delimiters scope key =
   let sc = find_scope scope in
-  if sc.delimiters <> None && Options.is_verbose () then begin
-    let old = out_some sc.delimiters in
-    Options.if_verbose 
+  if sc.delimiters <> None && Flags.is_verbose () then begin
+    let old = Option.get sc.delimiters in
+    Flags.if_verbose 
       warning ("Overwritting previous delimiting key "^old^" in scope "^scope)
   end;
   let sc = { sc with delimiters = Some key } in
   scope_map := Gmap.add scope sc !scope_map;
   if Gmap.mem key !delimiters_map then begin
     let oldsc = Gmap.find key !delimiters_map in
-    Options.if_verbose warning ("Hiding binding of key "^key^" to "^oldsc)
+    Flags.if_verbose warning ("Hiding binding of key "^key^" to "^oldsc)
   end;
   delimiters_map := Gmap.add key scope !delimiters_map
 
@@ -187,10 +187,10 @@ let cases_pattern_key = function
   | PatCstr (_,ref,_,_) -> RefKey (ConstructRef ref)
   | _ -> Oth
 
-let aconstr_key = function
+let aconstr_key = function (* Rem: AApp(ARef ref,[]) stands for @ref *)
   | AApp (ARef ref,args) -> RefKey ref, Some (List.length args)
   | AList (_,_,AApp (ARef ref,args),_,_) -> RefKey ref, Some (List.length args)
-  | ARef ref -> RefKey ref, Some 0
+  | ARef ref -> RefKey ref, None
   | _ -> Oth, None
 
 let pattern_key = function
@@ -239,12 +239,12 @@ let delay dir int loc x = (dir, (fun () -> int loc x))
 let declare_numeral_interpreter sc dir interp (patl,uninterp,inpat) =
   declare_prim_token_interpreter sc
     (fun cont loc -> function Numeral n-> delay dir interp loc n | p -> cont loc p)
-    (patl, (fun r -> option_map mkNumeral (uninterp r)), inpat)
+    (patl, (fun r -> Option.map mkNumeral (uninterp r)), inpat)
 
 let declare_string_interpreter sc dir interp (patl,uninterp,inpat) =
   declare_prim_token_interpreter sc
     (fun cont loc -> function String s -> delay dir interp loc s | p -> cont loc p)
-    (patl, (fun r -> option_map mkString (uninterp r)), inpat)
+    (patl, (fun r -> Option.map mkString (uninterp r)), inpat)
 
 let check_required_module loc sc (sp,d) =
   try let _ = Nametab.absolute_reference sp in ()
@@ -288,7 +288,7 @@ let rec find_without_delimiters find (ntn_scope,ntn) = function
 
 let declare_notation_level ntn level =
   if Gmap.mem ntn !notation_level_map then
-    error ("Notation "^ntn^" is already assigned a level");
+    anomaly ("Notation "^ntn^" is already assigned a level");
   notation_level_map := Gmap.add ntn level !notation_level_map
 
 let level_of_notation ntn =
@@ -299,8 +299,8 @@ let level_of_notation ntn =
 let declare_notation_interpretation ntn scopt pat df =
   let scope = match scopt with Some s -> s | None -> default_scope in
   let sc = find_scope scope in
-  if Gmap.mem ntn sc.notations && Options.is_verbose () then
-    msg_warning (str ("Notation "^ntn^" was already used"^
+  if Gmap.mem ntn sc.notations then
+    Flags.if_warn msg_warning (str ("Notation "^ntn^" was already used"^
     (if scopt = None then "" else " in scope "^scope)));
   let sc = { sc with notations = Gmap.add ntn (pat,df) sc.notations } in
   scope_map := Gmap.add scope sc !scope_map;
@@ -393,16 +393,10 @@ let uninterp_prim_token_cases_pattern c =
       | Some n -> (na,sc,n)
   with Not_found -> raise No_match
 
-let availability_of_prim_token printer_scope local_scopes t =
-  let f scope =
-    try
-      (* raise Not_found if no primitive interpreter for scope *)
-      let interp = Hashtbl.find prim_token_interpreter_tab scope in
-      (* raise Not_found if no primitive interpreter for this token in scope *)
-      let _ = interp dummy_loc t in true
-    with Not_found -> false in
+let availability_of_prim_token printer_scope local_scopes =
+  let f scope = Hashtbl.mem prim_token_interpreter_tab scope in
   let scopes = make_current_scopes local_scopes in
-  option_map snd (find_without_delimiters f (Some printer_scope,None) scopes)
+  Option.map snd (find_without_delimiters f (Some printer_scope,None) scopes)
 
 (* Miscellaneous *)
 
@@ -413,6 +407,8 @@ let exists_notation_in_scope scopt ntn r =
     let (r',_) = Gmap.find ntn sc.notations in
     r' = r
   with Not_found -> false
+
+let isAVar = function AVar _ -> true | _ -> false
 
 (**********************************************************************)
 (* Mapping classes to scopes *)
@@ -458,7 +454,7 @@ type arguments_scope_discharge_request =
   | ArgsScopeNoDischarge
 
 let load_arguments_scope _ (_,(_,r,scl)) =
-  List.iter (option_iter check_scope) scl;
+  List.iter (Option.iter check_scope) scl;
   arguments_scope := Refmap.add r scl !arguments_scope
 
 let cache_arguments_scope o =
@@ -471,7 +467,7 @@ let discharge_arguments_scope (_,(req,r,l)) =
   if req = ArgsScopeNoDischarge then None
   else Some (req,pop_global_reference r,l)
 
-let rebuild_arguments_scope (req,r,l) =
+let rebuild_arguments_scope (_,(req,r,l)) =
   match req with
     | ArgsScopeNoDischarge -> assert false
     | ArgsScopeAuto ->
@@ -608,21 +604,51 @@ let factorize_entries = function
 let is_ident s = (* Poor analysis *)
   String.length s <> 0 & is_letter s.[0]
 
-let browse_notation ntn map =
+let browse_notation strict ntn map =
   let find =
     if String.contains ntn ' ' then (=) ntn
-    else fun ntn' -> List.mem (Terminal ntn) (decompose_notation_key ntn') in
+    else fun ntn' ->
+      let toks = decompose_notation_key ntn' in
+      let trms = List.filter (function Terminal _ -> true | _ -> false) toks in
+      if strict then [Terminal ntn] = trms else List.mem (Terminal ntn) trms in
   let l =
     Gmap.fold 
       (fun scope_name sc ->
 	Gmap.fold (fun ntn ((_,r),df) l ->
 	  if find ntn then (ntn,(scope_name,r,df))::l else l) sc.notations)
       map [] in
-  let l = List.sort (fun x y -> Pervasives.compare (fst x) (fst y)) l in
-  factorize_entries l
+  List.sort (fun x y -> Pervasives.compare (fst x) (fst y)) l
+
+let global_reference_of_notation test (ntn,(sc,c,_)) =
+  match c with
+  | ARef ref when test ref -> Some (ntn,sc,ref)
+  | AApp (ARef ref, l) when List.for_all isAVar l & test ref -> 
+      Some (ntn,sc,ref)
+  | _ -> None
+
+let error_ambiguous_notation loc _ntn =
+  user_err_loc (loc,"",str "Ambiguous notation")
+
+let error_notation_not_reference loc ntn =
+  user_err_loc (loc,"",
+    str "Unable to interpret " ++ quote (str ntn) ++
+    str " as a reference")
+
+let interp_notation_as_global_reference loc test ntn =
+  let ntns = browse_notation true ntn !scope_map in
+  let refs = List.map (global_reference_of_notation test) ntns in
+  match Option.List.flatten refs with
+  | [_,_,ref] -> ref
+  | [] -> error_notation_not_reference loc ntn
+  | refs -> 
+      let f (ntn,sc,ref) = find_default ntn !scope_stack = Some sc in
+      match List.filter f refs with
+      | [_,_,ref] -> ref
+      | [] -> error_notation_not_reference loc ntn
+      | _ -> error_ambiguous_notation loc ntn
 
 let locate_notation prraw ntn =
-  let ntns = browse_notation ntn !scope_map in
+  let ntns = factorize_entries (browse_notation false ntn !scope_map) in
   if ntns = [] then
     str "Unknown notation"
   else

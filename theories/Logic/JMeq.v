@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: JMeq.v 9077 2006-08-24 08:44:32Z herbelin $ i*)
+(*i $Id: JMeq.v 9849 2007-05-22 20:40:04Z herbelin $ i*)
 
 (** John Major's Equality as proposed by Conor McBride
 
@@ -19,9 +19,12 @@
 
 Set Implicit Arguments.
 
+Unset Elimination Schemes.
+
 Inductive JMeq (A:Type) (x:A) : forall B:Type, B -> Prop :=
     JMeq_refl : JMeq x x.
-Reset JMeq_rect.
+
+Set Elimination Schemes.
 
 Hint Resolve JMeq_refl.
 
@@ -65,20 +68,42 @@ Lemma JMeq_rect_r :
 intros A x y P H H'; case JMeq_eq with (1 := sym_JMeq H'); trivial.
 Qed.
 
-(** [JMeq] is equivalent to [(eq_dep Type [X]X)] *)
+(** [JMeq] is equivalent to [eq_dep Type (fun X => X)] *)
 
 Require Import Eqdep.
 
-Lemma JMeq_eq_dep :
+Lemma JMeq_eq_dep_id :
  forall (A B:Type) (x:A) (y:B), JMeq x y -> eq_dep Type (fun X => X) A x B y.
 Proof.
 destruct 1.
 apply eq_dep_intro.
 Qed.
 
-Lemma eq_dep_JMeq :
+Lemma eq_dep_id_JMeq :
  forall (A B:Type) (x:A) (y:B), eq_dep Type (fun X => X) A x B y -> JMeq x y.
 Proof.
 destruct 1.
-apply JMeq_refl. 
+apply JMeq_refl.
+Qed.
+
+(** [eq_dep U P p x q y] is strictly finer than [JMeq (P p) x (P q) y] *)
+
+Lemma eq_dep_JMeq :
+ forall U P p x q y, eq_dep U P p x q y -> JMeq x y.
+Proof.
+destruct 1.
+apply JMeq_refl.
+Qed.
+
+Lemma eq_dep_strictly_stronger_JMeq :
+ exists U, exists P, exists p, exists q, exists x, exists y,
+  JMeq x y /\ ~ eq_dep U P p x q y.
+Proof.
+exists bool. exists (fun _ => True). exists true. exists false.
+exists I. exists I.
+split.
+trivial.
+intro H.
+assert (true=false) by (destruct H; reflexivity).
+discriminate.
 Qed.

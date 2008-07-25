@@ -1,0 +1,240 @@
+# Makefile for the Coq documentation
+
+# COQSRC needs to be set to a coq source repository
+
+# To compile documentation, you need the following tools:
+# Dvi: latex (latex2e), bibtex, makeindex
+# Pdf: pdflatex
+# Html: hevea (http://hevea.inria.fr) >= 1.05
+
+######################################################################
+### General rules
+######################################################################
+
+.PHONY: doc doc-html doc-pdf doc-ps refman tutorial stdlib faq rectutorial
+
+doc: doc-html doc-pdf doc-ps ide/index_urls.txt
+
+doc-html:\
+  doc/tutorial/Tutorial.v.html doc/refman/html/index.html \
+  doc/faq/html/index.html doc/stdlib/html/index.html doc/RecTutorial/RecTutorial.v.html
+
+doc-pdf:\
+  doc/tutorial/Tutorial.v.pdf doc/refman/Reference-Manual.pdf \
+  doc/faq/FAQ.v.pdf doc/stdlib/Library.pdf doc/RecTutorial/RecTutorial.v.pdf
+
+doc-ps:\
+  doc/tutorial/Tutorial.v.ps doc/refman/Reference-Manual.ps \
+  doc/faq/FAQ.v.ps doc/stdlib/Library.ps doc/RecTutorial/RecTutorial.v.ps
+
+refman:\
+  doc/refman/html/index.html doc/refman/Reference-Manual.ps doc/refman/Reference-Manual.pdf
+
+tutorial:\
+  doc/tutorial/Tutorial.v.html doc/tutorial/Tutorial.v.ps doc/tutorial/Tutorial.v.pdf
+
+stdlib:\
+  doc/stdlib/html/index.html doc/stdlib/Library.ps doc/stdlib/Library.pdf
+
+faq:\
+  doc/faq/html/index.html doc/faq/FAQ.v.ps doc/faq/FAQ.v.pdf
+
+rectutorial:\
+  doc/RecTutorial/RecTutorial.v.html \
+  doc/RecTutorial/RecTutorial.v.ps doc/RecTutorial/RecTutorial.v.pdf
+
+######################################################################
+### Implicit rules
+######################################################################
+
+%.v.tex: %.tex coq
+	(cd `dirname $<`; $(COQSRC)/$(COQTEX) $(COQTEXOPTS) `basename $<`)
+
+%.ps: %.dvi
+	(cd `dirname $<`; dvips -o `basename $@` `basename $<`)
+
+%.eps: %.png
+	pngtopnm $< | pnmtops -equalpixels -noturn -rle > $@
+
+######################################################################
+# Common
+######################################################################
+
+### Version
+
+doc/common/version.tex: config/Makefile
+	printf '\\newcommand{\\coqversion}{$(VERSION)}' > doc/common/version.tex
+
+######################################################################
+# Reference Manual
+######################################################################
+
+
+### Reference Manual (printable format)
+
+# The second LATEX compilation is necessary otherwise the pages of the index
+# are not correct (don't know why...) - BB
+doc/refman/Reference-Manual.dvi: $(DOCCOMMON) $(REFMANFILES) doc/refman/Reference-Manual.tex
+	(cd doc/refman;\
+	$(LATEX) Reference-Manual;\
+	$(BIBTEX) Reference-Manual;\
+	$(LATEX) Reference-Manual;\
+	$(MAKEINDEX) Reference-Manual;\
+	$(MAKEINDEX) Reference-Manual.tacidx -o Reference-Manual.tacind;\
+	$(MAKEINDEX) Reference-Manual.comidx -o Reference-Manual.comind;\
+	$(MAKEINDEX) Reference-Manual.erridx -o Reference-Manual.errind;\
+	$(LATEX) Reference-Manual;\
+	$(LATEX) Reference-Manual)
+
+doc/refman/Reference-Manual.pdf: $(DOCCOMMON) $(REFMANFILES) doc/refman/Reference-Manual.tex
+	(cd doc/refman; $(PDFLATEX) Reference-Manual.tex)
+
+### Reference Manual (browsable format)
+
+doc/refman/Reference-Manual.html: doc/refman/headers.hva doc/refman/Reference-Manual.dvi # to ensure bbl file
+	(cd doc/refman; $(HEVEA) $(HEVEAOPTS) ./Reference-Manual.tex)
+
+doc/refman/html/index.html: doc/refman/Reference-Manual.html $(REFMANPNGFILES) \
+                        doc/refman/cover.html doc/refman/index.html
+	- rm -rf doc/refman/html
+	$(MKDIR) doc/refman/html
+	$(INSTALLLIB) $(REFMANPNGFILES) doc/refman/html
+	(cd doc/refman/html; hacha -o toc.html ../Reference-Manual.html)
+	$(INSTALLLIB) doc/refman/cover.html doc/refman/menu.html doc/refman/html
+	$(INSTALLLIB) doc/refman/index.html doc/refman/html
+
+doc/refman-quick:
+	(cd doc/refman; \
+	 $(PDFLATEX) Reference-Manual.tex; \
+	 $(HEVEA) $(HEVEAOPTS) ./Reference-Manual.tex)
+
+
+######################################################################
+# Tutorial
+######################################################################
+
+doc/tutorial/Tutorial.v.dvi: $(DOCCOMMON) doc/tutorial/Tutorial.v.tex
+	(cd doc/tutorial; $(LATEX) Tutorial.v)
+
+doc/tutorial/Tutorial.v.pdf: $(DOCCOMMON) doc/tutorial/Tutorial.v.tex
+	(cd doc/tutorial; $(PDFLATEX) Tutorial.v.tex)
+
+doc/tutorial/Tutorial.v.html: $(DOCCOMMON) doc/tutorial/Tutorial.v.tex
+	(cd doc/tutorial; $(HEVEA) $(HEVEAOPTS) Tutorial.v)
+
+
+######################################################################
+# FAQ
+######################################################################
+
+doc/faq/FAQ.v.dvi: doc/common/version.tex doc/common/title.tex doc/faq/FAQ.v.tex
+	(cd doc/faq;\
+	$(LATEX) FAQ.v;\
+	$(BIBTEX) FAQ.v;\
+	$(LATEX) FAQ.v;\
+	$(LATEX) FAQ.v)
+
+doc/faq/FAQ.v.pdf: doc/common/version.tex doc/common/title.tex doc/faq/FAQ.v.dvi doc/faq/axioms.png
+	(cd doc/faq; $(PDFLATEX) FAQ.v.tex)
+
+doc/faq/FAQ.v.html: doc/faq/FAQ.v.dvi # to ensure FAQ.v.bbl
+	(cd doc/faq; $(HEVEA) $(HEVEAOPTS) FAQ.v.tex)
+
+doc/faq/html/index.html: doc/faq/FAQ.v.html
+	- rm -rf doc/faq/html
+	$(MKDIR) doc/faq/html
+	$(INSTALLLIB) doc/faq/interval_discr.v doc/faq/axioms.png doc/faq/html
+	$(INSTALLLIB) doc/faq/FAQ.v.html doc/faq/html/index.html
+
+######################################################################
+# Standard library
+######################################################################
+
+### Standard library (browsable html format)
+
+doc/stdlib/index-body.html: $(THEORIESVO:.vo=.glob) $(COQDOC)
+	- rm -rf doc/stdlib/html
+	$(MKDIR) doc/stdlib/html
+	$(COQDOC) -q -d doc/stdlib/html --multi-index --html \
+	  -R theories Coq $(THEORIESVO:.vo=.v)
+	mv doc/stdlib/html/index.html doc/stdlib/index-body.html
+
+doc/stdlib/index-list.html: doc/stdlib/index-list.html.template
+	COQTOP=$(COQSRC) ./doc/stdlib/make-library-index doc/stdlib/index-list.html
+
+doc/stdlib/html/index.html: doc/stdlib/index-list.html doc/stdlib/index-body.html doc/stdlib/index-trailer.html
+	cat doc/stdlib/index-list.html > $@
+	sed -n -e '/<table>/,/<\/table>/p' doc/stdlib/index-body.html >> $@
+	cat doc/stdlib/index-trailer.html >> $@
+
+### Standard library (light version, full version is definitely too big)
+
+doc/stdlib/Library.coqdoc.tex: $(THEORIESLIGHTVO:.vo=.glob) $(COQDOC)
+	$(COQSRC)/$(COQDOC) -q --gallina --body-only --latex --stdout \
+            -R theories Coq $(THEORIESLIGHTVO:.vo=.v) >> $@
+
+doc/stdlib/Library.dvi: $(DOCCOMMON) doc/stdlib/Library.coqdoc.tex doc/stdlib/Library.tex
+	(cd doc/stdlib;\
+	$(LATEX) Library;\
+	$(LATEX) Library)
+
+doc/stdlib/Library.pdf: $(DOCCOMMON) doc/stdlib/Library.coqdoc.tex doc/stdlib/Library.dvi
+	(cd doc/stdlib; $(PDFLATEX) Library)
+
+######################################################################
+# Tutorial on inductive types
+######################################################################
+
+doc/RecTutorial/RecTutorial.v.dvi: doc/common/version.tex doc/common/title.tex doc/RecTutorial/RecTutorial.v.tex
+	(cd doc/RecTutorial;\
+	 $(LATEX) RecTutorial.v;\
+	 $(BIBTEX) RecTutorial.v;\
+	 $(LATEX) RecTutorial.v;\
+	 $(LATEX) RecTutorial.v)
+
+doc/RecTutorial/RecTutorial.v.pdf: doc/common/version.tex doc/common/title.tex doc/RecTutorial/RecTutorial.v.dvi
+	(cd doc/RecTutorial; $(PDFLATEX) RecTutorial.v.tex)
+
+doc/RecTutorial/RecTutorial.v.html: doc/RecTutorial/RecTutorial.v.tex
+	(cd doc/RecTutorial; $(HEVEA) $(HEVEAOPTS) RecTutorial.v)
+
+######################################################################
+# Index file for CoqIDE
+######################################################################
+
+# Not robust, improve...
+ide/index_urls.txt: doc/refman/html/index.html
+	- rm ide/index_urls.txt
+	cat doc/refman/html/command-index.html doc/refman/html/tactic-index.html | grep li-indexenv | grep HREF | sed -e 's@.*<TT>\(.*\)</TT>.*, <A HREF="\(.*\)">.*@\1,\2@' > ide/index_urls.txt
+
+
+######################################################################
+# Install all documentation files
+######################################################################
+
+install-doc: install-doc-meta install-doc-html install-doc-printable
+
+install-doc-meta:
+	$(MKDIR) $(DOCDIR)
+	$(INSTALLLIB) doc/LICENCE $(DOCDIR)/LICENCE.doc
+
+install-doc-html: doc-html
+	$(MKDIR) $(addprefix $(DOCDIR)/html/, refman stdlib faq)
+	$(INSTALLLIB) doc/refman/html/* $(DOCDIR)/html/refman 
+	$(INSTALLLIB) doc/stdlib/html/* $(DOCDIR)/html/stdlib 
+	$(INSTALLLIB) doc/RecTutorial/RecTutorial.v.html $(DOCDIR)/html/RecTutorial.html
+	$(INSTALLLIB) doc/faq/html/* $(DOCDIR)/html/faq
+	$(INSTALLLIB) doc/tutorial/Tutorial.v.html $(DOCDIR)/html/Tutorial.html
+
+install-doc-printable: doc-pdf doc-ps
+	$(MKDIR) $(DOCDIR)/ps $(DOCDIR)/pdf
+	$(INSTALLLIB) doc/refman/Reference-Manual.pdf \
+		doc/stdlib/Library.pdf $(DOCDIR)/pdf
+	$(INSTALLLIB) doc/refman/Reference-Manual.ps \
+		doc/stdlib/Library.ps $(DOCDIR)/ps
+	$(INSTALLLIB) doc/tutorial/Tutorial.v.pdf $(DOCDIR)/pdf/Tutorial.pdf
+	$(INSTALLLIB) doc/RecTutorial/RecTutorial.v.pdf $(DOCDIR)/pdf/RecTutorial.pdf
+	$(INSTALLLIB) doc/faq/FAQ.v.pdf $(DOCDIR)/pdf/FAQ.pdf
+	$(INSTALLLIB) doc/tutorial/Tutorial.v.ps $(DOCDIR)/ps/Tutorial.ps
+	$(INSTALLLIB) doc/RecTutorial/RecTutorial.v.ps $(DOCDIR)/ps/RecTutorial.ps
+	$(INSTALLLIB) doc/faq/FAQ.v.ps $(DOCDIR)/ps/FAQ.ps

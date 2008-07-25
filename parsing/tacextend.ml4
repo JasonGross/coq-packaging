@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacextend.ml4 10089 2007-08-24 10:49:43Z herbelin $ *)
+(*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
+
+(* $Id: tacextend.ml4 10091 2007-08-24 10:57:37Z herbelin $ *)
 
 open Util
 open Genarg
@@ -64,7 +66,7 @@ let rec extract_signature = function
 let check_unicity s l =
   let l' = List.map (fun (l,_) -> extract_signature l) l in
   if not (Util.list_distinct l') then
-    Pp.warning_with Pp_control.err_ft
+    Pp.warning_with !Pp_control.err_ft
       ("Two distinct rules of tactic entry "^s^" have the same\n"^
       "non-terminals in the same order: put them in distinct tactic entries")
 

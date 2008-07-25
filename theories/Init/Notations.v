@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Notations.v 8866 2006-05-28 16:21:04Z herbelin $ i*)
+(*i $Id: Notations.v 11073 2008-06-08 20:24:51Z herbelin $ i*)
 
 (** These are the notations whose level and associativity are imposed by Coq *)
 
@@ -19,13 +19,13 @@ Reserved Notation "~ x" (at level 75, right associativity).
 
 (** Notations for equality and inequalities *)
 
-Reserved Notation "x = y  :> T"
+Reserved Notation "x = y  :>  T"
 (at level 70, y at next level, no associativity).
 Reserved Notation "x = y" (at level 70, no associativity).
 Reserved Notation "x = y = z"
 (at level 70, no associativity, y at next level).
 
-Reserved Notation "x <> y  :> T"
+Reserved Notation "x <> y  :>  T"
 (at level 70, y at next level, no associativity).
 Reserved Notation "x <> y" (at level 70, no associativity).
 
@@ -48,6 +48,11 @@ Reserved Notation "x / y" (at level 40, left associativity).
 Reserved Notation "- x" (at level 35, right associativity).
 Reserved Notation "/ x" (at level 35, right associativity).
 Reserved Notation "x ^ y" (at level 30, right associativity).
+
+(** Notations for booleans *)
+
+Reserved Notation "x || y" (at level 50, left associativity).
+Reserved Notation "x && y" (at level 40, left associativity).
 
 (** Notations for pairs *)
 

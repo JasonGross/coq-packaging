@@ -6,14 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetWeakList.v 8834 2006-05-20 00:41:35Z letouzey $ *)
+(* $Id: FSetWeakList.v 10631 2008-03-06 18:17:24Z msozeau $ *)
 
 (** * Finite sets library *)
 
 (** This file proposes an implementation of the non-dependant 
     interface [FSetWeakInterface.S] using lists without redundancy. *)
 
-Require Import FSetWeakInterface.
+Require Import FSetInterface.
 Set Implicit Arguments.
 Unset Strict Implicit.
 
@@ -24,8 +24,6 @@ Unset Strict Implicit.
    And the functions returning sets are proved to preserve this invariant. *)
 
 Module Raw (X: DecidableType).
- 
-  Module E := X.
 
   Definition elt := X.t.
   Definition t := list elt.
@@ -59,7 +57,7 @@ Module Raw (X: DecidableType).
         if X.eq_dec x y then l else y :: remove x l
     end.
 
-  Fixpoint fold (B : Set) (f : elt -> B -> B) (s : t) {struct s} : 
+  Fixpoint fold (B : Type) (f : elt -> B -> B) (s : t) {struct s} : 
    B -> B := fun i => match s with
                       | nil => i
                       | x :: l => fold f l (f x i)
@@ -127,7 +125,7 @@ Module Raw (X: DecidableType).
   Lemma In_eq :
     forall (s : t) (x y : elt), X.eq x y -> In x s -> In y s.
   Proof.
-  intros s x y; do 2 setoid_rewrite InA_alt; firstorder eauto.
+  intros s x y; setoid_rewrite InA_alt; firstorder eauto.
   Qed.
   Hint Immediate In_eq.
 
@@ -287,13 +285,13 @@ Module Raw (X: DecidableType).
   unfold elements; auto.
   Qed.
  
-  Lemma elements_3 : forall (s : t) (Hs : NoDup s), NoDup (elements s).  
+  Lemma elements_3w : forall (s : t) (Hs : NoDup s), NoDup (elements s).  
   Proof. 
   unfold elements; auto.
   Qed.
 
   Lemma fold_1 :
-   forall (s : t) (Hs : NoDup s) (A : Set) (i : A) (f : elt -> A -> A),
+   forall (s : t) (Hs : NoDup s) (A : Type) (i : A) (f : elt -> A -> A),
    fold f s i = fold_left (fun a e => f e a) (elements s) i.
   Proof.
   induction s; simpl; auto; intros.
@@ -732,22 +730,68 @@ Module Raw (X: DecidableType).
   generalize (Hrec H0 f).
   case (f x); case (partition f l); simpl; auto.
   Qed.
- 
+
   Definition eq : t -> t -> Prop := Equal.
 
-  Lemma eq_refl : forall s : t, eq s s. 
-  Proof. 
-  unfold eq, Equal; intuition.
-  Qed.
+  Lemma eq_refl : forall s, eq s s. 
+  Proof. firstorder. Qed.
 
-  Lemma eq_sym : forall s s' : t, eq s s' -> eq s' s.
-  Proof. 
-  unfold eq, Equal; firstorder.
-  Qed.
+  Lemma eq_sym : forall s s', eq s s' -> eq s' s.
+  Proof. firstorder. Qed.
 
-  Lemma eq_trans : forall s s' s'' : t, eq s s' -> eq s' s'' -> eq s s''.
-  Proof. 
-  unfold eq, Equal; firstorder.
+  Lemma eq_trans : 
+   forall s s' s'', eq s s' -> eq s' s'' -> eq s s''.
+  Proof. firstorder. Qed.
+
+  Definition eq_dec : forall (s s':t)(Hs:NoDup s)(Hs':NoDup s'), 
+   { eq s s' }+{ ~eq s s' }.
+  Proof.
+  unfold eq.
+  induction s; intros s'.
+  (* nil *)
+   destruct s'; [left|right].
+   firstorder.
+   unfold not, Equal.
+   intros H; generalize (H e); clear H.
+   rewrite InA_nil, InA_cons; intuition.
+  (* cons *)
+   intros.
+   case_eq (mem a s'); intros H; 
+    [ destruct (IHs (remove a s')) as [H'|H']; 
+      [ | | left|right]|right]; 
+    clear IHs.
+   inversion_clear Hs; auto.
+   apply remove_unique; auto.
+   (* In a s' /\ s [=] remove a s' *)
+   generalize (mem_2 H); clear H; intro H.
+   unfold Equal in *; intros b.
+   rewrite InA_cons; split.
+   destruct 1.
+   apply In_eq with a; auto.
+   rewrite H' in H0.
+   apply remove_3 with a; auto.
+   destruct (X.eq_dec b a); [left|right]; auto.
+   rewrite H'.
+   apply remove_2; auto.
+   (* In a s' /\ ~ s [=] remove a s' *)
+   generalize (mem_2 H); clear H; intro H.
+   contradict H'.
+   unfold Equal in *; intros b.
+   split; intros.
+   apply remove_2; auto.
+   inversion_clear Hs.
+   contradict H1; apply In_eq with b; auto.
+   rewrite <- H'; rewrite InA_cons; auto.
+   assert (In b s') by (apply remove_3 with a; auto).
+   rewrite <- H', InA_cons in H1; destruct H1; auto.
+   elim (remove_1 Hs' (X.eq_sym H1) H0).
+   (* ~ In a s' *)
+   assert (~In a s').
+    red; intro H'; rewrite (mem_1 H') in H; discriminate.
+   contradict H0.
+   unfold Equal in *.
+   rewrite <- H0.
+   rewrite InA_cons; auto.
   Qed.
 
   End ForNotations.
@@ -758,12 +802,12 @@ End Raw.
    Now, in order to really provide a functor implementing [S], we 
    need to encapsulate everything into a type of lists without redundancy. *)
 
-Module Make (X: DecidableType) <: S with Module E := X.
+Module Make (X: DecidableType) <: WS with Module E := X.
 
  Module Raw := Raw X. 
  Module E := X.
 
- Record slist : Set :=  {this :> Raw.t; unique : NoDupA E.eq this}.
+ Record slist := {this :> Raw.t; unique : NoDupA E.eq this}.
  Definition t := slist. 
  Definition elt := E.t.
  
@@ -791,7 +835,7 @@ Module Make (X: DecidableType) <: S with Module E := X.
  Definition is_empty (s : t) : bool := Raw.is_empty s.
  Definition elements (s : t) : list elt := Raw.elements s.
  Definition choose (s:t) : option elt := Raw.choose s.
- Definition fold (B : Set) (f : elt -> B -> B) (s : t) : B -> B := Raw.fold (B:=B) f s. 
+ Definition fold (B : Type) (f : elt -> B -> B) (s : t) : B -> B := Raw.fold (B:=B) f s. 
  Definition cardinal (s : t) : nat := Raw.cardinal s.
  Definition filter (f : elt -> bool) (s : t) : t :=
    Build_slist (Raw.filter_unique (unique s) f).
@@ -872,7 +916,7 @@ Module Make (X: DecidableType) <: S with Module E := X.
   Lemma diff_3 : In x s -> ~ In x s' -> In x (diff s s').
   Proof. exact (fun H => Raw.diff_3 s.(unique) s'.(unique) H). Qed.
  
-  Lemma fold_1 : forall (A : Set) (i : A) (f : elt -> A -> A),
+  Lemma fold_1 : forall (A : Type) (i : A) (f : elt -> A -> A),
       fold f s i = fold_left (fun a e => f e a) (elements s) i.
   Proof. exact (Raw.fold_1 s.(unique)). Qed.
 
@@ -923,8 +967,8 @@ Module Make (X: DecidableType) <: S with Module E := X.
   Proof. exact (fun H => Raw.elements_1 H). Qed.
   Lemma elements_2 : InA E.eq x (elements s) -> In x s.
   Proof. exact (fun H => Raw.elements_2 H). Qed.
-  Lemma elements_3 : NoDupA E.eq (elements s).
-  Proof. exact (Raw.elements_3 s.(unique)). Qed.
+  Lemma elements_3w : NoDupA E.eq (elements s).
+  Proof. exact (Raw.elements_3w s.(unique)). Qed.
 
   Lemma choose_1 : choose s = Some x -> In x s.
   Proof. exact (fun H => Raw.choose_1 H). Qed.
@@ -932,5 +976,23 @@ Module Make (X: DecidableType) <: S with Module E := X.
   Proof. exact (fun H => Raw.choose_2 H). Qed.
 
  End Spec.
+
+ Definition eq : t -> t -> Prop := Equal.
+
+ Lemma eq_refl : forall s, eq s s. 
+ Proof. firstorder. Qed.
+
+ Lemma eq_sym : forall s s', eq s s' -> eq s' s.
+ Proof. firstorder. Qed.
+
+ Lemma eq_trans : 
+  forall s s' s'', eq s s' -> eq s' s'' -> eq s s''.
+ Proof. firstorder. Qed.
+
+ Definition eq_dec : forall (s s':t), 
+  { eq s s' }+{ ~eq s s' }.
+ Proof. 
+  intros s s'; exact (Raw.eq_dec s.(unique) s'.(unique)). 
+ Qed.
 
 End Make.

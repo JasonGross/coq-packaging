@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: type_errors.mli 8845 2006-05-23 07:41:58Z herbelin $ i*)
+(*i $Id: type_errors.mli 10533 2008-02-08 16:54:47Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -58,7 +58,7 @@ type type_error =
   | CantApplyBadType of
       (int * constr * constr) * unsafe_judgment * unsafe_judgment array
   | CantApplyNonFunctional of unsafe_judgment * unsafe_judgment array
-  | IllFormedRecBody of guard_error * name array * int
+  | IllFormedRecBody of guard_error * name array * int * env * unsafe_judgment array
   | IllTypedRecBody of
       int * name array * unsafe_judgment array * types array
 
@@ -96,7 +96,7 @@ val error_cant_apply_bad_type :
       unsafe_judgment -> unsafe_judgment array -> 'a
 
 val error_ill_formed_rec_body :
-  env -> guard_error -> name array -> int -> 'a
+  env -> guard_error -> name array -> int -> env -> unsafe_judgment array -> 'a
 
 val error_ill_typed_rec_body  :
   env -> int -> name array -> unsafe_judgment array -> types array -> 'a

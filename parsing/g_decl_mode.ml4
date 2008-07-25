@@ -6,8 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
 (*i camlp4deps: "parsing/grammar.cma" i*)
+(*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
+
+(* $Id: g_decl_mode.ml4 10739 2008-04-01 14:45:20Z herbelin $ *)
+
 
 open Decl_expr
 open Names
@@ -28,7 +31,6 @@ GLOBAL: proof_instr;
   thesis :
     [[ "thesis" -> Plain 
      | "thesis"; "for"; i=ident -> (For i)
-     | "thesis"; "["; n=INT ;"]" -> (Sub (int_of_string n))
      ]];
   statement :
     [[ i=ident ; ":" ; c=constr -> {st_label=Name i;st_it=c}

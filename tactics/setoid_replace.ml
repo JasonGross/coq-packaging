@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: setoid_replace.ml 10213 2007-10-10 13:05:59Z letouzey $ *)
+(* $Id: setoid_replace.ml 11094 2008-06-10 19:35:23Z herbelin $ *)
 
 open Tacmach
 open Proof_type
@@ -85,7 +85,7 @@ type morphism_class =
 let subst_mps_in_relation_class subst =
  function
     Relation  t -> Relation  (subst_mps subst t)
-  | Leibniz t -> Leibniz (option_map (subst_mps subst) t) 
+  | Leibniz t -> Leibniz (Option.map (subst_mps subst) t) 
 
 let subst_mps_in_argument_class subst (variance,rel) =
  variance, subst_mps_in_relation_class subst rel
@@ -108,7 +108,9 @@ let current_constant id =
   try
     global_reference id
   with Not_found ->
-    anomaly ("Setoid: cannot find " ^ (string_of_id id))
+    anomalylabstrm ""
+      (str "Setoid: cannot find " ++ pr_id id ++
+       str "(if loading Setoid.v under coqtop, use option \"-top Coq.Setoids.Setoid_tac\")")
 
 (* From Setoid.v *)
 
@@ -121,69 +123,69 @@ let coq_transitive =
 let coq_relation =
  lazy(gen_constant ["Relations"; "Relation_Definitions"] "relation")
 
-let coq_Relation_Class = lazy(constant ["Setoid"] "Relation_Class")
-let coq_Argument_Class = lazy(constant ["Setoid"] "Argument_Class")
+let coq_Relation_Class = lazy(constant ["Setoid_tac"] "Relation_Class")
+let coq_Argument_Class = lazy(constant ["Setoid_tac"] "Argument_Class")
 let coq_Setoid_Theory = lazy(constant ["Setoid"] "Setoid_Theory")
-let coq_Morphism_Theory = lazy(constant ["Setoid"] "Morphism_Theory")
-let coq_Build_Morphism_Theory= lazy(constant ["Setoid"] "Build_Morphism_Theory")
-let coq_Compat = lazy(constant ["Setoid"] "Compat")
+let coq_Morphism_Theory = lazy(constant ["Setoid_tac"] "Morphism_Theory")
+let coq_Build_Morphism_Theory= lazy(constant ["Setoid_tac"] "Build_Morphism_Theory")
+let coq_Compat = lazy(constant ["Setoid_tac"] "Compat")
 
-let coq_AsymmetricReflexive = lazy(constant ["Setoid"] "AsymmetricReflexive")
-let coq_SymmetricReflexive = lazy(constant ["Setoid"] "SymmetricReflexive")
-let coq_SymmetricAreflexive = lazy(constant ["Setoid"] "SymmetricAreflexive")
-let coq_AsymmetricAreflexive = lazy(constant ["Setoid"] "AsymmetricAreflexive")
-let coq_Leibniz = lazy(constant ["Setoid"] "Leibniz")
+let coq_AsymmetricReflexive = lazy(constant ["Setoid_tac"] "AsymmetricReflexive")
+let coq_SymmetricReflexive = lazy(constant ["Setoid_tac"] "SymmetricReflexive")
+let coq_SymmetricAreflexive = lazy(constant ["Setoid_tac"] "SymmetricAreflexive")
+let coq_AsymmetricAreflexive = lazy(constant ["Setoid_tac"] "AsymmetricAreflexive")
+let coq_Leibniz = lazy(constant ["Setoid_tac"] "Leibniz")
 
-let coq_RAsymmetric = lazy(constant ["Setoid"] "RAsymmetric")
-let coq_RSymmetric = lazy(constant ["Setoid"] "RSymmetric")
-let coq_RLeibniz = lazy(constant ["Setoid"] "RLeibniz")
+let coq_RAsymmetric = lazy(constant ["Setoid_tac"] "RAsymmetric")
+let coq_RSymmetric = lazy(constant ["Setoid_tac"] "RSymmetric")
+let coq_RLeibniz = lazy(constant ["Setoid_tac"] "RLeibniz")
 
-let coq_ASymmetric = lazy(constant ["Setoid"] "ASymmetric")
-let coq_AAsymmetric = lazy(constant ["Setoid"] "AAsymmetric")
+let coq_ASymmetric = lazy(constant ["Setoid_tac"] "ASymmetric")
+let coq_AAsymmetric = lazy(constant ["Setoid_tac"] "AAsymmetric")
 
 let coq_seq_refl = lazy(constant ["Setoid"] "Seq_refl")
 let coq_seq_sym = lazy(constant ["Setoid"] "Seq_sym")
 let coq_seq_trans = lazy(constant ["Setoid"] "Seq_trans")
 
-let coq_variance = lazy(constant ["Setoid"] "variance")
-let coq_Covariant = lazy(constant ["Setoid"] "Covariant")
-let coq_Contravariant = lazy(constant ["Setoid"] "Contravariant")
-let coq_Left2Right = lazy(constant ["Setoid"] "Left2Right")
-let coq_Right2Left = lazy(constant ["Setoid"] "Right2Left")
-let coq_MSNone = lazy(constant ["Setoid"] "MSNone")
-let coq_MSCovariant = lazy(constant ["Setoid"] "MSCovariant")
-let coq_MSContravariant = lazy(constant ["Setoid"] "MSContravariant")
+let coq_variance = lazy(constant ["Setoid_tac"] "variance")
+let coq_Covariant = lazy(constant ["Setoid_tac"] "Covariant")
+let coq_Contravariant = lazy(constant ["Setoid_tac"] "Contravariant")
+let coq_Left2Right = lazy(constant ["Setoid_tac"] "Left2Right")
+let coq_Right2Left = lazy(constant ["Setoid_tac"] "Right2Left")
+let coq_MSNone = lazy(constant ["Setoid_tac"] "MSNone")
+let coq_MSCovariant = lazy(constant ["Setoid_tac"] "MSCovariant")
+let coq_MSContravariant = lazy(constant ["Setoid_tac"] "MSContravariant")
 
-let coq_singl = lazy(constant ["Setoid"] "singl")
-let coq_cons = lazy(constant ["Setoid"] "necons")
+let coq_singl = lazy(constant ["Setoid_tac"] "singl")
+let coq_cons = lazy(constant ["Setoid_tac"] "necons")
 
 let coq_equality_morphism_of_asymmetric_areflexive_transitive_relation =
- lazy(constant ["Setoid"]
+ lazy(constant ["Setoid_tac"]
   "equality_morphism_of_asymmetric_areflexive_transitive_relation")
 let coq_equality_morphism_of_symmetric_areflexive_transitive_relation =
- lazy(constant ["Setoid"]
+ lazy(constant ["Setoid_tac"]
   "equality_morphism_of_symmetric_areflexive_transitive_relation")
 let coq_equality_morphism_of_asymmetric_reflexive_transitive_relation =
- lazy(constant ["Setoid"]
+ lazy(constant ["Setoid_tac"]
   "equality_morphism_of_asymmetric_reflexive_transitive_relation")
 let coq_equality_morphism_of_symmetric_reflexive_transitive_relation =
- lazy(constant ["Setoid"]
+ lazy(constant ["Setoid_tac"]
   "equality_morphism_of_symmetric_reflexive_transitive_relation")
 let coq_make_compatibility_goal =
- lazy(constant ["Setoid"] "make_compatibility_goal")
+ lazy(constant ["Setoid_tac"] "make_compatibility_goal")
 let coq_make_compatibility_goal_eval_ref =
- lazy(eval_reference ["Setoid"] "make_compatibility_goal")
+ lazy(eval_reference ["Setoid_tac"] "make_compatibility_goal")
 let coq_make_compatibility_goal_aux_eval_ref =
- lazy(eval_reference ["Setoid"] "make_compatibility_goal_aux")
+ lazy(eval_reference ["Setoid_tac"] "make_compatibility_goal_aux")
 
-let coq_App = lazy(constant ["Setoid"] "App")
-let coq_ToReplace = lazy(constant ["Setoid"] "ToReplace")
-let coq_ToKeep = lazy(constant ["Setoid"] "ToKeep")
-let coq_ProperElementToKeep = lazy(constant ["Setoid"] "ProperElementToKeep")
-let coq_fcl_singl = lazy(constant ["Setoid"] "fcl_singl")
-let coq_fcl_cons = lazy(constant ["Setoid"] "fcl_cons")
+let coq_App = lazy(constant ["Setoid_tac"] "App")
+let coq_ToReplace = lazy(constant ["Setoid_tac"] "ToReplace")
+let coq_ToKeep = lazy(constant ["Setoid_tac"] "ToKeep")
+let coq_ProperElementToKeep = lazy(constant ["Setoid_tac"] "ProperElementToKeep")
+let coq_fcl_singl = lazy(constant ["Setoid_tac"] "fcl_singl")
+let coq_fcl_cons = lazy(constant ["Setoid_tac"] "fcl_cons")
 
-let coq_setoid_rewrite = lazy(constant ["Setoid"] "setoid_rewrite")
+let coq_setoid_rewrite = lazy(constant ["Setoid_tac"] "setoid_rewrite")
 let coq_proj1 = lazy(gen_constant ["Init"; "Logic"] "proj1")
 let coq_proj2 = lazy(gen_constant ["Init"; "Logic"] "proj2")
 let coq_unit = lazy(gen_constant ["Init"; "Datatypes"] "unit")
@@ -191,24 +193,26 @@ let coq_tt = lazy(gen_constant ["Init"; "Datatypes"] "tt")
 let coq_eq = lazy(gen_constant ["Init"; "Logic"] "eq")
 
 let coq_morphism_theory_of_function =
- lazy(constant ["Setoid"] "morphism_theory_of_function")
+ lazy(constant ["Setoid_tac"] "morphism_theory_of_function")
 let coq_morphism_theory_of_predicate =
- lazy(constant ["Setoid"] "morphism_theory_of_predicate")
+ lazy(constant ["Setoid_tac"] "morphism_theory_of_predicate")
 let coq_relation_of_relation_class =
- lazy(eval_reference ["Setoid"] "relation_of_relation_class")
+ lazy(eval_reference ["Setoid_tac"] "relation_of_relation_class")
 let coq_directed_relation_of_relation_class =
- lazy(eval_reference ["Setoid"] "directed_relation_of_relation_class")
-let coq_interp = lazy(eval_reference ["Setoid"] "interp")
+ lazy(eval_reference ["Setoid_tac"] "directed_relation_of_relation_class")
+let coq_interp = lazy(eval_reference ["Setoid_tac"] "interp")
 let coq_Morphism_Context_rect2 =
- lazy(eval_reference ["Setoid"] "Morphism_Context_rect2")
+ lazy(eval_reference ["Setoid_tac"] "Morphism_Context_rect2")
 let coq_iff = lazy(gen_constant ["Init";"Logic"] "iff")
-let coq_impl = lazy(constant ["Setoid"] "impl")
+let coq_impl = lazy(constant ["Setoid_tac"] "impl")
 
 
 (************************* Table of declared relations **********************)
 
 
-(* Relations are stored in a table which is synchronised with the Reset mechanism. *)
+(* Relations are stored in a table which is synchronised with the
+   Reset mechanism. The table maps the term denoting the relation to
+   the data of type relation that characterises the relation *)
 
 let relation_table = ref Gmap.empty
 
@@ -257,8 +261,8 @@ let default_relation_for_carrier ?(filter=fun _ -> true) a =
     [] -> Leibniz (Some a)
   | relation::tl ->
      if tl <> [] then
-      ppnl
-       (str "Warning: There are several relations on the carrier \"" ++
+      Flags.if_warn msg_warning
+       (str "There are several relations on the carrier \"" ++
          pr_lconstr a ++ str "\". The relation " ++ prrelation relation ++
          str " is chosen.") ;
      Relation relation
@@ -295,9 +299,9 @@ let relation_morphism_of_constr_morphism =
 let subst_relation subst relation = 
   let rel_a' = subst_mps subst relation.rel_a in
   let rel_aeq' = subst_mps subst relation.rel_aeq in
-  let rel_refl' = option_map (subst_mps subst) relation.rel_refl in
-  let rel_sym' = option_map (subst_mps subst) relation.rel_sym in
-  let rel_trans' = option_map (subst_mps subst) relation.rel_trans in
+  let rel_refl' = Option.map (subst_mps subst) relation.rel_refl in
+  let rel_sym' = Option.map (subst_mps subst) relation.rel_sym in
+  let rel_trans' = Option.map (subst_mps subst) relation.rel_trans in
   let rel_X_relation_class' = subst_mps subst relation.rel_X_relation_class in
   let rel_Xreflexive_relation_class' =
    subst_mps subst relation.rel_Xreflexive_relation_class
@@ -345,29 +349,29 @@ let (relation_to_obj, obj_to_relation)=
           match th.rel_sym with
              None -> old_relation.rel_sym
            | Some t -> Some t} in
-        ppnl
-         (str "Warning: The relation " ++ prrelation th' ++
-          str " is redeclared. The new declaration" ++
+        Flags.if_warn msg_warning 
+         (strbrk "The relation " ++ prrelation th' ++
+          strbrk " is redeclared. The new declaration" ++
            (match th'.rel_refl with
-              None -> str ""
-            | Some t -> str " (reflevity proved by " ++ pr_lconstr t) ++
+              None -> mt ()
+            | Some t -> strbrk " (reflexivity proved by " ++ pr_lconstr t) ++
            (match th'.rel_sym with
-               None -> str ""
+               None -> mt ()
              | Some t ->
-                (if th'.rel_refl = None then str " (" else str " and ") ++
-                str "symmetry proved by " ++ pr_lconstr t) ++
+                (if th'.rel_refl = None then strbrk " (" else strbrk " and ")
+		++ strbrk "symmetry proved by " ++ pr_lconstr t) ++
            (if th'.rel_refl <> None && th'.rel_sym <> None then
              str ")" else str "") ++
-           str " replaces the old declaration" ++
+           strbrk " replaces the old declaration" ++
            (match old_relation.rel_refl with
               None -> str ""
-            | Some t -> str " (reflevity proved by " ++ pr_lconstr t) ++
+            | Some t -> strbrk " (reflexivity proved by " ++ pr_lconstr t) ++
            (match old_relation.rel_sym with
                None -> str ""
              | Some t ->
                 (if old_relation.rel_refl = None then
-                  str " (" else str " and ") ++
-                str "symmetry proved by " ++ pr_lconstr t) ++
+                  strbrk " (" else strbrk " and ") ++
+                strbrk "symmetry proved by " ++ pr_lconstr t) ++
            (if old_relation.rel_refl <> None && old_relation.rel_sym <> None
             then str ")" else str "") ++
            str ".");
@@ -410,12 +414,12 @@ let morphism_table_add (m,c) =
     List.find
      (function mor -> mor.args = c.args && mor.output = c.output) old
    in
-    ppnl
-     (str "Warning: The morphism " ++ prmorphism m old_morph ++
-      str " is redeclared. " ++
-      str "The new declaration whose compatibility is proved by " ++
-       pr_lconstr c.lem ++ str " replaces the old declaration whose" ++
-       str " compatibility was proved by " ++
+    Flags.if_warn msg_warning
+     (strbrk "The morphism " ++ prmorphism m old_morph ++
+      strbrk " is redeclared. " ++
+      strbrk "The new declaration whose compatibility is proved by " ++
+       pr_lconstr c.lem ++ strbrk " replaces the old declaration whose" ++
+       strbrk " compatibility was proved by " ++
        pr_lconstr old_morph.lem ++ str ".")
   with
    Not_found -> morphism_table := Gmap.add m (c::old) !morphism_table
@@ -425,10 +429,10 @@ let default_morphism ?(filter=fun _ -> true) m =
       [] -> raise Not_found
     | m1::ml ->
         if ml <> [] then
-          ppnl
-            (str "Warning: There are several morphisms associated to \"" ++
-            pr_lconstr m ++ str"\". Morphism " ++ prmorphism m m1 ++
-            str " is randomly chosen.");
+          Flags.if_warn msg_warning
+            (strbrk "There are several morphisms associated to \"" ++
+            pr_lconstr m ++ strbrk "\". Morphism " ++ prmorphism m m1 ++
+            strbrk " is randomly chosen.");
         relation_morphism_of_constr_morphism m1
 
 let subst_morph subst morph = 
@@ -638,9 +642,9 @@ let apply_to_relation subst rel =
    assert (new_quantifiers_no >= 0) ;
    { rel_a = mkApp (rel.rel_a, subst) ;
      rel_aeq = mkApp (rel.rel_aeq, subst) ;
-     rel_refl = option_map (fun c -> mkApp (c,subst)) rel.rel_refl ; 
-     rel_sym = option_map (fun c -> mkApp (c,subst)) rel.rel_sym;
-     rel_trans = option_map (fun c -> mkApp (c,subst)) rel.rel_trans;
+     rel_refl = Option.map (fun c -> mkApp (c,subst)) rel.rel_refl ; 
+     rel_sym = Option.map (fun c -> mkApp (c,subst)) rel.rel_sym;
+     rel_trans = Option.map (fun c -> mkApp (c,subst)) rel.rel_trans;
      rel_quantifiers_no = new_quantifiers_no;
      rel_X_relation_class = mkApp (rel.rel_X_relation_class, subst);
      rel_Xreflexive_relation_class =
@@ -687,7 +691,7 @@ let add_morphism lemma_infos mor_name (m,quantifiers_rev,args,output) =
                   apply_to_rels mext quantifiers_rev |]));
           const_entry_type = None;
           const_entry_opaque = false;
-          const_entry_boxed = Options.boxed_definitions()},
+          const_entry_boxed = Flags.boxed_definitions()},
 	IsDefinition Definition)) ;
      mext 
  in
@@ -703,17 +707,18 @@ let add_morphism lemma_infos mor_name (m,quantifiers_rev,args,output) =
         output = output_constr;
         lem = lem;
         morphism_theory = mmor }));
-   Options.if_verbose ppnl (pr_lconstr m ++ str " is registered as a morphism")   
+   Flags.if_verbose ppnl (pr_lconstr m ++ str " is registered as a morphism")
+
+let error_cannot_unify_signature env k t t' =
+  errorlabstrm "New Morphism"
+   (str "One morphism argument or its output has type" ++ spc() ++
+    pr_lconstr_env env t ++ strbrk " but the signature requires an argument" ++
+    (if k = 0 then strbrk " of type " else
+    strbrk "whose type is an instance of ") ++ pr_lconstr_env env t' ++
+    str ".")
 
 (* first order matching with a bit of conversion *)
 let unify_relation_carrier_with_type env rel t =
- let raise_error quantifiers_no =
-  errorlabstrm "New Morphism"
-   (str "One morphism argument or its output has type " ++ 
-    pr_lconstr_env env t ++
-    str " but the signature requires an argument of type \"" ++
-    pr_lconstr_env env rel.rel_a ++ prvect_with_sep mt (fun _ -> str " ?")
-     (Array.make quantifiers_no 0) ++ str "\"") in
  let args =
   match kind_of_term t with
      App (he',args') ->
@@ -723,31 +728,15 @@ let unify_relation_carrier_with_type env rel t =
        if is_conv env Evd.empty rel.rel_a (mkApp (he',args1)) then
         args2
        else
-        raise_error rel.rel_quantifiers_no
+	error_cannot_unify_signature env rel.rel_quantifiers_no t rel.rel_a
    | _  ->
-     if rel.rel_quantifiers_no = 0 && is_conv env Evd.empty rel.rel_a t then
-      [||] 
-     else
-      begin
-        let evars,args,instantiated_rel_a =
-         let ty = Typing.type_of env Evd.empty rel.rel_a in
-         let evd = Evd.create_evar_defs Evd.empty in
-         let evars,args,concl =
-          Clenv.clenv_environments_evars env evd
-           (Some rel.rel_quantifiers_no) ty
-         in
-          evars, args,
-          nf_betaiota
-           (match args with [] -> rel.rel_a | _ -> applist (rel.rel_a,args))
-        in
-         let evars' =
-          w_unify true (*??? or false? *) env Reduction.CONV (*??? or cumul? *)
-           ~mod_delta:true (*??? or true? *) t instantiated_rel_a evars in
-         let args' =
-          List.map (Reductionops.nf_evar (Evd.evars_of evars')) args
-         in
-          Array.of_list args'
-      end
+       try
+       let args =
+         Clenv.clenv_conv_leq env Evd.empty t rel.rel_a rel.rel_quantifiers_no
+       in
+       Array.of_list args
+       with Reduction.NotConvertible -> 
+	error_cannot_unify_signature env rel.rel_quantifiers_no t rel.rel_a
  in
   apply_to_relation args rel
 
@@ -757,11 +746,7 @@ let unify_relation_class_carrier_with_type env rel t =
      if is_conv env Evd.empty t t' then
       rel
      else
-      errorlabstrm "New Morphism"
-       (str "One morphism argument or its output has type " ++ 
-        pr_lconstr_env env t ++
-        str " but the signature requires an argument of type " ++
-        pr_lconstr_env env t')
+      error_cannot_unify_signature env 0 t t'
   | Leibniz None -> Leibniz (Some t)
   | Relation rel -> Relation (unify_relation_carrier_with_type env rel t)
 
@@ -863,7 +848,7 @@ let new_morphism m signature id hook =
 	    if number_of_quantifiers < 0 then
               errorlabstrm "New Morphism"
 		(str "The morphism " ++ pr_lconstr m ++ str " has type " ++
-		    pr_lconstr typeofm ++ str " that attends at most " ++ int args_ty_len ++
+		    pr_lconstr typeofm ++ str " that expects at most " ++ int args_ty_len ++
 		    str " arguments. The signature that you specified requires " ++
 		    int number_of_arguments ++ str " arguments.")
 	    else
@@ -922,12 +907,12 @@ let new_morphism m signature id hook =
       (Closure.unfold_red(Lazy.force coq_make_compatibility_goal_aux_eval_ref))
       env Evd.empty lem in
     (* "simpl" *)
-  let lem = Tacred.nf env Evd.empty lem in
+  let lem = Tacred.simpl env Evd.empty lem in
     if Lib.is_modtype () then
       begin
 	ignore
 	  (Declare.declare_internal_constant id
-              (ParameterEntry lem, IsAssumption Logical)) ;
+              (ParameterEntry (lem,false), IsAssumption Logical)) ;
 	let mor_name = morphism_theory_id_of_morphism_proof_id id in
 	let lemma_infos = Some (id,argsconstr,outputconstr) in
 	  add_morphism lemma_infos mor_name
@@ -938,9 +923,9 @@ let new_morphism m signature id hook =
 	new_edited id
 	  (m,args_ty_quantifiers_rev,args,argsconstr,output,outputconstr);
 	Pfedit.start_proof id (Global, Proof Lemma) 
-	  (Declare.clear_proofs (Global.named_context ()))
+	  (Decls.clear_proofs (Global.named_context ()))
 	  lem hook;
-	Options.if_verbose msg (Printer.pr_open_subgoals ());
+	Flags.if_verbose msg (Printer.pr_open_subgoals ());
       end
 
 let morphism_hook _ ref =
@@ -960,6 +945,7 @@ type morphism_signature =
  (bool option * Topconstr.constr_expr) list * Topconstr.constr_expr
 
 let new_named_morphism id m sign =
+  Coqlib.check_required_library ["Coq";"Setoids";"Setoid_tac"];
  let sign =
   match sign with
      None -> None
@@ -1028,9 +1014,9 @@ let int_add_relation id a aeq refl sym trans =
  let env = Global.env () in
  let a_quantifiers_rev = check_a env a in
   check_eq env a_quantifiers_rev a aeq  ;
-  option_iter (check_refl env a_quantifiers_rev a aeq) refl ;
-  option_iter (check_sym env a_quantifiers_rev a aeq) sym ;
-  option_iter (check_trans env a_quantifiers_rev a aeq) trans ;
+  Option.iter (check_refl env a_quantifiers_rev a aeq) refl ;
+  Option.iter (check_sym env a_quantifiers_rev a aeq) sym ;
+  Option.iter (check_trans env a_quantifiers_rev a aeq) trans ;
   let quantifiers_no = List.length a_quantifiers_rev in
   let aeq_rel =
    { rel_a = a;
@@ -1059,7 +1045,7 @@ let int_add_relation id a aeq refl sym trans =
             a_quantifiers_rev);
        const_entry_type = None;
        const_entry_opaque = false;
-       const_entry_boxed = Options.boxed_definitions()},
+       const_entry_boxed = Flags.boxed_definitions()},
       IsDefinition Definition) in
   let id_precise = id_of_string (string_of_id id ^ "_precise_relation_class") in
   let xreflexive_relation_class =
@@ -1076,14 +1062,14 @@ let int_add_relation id a aeq refl sym trans =
         Sign.it_mkLambda_or_LetIn xreflexive_relation_class a_quantifiers_rev;
        const_entry_type = None;
        const_entry_opaque = false;
-       const_entry_boxed = Options.boxed_definitions() },
+       const_entry_boxed = Flags.boxed_definitions() },
       IsDefinition Definition) in
   let aeq_rel =
    { aeq_rel with
       rel_X_relation_class = current_constant id;
       rel_Xreflexive_relation_class = current_constant id_precise } in
   Lib.add_anonymous_leaf (relation_to_obj (aeq, aeq_rel)) ;
-  Options.if_verbose ppnl (pr_lconstr aeq ++ str " is registered as a relation");
+  Flags.if_verbose ppnl (pr_lconstr aeq ++ str " is registered as a relation");
   match trans with
      None -> ()
    | Some trans ->
@@ -1091,9 +1077,9 @@ let int_add_relation id a aeq refl sym trans =
       let a_instance = apply_to_rels a a_quantifiers_rev in
       let aeq_instance = apply_to_rels aeq a_quantifiers_rev in
       let sym_instance =
-       option_map (fun x -> apply_to_rels x a_quantifiers_rev) sym in
+       Option.map (fun x -> apply_to_rels x a_quantifiers_rev) sym in
       let refl_instance =
-       option_map (fun x -> apply_to_rels x a_quantifiers_rev) refl in
+       Option.map (fun x -> apply_to_rels x a_quantifiers_rev) refl in
       let trans_instance = apply_to_rels trans a_quantifiers_rev in
       let aeq_rel_class_and_var1, aeq_rel_class_and_var2, lemma, output =
        match sym_instance, refl_instance with
@@ -1136,7 +1122,7 @@ let int_add_relation id a aeq refl sym trans =
           {const_entry_body = Sign.it_mkLambda_or_LetIn lemma a_quantifiers_rev;
            const_entry_type = None;
            const_entry_opaque = false;
-          const_entry_boxed = Options.boxed_definitions()},
+          const_entry_boxed = Flags.boxed_definitions()},
           IsDefinition Definition)
       in
        let a_quantifiers_rev =
@@ -1147,21 +1133,23 @@ let int_add_relation id a aeq refl sym trans =
 
 (* The vernac command "Add Relation ..." *)
 let add_relation id a aeq refl sym trans =
- int_add_relation id (constr_of a) (constr_of aeq) (option_map constr_of refl)
-  (option_map constr_of sym) (option_map constr_of trans)
+  Coqlib.check_required_library ["Coq";"Setoids";"Setoid_tac"];
+  int_add_relation id (constr_of a) (constr_of aeq) (Option.map constr_of refl)
+    (Option.map constr_of sym) (Option.map constr_of trans)
 
 (************************ Add Setoid ******************************************)
 
 (* The vernac command "Add Setoid" *)
 let add_setoid id a aeq th =
- let a = constr_of a in
- let aeq = constr_of aeq in
- let th = constr_of th in
- let env = Global.env () in
- let a_quantifiers_rev = check_a env a in
+  Coqlib.check_required_library ["Coq";"Setoids";"Setoid_tac"];
+  let a = constr_of a in
+  let aeq = constr_of aeq in
+  let th = constr_of th in
+  let env = Global.env () in
+  let a_quantifiers_rev = check_a env a in
   check_eq env a_quantifiers_rev a aeq  ;
   check_setoid_theory env a_quantifiers_rev a aeq  th ;
-   let a_instance = apply_to_rels a a_quantifiers_rev in
+  let a_instance = apply_to_rels a a_quantifiers_rev in
    let aeq_instance = apply_to_rels aeq a_quantifiers_rev in
    let th_instance = apply_to_rels th a_quantifiers_rev in
    let refl =
@@ -1478,12 +1466,9 @@ let mark_occur gl ~new_goals t in_c input_relation input_direction =
                           (MApp (func,mor,a,output_direction)))
 			  output_directions @ res
                     ) [] a'
-              | (he::tl) as a->
+              | (he::tl) ->
                  let typnf = Reduction.whd_betadeltaiota env typ in
                   match kind_of_term typnf with
-                    Cast (typ,_,_) ->
-                     find_non_dependent_function env c c_args_rev typ
-                      f_args_rev a_rev a
                   | Prod (name,s,t) ->
                      let env' = push_rel (name,None,s) env in
                      let he =
@@ -1578,12 +1563,12 @@ let mark_occur gl ~new_goals t in_c input_relation input_direction =
   match res' with
      [] when res = [] ->
       errorlabstrm "Setoid_rewrite"
-       (str "Either the term " ++ pr_lconstr t ++ str " that must be " ++
-        str "rewritten occurs in a covariant position or the goal is not " ++
-        str "made of morphism applications only. You can replace only " ++
-        str "occurrences that are in a contravariant position and such that " ++
-        str "the context obtained by abstracting them is made of morphism " ++
-        str "applications only.")
+       (strbrk "Either the term " ++ pr_lconstr t ++ strbrk " that must be " ++
+        strbrk "rewritten occurs in a covariant position or the goal is not" ++
+        strbrk " made of morphism applications only. You can replace only " ++
+        strbrk "occurrences that are in a contravariant position and such " ++
+        strbrk "that the context obtained by abstracting them is made of " ++
+        strbrk "morphism applications only.")
    | [] ->
       errorlabstrm "Setoid_rewrite"
        (str "No generated set of side conditions is a superset of those " ++
@@ -1594,16 +1579,16 @@ let mark_occur gl ~new_goals t in_c input_relation input_direction =
           (fun i (_,_,mc) -> pr_new_goals i mc) res)
    | [he] -> he
    | he::_ ->
-      ppnl
-       (str "Warning: The application of the tactic is subject to one of " ++
-        str "the \nfollowing set of side conditions that the user needs " ++
-        str "to prove:" ++
+      Flags.if_warn msg_warning
+       (strbrk "The application of the tactic is subject to one of " ++
+        strbrk "the following set of side conditions that the user needs " ++
+        strbrk "to prove:" ++
          pr_fnl () ++
          prlist_with_sepi pr_fnl
           (fun i (_,_,mc) -> pr_new_goals i mc) res' ++ pr_fnl () ++
-         str "The first set is randomly chosen. Use the syntax " ++
-         str "\"setoid_rewrite ... generate side conditions ...\" to choose " ++
-         str "a different set.") ;
+         strbrk "The first set is randomly chosen. Use the syntax " ++
+         strbrk "\"setoid_rewrite ... generate side conditions ...\" to choose " ++
+         strbrk "a different set.") ;
       he
 
 let cic_morphism_context_list_of_list hole_relation hole_direction out_direction
@@ -1727,14 +1712,14 @@ let check_evar_map_of_evars_defs evd =
   Evd.Metaset.iter
    (fun m ->
      if Evd.meta_defined evd m then () else
-      raise (Logic.RefinerError (Logic.OccurMetaGoal rebus)))
+      raise (Logic.RefinerError (Logic.UnresolvedBindings [Evd.meta_name evd m])))
  in
   List.iter
    (fun (_,binding) ->
      match binding with
         Evd.Cltyp (_,{Evd.rebus=rebus; Evd.freemetas=freemetas}) ->
          check_freemetas_is_empty rebus freemetas
-      | Evd.Clval (_,{Evd.rebus=rebus1; Evd.freemetas=freemetas1},
+      | Evd.Clval (_,({Evd.rebus=rebus1; Evd.freemetas=freemetas1},_),
                  {Evd.rebus=rebus2; Evd.freemetas=freemetas2}) ->
          check_freemetas_is_empty rebus1 freemetas1 ;
          check_freemetas_is_empty rebus2 freemetas2
@@ -1746,20 +1731,33 @@ let check_evar_map_of_evars_defs evd =
 (* [unification_rewrite] searchs a match for [c1] in [but] and then 
    returns the modified objects (in particular [c1] and [c2]) *)  
 
+let rewrite_unif_flags = {
+  modulo_conv_on_closed_terms = None;
+  use_metas_eagerly = true;
+  modulo_delta = empty_transparent_state;
+}
+
+let rewrite2_unif_flags = {
+  modulo_conv_on_closed_terms = Some full_transparent_state;
+  use_metas_eagerly = true;
+  modulo_delta = empty_transparent_state;
+}
+
 let unification_rewrite c1 c2 cl but gl = 
   let (env',c1) =
     try
-      (* ~mod_delta:false to allow to mark occurences that must not be
+      (* ~flags:(false,true) to allow to mark occurences that must not be
          rewritten simply by replacing them with let-defined definitions
          in the context *)
-      w_unify_to_subterm ~mod_delta:false (pf_env gl) (c1,but) cl.env
+      w_unify_to_subterm ~flags:rewrite_unif_flags (pf_env gl) (c1,but) cl.evd
     with
 	Pretype_errors.PretypeError _ ->
-	  (* ~mod_delta:true to make Ring work (since it really
+	  (* ~flags:(true,true) to make Ring work (since it really
              exploits conversion) *)
-	  w_unify_to_subterm ~mod_delta:true (pf_env gl) (c1,but) cl.env
+	  w_unify_to_subterm ~flags:rewrite2_unif_flags
+	    (pf_env gl) (c1,but) cl.evd
   in
-  let cl' = {cl with env = env' } in
+  let cl' = {cl with evd = env' } in
   let c2 = Clenv.clenv_nf_meta cl' c2 in
   check_evar_map_of_evars_defs env' ;
   env',Clenv.clenv_value cl', c1, c2
@@ -1808,7 +1806,7 @@ let relation_rewrite_no_unif c1 c2 hyp ~new_goals sigma gl =
      if_output_relation_is_if gl
   with
     Optimize ->
-      !general_rewrite (fst hyp = Left2Right) (snd hyp) gl
+      !general_rewrite (fst hyp = Left2Right) all_occurrences (snd hyp) gl
 
 let relation_rewrite c1 c2 (input_direction,cl) ~new_goals gl =
  let (sigma,cl,c1,c2) = unification_rewrite c1 c2 cl (pf_concl gl) gl in 
@@ -1826,7 +1824,9 @@ let analyse_hypothesis gl c =
  let others,(c1,c2) = split_last_two args in
   eqclause,mkApp (equiv, Array.of_list others),c1,c2
 
-let general_s_rewrite lft2rgt c ~new_goals gl =
+let general_s_rewrite lft2rgt occs c ~new_goals gl =
+  if occs <> all_occurrences then
+    warning "Rewriting at selected occurrences not supported";
   let eqclause,_,c1,c2 = analyse_hypothesis gl c in
   if lft2rgt then 
     relation_rewrite c1 c2 (Left2Right,eqclause) ~new_goals gl
@@ -1863,7 +1863,9 @@ let relation_rewrite_in id c1 c2 (direction,eqclause) ~new_goals gl =
             (relation_rewrite_no_unif c2 c1 (oppdir,cl) ~new_goals sigma))))
    gl
 
-let general_s_rewrite_in id lft2rgt c ~new_goals gl =
+let general_s_rewrite_in id lft2rgt occs c ~new_goals gl =
+  if occs <> all_occurrences then
+    warning "Rewriting at selected occurrences not supported";
   let eqclause,_,c1,c2 = analyse_hypothesis gl c in
   if lft2rgt then 
     relation_rewrite_in id c1 c2 (Left2Right,eqclause) ~new_goals gl
@@ -1918,7 +1920,7 @@ let general_setoid_replace rewrite_tac try_prove_eq_tac_opt relation c1 c2 ~new_
       tclTHENS (assert_tac false Anonymous eq)
 	[onLastHyp (fun id ->
           tclTHEN
-            (rewrite_tac dir (mkVar id) ~new_goals)
+            (rewrite_tac dir all_occurrences (mkVar id) ~new_goals)
             (clear [id]));
 	 try_prove_eq_tac]
     in
@@ -1930,7 +1932,7 @@ let general_setoid_replace rewrite_tac try_prove_eq_tac_opt relation c1 c2 ~new_
 	  tclTHENS (assert_tac false Anonymous eq)
 	    [onLastHyp (fun id ->
 	      tclTHEN
-		(rewrite_tac false (mkVar id) ~new_goals)
+		(rewrite_tac false all_occurrences (mkVar id) ~new_goals)
 		(clear [id]));
 	     try_prove_eq_tac] gl
       
@@ -2019,7 +2021,3 @@ let setoid_transitivity c gl =
   Optimize -> transitivity_red true c gl
 ;;
 
-Tactics.register_setoid_reflexivity setoid_reflexivity;;
-Tactics.register_setoid_symmetry setoid_symmetry;;
-Tactics.register_setoid_symmetry_in setoid_symmetry_in;;
-Tactics.register_setoid_transitivity setoid_transitivity;;

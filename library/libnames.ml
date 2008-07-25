@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libnames.ml 9488 2007-01-17 11:11:58Z herbelin $ i*)
+(*i $Id: libnames.ml 10580 2008-02-22 13:39:13Z lmamane $ i*)
 
 open Pp
 open Util
@@ -15,6 +15,7 @@ open Nameops
 open Term
 open Mod_subst
 
+(*s Global reference is a kernel side type for all references together *)
 type global_reference =
   | VarRef of variable
   | ConstRef of constant

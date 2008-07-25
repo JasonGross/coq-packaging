@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Ring_abstract.v 9179 2006-09-26 12:13:06Z barras $ *)
+(* $Id: Ring_abstract.v 9370 2006-11-13 09:21:31Z herbelin $ *)
 
 Require Import LegacyRing_theory.
 Require Import Quote.
@@ -428,7 +428,7 @@ Fixpoint interp_ap (p:apolynomial) : A :=
 Hint Resolve (Th_plus_comm T).
 Hint Resolve (Th_plus_assoc T).
 Hint Resolve (Th_plus_assoc2 T).
-Hint Resolve (Th_mult_sym T).
+Hint Resolve (Th_mult_comm T).
 Hint Resolve (Th_mult_assoc T).
 Hint Resolve (Th_mult_assoc2 T).
 Hint Resolve (Th_plus_zero_left T).

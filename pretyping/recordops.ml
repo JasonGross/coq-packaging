@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: recordops.ml 9166 2006-09-23 11:20:06Z herbelin $ *)
+(* $Id: recordops.ml 10577 2008-02-19 10:18:19Z corbinea $ *)
 
 open Util
 open Pp
@@ -40,15 +40,13 @@ type struc_typ = {
 let structure_table = ref (Indmap.empty : struc_typ Indmap.t)
 let projection_table = ref Cmap.empty
 
-let option_fold_right f p e = match p with Some a -> f a e | None -> e
-
 let load_structure i (_,(ind,id,kl,projs)) =
   let n = (fst (Global.lookup_inductive ind)).Declarations.mind_nparams in
   let struc =
     { s_CONST = id; s_EXPECTEDPARAM = n; s_PROJ = projs; s_PROJKIND = kl } in
   structure_table := Indmap.add ind struc !structure_table;
   projection_table := 
-    List.fold_right (option_fold_right (fun proj -> Cmap.add proj struc))
+    List.fold_right (Option.fold_right (fun proj -> Cmap.add proj struc))
       projs !projection_table
 
 let cache_structure o =
@@ -60,7 +58,7 @@ let subst_structure (_,subst,((kn,i),id,kl,projs as obj)) =
    (* invariant: struc.s_PROJ is an evaluable reference. Thus we can take *)
    (* the first component of subst_con.                                   *)
    list_smartmap 
-     (option_smartmap (fun kn -> fst (subst_con subst kn)))
+     (Option.smartmap (fun kn -> fst (subst_con subst kn)))
     projs
   in
     if projs' == projs && kn' == kn then obj else
@@ -68,7 +66,7 @@ let subst_structure (_,subst,((kn,i),id,kl,projs as obj)) =
 
 let discharge_structure (_,(ind,id,kl,projs)) =
   Some (Lib.discharge_inductive ind, id, kl,
-        List.map (option_map Lib.discharge_con) projs)
+        List.map (Option.map Lib.discharge_con) projs)
 
 let (inStruc,outStruc) =
   declare_object {(default_object "STRUCTURE") with 
@@ -117,12 +115,19 @@ that maps the pair (Li,ci) to the following data
 
 type obj_typ = {
   o_DEF : constr;
+  o_INJ : int;      (* position of trivial argument (negative= none) *)
   o_TABS : constr list;    (* ordered *)
   o_TPARAMS : constr list; (* ordered *)
   o_TCOMPS : constr list } (* ordered *)
 
+type cs_pattern =
+    Const_cs of global_reference
+  | Prod_cs
+  | Sort_cs of sorts_family
+  | Default_cs
+
 let object_table =
-  (ref [] : ((global_reference * global_reference) * obj_typ) list ref)
+  (ref [] : ((global_reference * cs_pattern) * obj_typ) list ref)
 
 let canonical_projections () = !object_table
 
@@ -130,14 +135,31 @@ let keep_true_projections projs kinds =
   map_succeed (function (p,true) -> p | _ -> failwith "")
     (List.combine projs kinds)
 
-(* Intended to always success *)
+let cs_pattern_of_constr t =
+  match kind_of_term t with
+      App (f,vargs) -> 
+	begin 
+	  try  Const_cs (global_of_constr f) , -1, Array.to_list vargs with
+	      _ -> raise Not_found 
+	end 
+    | Rel n -> Default_cs, pred n, []
+    | Prod (_,a,b) when not (dependent (mkRel 1) b) -> Prod_cs, -1, [a;pop b]
+    | Sort s -> Sort_cs (family_of_sort s), -1, []
+    | _ -> 
+	begin 
+	  try  Const_cs (global_of_constr t) , -1, [] with
+	      _ -> raise Not_found 
+	end 
+
+(* Intended to always succeed *)
 let compute_canonical_projections (con,ind) =
   let v = mkConst con in
   let c = Environ.constant_value (Global.env()) con in
   let lt,t = Reductionops.splay_lambda (Global.env()) Evd.empty c in
   let lt = List.rev (List.map snd lt) in
   let args = snd (decompose_app t) in
-  let { s_EXPECTEDPARAM = p; s_PROJ = lpj; s_PROJKIND = kl } = lookup_structure ind in
+  let { s_EXPECTEDPARAM = p; s_PROJ = lpj; s_PROJKIND = kl } = 
+    lookup_structure ind in
   let params, projs = list_chop p args in
   let lpj = keep_true_projections lpj kl in
   let lps = List.combine lpj projs in
@@ -146,13 +168,16 @@ let compute_canonical_projections (con,ind) =
       (fun l (spopt,t) -> (* comp=components *)
 	 match spopt with
            | Some proji_sp ->
-	       let c, args = decompose_app t in
-	       (try (ConstRef proji_sp, global_of_constr c, args) :: l
-                with Not_found -> l)
+	       begin
+		 try 
+		   let patt, n , args = cs_pattern_of_constr t in
+		     ((ConstRef proji_sp, patt, n, args) :: l)
+		 with Not_found -> l 
+	       end
 	   | _ -> l)
       [] lps in
-  List.map (fun (refi,c,argj) ->
-    (refi,c),{o_DEF=v; o_TABS=lt; o_TPARAMS=params; o_TCOMPS=argj})
+  List.map (fun (refi,c,inj,argj) ->
+    (refi,c),{o_DEF=v; o_INJ=inj; o_TABS=lt; o_TPARAMS=params; o_TCOMPS=argj})
     comp
 
 let open_canonical_structure i (_,o) =

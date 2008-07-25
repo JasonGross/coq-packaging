@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: closure.ml 9215 2006-10-05 15:40:31Z herbelin $ *)
+(* $Id: closure.ml 10819 2008-04-20 18:14:44Z msozeau $ *)
 
 open Util
 open Pp
@@ -165,143 +165,15 @@ let betadeltaiotanolet = mkflags [fBETA;fDELTA;fIOTA]
 let betaiota = mkflags [fBETA;fIOTA]
 let beta = mkflags [fBETA]
 let betaiotazeta = mkflags [fBETA;fIOTA;fZETA]
+
+(* Removing fZETA for finer behaviour would break many developments *)
+let unfold_side_flags = [fBETA;fIOTA;fZETA]
+let unfold_side_red = mkflags [fBETA;fIOTA;fZETA]
 let unfold_red kn = 
   let flag = match kn with
     | EvalVarRef id -> fVAR id
-    | EvalConstRef kn -> fCONST kn
-  in (* Remove fZETA for finer behaviour ? *)
-  mkflags [fBETA;flag;fIOTA;fZETA]
-
-(************************* Obsolète
-(* [r_const=(true,cl)] means all constants but those in [cl] *)
-(* [r_const=(false,cl)] means only those in [cl] *)
-type reds = {
-  r_beta : bool;
-  r_const : bool * constant_path list * identifier list;
-  r_zeta : bool;
-  r_evar : bool;
-  r_iota : bool }
-
-let betadeltaiota_red = {
-  r_beta = true;
-  r_const = true,[],[];
-  r_zeta = true;
-  r_evar = true;
-  r_iota = true } 
-
-let betaiota_red = {
-  r_beta = true;
-  r_const = false,[],[];
-  r_zeta = false;
-  r_evar = false;
-  r_iota = true }
-		     
-let beta_red = {
-  r_beta = true;
-  r_const = false,[],[];
-  r_zeta = false;
-  r_evar = false;
-  r_iota = false }
-
-let no_red = {
-  r_beta = false;
-  r_const = false,[],[];
-  r_zeta = false;
-  r_evar = false;
-  r_iota = false }
-
-let betaiotazeta_red = {
-  r_beta = true;
-  r_const = false,[],[];
-  r_zeta = true;
-  r_evar = false;
-  r_iota = true }
-
-let unfold_red kn =
-  let c = match kn with
-    | EvalVarRef id -> false,[],[id]
-    | EvalConstRef kn -> false,[kn],[]
-  in {
-  r_beta = true;
-  r_const = c;
-  r_zeta = true;   (* false for finer behaviour ? *)
-  r_evar = false;
-  r_iota = true }
-
-(* Sets of reduction kinds.
-   Main rule: delta implies all consts (both global (= by
-   kernel_name) and local (= by Rel or Var)), all evars, and zeta (= letin's).
-   Rem: reduction of a Rel/Var bound to a term is Delta, but reduction of 
-   a LetIn expression is Letin reduction *)
-
-type red_kind =
-    BETA | DELTA | ZETA | IOTA
-  | CONST of constant_path list | CONSTBUT of constant_path list
-  | VAR of identifier | VARBUT of identifier
-
-let rec red_add red = function
-  | BETA -> { red with r_beta = true }
-  | DELTA ->
-      (match red.r_const with
-	| _,_::_,[] | _,[],_::_ -> error "Conflict in the reduction flags"
-	| _ -> { red with r_const = true,[],[]; r_zeta = true; r_evar = true })
-  | CONST cl ->
-      (match red.r_const with
-	| true,_,_ -> error "Conflict in the reduction flags"
-	| _,l1,l2 -> { red with r_const = false, list_union cl l1, l2 })
-  | CONSTBUT cl ->
-      (match red.r_const with
-	| false,_::_,_ | false,_,_::_ ->
-			   error "Conflict in the reduction flags"
-	| _,l1,l2 ->
-	    { red with r_const = true, list_union cl l1, l2;
-		r_zeta = true; r_evar = true })
-  | IOTA -> { red with r_iota = true }
-  | ZETA -> { red with r_zeta = true }
-  | VAR id ->
-      (match red.r_const with
-	| true,_,_ -> error "Conflict in the reduction flags"
-	| _,l1,l2 -> { red with r_const = false, l1, list_union [id] l2 })
-  | VARBUT cl ->
-      (match red.r_const with
-	| false,_::_,_ | false,_,_::_ ->
-			   error "Conflict in the reduction flags"
-	| _,l1,l2 ->
-	    { red with r_const = true, l1, list_union [cl] l2;
-		r_zeta = true; r_evar = true })
-
-let red_delta_set red =
-  let b,_,_ = red.r_const in b
-
-let red_local_const = red_delta_set
-
-(* to know if a redex is allowed, only a subset of red_kind is used ... *)
-let red_set red = function
-  | BETA -> incr_cnt red.r_beta beta
-  | CONST [kn] -> 
-      let (b,l,_) = red.r_const in
-      let c = List.mem kn l in
-      incr_cnt ((b & not c) or (c & not b)) delta
-  | VAR id -> (* En attendant d'avoir des kn pour les Var *)
-     let (b,_,l) = red.r_const in
-      let c = List.mem id l in
-      incr_cnt ((b & not c) or (c & not b)) delta
-  | ZETA -> incr_cnt red.r_zeta zeta
-  | EVAR -> incr_cnt red.r_zeta evar
-  | IOTA -> incr_cnt red.r_iota iota
-  | DELTA -> red_delta_set red (*Used for Rel/Var defined in context*)
-  (* Not for internal use *)
-  | CONST _ | CONSTBUT _ | VAR _ | VARBUT _ -> failwith "not implemented"
-
-(* Gives the constant list *)
-let red_get_const red =
-  let b,l1,l2 = red.r_const in
-  let l1' = List.map (fun x -> EvalConstRef x) l1 in
-  let l2' = List.map (fun x -> EvalVarRef x) l2 in
-  b, l1' @ l2'
-fin obsolète **************)
-(* specification of the reduction function *)
-
+    | EvalConstRef kn -> fCONST kn in
+  mkflags (flag::unfold_side_flags)
 
 (* Flags of reduction and cache of constants: 'a is a type that may be
  * mapped to constr. 'a infos implements a cache for constants and
@@ -980,7 +852,7 @@ and knht e t stk =
 
 (************************************************************************)
 
-(* Computes a normal form from the result of knh. *)
+(* Computes a weak head normal form from the result of knh. *)
 let rec knr info m stk =
   match m.term with
   | FLambda(n,tys,f,e) when red_set info.i_flags fBETA ->
@@ -1082,6 +954,11 @@ and norm_head info m =
           let fbds =
             Array.map (mk_clos (subs_liftn (Array.length na) e)) bds in
           mkCoFix(n,(na, Array.map (kl info) ftys, Array.map (kl info) fbds))
+      | FFix((n,(na,tys,bds)),e) ->
+          let ftys = Array.map (mk_clos e) tys in
+          let fbds =
+            Array.map (mk_clos (subs_liftn (Array.length na) e)) bds in
+          mkFix(n,(na, Array.map (kl info) ftys, Array.map (kl info) fbds))
       | FEvar(i,args) -> mkEvar(i, Array.map (kl info) args)
       | t -> term_of_fconstr m
 

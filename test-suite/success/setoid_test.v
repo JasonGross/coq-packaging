@@ -18,7 +18,7 @@ Definition same (s t : set) : Prop := forall a : A, In a s <-> In a t.
 
 Lemma setoid_set : Setoid_Theory set same.
 
-unfold same in |- *; split.
+unfold same in |- *; split ; red.
 red in |- *; auto.
 
 red in |- *.
@@ -104,3 +104,15 @@ setoid_rewrite <- H.
 trivial.
 Qed.
 
+(* Unifying the domain up to delta-conversion (example from emakarov) *)
+
+Definition id: Set -> Set := fun A => A.
+Definition rel : forall A : Set, relation (id A) := @eq.
+Definition f: forall A : Set, A -> A := fun A x => x.
+
+Add Relation (id A) (rel A) as eq_rel.
+
+Add Morphism (@f A) : f_morph.
+Proof.
+unfold rel, f. trivial.
+Qed.

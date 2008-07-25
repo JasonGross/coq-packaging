@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: cctac.mli 10121 2007-09-14 09:45:40Z corbinea $ *)
+(* $Id: cctac.mli 10637 2008-03-07 23:52:56Z letouzey $ *)
 
 open Term 
 open Proof_type
@@ -18,3 +18,5 @@ val cc_tactic : int -> constr list -> tactic
 val cc_fail : tactic
 
 val congruence_tac : int -> constr list -> tactic
+
+val f_equal : tactic

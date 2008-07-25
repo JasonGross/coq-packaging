@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: q_coqast.ml4 10185 2007-10-06 18:05:13Z herbelin $ *)
+(*i camlp4use: "q_MLast.cmo pa_macro.cmo" i*)
+
+(* $Id: q_coqast.ml4 11094 2008-06-10 19:35:23Z herbelin $ *)
 
 open Util
 open Names
@@ -60,12 +62,18 @@ let mlexpr_of_reference = function
   | Libnames.Qualid (loc,qid) -> <:expr< Libnames.Qualid $dloc$ $mlexpr_of_qualid qid$ >>
   | Libnames.Ident (loc,id) -> <:expr< Libnames.Ident $dloc$ $mlexpr_of_ident id$ >>
 
+let mlexpr_of_by_notation f = function
+  | Genarg.AN x -> <:expr< Genarg.AN $f x$ >>
+  | Genarg.ByNotation (loc,s) -> <:expr< Genarg.ByNotation $dloc$ $str:s$ >>
+
 let mlexpr_of_intro_pattern = function
-  | Genarg.IntroOrAndPattern _ -> failwith "mlexpr_of_intro_pattern: TODO"
   | Genarg.IntroWildcard -> <:expr< Genarg.IntroWildcard >>
   | Genarg.IntroAnonymous -> <:expr< Genarg.IntroAnonymous >>
+  | Genarg.IntroFresh id -> <:expr< Genarg.IntroFresh (mlexpr_of_ident $dloc$ id) >>
   | Genarg.IntroIdentifier id ->
       <:expr< Genarg.IntroIdentifier (mlexpr_of_ident $dloc$ id) >>
+  | Genarg.IntroOrAndPattern _ | Genarg.IntroRewrite _ ->
+      failwith "mlexpr_of_intro_pattern: TODO"
 
 let mlexpr_of_ident_option = mlexpr_of_option (mlexpr_of_ident)
 
@@ -87,7 +95,9 @@ let mlexpr_of_or_var f = function
 
 let mlexpr_of_hyp = mlexpr_of_or_metaid (mlexpr_of_located mlexpr_of_ident)
 
-let mlexpr_of_occs = mlexpr_of_list (mlexpr_of_or_var mlexpr_of_int)
+let mlexpr_of_occs =
+  mlexpr_of_pair
+    mlexpr_of_bool (mlexpr_of_list (mlexpr_of_or_var mlexpr_of_int))
 
 let mlexpr_of_occurrences f = mlexpr_of_pair mlexpr_of_occs f
 
@@ -103,7 +113,6 @@ let mlexpr_of_clause cl =
   <:expr< {Tacexpr.onhyps=
              $mlexpr_of_option (mlexpr_of_list mlexpr_of_hyp_location)
                cl.Tacexpr.onhyps$;
-           Tacexpr.onconcl= $mlexpr_of_bool cl.Tacexpr.onconcl$;
            Tacexpr.concl_occs= $mlexpr_of_occs cl.Tacexpr.concl_occs$} >>
 
 let mlexpr_of_red_flags {
@@ -117,13 +126,21 @@ let mlexpr_of_red_flags {
   Rawterm.rIota = $mlexpr_of_bool bi$;
   Rawterm.rZeta = $mlexpr_of_bool bz$;
   Rawterm.rDelta = $mlexpr_of_bool bd$;
-  Rawterm.rConst = $mlexpr_of_list mlexpr_of_reference l$
+  Rawterm.rConst = $mlexpr_of_list (mlexpr_of_by_notation mlexpr_of_reference) l$
 } >>
 
 let mlexpr_of_explicitation = function
   | Topconstr.ExplByName id -> <:expr< Topconstr.ExplByName $mlexpr_of_ident id$ >>
-  | Topconstr.ExplByPos n -> <:expr< Topconstr.ExplByPos $mlexpr_of_int n$ >>
+  | Topconstr.ExplByPos (n,_id) -> <:expr< Topconstr.ExplByPos $mlexpr_of_int n$ >>
  
+let mlexpr_of_binding_kind = function
+  | Rawterm.Implicit -> <:expr< Rawterm.Implicit >>
+  | Rawterm.Explicit -> <:expr< Rawterm.Explicit >>
+
+let mlexpr_of_binder_kind = function
+  | Topconstr.Default b -> <:expr< Topconstr.Default $mlexpr_of_binding_kind b$ >>
+  | Topconstr.TypeClass b -> <:expr< Topconstr.TypeClass $mlexpr_of_binding_kind b$ >>
+
 let rec mlexpr_of_constr = function
   | Topconstr.CRef (Libnames.Ident (loc,id)) when is_meta (string_of_id id) ->
       anti loc (string_of_id id)
@@ -132,13 +149,15 @@ let rec mlexpr_of_constr = function
   | Topconstr.CCoFix (loc,_,_) -> failwith "mlexpr_of_constr: TODO"
   | Topconstr.CArrow (loc,a,b) ->
   <:expr< Topconstr.CArrow $dloc$ $mlexpr_of_constr a$ $mlexpr_of_constr b$ >>
-  | Topconstr.CProdN (loc,l,a) -> <:expr< Topconstr.CProdN $dloc$ $mlexpr_of_list (mlexpr_of_pair (mlexpr_of_list (mlexpr_of_pair (fun _ -> dloc) mlexpr_of_name)) mlexpr_of_constr) l$ $mlexpr_of_constr a$ >>
-  | Topconstr.CLambdaN (loc,l,a) -> <:expr< Topconstr.CLambdaN $dloc$ $mlexpr_of_list (mlexpr_of_pair (mlexpr_of_list (mlexpr_of_pair (fun _ -> dloc) mlexpr_of_name)) mlexpr_of_constr) l$ $mlexpr_of_constr a$ >>
+  | Topconstr.CProdN (loc,l,a) -> <:expr< Topconstr.CProdN $dloc$ $mlexpr_of_list 
+      (mlexpr_of_triple (mlexpr_of_list (mlexpr_of_pair (fun _ -> dloc) mlexpr_of_name)) mlexpr_of_binder_kind mlexpr_of_constr) l$ $mlexpr_of_constr a$ >>
+  | Topconstr.CLambdaN (loc,l,a) -> <:expr< Topconstr.CLambdaN $dloc$ $mlexpr_of_list (mlexpr_of_triple (mlexpr_of_list (mlexpr_of_pair (fun _ -> dloc) mlexpr_of_name)) mlexpr_of_binder_kind mlexpr_of_constr) l$ $mlexpr_of_constr a$ >>
   | Topconstr.CLetIn (loc,_,_,_) -> failwith "mlexpr_of_constr: TODO"
   | Topconstr.CAppExpl (loc,a,l) -> <:expr< Topconstr.CAppExpl $dloc$ $mlexpr_of_pair (mlexpr_of_option mlexpr_of_int) mlexpr_of_reference a$ $mlexpr_of_list mlexpr_of_constr l$ >>
   | Topconstr.CApp (loc,a,l) -> <:expr< Topconstr.CApp $dloc$ $mlexpr_of_pair (mlexpr_of_option mlexpr_of_int) mlexpr_of_constr a$ $mlexpr_of_list (mlexpr_of_pair mlexpr_of_constr (mlexpr_of_option (mlexpr_of_located mlexpr_of_explicitation))) l$ >>
-  | Topconstr.CCases (loc,_,_,_) -> failwith "mlexpr_of_constr: TODO"
-  | Topconstr.CHole loc -> <:expr< Topconstr.CHole $dloc$ >>
+  | Topconstr.CCases (loc,_,_,_,_) -> failwith "mlexpr_of_constr: TODO"
+  | Topconstr.CHole (loc, None) -> <:expr< Topconstr.CHole $dloc$ None >>
+  | Topconstr.CHole (loc, Some _) -> failwith "mlexpr_of_constr: TODO CHole (Some _)"
   | Topconstr.CNotation(_,ntn,l) ->
       <:expr< Topconstr.CNotation $dloc$ $mlexpr_of_string ntn$
                 $mlexpr_of_list mlexpr_of_constr l$ >>
@@ -147,8 +166,7 @@ let rec mlexpr_of_constr = function
   | _ -> failwith "mlexpr_of_constr: TODO"
 
 let mlexpr_of_occ_constr =
-  mlexpr_of_pair (mlexpr_of_list (mlexpr_of_or_var mlexpr_of_int))
-    mlexpr_of_constr
+  mlexpr_of_occurrences mlexpr_of_constr
 
 let mlexpr_of_red_expr = function
   | Rawterm.Red b -> <:expr< Rawterm.Red $mlexpr_of_bool b$ >>
@@ -159,9 +177,8 @@ let mlexpr_of_red_expr = function
   | Rawterm.Lazy f ->
       <:expr< Rawterm.Lazy $mlexpr_of_red_flags f$ >>
   | Rawterm.Unfold l ->
-      let f1 = mlexpr_of_list (mlexpr_of_or_var mlexpr_of_int) in
-      let f2 = mlexpr_of_reference in
-      let f = mlexpr_of_list (mlexpr_of_pair f1 f2) in
+      let f1 = mlexpr_of_by_notation mlexpr_of_reference in
+      let f = mlexpr_of_list (mlexpr_of_occurrences f1) in
       <:expr< Rawterm.Unfold $f l$ >>
   | Rawterm.Fold l ->
       <:expr< Rawterm.Fold $mlexpr_of_list mlexpr_of_constr l$ >>
@@ -220,18 +237,18 @@ let mlexpr_of_binding_kind = function
   | Rawterm.NoBindings -> 
        <:expr< Rawterm.NoBindings >>
 
-let mlexpr_of_induction_arg = function
-  | Tacexpr.ElimOnConstr c ->
-      <:expr< Tacexpr.ElimOnConstr $mlexpr_of_constr c$ >>
-  | Tacexpr.ElimOnIdent (_,id) -> 
-      <:expr< Tacexpr.ElimOnIdent $dloc$ $mlexpr_of_ident id$ >>
-  | Tacexpr.ElimOnAnonHyp n ->
-      <:expr< Tacexpr.ElimOnAnonHyp $mlexpr_of_int n$ >>
-
 let mlexpr_of_binding = mlexpr_of_pair mlexpr_of_binding_kind mlexpr_of_constr
 
 let mlexpr_of_constr_with_binding =
   mlexpr_of_pair mlexpr_of_constr mlexpr_of_binding_kind
+
+let mlexpr_of_induction_arg = function
+  | Tacexpr.ElimOnConstr c ->
+      <:expr< Tacexpr.ElimOnConstr $mlexpr_of_constr_with_binding c$ >>
+  | Tacexpr.ElimOnIdent (_,id) -> 
+      <:expr< Tacexpr.ElimOnIdent $dloc$ $mlexpr_of_ident id$ >>
+  | Tacexpr.ElimOnAnonHyp n ->
+      <:expr< Tacexpr.ElimOnAnonHyp $mlexpr_of_int n$ >>
 
 let mlexpr_of_clause_pattern _ = failwith "mlexpr_of_clause_pattern: TODO"
 
@@ -278,37 +295,39 @@ let rec mlexpr_of_atomic_tactic = function
       <:expr< Tacexpr.TacExactNoCheck $mlexpr_of_constr c$ >>
   | Tacexpr.TacVmCastNoCheck c ->
       <:expr< Tacexpr.TacVmCastNoCheck $mlexpr_of_constr c$ >>
-  | Tacexpr.TacApply cb ->
-      <:expr< Tacexpr.TacApply $mlexpr_of_constr_with_binding cb$ >>
-  | Tacexpr.TacElim (cb,cbo) ->
+  | Tacexpr.TacApply (b,false,cb) ->
+      <:expr< Tacexpr.TacApply $mlexpr_of_bool b$ False $mlexpr_of_constr_with_binding cb$ >>
+  | Tacexpr.TacElim (false,cb,cbo) ->
       let cb = mlexpr_of_constr_with_binding cb in
       let cbo = mlexpr_of_option mlexpr_of_constr_with_binding cbo in
-      <:expr< Tacexpr.TacElim $cb$ $cbo$ >>
+      <:expr< Tacexpr.TacElim False $cb$ $cbo$ >>
   | Tacexpr.TacElimType c ->
       <:expr< Tacexpr.TacElimType $mlexpr_of_constr c$ >>
-  | Tacexpr.TacCase cb ->
+  | Tacexpr.TacCase (false,cb) ->
       let cb = mlexpr_of_constr_with_binding cb in
-      <:expr< Tacexpr.TacCase $cb$ >>
+      <:expr< Tacexpr.TacCase False $cb$ >>
   | Tacexpr.TacCaseType c ->
       <:expr< Tacexpr.TacCaseType $mlexpr_of_constr c$ >>
   | Tacexpr.TacFix (ido,n) ->
       let ido = mlexpr_of_ident_option ido in
       let n = mlexpr_of_int n in
       <:expr< Tacexpr.TacFix $ido$ $n$ >>
-  | Tacexpr.TacMutualFix (id,n,l) ->
+  | Tacexpr.TacMutualFix (b,id,n,l) ->
+      let b = mlexpr_of_bool b in
       let id = mlexpr_of_ident id in
       let n = mlexpr_of_int n in
       let f =mlexpr_of_triple mlexpr_of_ident mlexpr_of_int mlexpr_of_constr in
       let l = mlexpr_of_list f l in
-      <:expr< Tacexpr.TacMutualFix $id$ $n$ $l$ >>
+      <:expr< Tacexpr.TacMutualFix $b$ $id$ $n$ $l$ >>
   | Tacexpr.TacCofix ido ->
       let ido = mlexpr_of_ident_option ido in
       <:expr< Tacexpr.TacCofix $ido$ >>
-  | Tacexpr.TacMutualCofix (id,l) ->
+  | Tacexpr.TacMutualCofix (b,id,l) ->
+      let b = mlexpr_of_bool b in
       let id = mlexpr_of_ident id in
       let f = mlexpr_of_pair mlexpr_of_ident mlexpr_of_constr in
       let l = mlexpr_of_list f l in
-      <:expr< Tacexpr.TacMutualCofix $id$ $l$ >>
+      <:expr< Tacexpr.TacMutualCofix $b$ $id$ $l$ >>
 
   | Tacexpr.TacCut c ->
       <:expr< Tacexpr.TacCut $mlexpr_of_constr c$ >>
@@ -317,29 +336,30 @@ let rec mlexpr_of_atomic_tactic = function
       <:expr< Tacexpr.TacAssert $mlexpr_of_option mlexpr_of_tactic t$ $ipat$ 
 	      $mlexpr_of_constr c$ >>
   | Tacexpr.TacGeneralize cl ->
-      <:expr< Tacexpr.TacGeneralize $mlexpr_of_list mlexpr_of_constr cl$ >>
+      <:expr< Tacexpr.TacGeneralize
+	      $mlexpr_of_list 
+                (mlexpr_of_pair mlexpr_of_occ_constr mlexpr_of_name) cl$ >>
   | Tacexpr.TacGeneralizeDep c ->
       <:expr< Tacexpr.TacGeneralizeDep $mlexpr_of_constr c$ >>
-  | Tacexpr.TacLetTac (na,c,cl) ->
+  | Tacexpr.TacLetTac (na,c,cl,b) ->
       let na = mlexpr_of_name na in
       let cl = mlexpr_of_clause_pattern cl in
-      <:expr< Tacexpr.TacLetTac $na$ $mlexpr_of_constr c$ $cl$ >>
+      <:expr< Tacexpr.TacLetTac $na$ $mlexpr_of_constr c$ $cl$
+	      $mlexpr_of_bool b$ >>
 
   (* Derived basic tactics *)
   | Tacexpr.TacSimpleInduction h ->
       <:expr< Tacexpr.TacSimpleInduction ($mlexpr_of_quantified_hypothesis h$) >>
-  | Tacexpr.TacNewInduction (cl,cbo,ids) ->
+  | Tacexpr.TacNewInduction (false,cl,cbo,ids,cls) ->
       let cbo = mlexpr_of_option mlexpr_of_constr_with_binding cbo in
       let ids = mlexpr_of_intro_pattern ids in
-(*       let ids = mlexpr_of_option mlexpr_of_intro_pattern ids in *)
-(*       <:expr< Tacexpr.TacNewInduction $mlexpr_of_induction_arg c$ $cbo$ $ids$>> *)
-      <:expr< Tacexpr.TacNewInduction $mlexpr_of_list mlexpr_of_induction_arg cl$ $cbo$ $ids$>>
+      <:expr< Tacexpr.TacNewInduction False $mlexpr_of_list mlexpr_of_induction_arg cl$ $cbo$ $ids$ $mlexpr_of_option mlexpr_of_clause cls$ >>
   | Tacexpr.TacSimpleDestruct h ->
       <:expr< Tacexpr.TacSimpleDestruct $mlexpr_of_quantified_hypothesis h$ >>
-  | Tacexpr.TacNewDestruct (c,cbo,ids) ->
+  | Tacexpr.TacNewDestruct (false,c,cbo,ids,cls) ->
       let cbo = mlexpr_of_option mlexpr_of_constr_with_binding cbo in
       let ids = mlexpr_of_intro_pattern ids in
-      <:expr< Tacexpr.TacNewDestruct $mlexpr_of_list mlexpr_of_induction_arg c$ $cbo$ $ids$ >>
+      <:expr< Tacexpr.TacNewDestruct False $mlexpr_of_list mlexpr_of_induction_arg c$ $cbo$ $ids$ $mlexpr_of_option mlexpr_of_clause cls$ >>
 
   (* Context management *)
   | Tacexpr.TacClear (b,l) ->
@@ -354,18 +374,18 @@ let rec mlexpr_of_atomic_tactic = function
               $mlexpr_of_hyp id2$ >>
 
   (* Constructors *)
-  | Tacexpr.TacLeft l ->
-      <:expr< Tacexpr.TacLeft $mlexpr_of_binding_kind l$>>
-  | Tacexpr.TacRight l ->
-      <:expr< Tacexpr.TacRight $mlexpr_of_binding_kind l$>>
-  | Tacexpr.TacSplit (b,l) ->
+  | Tacexpr.TacLeft (ev,l) ->
+      <:expr< Tacexpr.TacLeft $mlexpr_of_bool ev$ $mlexpr_of_binding_kind l$>>
+  | Tacexpr.TacRight (ev,l) ->
+      <:expr< Tacexpr.TacRight $mlexpr_of_bool ev$ $mlexpr_of_binding_kind l$>>
+  | Tacexpr.TacSplit (ev,b,l) ->
       <:expr< Tacexpr.TacSplit
-        ($mlexpr_of_bool b$,$mlexpr_of_binding_kind l$)>>
-  | Tacexpr.TacAnyConstructor t ->
-      <:expr< Tacexpr.TacAnyConstructor $mlexpr_of_option mlexpr_of_tactic t$>>
-  | Tacexpr.TacConstructor (n,l) ->
+        ($mlexpr_of_bool ev$,$mlexpr_of_bool b$,$mlexpr_of_binding_kind l$)>>
+  | Tacexpr.TacAnyConstructor (ev,t) ->
+      <:expr< Tacexpr.TacAnyConstructor $mlexpr_of_bool ev$ $mlexpr_of_option mlexpr_of_tactic t$>>
+  | Tacexpr.TacConstructor (ev,n,l) ->
       let n = mlexpr_of_or_metaid mlexpr_of_int n in
-      <:expr< Tacexpr.TacConstructor $n$ $mlexpr_of_binding_kind l$>>
+      <:expr< Tacexpr.TacConstructor $mlexpr_of_bool ev$ $n$ $mlexpr_of_binding_kind l$>>
 
   (* Conversion *)
   | Tacexpr.TacReduce (r,cl) ->
@@ -403,8 +423,8 @@ let rec mlexpr_of_atomic_tactic = function
 and mlexpr_of_tactic : (Tacexpr.raw_tactic_expr -> MLast.expr) = function
   | Tacexpr.TacAtom (loc,t) ->
       <:expr< Tacexpr.TacAtom $dloc$ $mlexpr_of_atomic_tactic t$ >>
-  | Tacexpr.TacThen (t1,t2) -> 
-      <:expr< Tacexpr.TacThen $mlexpr_of_tactic t1$ $mlexpr_of_tactic t2$ >>
+  | Tacexpr.TacThen (t1,[||],t2,[||]) -> 
+      <:expr< Tacexpr.TacThen $mlexpr_of_tactic t1$ [||] $mlexpr_of_tactic t2$ [||]>>
   | Tacexpr.TacThens (t,tl) ->
       <:expr< Tacexpr.TacThens $mlexpr_of_tactic t$ $mlexpr_of_list mlexpr_of_tactic tl$>>
   | Tacexpr.TacFirst tl ->
@@ -431,13 +451,12 @@ and mlexpr_of_tactic : (Tacexpr.raw_tactic_expr -> MLast.expr) = function
   | Tacexpr.TacRec (id,(idl,t)) -> TacRec (loc,(id,(idl,f t)))
   | Tacexpr.TacRecIn (l,t) -> TacRecIn(loc,List.map (fun (id,t) -> (id,f t)) l,f t)
 *)
-  | Tacexpr.TacLetIn (l,t) ->
+  | Tacexpr.TacLetIn (isrec,l,t) ->
       let f =
-	mlexpr_of_triple
+	mlexpr_of_pair
 	  (mlexpr_of_pair (fun _ -> dloc) mlexpr_of_ident)
-	  (mlexpr_of_option mlexpr_of_tactic)
 	  mlexpr_of_tactic_arg in
-      <:expr< Tacexpr.TacLetIn $mlexpr_of_list f l$ $mlexpr_of_tactic t$ >>
+      <:expr< Tacexpr.TacLetIn $mlexpr_of_bool isrec$ $mlexpr_of_list f l$ $mlexpr_of_tactic t$ >>
   | Tacexpr.TacMatch (lz,t,l) ->
       <:expr< Tacexpr.TacMatch
         $mlexpr_of_bool lz$
@@ -453,19 +472,15 @@ and mlexpr_of_tactic : (Tacexpr.raw_tactic_expr -> MLast.expr) = function
       <:expr< Tacexpr.TacFun
         ($mlexpr_of_list mlexpr_of_ident_option idol$,
          $mlexpr_of_tactic body$) >>
-(*
-  | Tacexpr.TacFunRec of $dloc$ * identifier * tactic_fun_ast
-*)
-(*
-  | Tacexpr.TacArg (Tacexpr.AstTacArg (Coqast.Nmeta $dloc$ id)) -> anti loc id
-*)
-  | Tacexpr.TacArg (Tacexpr.MetaIdArg (_,id)) -> anti loc id
+  | Tacexpr.TacArg (Tacexpr.MetaIdArg (_,true,id)) -> anti loc id
   | Tacexpr.TacArg t ->
       <:expr< Tacexpr.TacArg $mlexpr_of_tactic_arg t$ >>
   | _ -> failwith "Quotation of tactic expressions: TODO"
 
 and mlexpr_of_tactic_arg = function
-  | Tacexpr.MetaIdArg (loc,id) -> anti loc id
+  | Tacexpr.MetaIdArg (loc,true,id) -> anti loc id
+  | Tacexpr.MetaIdArg (loc,false,id) -> 
+      <:expr< Tacexpr.ConstrMayEval (Rawterm.ConstrTerm $anti loc id$) >>
   | Tacexpr.TacCall (loc,t,tl) ->
       <:expr< Tacexpr.TacCall $dloc$ $mlexpr_of_reference t$ $mlexpr_of_list mlexpr_of_tactic_arg tl$>>
   | Tacexpr.Tacexp t ->

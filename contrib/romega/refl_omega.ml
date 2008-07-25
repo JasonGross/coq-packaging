@@ -6,10 +6,7 @@
 
  *************************************************************************)
 
-(* The addition on int, since it while be hidden soon by the one on BigInt *)
-
-let (+.) = (+)
-
+open Util
 open Const_omega
 module OmegaSolver = Omega.MakeOmegaSolver (Bigint)
 open OmegaSolver
@@ -25,65 +22,6 @@ let pp i = print_int i; print_newline (); flush stdout
 
 (* More readable than the prefix notation *)
 let (>>) = Tacticals.tclTHEN
-
-(* [list_index t l = i] \eqv $nth l i = t \wedge \forall j < i nth l j != t$ *)
-
-let list_index t = 
-  let rec loop i = function
-    | (u::l) -> if u = t then i else loop (succ i) l
-    | [] -> raise Not_found in
-  loop 0
-
-(* [list_uniq l = filter_i (x i -> nth l (i-1) != x) l] *)
-let list_uniq l  = 
-  let rec uniq = function
-      x :: ((y :: _) as l) when x = y -> uniq l
-    | x :: l -> x :: uniq l
-    | [] -> [] in
-  uniq (List.sort compare l)
-
-(* $\forall x. mem x  (list\_union l1 l2) \eqv x \in \{l1\} \cup \{l2\}$ *)
-let list_union l1 l2 =
-  let rec loop buf = function
-      x :: r -> if List.mem x l2 then loop buf r else loop (x :: buf) r
-    | [] -> buf in
-  loop l2 l1
-
-(* $\forall x. 
-      mem \;\; x \;\; (list\_intersect\;\; l1\;\;l2) \eqv x \in \{l1\} 
-       \cap \{l2\}$ *)
-let list_intersect l1 l2 =
-  let rec loop buf = function
-      x :: r -> if List.mem x l2 then loop (x::buf) r else loop buf r
-    | [] -> buf in
-  loop [] l1
-
-(* cartesian product. Elements are lists and are concatenated.
-   $cartesian [x_1 ... x_n] [y_1 ... y_p] = [x_1 @ y_1, x_2 @ y_1 ... x_n @ y_1 , x_1 @ y_2 ... x_n @ y_p]$ *)
-
-let rec cartesien l1 l2 =
-  let rec loop = function
-      (x2 :: r2) -> List.map (fun x1 -> x1 @ x2) l1 @ loop r2
-    | [] -> [] in
-  loop l2
-
-(* remove element e from list l *)
-let list_remove e l =
-  let rec loop = function
-      x :: l -> if x = e then loop l else x :: loop l
-    | [] -> [] in
-  loop l
-
-(* equivalent of the map function but no element is added when the function
-   raises an exception (and the computation silently continues) *)
-let map_exc f = 
-  let rec loop = function 
-    (x::l) -> 
-      begin match try Some (f x) with exc -> None with
-        Some v -> v :: loop l | None -> loop l
-      end
-    | [] -> [] in
-  loop 
 
 let mkApp = Term.mkApp
 
@@ -174,6 +112,7 @@ type environment = {
 (* \subsection{Solution tree}
    Définition d'une solution trouvée par Omega sous la forme d'un identifiant,
    d'un ensemble d'équation dont dépend la solution et d'une trace *)
+(* La liste des dépendances est triée et sans redondance *)
 type solution = {
   s_index : int;
   s_equa_deps : int list;
@@ -280,7 +219,7 @@ let unintern_omega env id =
    calcul des variables utiles. *)
 
 let add_reified_atom t env =
-  try list_index t env.terms
+  try list_index0 t env.terms
   with Not_found ->
     let i = List.length env.terms in
     env.terms <- env.terms @ [t]; i
@@ -291,7 +230,7 @@ let get_reified_atom env =
 (* \subsection{Gestion de l'environnement de proposition pour Omega} *)
 (* ajout d'une proposition *)
 let add_prop env t =
-  try list_index t env.props
+  try list_index0 t env.props
   with Not_found ->
     let i = List.length env.props in  env.props <- env.props @ [t]; i
 
@@ -362,13 +301,6 @@ let omega_of_oformula env kind =
 
 (* \subsection{Omega vers Oformula} *)
 
-let reified_of_atom env i =
-  try Hashtbl.find env.real_indices i
-  with Not_found -> 
-    Printf.printf "Atome %d non trouvé\n" i; 
-    Hashtbl.iter (fun k v -> Printf.printf "%d -> %d\n" k v) env.real_indices;
-    raise Not_found
-
 let rec oformula_of_omega env af = 
   let rec loop = function
     | ({v=v; c=n}::r) ->
@@ -382,19 +314,26 @@ let app f v = mkApp(Lazy.force f,v)
 
 let rec coq_of_formula env t =
   let rec loop = function
-  | Oplus (t1,t2) -> app coq_Zplus [| loop t1; loop t2 |]
-  | Oopp t -> app coq_Zopp [| loop t |]
-  | Omult(t1,t2) -> app coq_Zmult [| loop t1; loop t2 |]
-  | Oint v ->   mk_Z v
+  | Oplus (t1,t2) -> app Z.plus [| loop t1; loop t2 |]
+  | Oopp t -> app Z.opp [| loop t |]
+  | Omult(t1,t2) -> app Z.mult [| loop t1; loop t2 |]
+  | Oint v ->   Z.mk v
   | Oufo t -> loop t
   | Oatom var ->
       (* attention ne traite pas les nouvelles variables si on ne les
        * met pas dans env.term *)
       get_reified_atom env var
-  | Ominus(t1,t2) -> app coq_Zminus [| loop t1; loop t2 |] in
+  | Ominus(t1,t2) -> app Z.minus [| loop t1; loop t2 |] in
   loop t
 
 (* \subsection{Oformula vers COQ reifié} *)
+
+let reified_of_atom env i =
+  try Hashtbl.find env.real_indices i
+  with Not_found -> 
+    Printf.printf "Atome %d non trouvé\n" i; 
+    Hashtbl.iter (fun k v -> Printf.printf "%d -> %d\n" k v) env.real_indices;
+    raise Not_found
 
 let rec reified_of_formula env = function
   | Oplus (t1,t2) ->
@@ -403,7 +342,7 @@ let rec reified_of_formula env = function
       app coq_t_opp [| reified_of_formula env t |]
   | Omult(t1,t2) ->
       app coq_t_mult [| reified_of_formula env t1; reified_of_formula env t2 |]
-  | Oint v ->  app coq_t_int [| mk_Z v |]
+  | Oint v ->  app coq_t_int [| Z.mk v |]
   | Oufo t -> reified_of_formula env t
   | Oatom i -> app coq_t_var [| mk_nat (reified_of_atom env i) |]
   | Ominus(t1,t2) ->
@@ -448,12 +387,12 @@ let reified_of_proposition env f =
 
 let reified_of_omega env body constant = 
   let coeff_constant = 
-    app coq_t_int [| mk_Z constant |] in
+    app coq_t_int [| Z.mk constant |] in
   let mk_coeff {c=c; v=v} t =
     let coef = 
       app coq_t_mult 
 	[| reified_of_formula env (unintern_omega env v); 
-	   app coq_t_int [| mk_Z c |] |] in
+	   app coq_t_int [| Z.mk c |] |] in
     app coq_t_plus [|coef; t |] in
   List.fold_right mk_coeff body coeff_constant
 
@@ -469,22 +408,34 @@ Ces fonctions préparent les traces utilisées par la tactique réfléchie
 pour faire des opérations de normalisation sur les équations.  *)
 
 (* \subsection{Extractions des variables d'une équation} *)
-(* Extraction des variables d'une équation *)
+(* Extraction des variables d'une équation. *)
+(* Chaque fonction retourne une liste triée sans redondance *)
+
+let (@@) = list_merge_uniq compare
 
 let rec vars_of_formula = function
   | Oint _ -> []
-  | Oplus (e1,e2)  -> (vars_of_formula e1) @ (vars_of_formula e2)
-  | Omult (e1,e2)  -> (vars_of_formula e1) @ (vars_of_formula e2)
-  | Ominus (e1,e2) -> (vars_of_formula e1) @ (vars_of_formula e2)
-  | Oopp e -> (vars_of_formula e)
+  | Oplus (e1,e2) -> (vars_of_formula e1) @@ (vars_of_formula e2)
+  | Omult (e1,e2) -> (vars_of_formula e1) @@ (vars_of_formula e2)
+  | Ominus (e1,e2) -> (vars_of_formula e1) @@ (vars_of_formula e2)
+  | Oopp e -> vars_of_formula e
   | Oatom i -> [i]
   | Oufo _ -> []
 
-let vars_of_equations l =
-  let rec loop = function
-      e :: l -> vars_of_formula e.e_left @ vars_of_formula e.e_right @ loop l
-    | [] -> [] in
-  list_uniq (List.sort compare (loop l))
+let rec vars_of_equations = function
+  | [] -> [] 
+  | e::l -> 
+      (vars_of_formula e.e_left) @@
+      (vars_of_formula e.e_right) @@
+      (vars_of_equations l)
+
+let rec vars_of_prop = function 
+  | Pequa(_,e) -> vars_of_equations [e]
+  | Pnot p -> vars_of_prop p
+  | Por(_,p1,p2) -> (vars_of_prop p1) @@ (vars_of_prop p2)
+  | Pand(_,p1,p2) -> (vars_of_prop p1) @@ (vars_of_prop p2)
+  | Pimp(_,p1,p2) -> (vars_of_prop p1) @@ (vars_of_prop p2)
+  | Pprop _ | Ptrue | Pfalse -> []
 
 (* \subsection{Multiplication par un scalaire} *)
 
@@ -715,36 +666,23 @@ let normalize_equation env (negated,depends,origin,path) (oper,t1,t2) =
 
 (* \section{Compilation des hypothèses} *)
 
-let is_scalar t =
-  let rec aux t = match destructurate t with
-    | Kapp(("Zplus"|"Zminus"|"Zmult"),[t1;t2]) -> aux t1 & aux t2
-    | Kapp(("Zopp"|"Zsucc"),[t]) -> aux t
-    | Kapp(("Zpos"|"Zneg"|"Z0"),_) -> let _ = recognize_number t in true
-    | _ -> false in
-  try aux t with _ -> false
-
 let rec oformula_of_constr env t =
-  try match destructurate t with
-  | Kapp("Zplus",[t1;t2]) -> binop env (fun x y -> Oplus(x,y)) t1 t2
-  | Kapp("Zminus",[t1;t2]) -> binop env (fun x y -> Ominus(x,y)) t1 t2
-  | Kapp("Zmult",[t1;t2]) when is_scalar t1 or is_scalar t2 ->
-      binop env (fun x y -> Omult(x,y)) t1 t2
-  | Kapp("Zopp",[t]) -> Oopp(oformula_of_constr env t)
-  | Kapp("Zsucc",[t]) -> Oplus(oformula_of_constr env t, Oint one)
-  | Kapp(("Zpos"|"Zneg"|"Z0"),_) -> 
-      begin try Oint(recognize_number t)
-      with _ -> Oatom (add_reified_atom t env) end
-  | _ -> 
-      Oatom (add_reified_atom t env)
-  with e when Logic.catchable_exception e ->
-    Oatom (add_reified_atom t env)
+  match Z.parse_term t with 
+    | Tplus (t1,t2) -> binop env (fun x y -> Oplus(x,y)) t1 t2
+    | Tminus (t1,t2) -> binop env (fun x y -> Ominus(x,y)) t1 t2
+    | Tmult (t1,t2) when Z.is_scalar t1 || Z.is_scalar t2 -> 
+	binop env (fun x y -> Omult(x,y)) t1 t2
+    | Topp t -> Oopp(oformula_of_constr env t)
+    | Tsucc t -> Oplus(oformula_of_constr env t, Oint one)
+    | Tnum n -> Oint n
+    | _ -> Oatom (add_reified_atom t env)
 
-and  binop env c t1 t2 = 
-    let t1' = oformula_of_constr env t1 in
-    let t2' = oformula_of_constr env t2 in
-    c t1' t2'
+and binop env c t1 t2 = 
+  let t1' = oformula_of_constr env t1 in
+  let t2' = oformula_of_constr env t2 in
+  c t1' t2'
 
-and  binprop env (neg2,depends,origin,path) 
+and binprop env (neg2,depends,origin,path) 
              add_to_depends neg1 gl c t1 t2 =
   let i = new_connector_id env in
   let depends1 = if add_to_depends then Left i::depends else depends in
@@ -767,40 +705,32 @@ and mk_equation env ctxt c connector t1 t2 =
   Pequa (c,omega)
 
 and oproposition_of_constr env ((negated,depends,origin,path) as ctxt) gl c = 
-  try match destructurate c with
-    | Kapp("eq",[typ;t1;t2]) 
-      when destructurate (Tacmach.pf_nf gl typ) = Kapp("Z",[]) ->
-         mk_equation env ctxt c Eq t1 t2
-    | Kapp("Zne",[t1;t2]) -> 
-	mk_equation env ctxt c Neq t1 t2
-    | Kapp("Zle",[t1;t2]) -> 
-	mk_equation env ctxt c Leq t1 t2
-    | Kapp("Zlt",[t1;t2]) -> 
-	mk_equation env ctxt c Lt t1 t2
-    | Kapp("Zge",[t1;t2]) -> 
-	mk_equation env ctxt c Geq t1 t2
-    | Kapp("Zgt",[t1;t2]) -> 
-	mk_equation env ctxt c Gt t1 t2
-    | Kapp("True",[]) -> Ptrue
-    | Kapp("False",[]) -> Pfalse
-    | Kapp("not",[t]) ->
-       let t' = 
-	 oproposition_of_constr 
-	   env (not negated, depends, origin,(O_mono::path)) gl t in 
-       Pnot t'
-    | Kapp("or",[t1;t2]) ->  
+  match Z.parse_rel gl c with 
+    | Req (t1,t2) -> mk_equation env ctxt c Eq t1 t2
+    | Rne (t1,t2) -> mk_equation env ctxt c Neq t1 t2
+    | Rle (t1,t2) -> mk_equation env ctxt c Leq t1 t2
+    | Rlt (t1,t2) -> mk_equation env ctxt c Lt t1 t2
+    | Rge (t1,t2) -> mk_equation env ctxt c Geq t1 t2
+    | Rgt (t1,t2) -> mk_equation env ctxt c Gt t1 t2
+    | Rtrue -> Ptrue 
+    | Rfalse -> Pfalse
+    | Rnot t -> 
+	let t' = 
+	  oproposition_of_constr 
+	    env (not negated, depends, origin,(O_mono::path)) gl t in 
+	Pnot t'
+    | Ror (t1,t2) -> 
 	binprop env ctxt (not negated) negated gl (fun i x y -> Por(i,x,y)) t1 t2
-    | Kapp("and",[t1;t2]) ->
+    | Rand (t1,t2) -> 
 	binprop env ctxt negated negated gl
 	  (fun i x y -> Pand(i,x,y)) t1 t2
-    | Kimp(t1,t2) ->
+    | Rimp (t1,t2) ->
 	binprop env ctxt (not negated) (not negated) gl 
 	  (fun i x y -> Pimp(i,x,y)) t1 t2
-    | Kapp("iff",[t1;t2]) ->
+    | Riff (t1,t2) ->
 	binprop env ctxt negated negated gl 
 	  (fun i x y -> Pand(i,x,y)) (Term.mkArrow t1 t2) (Term.mkArrow t2 t1)
     | _ -> Pprop c
-  with e when Logic.catchable_exception e -> Pprop c
 
 (* Destructuration des hypothèses et de la conclusion *)
 
@@ -881,7 +811,7 @@ let destructurate_hyps syst =
       (i,t) :: l -> 
 	let l_syst1 = destructurate_pos_hyp i []  [] t in
 	let l_syst2 = loop l in
-	cartesien l_syst1 l_syst2
+	list_cartesian (@) l_syst1 l_syst2
     | [] -> [[]] in
   loop syst
 
@@ -924,9 +854,9 @@ let display_systems syst_list =
 let rec hyps_used_in_trace = function
   | act :: l -> 
       begin match act with
-	| HYP e -> e.id :: hyps_used_in_trace l
+	| HYP e -> [e.id] @@ (hyps_used_in_trace l)
 	| SPLIT_INEQ (_,(_,act1),(_,act2)) -> 
-	    hyps_used_in_trace act1 @ hyps_used_in_trace act2
+	    hyps_used_in_trace act1 @@ hyps_used_in_trace act2
 	| _ -> hyps_used_in_trace l
       end
   | [] -> []
@@ -950,14 +880,15 @@ let rec variable_stated_in_trace = function
 ;;
 
 let add_stated_equations env tree = 
-  let rec loop = function
-      Tree(_,t1,t2) -> 
-	list_union (loop t1) (loop t2)
-    | Leaf s -> variable_stated_in_trace s.s_trace in
   (* Il faut trier les variables par ordre d'introduction pour ne pas risquer
      de définir dans le mauvais ordre *)
   let stated_equations = 
-    List.sort (fun x y -> Pervasives.(-) x.st_var y.st_var) (loop tree) in
+    let cmpvar x y = Pervasives.(-) x.st_var y.st_var in 
+    let rec loop = function
+      | Tree(_,t1,t2) -> List.merge cmpvar (loop t1) (loop t2)
+      | Leaf s -> List.sort cmpvar (variable_stated_in_trace s.s_trace) 
+    in loop tree
+  in 
   let add_env st = 
     (* On retransforme la définition de v en formule reifiée *)
     let v_def = oformula_of_omega env st.st_def in
@@ -966,7 +897,7 @@ let add_stated_equations env tree =
     let coq_v = coq_of_formula env v_def in
     let v = add_reified_atom coq_v env in
     (* Le terme qu'il va falloir introduire *)
-    let term_to_generalize = app coq_refl_equal [|Lazy.force coq_Z; coq_v|] in
+    let term_to_generalize = app coq_refl_equal [|Lazy.force Z.typ; coq_v|] in
     (* sa représentation sous forme d'équation mais non réifié car on n'a pas
      * l'environnement pour le faire correctement *)
     let term_to_reify = (v_def,Oatom v) in
@@ -978,10 +909,15 @@ let add_stated_equations env tree =
 (* Calcule la liste des éclatements à réaliser sur les hypothèses 
    nécessaires pour extraire une liste d'équations donnée *)
 
+(* PL: experimentally, the result order of the following function seems 
+   _very_ crucial for efficiency. No idea why. Do not remove the List.rev
+   or modify the current semantics of Util.list_union (some elements of first 
+   arg, then second arg), unless you know what you're doing. *)
+
 let rec get_eclatement env = function
     i :: r -> 
       let l = try (get_equation env i).e_depends with Not_found -> [] in
-      list_union l (get_eclatement env r)
+      list_union (List.rev l) (get_eclatement env r)
   | [] -> []
 
 let select_smaller l = 
@@ -992,14 +928,13 @@ let filter_compatible_systems required systems =
   let rec select = function
       (x::l) -> 
 	if List.mem x required then select l
-	else if List.mem (barre x) required then raise Exit 
+	else if List.mem (barre x) required then failwith "Exit" 
 	else x :: select l
     | [] -> [] in
-  map_exc (function (sol,splits) -> (sol,select splits)) systems
+  map_succeed (function (sol,splits) -> (sol,select splits)) systems
 
 let rec equas_of_solution_tree = function
-    Tree(_,t1,t2) -> 
-      list_union (equas_of_solution_tree t1) (equas_of_solution_tree t2)
+    Tree(_,t1,t2) -> (equas_of_solution_tree t1)@@(equas_of_solution_tree t2)
   | Leaf s -> s.s_equa_deps
 
 (* [really_useful_prop] pushes useless props in a new Pprop variable *)
@@ -1040,14 +975,6 @@ let really_useful_prop l_equa c =
   match loop c with
     None -> Pprop (real_of c)
   | Some t -> t
-
-let rec vars_of_prop = function 
-  | Pequa(_,e) -> vars_of_equations [e]
-  | Pnot p -> vars_of_prop p
-  | Por(_,p1,p2) -> list_union (vars_of_prop p1) (vars_of_prop p2)
-  | Pand(_,p1,p2) -> list_union (vars_of_prop p1) (vars_of_prop p2)
-  | Pimp(_,p1,p2) -> list_union (vars_of_prop p1) (vars_of_prop p2)
-  | _ -> []
 
 let rec display_solution_tree ch = function
     Leaf t -> 
@@ -1103,7 +1030,7 @@ let mk_direction_list l =
 (* \section{Rejouer l'historique} *)
 
 let get_hyp env_hyp i =
-  try list_index (CCEqua i) env_hyp
+  try list_index0 (CCEqua i) env_hyp
   with Not_found -> failwith (Printf.sprintf "get_hyp %d" i)
 
 let replay_history env env_hyp =
@@ -1116,7 +1043,7 @@ let replay_history env env_hyp =
 		    mk_nat (get_hyp env_hyp e2.id) |])
       | DIVIDE_AND_APPROX (e1,e2,k,d) :: l ->
 	  mkApp (Lazy.force coq_s_div_approx,
-		 [| mk_Z k; mk_Z d; 
+		 [| Z.mk k; Z.mk d; 
 		    reified_of_omega env e2.body e2.constant;
 		    mk_nat (List.length e2.body); 
 		    loop env_hyp l; mk_nat (get_hyp env_hyp e1.id) |])
@@ -1125,7 +1052,7 @@ let replay_history env env_hyp =
 	  let d = e1.constant - e2_constant * k in
 	  let e2_body = map_eq_linear (fun c -> c / k) e1.body in
           mkApp (Lazy.force coq_s_not_exact_divide,
-		 [|mk_Z k; mk_Z d; 
+		 [|Z.mk k; Z.mk d; 
 		   reified_of_omega env e2_body e2_constant; 
 		   mk_nat (List.length e2_body); 
 		   mk_nat (get_hyp env_hyp e1.id)|])
@@ -1134,7 +1061,7 @@ let replay_history env env_hyp =
 	    map_eq_linear (fun c -> c / k) e1.body in
 	  let e2_constant = floor_div e1.constant k in
           mkApp (Lazy.force coq_s_exact_divide,
-		 [|mk_Z k; 
+		 [|Z.mk k; 
 		   reified_of_omega env e2_body e2_constant; 
 		   mk_nat (List.length e2_body);
 		   loop env_hyp l; mk_nat (get_hyp env_hyp e1.id)|])
@@ -1149,7 +1076,7 @@ let replay_history env env_hyp =
 	  and n2 = get_hyp env_hyp e2.id in
 	  let trace = shuffle_path k1 e1.body k2 e2.body in
           mkApp (Lazy.force coq_s_sum,
-		 [| mk_Z k1; mk_nat n1; mk_Z k2;
+		 [| Z.mk k1; mk_nat n1; Z.mk k2;
 		    mk_nat n2; trace; (loop (CCEqua e3 :: env_hyp) l) |])
       | CONSTANT_NOT_NUL(e,k) :: l -> 
           mkApp (Lazy.force coq_s_constant_not_nul,
@@ -1169,7 +1096,7 @@ let replay_history env env_hyp =
 	     Oplus (o_orig,Omult (Oplus (Oopp v,o_def), Oint m)) in
           let trace,_ = normalize_linear_term env body in
 	  mkApp (Lazy.force coq_s_state,
-		 [| mk_Z m; trace; mk_nat n1; mk_nat n2; 
+		 [| Z.mk m; trace; mk_nat n1; mk_nat n2; 
 		    loop (CCEqua new_eq.id :: env_hyp) l |])
       |	HYP _ :: l -> loop env_hyp l
       |	CONSTANT_NUL e :: l ->
@@ -1267,17 +1194,17 @@ let resolution env full_reified_goal systems_list =
     print_newline()
   end;
   (* calcule la liste de toutes les hypothèses utilisées dans l'arbre de solution *)
-  let useful_equa_id = list_uniq (equas_of_solution_tree solution_tree) in
+  let useful_equa_id = equas_of_solution_tree solution_tree in
   (* recupere explicitement ces equations *)
   let equations = List.map (get_equation env) useful_equa_id in
-  let l_hyps' = list_uniq (List.map (fun e -> e.e_origin.o_hyp) equations) in
+  let l_hyps' = list_uniquize (List.map (fun e -> e.e_origin.o_hyp) equations) in
   let l_hyps = id_concl :: list_remove id_concl l_hyps' in
   let useful_hyps =
     List.map (fun id -> List.assoc id full_reified_goal) l_hyps in
   let useful_vars = 
     let really_useful_vars = vars_of_equations equations in
     let concl_vars = vars_of_prop (List.assoc id_concl full_reified_goal) in     
-    list_uniq (List.sort compare (really_useful_vars @ concl_vars))
+    really_useful_vars @@ concl_vars
   in 
   (* variables a introduire *)
   let to_introduce = add_stated_equations env solution_tree in
@@ -1295,7 +1222,7 @@ let resolution env full_reified_goal systems_list =
 	  Hashtbl.add env.real_indices var i; t :: loop (succ i) l
       |	[] -> [] in
     loop 0 all_vars_env in
-  let env_terms_reified = mk_list (Lazy.force coq_Z) basic_env in
+  let env_terms_reified = mk_list (Lazy.force Z.typ) basic_env in
   (* On peut maintenant généraliser le but : env est a jour *)
   let l_reified_stated =
      List.map (fun (_,_,(l,r),_) -> 
@@ -1325,10 +1252,10 @@ let resolution env full_reified_goal systems_list =
       |	((O_left | O_mono) :: l) -> app coq_p_left [| loop l |]
       |	(O_right :: l) -> app coq_p_right [| loop l |] in
     let correct_index = 
-      let i = list_index e.e_origin.o_hyp l_hyps in 
+      let i = list_index0 e.e_origin.o_hyp l_hyps in 
       (* PL: it seems that additionnally introduced hyps are in the way during 
              normalization, hence this index shifting... *) 
-      if i=0 then 0 else i +. List.length to_introduce
+      if i=0 then 0 else Pervasives.(+) i (List.length to_introduce)
     in 	
     app coq_pair_step [| mk_nat correct_index; loop e.e_origin.o_path |] in
   let normalization_trace =

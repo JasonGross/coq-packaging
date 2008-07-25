@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: names.ml 9980 2007-07-12 13:32:37Z soubiran $ *)
+(* $Id: names.ml 10919 2008-05-11 22:04:26Z msozeau $ *)
 
 open Pp
 open Util
@@ -17,7 +17,7 @@ type identifier = string
 
 let id_ord = Pervasives.compare
 
-let id_of_string s = String.copy s
+let id_of_string s = check_ident s; String.copy s
 
 let string_of_id id = String.copy id
 
@@ -65,16 +65,15 @@ let repr_dirpath x = x
 let empty_dirpath = []
 
 let string_of_dirpath = function
-  | [] -> ""
-  | sl ->
-      String.concat "." (List.map string_of_id (List.rev sl))
+  | [] -> "<>"
+  | sl -> String.concat "." (List.map string_of_id (List.rev sl))
 
 
 let u_number = ref 0 
 type uniq_ident = int * string * dir_path
 let make_uid dir s = incr u_number;(!u_number,String.copy s,dir)
-let debug_string_of_uid (i,s,p) = 
-  "<"(*^string_of_dirpath p ^"#"^*) ^ s ^"#"^ string_of_int i^">"
+ let debug_string_of_uid (i,s,p) =
+ "<"(*^string_of_dirpath p ^"#"^*) ^ s ^"#"^ string_of_int i^">"
 let string_of_uid (i,s,p) = 
   string_of_dirpath p ^"."^s
 
@@ -83,20 +82,24 @@ module Umap = Map.Make(struct
 			 let compare = Pervasives.compare
 		       end)
 
+type label = string
 
 type mod_self_id = uniq_ident
 let make_msid = make_uid
 let debug_string_of_msid = debug_string_of_uid
+let refresh_msid (_,s,dir) = make_uid dir s
 let string_of_msid = string_of_uid
 let id_of_msid (_,s,_) = s
+let label_of_msid (_,s,_) = s
 
 type mod_bound_id = uniq_ident
 let make_mbid = make_uid
 let debug_string_of_mbid = debug_string_of_uid
 let string_of_mbid = string_of_uid
 let id_of_mbid (_,s,_) = s
+let label_of_mbid (_,s,_) = s
 
-type label = string
+
 let mk_label l = l
 let string_of_label l = l
 
@@ -181,7 +184,7 @@ module Cmap = KNmap
 module Cpred = KNpred
 module Cset = KNset
 
-let default_module_name = id_of_string "If you see this, it's a bug"
+let default_module_name = "If you see this, it's a bug"
 
 let initial_dir = make_dirpath [default_module_name]
 
@@ -314,6 +317,11 @@ let hcons_names () =
 
 type transparent_state = Idpred.t * Cpred.t
 
+let empty_transparent_state = (Idpred.empty, Cpred.empty)
+let full_transparent_state = (Idpred.full, Cpred.full)
+let var_full_transparent_state = (Idpred.full, Cpred.empty)
+let cst_full_transparent_state = (Idpred.empty, Cpred.full)
+
 type 'a tableKey =
   | ConstKey of constant
   | VarKey of identifier
@@ -325,6 +333,4 @@ type inv_rel_key = int (* index in the [rel_context] part of environment
 			  of de Bruijn indice *)
 
 type id_key = inv_rel_key tableKey
-
-
 

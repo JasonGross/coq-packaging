@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coqdep_lexer.mll 8737 2006-04-26 21:55:21Z herbelin $ i*)
+(*i $Id: coqdep_lexer.mll 10721 2008-03-26 14:40:30Z notin $ i*)
   
 {
 
@@ -215,7 +215,7 @@ and modules = parse
   | '"' [^'"']* '"'
         { let lex = (Lexing.lexeme lexbuf) in 
 	  let str = String.sub lex 1 (String.length lex - 2) in
-	  mllist := str :: !mllist; modules lexbuf }
+	    mllist := str :: !mllist; modules lexbuf}
   | _   { (Declare (List.rev !mllist)) }   
 
 and qual_id = parse

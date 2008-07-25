@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: Cos_rel.v 9551 2007-01-29 15:13:35Z bgregoir $ i*)
+(*i $Id: Cos_rel.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -263,7 +263,7 @@ assert (H := exist_cos (x * x)).
 elim H; intros. 
 assert (p_i := p). 
 unfold cos_in in p. 
-unfold cos_n, infinit_sum in p. 
+unfold cos_n, infinite_sum in p. 
 unfold R_dist in p. 
 cut (cos x = x0). 
 intro. 
@@ -295,7 +295,7 @@ assert (H := exist_cos ((x + y) * (x + y))).
 elim H; intros. 
 assert (p_i := p). 
 unfold cos_in in p. 
-unfold cos_n, infinit_sum in p. 
+unfold cos_n, infinite_sum in p. 
 unfold R_dist in p. 
 cut (cos (x + y) = x0). 
 intro. 
@@ -344,7 +344,7 @@ assert (H0 := exist_sin (x * x)).
 elim H0; intros. 
 assert (p_i := p). 
 unfold sin_in in p. 
-unfold sin_n, infinit_sum in p. 
+unfold sin_n, infinite_sum in p. 
 unfold R_dist in p. 
 cut (sin x = x * x0). 
 intro. 

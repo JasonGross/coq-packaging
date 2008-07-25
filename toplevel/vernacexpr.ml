@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacexpr.ml 10067 2007-08-09 17:13:16Z msozeau $ i*)
+(*i $Id: vernacexpr.ml 11024 2008-05-30 12:41:39Z msozeau $ i*)
 
 open Util
 open Names
@@ -37,7 +37,7 @@ type printable =
   | PrintFullContext
   | PrintSectionContext of reference
   | PrintInspect of int
-  | PrintGrammar of string * string
+  | PrintGrammar of string
   | PrintLoadPath
   | PrintModules
   | PrintModule of reference
@@ -48,6 +48,8 @@ type printable =
   | PrintOpaqueName of reference
   | PrintGraph
   | PrintClasses
+  | PrintTypeClasses
+  | PrintInstances of reference
   | PrintLtac of reference
   | PrintCoercions
   | PrintCoercionPaths of class_rawexpr * class_rawexpr
@@ -64,6 +66,7 @@ type printable =
   | PrintVisibility of string option
   | PrintAbout of reference
   | PrintImplicit of reference
+  | PrintAssumptions of reference
 
 type search_about_item =
   | SearchRef of reference
@@ -109,7 +112,7 @@ type comment =
   | CommentInt of int
 
 type hints =
-  | HintsResolve of constr_expr list
+  | HintsResolve of (int option * constr_expr) list
   | HintsImmediate of constr_expr list
   | HintsUnfold of reference list
   | HintsConstructors of reference list
@@ -144,10 +147,12 @@ type sort_expr = Rawterm.rawsort
 
 type decl_notation = (string * constr_expr * scope_name option) option
 type simple_binder = lident list  * constr_expr
+type class_binder = lident * constr_expr list
 type 'a with_coercion = coercion_flag * 'a
 type constructor_expr = (lident * constr_expr) with_coercion
 type inductive_expr =
      lident * local_binder list * constr_expr * constructor_expr list
+
 type definition_expr =
   | ProveBody of local_binder list * constr_expr
   | DefineBody of local_binder list * raw_red_expr option * constr_expr
@@ -167,12 +172,15 @@ type proof_end =
   | Admitted
   | Proved of opacity_flag * (lident * theorem_kind option) option
 
+type scheme =
+  | InductionScheme of bool * lreference * sort_expr
+  | EqualityScheme of lreference
+
 type vernac_expr =
   (* Control *)
   | VernacList of located_vernac_expr list
   | VernacLoad of verbose_flag * lstring
   | VernacTime of vernac_expr
-  | VernacVar of lident
 
   (* Syntax *) 
   | VernacTacticNotation of int * grammar_production list * raw_tactic_expr
@@ -190,15 +198,16 @@ type vernac_expr =
   (* Gallina *)
   | VernacDefinition of definition_kind * lident * definition_expr * 
       declaration_hook
-  | VernacStartTheoremProof of theorem_kind * lident *
-      (local_binder list * constr_expr) * bool * declaration_hook
+  | VernacStartTheoremProof of theorem_kind * 
+      (lident option * (local_binder list * constr_expr)) list *
+        bool * declaration_hook
   | VernacEndProof of proof_end
   | VernacExactProof of constr_expr
-  | VernacAssumption of assumption_kind * simple_binder with_coercion list
+  | VernacAssumption of assumption_kind * bool * simple_binder with_coercion list
   | VernacInductive of inductive_flag * (inductive_expr * decl_notation) list
   | VernacFixpoint of (fixpoint_expr * decl_notation) list * bool
   | VernacCoFixpoint of (cofixpoint_expr * decl_notation) list * bool
-  | VernacScheme of (lident * bool * lreference * sort_expr) list
+  | VernacScheme of (lident option * scheme) list
   | VernacCombinedScheme of lident * lident list
 
   (* Gallina extensions *)
@@ -211,9 +220,29 @@ type vernac_expr =
       export_flag option * specif_flag option * lreference list
   | VernacImport of export_flag * lreference list
   | VernacCanonical of lreference
-  | VernacCoercion of strength * lreference * class_rawexpr * class_rawexpr
-  | VernacIdentityCoercion of strength * lident * 
+  | VernacCoercion of locality * lreference * class_rawexpr * class_rawexpr
+  | VernacIdentityCoercion of locality * lident * 
       class_rawexpr * class_rawexpr
+
+  (* Type classes *)
+  | VernacClass of
+      lident * (* name *)
+	local_binder list * (* params *)
+	sort_expr located option * (* arity *)
+	local_binder list * (* constraints *)
+	(lident * bool * constr_expr) list (* props, with substructure hints *)
+	
+  | VernacInstance of
+      bool * (* global *)
+      local_binder list * (* super *)
+	typeclass_constraint * (* instance name, class name, params *)
+	(lident * lident list * constr_expr) list * (* props *)
+	int option (* Priority *)
+
+  | VernacContext of typeclass_context
+	
+  | VernacDeclareInstance of
+      lident (* instance name *)
 
   (* Modules and Module Types *)
   | VernacDeclareModule of bool option * lident * 
@@ -222,6 +251,7 @@ type vernac_expr =
       module_binder list * (module_type_ast * bool) option * module_ast option
   | VernacDeclareModuleType of lident * 
       module_binder list * module_type_ast option
+  | VernacInclude of include_ast
 
   (* Solving *)
 
@@ -248,6 +278,7 @@ type vernac_expr =
   | VernacRestoreState of lstring
 
   (* Resetting *)
+  | VernacRemoveName of lident
   | VernacResetName of lident
   | VernacResetInitial
   | VernacBack of int
@@ -255,14 +286,15 @@ type vernac_expr =
 
   (* Commands *)
   | VernacDeclareTacticDefinition of
-      rec_flag * (lident * raw_tactic_expr) list
+      rec_flag * (reference * bool * raw_tactic_expr) list
   | VernacHints of locality_flag * lstring list * hints
-  | VernacSyntacticDefinition of identifier * constr_expr * locality_flag *
-      onlyparsing_flag
-  | VernacDeclareImplicits of locality_flag * lreference *
-      explicitation list option
+  | VernacSyntacticDefinition of identifier located * (identifier list * constr_expr) *
+      locality_flag * onlyparsing_flag
+  | VernacDeclareImplicits of locality_flag * lreference * 
+      (explicitation * bool * bool) list option
   | VernacReserve of lident list * constr_expr
-  | VernacSetOpacity of opacity_flag * lreference list
+  | VernacSetOpacity of
+      locality_flag * (Conv_oracle.level * lreference list) list
   | VernacUnsetOption of Goptions.option_name
   | VernacSetOption of Goptions.option_name * option_value
   | VernacAddOption of Goptions.option_name * option_ref_value list
@@ -285,6 +317,7 @@ type vernac_expr =
   | VernacSuspend
   | VernacResume of lident option
   | VernacUndo of int
+  | VernacUndoTo of int
   | VernacBacktrack of int*int*int
   | VernacFocus of int option
   | VernacUnfocus

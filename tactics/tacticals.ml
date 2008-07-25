@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacticals.ml 9211 2006-10-05 12:38:33Z letouzey $ *)
+(* $Id: tacticals.ml 11166 2008-06-22 13:23:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -23,6 +23,7 @@ open Refiner
 open Tacmach
 open Clenv
 open Clenvtac
+open Rawterm
 open Pattern
 open Matching
 open Evar_refiner
@@ -37,6 +38,7 @@ open Tacexpr
 (* Tacticals re-exported from the Refiner module.*)
 (*************************************************)
 
+let tclNORMEVAR      = tclNORMEVAR
 let tclIDTAC         = tclIDTAC
 let tclIDTAC_MESSAGE = tclIDTAC_MESSAGE
 let tclORELSE        = tclORELSE
@@ -90,6 +92,10 @@ let tclNTH_HYP m (tac : constr->tactic) gl =
 
 let tclLAST_HYP = tclNTH_HYP 1
 
+let tclLAST_NHYPS n tac gl =
+  tac (try list_firstn n (pf_ids_of_hyps gl)
+       with Failure _ -> error "No such assumptions") gl
+
 let tclTRY_sign (tac : constr->tactic) sign gl =
   let rec arec = function
     | []      -> tclFAIL 0 (str "no applicable hypothesis")
@@ -118,17 +124,21 @@ let tclTRY_HYPS (tac : constr->tactic) gl =
 type simple_clause = identifier gsimple_clause
 type clause = identifier gclause
 
-let allClauses = { onhyps=None; onconcl=true; concl_occs=[] }
-let allHyps = { onhyps=None; onconcl=false; concl_occs=[] }
-let onHyp id = { onhyps=Some[(([],id),InHyp)]; onconcl=false; concl_occs=[] }
-let onConcl = { onhyps=Some[]; onconcl=true; concl_occs=[] }
+let allClauses = { onhyps=None; concl_occs=all_occurrences_expr }
+let allHyps = { onhyps=None; concl_occs=no_occurrences_expr }
+let onConcl = { onhyps=Some[]; concl_occs=all_occurrences_expr }
+let onHyp id =
+  { onhyps=Some[((all_occurrences_expr,id),InHyp)]; concl_occs=no_occurrences_expr }
 
 let simple_clause_list_of cl gls =
   let hyps =
     match cl.onhyps with 
-        None -> List.map (fun id -> Some(([],id),InHyp)) (pf_ids_of_hyps gls)
-      | Some l -> List.map (fun h -> Some h) l in
-  if cl.onconcl then None::hyps else hyps
+    | None ->
+	let f id = Some((all_occurrences_expr,id),InHyp) in
+	List.map f (pf_ids_of_hyps gls)
+    | Some l ->
+	List.map (fun h -> Some h) l in
+  if cl.concl_occs = all_occurrences_expr then None::hyps else hyps
 
 
 (* OR-branch *)
@@ -315,16 +325,12 @@ let elimination_sort_of_hyp id gl =
 (* Find the right elimination suffix corresponding to the sort of the goal *)
 (* c should be of type A1->.. An->B with B an inductive definition *)
 
-let last_arg c = match kind_of_term c with
-  | App (f,cl) -> array_last cl
-  | _ -> anomaly "last_arg"
-
-let general_elim_then_using 
-  elim isrec allnames tac predicate (indbindings,elimbindings) c gl =
-  let (ity,t) = pf_reduce_to_quantified_ind gl (pf_type_of gl c) in
+let general_elim_then_using mk_elim 
+  isrec allnames tac predicate (indbindings,elimbindings) 
+  ind indclause gl =
+  let elim = mk_elim ind gl in
   (* applying elimination_scheme just a little modified *)
-  let indclause  = mk_clenv_from gl (c,t) in
-  let indclause' = clenv_constrain_with_bindings indbindings indclause in
+  let indclause' = clenv_match_args indbindings indclause in
   let elimclause = mk_clenv_from gl (elim,pf_type_of gl elim) in
   let indmv = 
     match kind_of_term (last_arg elimclause.templval.Evd.rebus) with
@@ -345,8 +351,8 @@ let general_elim_then_using
 	  error ("The elimination combinator " ^ name_elim ^ " is not known") 
   in
   let elimclause' = clenv_fchain indmv elimclause indclause' in
-  let elimclause' = clenv_constrain_with_bindings elimbindings elimclause' in
-  let branchsigns = compute_construtor_signatures isrec ity in
+  let elimclause' = clenv_match_args elimbindings elimclause' in
+  let branchsigns = compute_construtor_signatures isrec ind in
   let brnames = compute_induction_names (Array.length branchsigns) allnames in
   let after_tac ce i gl =
     let (hd,largs) = decompose_app ce.templtyp.Evd.rebus in
@@ -357,7 +363,7 @@ let general_elim_then_using
                    (fun acc b -> if b then acc+2 else acc+1)
                    0 branchsigns.(i);
                branchnum = i+1;
-               ity = ity;
+               ity = ind;
                largs = List.map (clenv_nf_meta ce) largs;
                pred = clenv_nf_meta ce hd }
     in 
@@ -372,36 +378,31 @@ let general_elim_then_using
   in 
   elim_res_pf_THEN_i elimclause' branchtacs gl
 
+(* computing the case/elim combinators *)
 
-let elimination_then_using tac predicate (indbindings,elimbindings) c gl = 
+let gl_make_elim ind gl =
+  Indrec.lookup_eliminator ind (elimination_sort_of_goal gl)
+
+let gl_make_case_dep ind gl =
+  pf_apply Indrec.make_case_dep gl ind (elimination_sort_of_goal gl)
+
+let gl_make_case_nodep ind gl =
+  pf_apply Indrec.make_case_nodep gl ind (elimination_sort_of_goal gl)
+
+let elimination_then_using tac predicate bindings c gl = 
   let (ind,t) = pf_reduce_to_quantified_ind gl (pf_type_of gl c) in
-  let elim =
-    Indrec.lookup_eliminator ind (elimination_sort_of_goal gl) in
-  general_elim_then_using
-    elim true IntroAnonymous tac predicate (indbindings,elimbindings) c gl
+  let indclause  = mk_clenv_from gl (c,t) in
+  general_elim_then_using gl_make_elim
+    true IntroAnonymous tac predicate bindings ind indclause gl
 
+let case_then_using =
+  general_elim_then_using gl_make_case_dep false
+
+let case_nodep_then_using =
+  general_elim_then_using gl_make_case_nodep false
 
 let elimination_then tac        = elimination_then_using tac None 
 let simple_elimination_then tac = elimination_then tac ([],[])
-
-let case_then_using allnames tac predicate (indbindings,elimbindings) c gl =
-  (* finding the case combinator *)
-  let (ity,t) = pf_reduce_to_quantified_ind gl (pf_type_of gl c) in
-  let sigma = project gl in 
-  let sort  = elimination_sort_of_goal gl  in
-  let elim  = Indrec.make_case_dep (pf_env gl) sigma ity sort in  
-  general_elim_then_using 
-    elim false allnames tac predicate (indbindings,elimbindings) c gl
-
-let case_nodep_then_using allnames tac predicate (indbindings,elimbindings)
-  c gl =
-  (* finding the case combinator *)
-  let (ity,t) = pf_reduce_to_quantified_ind gl (pf_type_of gl c) in
-  let sigma = project gl in 
-  let sort  = elimination_sort_of_goal gl  in
-  let elim  = Indrec.make_case_nodep (pf_env gl) sigma ity sort in  
-  general_elim_then_using 
-    elim false allnames tac predicate (indbindings,elimbindings) c gl
 
 
 let make_elim_branch_assumptions ba gl =   

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: logic.mli 9573 2007-01-31 20:18:18Z notin $ i*)
+(*i $Id: logic.mli 10785 2008-04-13 21:41:54Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -50,8 +50,7 @@ type refiner_error =
 
   (*i Errors raised by the refiner i*)
   | BadType of constr * constr * constr
-  | OccurMeta of constr
-  | OccurMetaGoal of constr
+  | UnresolvedBindings of name list
   | CannotApply of constr * constr
   | NotWellTyped of constr
   | NonLinearProof of constr

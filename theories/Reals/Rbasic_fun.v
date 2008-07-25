@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rbasic_fun.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Rbasic_fun.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 (*********************************************************)
 (**          Complements for the real numbers            *)
@@ -15,7 +15,8 @@
 
 Require Import Rbase.
 Require Import R_Ifp.
-Require Import Fourier. Open Local Scope R_scope.
+Require Import Fourier.
+Open Local Scope R_scope.
 
 Implicit Type r : R.
 

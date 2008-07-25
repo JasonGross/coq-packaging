@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: subtyping.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: subtyping.mli 10664 2008-03-14 11:27:37Z soubiran $ i*)
 
 (*i*)
 open Univ

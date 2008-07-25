@@ -24,7 +24,7 @@
 (* in Summer 1995. Several developments by E. Ledinot were an inspiration.  *)
 (****************************************************************************)
 
-(*i $Id: Powerset_Classical_facts.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Powerset_Classical_facts.v 10855 2008-04-27 11:16:15Z msozeau $ i*)
 
 Require Export Ensembles.
 Require Export Constructive_sets.

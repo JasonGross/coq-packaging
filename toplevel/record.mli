@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: record.mli 6743 2005-02-18 22:14:08Z herbelin $ i*)
+(*i $Id: record.mli 11024 2008-05-30 12:41:39Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -16,13 +16,13 @@ open Vernacexpr
 open Topconstr
 (*i*)
 
-(* [declare_projections ref coers params fields] declare projections of
-   record [ref] (if allowed), and put them as coercions accordingly to
-   [coers]; it returns the absolute names of projections *)
+(* [declare_projections ref name coers params fields] declare projections of
+   record [ref] (if allowed) using the given [name] as argument, and put them
+   as coercions accordingly to [coers]; it returns the absolute names of projections *)
 
 val declare_projections :
-  inductive -> bool list -> rel_context -> bool list * constant option list
+  inductive -> ?kind:Decl_kinds.definition_object_kind -> ?name:identifier -> bool list -> rel_context -> bool list * constant option list
 
 val definition_structure :
   lident with_coercion * local_binder list *
-  (local_decl_expr with_coercion) list * identifier * sorts -> unit
+  (local_decl_expr with_coercion) list * identifier * sorts -> kernel_name

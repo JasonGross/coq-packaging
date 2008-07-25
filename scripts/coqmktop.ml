@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqmktop.ml 10192 2007-10-08 00:33:39Z letouzey $ *)
+(* $Id: coqmktop.ml 10947 2008-05-19 19:10:40Z herbelin $ *)
 
 (* coqmktop is a script to link Coq, analogous to ocamlmktop.
    The command line contains options specific to coqmktop, options for the
@@ -17,7 +17,7 @@ open Unix
 (* Objects to link *)
 
 (* 1. Core objects *)
-let ocamlobjs = ["unix.cma"]
+let ocamlobjs = ["unix.cma";"nums.cma"]
 let dynobjs = ["dynlink.cma"]
 let camlp4objs = ["gramlib.cma"]
 let libobjs = ocamlobjs @ camlp4objs
@@ -33,7 +33,7 @@ let ide       = split_list Tolink.ide
 (* 3. Toplevel objects *)
 let camlp4topobjs =
   if Coq_config.camlp4 = "camlp5" then
-    ["camlp5_top.cma"; "camlp5o.cma"; "pa_o.cmo"; "pa_op.cmo"; "pa_extend.cmo"]
+    ["camlp5_top.cma"; "pa_o.cmo"; "pa_extend.cmo"]
   else
     ["camlp4_top.cma"; "pa_o.cmo"; "pa_op.cmo"; "pa_extend.cmo"]
 let topobjs = camlp4topobjs
@@ -51,9 +51,6 @@ let top        = ref false
 let searchisos = ref false
 let coqide     = ref false
 let echo       = ref false
-
-(* Caml inline flag *)
-let caml_inline_0 = ref false
 
 let src_dirs () = 
   [ []; ["kernel";"byterun"]; [ "config" ]; [ "toplevel" ] ] @
@@ -105,7 +102,7 @@ let files_to_link userfiles =
       ((List.map native_suffix objs) @ userfiles,
        (List.map native_suffix libs) @ userfiles)
     else 
-      (objs @ userfiles ,libs @ userfiles )
+      (objs @ userfiles, libs @ userfiles )
   in
   let modules = List.map module_of_file objstolink in
   (modules, libstolink)
@@ -137,7 +134,7 @@ let all_subdirs dir =
 (* usage *)
 let usage () =
   prerr_endline "Usage: coqmktop <options> <ocaml options> files
-Options are:
+Flags.are:
   -srcdir dir   Specify where the Coq source files are
   -o exec-file  Specify the name of the resulting toplevel
   -opt          Compile in native code
@@ -145,8 +142,7 @@ Options are:
   -top          Build Coq on a ocaml toplevel (incompatible with -opt)
   -searchisos   Build a toplevel for SearchIsos
   -ide          Build a toplevel for the Coq IDE
-  -R dir        Specify recursively directories for Ocaml
-  -v8           Link with V8 grammar\n";
+  -R dir        Specify recursively directories for Ocaml\n";
   exit 1
 
 (* parsing of the command line *)
@@ -160,7 +156,9 @@ let parse_args () =
     | "-top" :: rem -> top := true ; parse (op,fl) rem
     | "-ide" :: rem ->
         coqide := true; parse (op,fl) rem
-    | "-v8" :: rem -> parse (op,fl) rem
+    | "-v8" :: rem -> 
+	Printf.eprintf "warning: option -v8 deprecated";
+	parse (op,fl) rem
     | "-echo" :: rem -> echo := true ; parse (op,fl) rem
     | ("-cclib"|"-ccopt"|"-I"|"-o"|"-w" as o) :: rem' ->
 	begin
@@ -174,7 +172,6 @@ let parse_args () =
     | "-R" :: [] -> usage ()
     | ("-noassert"|"-compact"|"-g"|"-p"|"-thread"|"-dtypes" as o) :: rem ->
         parse (o::op,fl) rem
-    | "-inline" :: p :: rem -> caml_inline_0 := true; parse (op,fl) rem
     | ("-h"|"--help") :: _ -> usage ()
     | f :: rem ->
 	if Filename.check_suffix f ".ml" 
@@ -283,25 +280,24 @@ let main () =
   let (options, userfiles) = parse_args () in
   (* which ocaml command to invoke *)
   let prog =
-    if !opt then
-      begin
-	(* native code *)
-	if !top then failwith "no custom toplevel in native code !";
-	let ocamloptexec = Filename.concat Coq_config.camldir "ocamlopt" in
-          (if !caml_inline_0 then ocamloptexec^" -linkall"^" -inline 0" else ocamloptexec^" -linkall")
-      end else
+    if !opt then begin
+      (* native code *)
+      if !top then failwith "no custom toplevel in native code !";
+      let ocamloptexec = Filename.concat Coq_config.camldir "ocamlopt" in
+        ocamloptexec^" -linkall"
+    end else
       (* bytecode (we shunt ocamlmktop script which fails on win32) *)
       let ocamlmktoplib = " toplevellib.cma" in
       let ocamlcexec = Filename.concat Coq_config.camldir "ocamlc" in
       let ocamlccustom = ocamlcexec^" -custom -linkall" in
-	(if !top then ocamlccustom^ocamlmktoplib else ocamlccustom)
+      (if !top then ocamlccustom^ocamlmktoplib else ocamlccustom)
   in
-    (* files to link *)
+  (* files to link *)
   let (modules, tolink) = files_to_link userfiles in
-    (*file for dynlink *)
+  (*file for dynlink *)
   let dynlink=
     if not (!opt || !top) then
-      [tmp_dynlink()]
+      [(print_int 2; tmp_dynlink())]
     else
       []
   in
@@ -322,6 +318,7 @@ let main () =
 	   (string_of_int (String.length command)) ^ " characters)");
 	flush Pervasives.stdout 
       end;
+    print_string command;
     let retcode = Sys.command command in
     clean main_file;
     (* command gives the exit code in HSB, and signal in LSB !!! *)

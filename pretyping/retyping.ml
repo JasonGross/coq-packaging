@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: retyping.ml 9314 2006-10-29 20:11:08Z herbelin $ *)
+(* $Id: retyping.ml 11077 2008-06-09 11:26:32Z herbelin $ *)
 
 open Util
 open Term
@@ -44,7 +44,7 @@ let type_of_var env id =
   with Not_found ->
     anomaly ("type_of: variable "^(string_of_id id)^" unbound")
 
-let typeur sigma metamap =
+let retype sigma metamap =
   let rec type_of env cstr=
     match kind_of_term cstr with
     | Meta n ->
@@ -84,7 +84,7 @@ let typeur sigma metamap =
   and sort_of env t = 
     match kind_of_term t with
     | Cast (c,_, s) when isSort s -> destSort s
-    | Sort (Prop c) -> type_0
+    | Sort (Prop c) -> type1_sort
     | Sort (Type u) -> Type (Univ.super u)
     | Prod (name,t,c2) ->
         (match (sort_of env t, sort_of (push_rel (name,None,t) env) c2) with
@@ -92,10 +92,12 @@ let typeur sigma metamap =
           | Prop _, (Prop Pos as s) -> s
           | Type _, (Prop Pos as s) when
               Environ.engagement env = Some ImpredicativeSet -> s
-          | Type u1, Prop Pos -> Type (Univ.sup u1 Univ.base_univ)
-	  | Prop Pos, (Type u2) -> Type (Univ.sup Univ.base_univ u2)
+	  | (Type _, _) | (_, Type _) -> new_Type_sort ()
+(*
+          | Type u1, Prop Pos -> Type (Univ.sup u1 Univ.type0_univ)
+	  | Prop Pos, (Type u2) -> Type (Univ.sup Univ.type0_univ u2)
 	  | Prop Null, (Type _ as s) -> s
-	  | Type u1, Type u2 -> Type (Univ.sup u1 u2))
+	  | Type u1, Type u2 -> Type (Univ.sup u1 u2)*))
     | App(f,args) when isGlobalRef f ->
 	let t = type_of_global_reference_knowing_parameters env f args in
         sort_of_atomic_type env sigma t args
@@ -132,14 +134,18 @@ let typeur sigma metamap =
   in type_of, sort_of, sort_family_of,
      type_of_global_reference_knowing_parameters
 
-let get_type_of env sigma c = let f,_,_,_ = typeur sigma [] in f env c
-let get_sort_of env sigma t = let _,f,_,_ = typeur sigma [] in f env t
-let get_sort_family_of env sigma c = let _,_,f,_ = typeur sigma [] in f env c
+let get_sort_of env sigma t = let _,f,_,_ = retype sigma [] in f env t
+let get_sort_family_of env sigma c = let _,_,f,_ = retype sigma [] in f env c
 let type_of_global_reference_knowing_parameters env sigma c args =
-  let _,_,_,f = typeur sigma [] in f env c args
+  let _,_,_,f = retype sigma [] in f env c args
 
-let get_type_of_with_meta env sigma metamap = 
-  let f,_,_,_ = typeur sigma metamap in f env
+(* We are outside the kernel: we take fresh universes *)
+(* to avoid tactics and co to refresh universes themselves *)
+let get_type_of env sigma c =
+  let f,_,_,_ = retype sigma [] in refresh_universes (f env c)
+
+let get_type_of_with_meta env sigma metamap c =
+  let f,_,_,_ = retype sigma metamap in refresh_universes (f env c)
 
 (* Makes an assumption from a constr *)
 let get_assumption_of env evc c = c

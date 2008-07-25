@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: printer.mli 9385 2006-11-17 15:14:14Z courtieu $ i*)
+(*i $Id: printer.mli 11001 2008-05-27 16:56:07Z aspiwack $ i*)
 
 (*i*)
 open Pp
@@ -34,6 +34,12 @@ val pr_lconstr             : constr -> std_ppcmds
 
 val pr_constr_env          : env -> constr -> std_ppcmds
 val pr_constr              : constr -> std_ppcmds
+
+val pr_open_constr_env     : env -> open_constr -> std_ppcmds
+val pr_open_constr         : open_constr -> std_ppcmds
+
+val pr_open_lconstr_env    : env -> open_constr -> std_ppcmds
+val pr_open_lconstr        : open_constr -> std_ppcmds
 
 val pr_ltype_env_at_top    : env -> types -> std_ppcmds
 val pr_ltype_env           : env -> types -> std_ppcmds
@@ -85,6 +91,13 @@ val pr_rel_context         : env -> rel_context -> std_ppcmds
 val pr_rel_context_of      : env -> std_ppcmds
 val pr_context_of          : env -> std_ppcmds
 
+(* Predicates *)
+
+val pr_predicate           : ('a -> std_ppcmds) -> (bool * 'a list) -> std_ppcmds
+val pr_cpred               : Cpred.t -> std_ppcmds
+val pr_idpred              : Idpred.t -> std_ppcmds
+val pr_transparent_state   : transparent_state -> std_ppcmds
+
 (* Proofs *)
 
 val pr_goal                : goal -> std_ppcmds
@@ -107,3 +120,20 @@ val emacs_str              : string -> string -> string
 (* Backwards compatibility *)
 
 val prterm                 : constr -> std_ppcmds (* = pr_lconstr *)
+
+
+(* spiwack: printer function for sets of Environ.assumption.
+            It is used primarily by the Print Assumption command. *)
+val pr_assumptionset : env -> Term.types Environ.ContextObjectMap.t ->std_ppcmds
+
+
+type printer_pr = {
+ pr_subgoals            : string option -> evar_map -> goal list -> std_ppcmds;
+ pr_subgoal             : int -> goal list -> std_ppcmds;
+ pr_goal                : goal -> std_ppcmds;
+};;
+
+val set_printer_pr : printer_pr -> unit
+
+val default_printer_pr : printer_pr
+

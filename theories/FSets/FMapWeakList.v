@@ -6,39 +6,28 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FMapWeakList.v 8985 2006-06-23 16:12:45Z jforest $ *)
+(* $Id: FMapWeakList.v 10616 2008-03-04 17:33:35Z letouzey $ *)
 
 (** * Finite map library *)  
 
 (** This file proposes an implementation of the non-dependant interface
- [FMapInterface.S] using lists of pairs,  unordered but without redundancy. *)
+ [FMapInterface.WS] using lists of pairs, unordered but without redundancy. *)
 
-Require Import FSetInterface. 
-Require Import FSetWeakInterface.
-Require Import FMapWeakInterface.
+Require Import FMapInterface.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-Arguments Scope list [type_scope].
-
 Module Raw (X:DecidableType).
 
-Module PX := KeyDecidableType X.
-Import PX.
+Module Import PX := KeyDecidableType X.
 
 Definition key := X.t.
-Definition t (elt:Set) := list (X.t * elt).
+Definition t (elt:Type) := list (X.t * elt).
 
 Section Elt.
 
-Variable elt : Set.
-
-(* now in KeyDecidableType:
-Definition eqk (p p':key*elt) := X.eq (fst p) (fst p').
-Definition eqke (p p':key*elt) := 
-          X.eq (fst p) (fst p') /\ (snd p) = (snd p').
-*)
+Variable elt : Type.
 
 Notation eqk := (eqk (elt:=elt)).   
 Notation eqke := (eqke (elt:=elt)).
@@ -221,10 +210,10 @@ Proof.
  destruct a as (x',e').
  simpl; case (X.eq_dec x x'); inversion_clear Hm; auto.
  constructor; auto.
- swap H.
+ contradict H.
  apply InA_eqk with (x,e); auto.
  constructor; auto.
- swap H; apply add_3' with x e; auto.
+ contradict H; apply add_3' with x e; auto.
 Qed.
 
 (* Not part of the exported specifications, used later for [combine]. *)
@@ -272,8 +261,8 @@ Proof.
 
  inversion_clear Hm.
  subst.
- swap H0.
- destruct H2 as (e,H2); unfold PX.MapsTo in H2.
+ contradict H0.
+ destruct H0 as (e,H2); unfold PX.MapsTo in H2.
  apply InA_eqk with (y,e); auto.
  compute; apply X.eq_trans with x; auto.
   
@@ -323,7 +312,7 @@ Proof.
  destruct a as (x',e').
  simpl; case (X.eq_dec x x'); auto.
  constructor; auto.
- swap H; apply remove_3' with x; auto.
+ contradict H; apply remove_3' with x; auto.
 Qed.  
 
 (** * [elements] *)
@@ -340,20 +329,20 @@ Proof.
 auto.
 Qed.
 
-Lemma elements_3 : forall m (Hm:NoDupA m), NoDupA (elements m). 
+Lemma elements_3w : forall m (Hm:NoDupA m), NoDupA (elements m). 
 Proof. 
  auto.
 Qed.
 
 (** * [fold] *)
 
-Function fold (A:Set)(f:key->elt->A->A)(m:t elt) (acc : A) {struct m} :  A :=
+Function fold (A:Type)(f:key->elt->A->A)(m:t elt) (acc : A) {struct m} :  A :=
   match m with
    | nil => acc
    | (k,e)::m' => fold f m' (f k e acc)
   end.
 
-Lemma fold_1 : forall m (A:Set)(i:A)(f:key->elt->A->A),
+Lemma fold_1 : forall m (A:Type)(i:A)(f:key->elt->A->A),
   fold f m i = fold_left (fun a p => f (fst p) (snd p) a) (elements m) i.
 Proof. 
  intros; functional induction (@fold A f m i); auto.
@@ -377,7 +366,7 @@ Definition Submap cmp m m' :=
   (forall k, In k m -> In k m') /\ 
   (forall k e e', MapsTo k e m -> MapsTo k e' m' -> cmp e e' = true).  
 
-Definition Equal cmp m m' := 
+Definition Equivb cmp m m' := 
   (forall k, In k m <-> In k m') /\ 
   (forall k e e', MapsTo k e m -> MapsTo k e' m' -> cmp e e' = true).  
 
@@ -444,17 +433,17 @@ Qed.
 (** Specification of [equal] *)
 
 Lemma equal_1 : forall m (Hm:NoDupA m) m' (Hm': NoDupA m') cmp, 
-  Equal cmp m m' -> equal cmp m m' = true. 
+  Equivb cmp m m' -> equal cmp m m' = true. 
 Proof. 
- unfold Equal, equal.
+ unfold Equivb, equal.
  intuition.
  apply andb_true_intro; split; apply submap_1; unfold Submap; firstorder.
 Qed.
 
 Lemma equal_2 : forall m (Hm:NoDupA m) m' (Hm':NoDupA m') cmp, 
-  equal cmp m m' = true -> Equal cmp m m'.
+  equal cmp m m' = true -> Equivb cmp m m'.
 Proof.
- unfold Equal, equal.
+ unfold Equivb, equal.
  intros.
  destruct (andb_prop _ _ H); clear H.
  generalize (submap_2 Hm Hm' H0).
@@ -462,7 +451,7 @@ Proof.
  firstorder.
 Qed. 
 
-Variable elt':Set.
+Variable elt':Type.
 
 (** * [map] and [mapi] *)
   
@@ -483,7 +472,7 @@ Section Elt2.
 (* A new section is necessary for previous definitions to work 
    with different [elt], especially [MapsTo]... *)
   
-Variable elt elt' : Set.
+Variable elt elt' : Type.
 
 (** Specification of [map] *)
 
@@ -533,12 +522,12 @@ Proof.
  destruct a as (x',e').
  inversion_clear Hm.
  constructor; auto.
- swap H.
+ contradict H.
  (* il faut un map_1 avec eqk au lieu de eqke *)
  clear IHm H0. 
  induction m; simpl in *; auto.
- inversion H1.
- destruct a; inversion H1; auto.
+ inversion H.
+ destruct a; inversion H; auto.
 Qed.      
  
 (** Specification of [mapi] *)
@@ -593,17 +582,17 @@ Proof.
  destruct a as (x',e').
  inversion_clear Hm; auto.
  constructor; auto.
- swap H.
+ contradict H.
  clear IHm H0.
  induction m; simpl in *; auto.
- inversion_clear H1.
- destruct a; inversion_clear H1; auto.
+ inversion_clear H.
+ destruct a; inversion_clear H; auto.
 Qed.
 
 End Elt2. 
 Section Elt3.
 
-Variable elt elt' elt'' : Set.
+Variable elt elt' elt'' : Type.
 
 Notation oee' := (option elt * option elt')%type.
 	
@@ -613,7 +602,7 @@ Definition combine_l (m:t elt)(m':t elt') : t oee' :=
 Definition combine_r (m:t elt)(m':t elt') : t oee' :=
   mapi (fun k e' => (find k m, Some e')) m'.	
 
-Definition fold_right_pair (A B C:Set)(f:A->B->C->C)(l:list (A*B))(i:C) := 
+Definition fold_right_pair (A B C:Type)(f:A->B->C->C)(l:list (A*B))(i:C) := 
   List.fold_right (fun p => f (fst p) (snd p)) i l.
 
 Definition combine (m:t elt)(m':t elt') : t oee' := 
@@ -737,7 +726,7 @@ Qed.
 
 Variable f : option elt -> option elt' -> option elt''.
 
-Definition option_cons (A:Set)(k:key)(o:option A)(l:list (key*A)) := 
+Definition option_cons (A:Type)(k:key)(o:option A)(l:list (key*A)) := 
   match o with
    | Some e => (k,e)::l
    | None => l
@@ -765,13 +754,13 @@ Proof.
  inversion_clear H1.
  destruct a; destruct o; simpl; auto.
  constructor; auto.
- swap H.
+ contradict H.
  clear IHl1.
  induction l1.
- inversion H1.
+ inversion H.
  inversion_clear H0.
  destruct a; destruct o; simpl in *; auto.
- inversion_clear  H1; auto.
+ inversion_clear H; auto.
 Qed.
 
 Definition at_least_one_then_f (o:option elt)(o':option elt') := 
@@ -807,7 +796,7 @@ Proof.
  rewrite H2.
  unfold f'; simpl.
  destruct (f oo oo'); simpl. 
- destruct (X.eq_dec x k); try absurd_hyp n; auto.
+ destruct (X.eq_dec x k); try contradict n; auto.
  destruct (IHm0 H1) as (_,H4); apply H4; auto.
  case_eq (find x m0); intros; auto.
  elim H0.
@@ -817,7 +806,7 @@ Proof.
  (* k < x *)
  unfold f'; simpl.
  destruct (f oo oo'); simpl.
- destruct (X.eq_dec x k); [ absurd_hyp n; auto | auto].
+ destruct (X.eq_dec x k); [ contradict n; auto | auto].
  destruct (IHm0 H1) as (H3,_); apply H3; auto.
  destruct (IHm0 H1) as (H3,_); apply H3; auto.
 
@@ -831,7 +820,7 @@ Proof.
  (* k < x *)
  unfold f'; simpl.
  destruct (f oo oo'); simpl.
- destruct (X.eq_dec x k); [ absurd_hyp n; auto | auto].
+ destruct (X.eq_dec x k); [ contradict n; auto | auto].
  destruct (IHm0 H1) as (_,H4); apply H4; auto.
  destruct (IHm0 H1) as (_,H4); apply H4; auto.
 Qed.
@@ -873,18 +862,18 @@ End Elt3.
 End Raw.
 
 
-Module Make (X: DecidableType) <: S with Module E:=X.
+Module Make (X: DecidableType) <: WS with Module E:=X.
  Module Raw := Raw X. 
 
  Module E := X.
  Definition key := E.t. 
 
- Record slist (elt:Set) : Set :=  
+ Record slist (elt:Type) :=  
   {this :> Raw.t elt; NoDup : NoDupA (@Raw.PX.eqk elt) this}.
- Definition t (elt:Set) := slist elt. 
+ Definition t (elt:Type) := slist elt. 
 
 Section Elt. 
- Variable elt elt' elt'':Set. 
+ Variable elt elt' elt'':Type. 
 
  Implicit Types m : t elt.
  Implicit Types x y : key. 
@@ -901,13 +890,18 @@ Section Elt.
  Definition map2 f m (m':t elt') : t elt'' := 
    Build_slist (Raw.map2_NoDup f m.(NoDup) m'.(NoDup)).
  Definition elements m : list (key*elt) := @Raw.elements elt m.(this).
- Definition fold (A:Set)(f:key->elt->A->A) m (i:A) : A := @Raw.fold elt A f m.(this) i.
+ Definition cardinal m := length m.(this).
+ Definition fold (A:Type)(f:key->elt->A->A) m (i:A) : A := @Raw.fold elt A f m.(this) i.
  Definition equal cmp m m' : bool := @Raw.equal elt cmp m.(this) m'.(this).
-
  Definition MapsTo x e m : Prop := Raw.PX.MapsTo x e m.(this).
  Definition In x m : Prop := Raw.PX.In x m.(this).
  Definition Empty m : Prop := Raw.Empty m.(this).
- Definition Equal cmp m m' : Prop := @Raw.Equal elt cmp m.(this) m'.(this).
+
+ Definition Equal m m' := forall y, find y m = find y m'.
+ Definition Equiv (eq_elt:elt->elt->Prop) m m' := 
+         (forall k, In k m <-> In k m') /\ 
+         (forall k e e', MapsTo k e m -> MapsTo k e' m' -> eq_elt e e').  
+ Definition Equivb cmp m m' : Prop := @Raw.Equivb elt cmp m.(this) m'.(this).
 
  Definition eq_key : (key*elt) -> (key*elt) -> Prop := @Raw.PX.eqk elt.
  Definition eq_key_elt : (key*elt) -> (key*elt) -> Prop:= @Raw.PX.eqke elt.
@@ -951,36 +945,39 @@ Section Elt.
  Proof. intros m; exact (@Raw.elements_1 elt m.(this)). Qed.
  Lemma elements_2 : forall m x e, InA eq_key_elt (x,e) (elements m) -> MapsTo x e m.
  Proof. intros m; exact (@Raw.elements_2 elt m.(this)). Qed.
- Lemma elements_3 : forall m, NoDupA eq_key (elements m).  
- Proof. intros m; exact (@Raw.elements_3 elt m.(this) m.(NoDup)). Qed.
+ Lemma elements_3w : forall m, NoDupA eq_key (elements m).  
+ Proof. intros m; exact (@Raw.elements_3w elt m.(this) m.(NoDup)). Qed.
+ 
+ Lemma cardinal_1 : forall m, cardinal m = length (elements m). 
+ Proof. intros; reflexivity. Qed.
 
- Lemma fold_1 : forall m (A : Set) (i : A) (f : key -> elt -> A -> A),
+ Lemma fold_1 : forall m (A : Type) (i : A) (f : key -> elt -> A -> A),
         fold f m i = fold_left (fun a p => f (fst p) (snd p) a) (elements m) i.
  Proof. intros m; exact (@Raw.fold_1 elt m.(this)). Qed.
 
- Lemma equal_1 : forall m m' cmp, Equal cmp m m' -> equal cmp m m' = true. 
+ Lemma equal_1 : forall m m' cmp, Equivb cmp m m' -> equal cmp m m' = true. 
  Proof. intros m m'; exact (@Raw.equal_1 elt m.(this) m.(NoDup) m'.(this) m'.(NoDup)). Qed.
- Lemma equal_2 : forall m m' cmp, equal cmp m m' = true -> Equal cmp m m'.
+ Lemma equal_2 : forall m m' cmp, equal cmp m m' = true -> Equivb cmp m m'.
  Proof. intros m m'; exact (@Raw.equal_2 elt m.(this) m.(NoDup) m'.(this) m'.(NoDup)). Qed.
 
  End Elt.
  
- Lemma map_1 : forall (elt elt':Set)(m: t elt)(x:key)(e:elt)(f:elt->elt'), 
+ Lemma map_1 : forall (elt elt':Type)(m: t elt)(x:key)(e:elt)(f:elt->elt'), 
         MapsTo x e m -> MapsTo x (f e) (map f m).
  Proof. intros elt elt' m; exact (@Raw.map_1 elt elt' m.(this)). Qed.
- Lemma map_2 : forall (elt elt':Set)(m: t elt)(x:key)(f:elt->elt'), 
+ Lemma map_2 : forall (elt elt':Type)(m: t elt)(x:key)(f:elt->elt'), 
         In x (map f m) -> In x m. 
  Proof. intros elt elt' m; exact (@Raw.map_2 elt elt' m.(this)). Qed.
 
- Lemma mapi_1 : forall (elt elt':Set)(m: t elt)(x:key)(e:elt)
+ Lemma mapi_1 : forall (elt elt':Type)(m: t elt)(x:key)(e:elt)
         (f:key->elt->elt'), MapsTo x e m -> 
         exists y, E.eq y x /\ MapsTo x (f y e) (mapi f m).
  Proof. intros elt elt' m; exact (@Raw.mapi_1 elt elt' m.(this)). Qed.
- Lemma mapi_2 : forall (elt elt':Set)(m: t elt)(x:key)
+ Lemma mapi_2 : forall (elt elt':Type)(m: t elt)(x:key)
         (f:key->elt->elt'), In x (mapi f m) -> In x m.
  Proof. intros elt elt' m; exact (@Raw.mapi_2 elt elt' m.(this)). Qed.
 
- Lemma map2_1 : forall (elt elt' elt'':Set)(m: t elt)(m': t elt')
+ Lemma map2_1 : forall (elt elt' elt'':Type)(m: t elt)(m': t elt')
 	(x:key)(f:option elt->option elt'->option elt''), 
 	In x m \/ In x m' -> 
         find x (map2 f m m') = f (find x m) (find x m').       
@@ -988,7 +985,7 @@ Section Elt.
  intros elt elt' elt'' m m' x f; 
  exact (@Raw.map2_1 elt elt' elt'' f m.(this) m.(NoDup) m'.(this) m'.(NoDup) x).
  Qed.
- Lemma map2_2 : forall (elt elt' elt'':Set)(m: t elt)(m': t elt')
+ Lemma map2_2 : forall (elt elt' elt'':Type)(m: t elt)(m': t elt')
 	(x:key)(f:option elt->option elt'->option elt''), 
         In x (map2 f m m') -> In x m \/ In x m'.
  Proof. 

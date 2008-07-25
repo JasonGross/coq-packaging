@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: lib.mli 9488 2007-01-17 11:11:58Z herbelin $ i*)
+(*i $Id: lib.mli 11046 2008-06-03 22:48:06Z msozeau $ i*)
 
 (*i*)
 open Util
@@ -25,9 +25,11 @@ type node =
   | Leaf of obj
   | CompilingLibrary of object_prefix
   | OpenedModule of bool option * object_prefix * Summary.frozen
+  | ClosedModule  of library_segment
   | OpenedModtype of object_prefix * Summary.frozen
+  | ClosedModtype of library_segment
   | OpenedSection of object_prefix * Summary.frozen
-  | ClosedSection
+  | ClosedSection of library_segment
   | FrozenState of Summary.frozen
 
 and library_segment = (object_name * node) list
@@ -65,8 +67,14 @@ val add_anonymous_leaf : obj -> unit
 val add_leaves : identifier -> obj list -> object_name
 
 val add_frozen_state : unit -> unit
+
+(* Adds a "dummy" entry in lib_stk with a unique new label number. *)
 val mark_end_of_command : unit -> unit
+(* Returns the current label number *)
 val current_command_label : unit -> int
+(* [reset_label n ] resets [lib_stk] to the label n registered by
+   [mark_end_of_command()]. That is it forgets the label and anything
+   registered after it. *)
 val reset_label : int -> unit
 
 (*s The function [contents_after] returns the current library segment, 
@@ -80,6 +88,7 @@ val contents_after : object_name option -> library_segment
 (* User-side names *)
 val cwd : unit -> dir_path
 val make_path : identifier -> section_path
+val path_of_include : unit -> section_path
 
 (* Kernel-side names *)
 val current_prefix : unit -> module_path * dir_path
@@ -93,7 +102,7 @@ val sections_depth : unit -> int
 (* Are we inside an opened module type *)
 val is_modtype : unit -> bool
 val is_module : unit -> bool
-
+val current_mod_id : unit -> module_ident
 
 (* Returns the most recent OpenedThing node *)
 val what_is_opened : unit -> object_name * node
@@ -122,6 +131,7 @@ val end_compilation : dir_path -> object_prefix * library_segment
 val library_dp : unit -> dir_path
 
 (* Extract the library part of a name even if in a section *)
+val dp_of_mp : module_path -> dir_path
 val library_part :  global_reference -> dir_path
 val remove_section_part : global_reference -> dir_path
 
@@ -134,7 +144,11 @@ val close_section : identifier -> unit
 
 val reset_to : object_name -> unit
 val reset_name : identifier located -> unit
+val remove_name : identifier located -> unit
 val reset_mod : identifier located -> unit
+val reset_to_state : object_name -> unit
+
+val has_top_frozen_state : unit -> object_name option
 
 (* [back n] resets to the place corresponding to the $n$-th call of 
    [mark_end_of_command] (counting backwards) *)
@@ -165,7 +179,7 @@ val section_segment_of_mutual_inductive: mutual_inductive -> Sign.named_context
 
 val section_instance : global_reference -> identifier array
 
-val add_section_variable : identifier -> unit
+val add_section_variable : identifier -> bool -> Term.types option -> unit
 val add_section_constant : constant -> Sign.named_context -> unit
 val add_section_kn : kernel_name -> Sign.named_context -> unit
 val replacement_context : unit ->

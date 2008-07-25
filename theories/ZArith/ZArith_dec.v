@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ZArith_dec.v 9958 2007-07-06 22:47:40Z letouzey $ i*)
+(*i $Id: ZArith_dec.v 9759 2007-04-12 17:46:54Z notin $ i*)
 
 Require Import Sumbool.
 

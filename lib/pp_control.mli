@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pp_control.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: pp_control.mli 10917 2008-05-10 16:35:46Z herbelin $ i*)
 
 (* Parameters of pretty-printing. *)
 
@@ -37,8 +37,8 @@ val with_fp : 'a pp_formatter_params -> Format.formatter
 val with_output_to : out_channel -> Format.formatter
 
 val std_ft : Format.formatter ref
-val err_ft : Format.formatter
-val deep_ft : Format.formatter
+val err_ft : Format.formatter ref
+val deep_ft : Format.formatter ref
 
 (*s For parametrization through vernacular. *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Lexicographic_Product.v 9597 2007-02-06 19:44:05Z herbelin $ i*)
+(*i $Id: Lexicographic_Product.v 9598 2007-02-06 19:45:52Z herbelin $ i*)
 
 (** Authors: Bruno Barras, Cristina Cornes *)
 

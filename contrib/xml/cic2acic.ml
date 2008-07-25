@@ -55,18 +55,8 @@ let remove_module_dirpath_from_dirpath ~basedir dir =
 
 
 let get_uri_of_var v pvars =
- let module D = Declare in
+ let module D = Decls in
  let module N = Names in
-  let rec search_in_pvars names =
-   function
-      [] -> None
-    | ((name,l)::tl) ->
-       let names' = name::names in
-        if List.mem v l then
-         Some names'
-        else
-         search_in_pvars names' tl
-  in
   let rec search_in_open_sections =
    function
       [] -> Util.error ("Variable "^v^" not found")
@@ -78,9 +68,10 @@ let get_uri_of_var v pvars =
          search_in_open_sections tl
   in
    let path =
-    match search_in_pvars [] pvars with
-       None -> search_in_open_sections (N.repr_dirpath (Lib.cwd ()))
-     | Some path -> path
+    if List.mem v pvars then
+      []
+    else
+      search_in_open_sections (N.repr_dirpath (Lib.cwd ()))
    in
     "cic:" ^
      List.fold_left
@@ -241,16 +232,15 @@ let typeur sigma metamap =
     | T.Var id ->
         (try
           let (_,_,ty) = Environ.lookup_named id env in
-          T.body_of_type ty
+          ty
         with Not_found ->
           Util.anomaly ("type_of: variable "^(Names.string_of_id id)^" unbound"))
     | T.Const c ->
         let cb = Environ.lookup_constant c env in
         Typeops.type_of_constant_type env (cb.Declarations.const_type)
     | T.Evar ev -> Evd.existential_type sigma ev
-    | T.Ind ind -> T.body_of_type (Inductiveops.type_of_inductive env ind)
-    | T.Construct cstr ->
-       T.body_of_type (Inductiveops.type_of_constructor env cstr)
+    | T.Ind ind -> Inductiveops.type_of_inductive env ind
+    | T.Construct cstr -> Inductiveops.type_of_constructor env cstr
     | T.Case (_,p,c,lf) ->
         let Inductiveops.IndType(_,realargs) =
           try Inductiveops.find_rectype env sigma (type_of env c)
@@ -273,7 +263,7 @@ let typeur sigma metamap =
        match sort_of env cstr with
           Coq_sort T.InProp -> T.mkProp
         | Coq_sort T.InSet -> T.mkSet
-        | Coq_sort T.InType -> T.mkType Univ.prop_univ (* ERROR HERE *)
+        | Coq_sort T.InType -> T.mkType Univ.type1_univ (* ERROR HERE *)
         | CProp -> T.mkConst DoubleTypeInference.cprop
                                                                                 
   and sort_of env t =

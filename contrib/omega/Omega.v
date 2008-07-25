@@ -9,15 +9,16 @@
 (*                                                                        *)
 (* Omega: a solver of quantifier-free problems in Presburger Arithmetic   *)
 (*                                                                        *)
-(* Pierre Crégut (CNET, Lannion, France)                                  *)
+(* Pierre CrÃ©gut (CNET, Lannion, France)                                  *)
 (*                                                                        *)
 (**************************************************************************)
 
-(* $Id: Omega.v 8642 2006-03-17 10:09:02Z notin $ *)
+(* $Id: Omega.v 10028 2007-07-18 22:38:06Z letouzey $ *)
 
 (* We do not require [ZArith] anymore, but only what's necessary for Omega *)
 Require Export ZArith_base.
 Require Export OmegaLemmas.
+Require Export PreOmega.
 
 Hint Resolve Zle_refl Zplus_comm Zplus_assoc Zmult_comm Zmult_assoc Zplus_0_l
   Zplus_0_r Zmult_1_l Zplus_opp_l Zplus_opp_r Zmult_plus_distr_l

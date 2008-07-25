@@ -8,9 +8,7 @@
 
 (* Certification of Imperative Programs / Jean-Christophe Filliâtre *)
 
-(* $Id: ProgramsExtraction.v 5920 2004-07-16 20:01:26Z herbelin $ *)
-
-Require Export Extraction.
+(* $Id: ProgramsExtraction.v 10290 2007-11-06 01:27:17Z letouzey $ *)
 
 Extract Inductive unit => unit [ "()" ].
 Extract Inductive bool => bool [ true false ].

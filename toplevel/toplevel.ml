@@ -6,11 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: toplevel.ml 10087 2007-08-24 10:39:30Z herbelin $ *)
+(* $Id: toplevel.ml 10916 2008-05-10 15:38:36Z herbelin $ *)
 
 open Pp
 open Util
-open Options
+open Flags
 open Cerrors
 open Vernac
 open Pcoq
@@ -103,7 +103,7 @@ let get_bols_of_loc ibuf (bp,ep) =
         lines_rec ll nafter fl 
   in
   let (fl,ll) = lines_rec ibuf.len ([],None) ibuf.bols in
-  (fl,out_some ll)
+  (fl,Option.get ll)
 
 let dotted_location (b,e) =
   if e-b < 3 then 
@@ -134,18 +134,18 @@ let print_highlight_location ib loc =
 	  (l1 ++ li ++ ln)
   in 
   let loc = make_loc (bp,ep) in
-  (str"Toplevel input, characters " ++ Cerrors.print_loc loc ++ fnl () ++
+  (str"Toplevel input, characters " ++ Cerrors.print_loc loc ++ str":" ++ fnl () ++
      highlight_lines ++ fnl ())
 
 (* Functions to report located errors in a file. *)
 
 let print_location_in_file s inlibrary fname loc =
-  let errstrm = (str"Error while reading " ++ str s ++ str" :" ++ fnl ()) in
+  let errstrm = (str"Error while reading " ++ str s ++ str":") in
   if loc = dummy_loc then 
     (errstrm ++ str", unknown location." ++ fnl ())
   else
     if inlibrary then
-      (errstrm ++ str"Module " ++ str ("\""^fname^"\"") ++
+      (errstrm ++ fnl () ++ str"Module " ++ str ("\""^fname^"\"") ++
        str" characters " ++ Cerrors.print_loc loc ++ fnl ())
     else
     let (bp,ep) = unloc loc in
@@ -162,7 +162,7 @@ let print_location_in_file s inlibrary fname loc =
       close_in ic;
       (errstrm  ++ str"File " ++ str ("\""^fname^"\"") ++
          str", line " ++ int line ++
-         str", characters " ++ Cerrors.print_loc (make_loc (bp-bol,ep-bol)) ++ fnl ())
+         str", characters " ++ Cerrors.print_loc (make_loc (bp-bol,ep-bol)) ++ str":" ++ fnl ())
     with e -> (close_in ic; (errstrm ++ str", invalid location." ++ fnl ()))
 	
 let print_command_location ib dloc =
@@ -221,10 +221,8 @@ let make_emacs_prompt() =
       (fun acc x -> acc ^ (if acc <> "" then "|" else "") ^ Names.string_of_id x)
       "" pending in
   let proof_info = if dpth >= 0 then string_of_int dpth else "0" in
-(*   statnum ^ " |" ^ pendingprompt ^ "| " ^ proof_info ^ " < " ^ (emacs_prompt_endstring()) *)
-  if !Options.print_emacs then statnum ^ " |" ^ pendingprompt ^ "| " ^ proof_info ^ " < "
+  if !Flags.print_emacs then statnum ^ " |" ^ pendingprompt ^ "| " ^ proof_info ^ " < "
   else ""
-
 
 (* A buffer to store the current command read on stdin. It is
  * initialized when a vernac command is immediately followed by "\n",

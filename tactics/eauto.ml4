@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: eauto.ml4 9277 2006-10-25 13:02:22Z herbelin $ *)
+(* $Id: eauto.ml4 11094 2008-06-10 19:35:23Z herbelin $ *)
 
 open Pp
 open Util
@@ -29,6 +29,7 @@ open Pattern
 open Clenv
 open Auto
 open Rawterm
+open Hiddentac
 
 let e_give_exact c gl = let t1 = (pf_type_of gl c) and t2 = pf_concl gl in 
   if occur_existential t1 or occur_existential t2 then 
@@ -44,13 +45,6 @@ TACTIC EXTEND eassumption
 | [ "eassumption" ] -> [ e_assumption ]
 END
 
-let e_resolve_with_bindings_tac  (c,lbind) gl = 
-  let t = pf_hnf_constr gl (pf_type_of gl c) in 
-  let clause = make_clenv_binding_apply gl None (c,t) lbind in 
-  Clenvtac.e_res_pf clause gl
-
-let e_resolve_constr c gls = e_resolve_with_bindings_tac (c,NoBindings) gls
-			     
 TACTIC EXTEND eexact
 | [ "eexact" constr(c) ] -> [ e_give_exact c ]
 END
@@ -61,84 +55,14 @@ let registered_e_assumption gl =
   tclFIRST (List.map (fun id gl -> e_give_exact_constr (mkVar id) gl) 
               (pf_ids_of_hyps gl)) gl
 
-(* This automatically define h_eApply (among other things) *)
-TACTIC EXTEND eapply
-  [ "eapply" constr_with_bindings(c) ] -> [ e_resolve_with_bindings_tac c ]
-END
-
-let vernac_e_resolve_constr c = h_eapply (c,NoBindings)
-
-let e_constructor_tac boundopt i lbind gl = 
-    let cl = pf_concl gl in 
-  let (mind,redcl) = pf_reduce_to_quantified_ind gl cl in 
-  let nconstr =
-    Array.length (snd (Global.lookup_inductive mind)).mind_consnames in
-  if i=0 then error "The constructors are numbered starting from 1";
-  if i > nconstr then error "Not enough constructors";
-  begin match boundopt with 
-    | Some expctdnum -> 
-        if expctdnum <> nconstr then 
-	  error "Not the expected number of constructors"
-    | None -> ()
-  end;
-  let cons = mkConstruct (ith_constructor_of_inductive mind i) in
-  let apply_tac = e_resolve_with_bindings_tac (cons,lbind) in
-  (tclTHENLIST [convert_concl_no_check redcl DEFAULTcast
-; intros; apply_tac]) gl
-
-let e_one_constructor i = e_constructor_tac None i
-
-let e_any_constructor tacopt gl =
-  let t = match tacopt with None -> tclIDTAC | Some t -> t in
-  let mind = fst (pf_reduce_to_quantified_ind gl (pf_concl gl)) in
-  let nconstr =
-    Array.length (snd (Global.lookup_inductive mind)).mind_consnames in
-  if nconstr = 0 then error "The type has no constructors";
-  tclFIRST (List.map (fun i -> tclTHEN (e_one_constructor i NoBindings) t) 
-              (interval 1 nconstr)) gl
-
-let e_left = e_constructor_tac (Some 2) 1
-
-let e_right = e_constructor_tac (Some 2) 2
-
-let e_split = e_constructor_tac (Some 1) 1
-
-(* This automatically define h_econstructor (among other things) *)
-TACTIC EXTEND econstructor
-  [ "econstructor" integer(n) "with" bindings(c) ] -> [ e_constructor_tac None n c ]
-| [ "econstructor" integer(n) ] -> [ e_constructor_tac None n NoBindings ]
-| [ "econstructor" tactic_opt(t) ] -> [ e_any_constructor (option_map Tacinterp.eval_tactic t) ] 
-      END
-
-TACTIC EXTEND eleft
-  [ "eleft" "with" bindings(l) ] -> [e_left l]
-| [ "eleft"] -> [e_left NoBindings]
-END
-
-TACTIC EXTEND eright
-  [ "eright" "with" bindings(l) ] -> [e_right l]
-| [ "eright" ] -> [e_right NoBindings]
-END
-
-TACTIC EXTEND esplit
-  [ "esplit" "with" bindings(l) ] -> [e_split l]
-| [ "esplit"] -> [e_split NoBindings]
-END
-
-
-TACTIC EXTEND eexists
-  [ "eexists" bindings(l) ] -> [e_split l]
-END
-
-
 (************************************************************************)
 (*   PROLOG tactic                                                      *)
 (************************************************************************)
 
 let one_step l gl =
   [Tactics.intro]
-  @ (List.map e_resolve_constr (List.map mkVar (pf_ids_of_hyps gl)))
-  @ (List.map e_resolve_constr l)
+  @ (List.map h_simplest_eapply (List.map mkVar (pf_ids_of_hyps gl)))
+  @ (List.map h_simplest_eapply l)
   @ (List.map assumption (pf_ids_of_hyps gl))
 
 let rec prolog l n gl =
@@ -161,51 +85,103 @@ TACTIC EXTEND prolog
 END
 
 open Auto
+open Unification
 
 (***************************************************************************)
 (* A tactic similar to Auto, but using EApply, Assumption and e_give_exact *)
 (***************************************************************************)
 
-let unify_e_resolve  (c,clenv) gls = 
+(* no delta yet *)
+
+let unify_e_resolve flags (c,clenv) gls = 
+  let clenv' = connect_clenv gls clenv in
+  let _ = clenv_unique_resolver false ~flags clenv' gls in
+  h_simplest_eapply c gls
+
+let unify_e_resolve_nodelta (c,clenv) gls = 
   let clenv' = connect_clenv gls clenv in
   let _ = clenv_unique_resolver false clenv' gls in
-  vernac_e_resolve_constr c gls
+  h_simplest_eapply c gls
 
-let rec e_trivial_fail_db db_list local_db goal =
+let rec e_trivial_fail_db mod_delta db_list local_db goal =
   let tacl = 
     registered_e_assumption ::
     (tclTHEN Tactics.intro 
        (function g'->
 	  let d = pf_last_hyp g' in
 	  let hintl = make_resolve_hyp (pf_env g') (project g') d in
-          (e_trivial_fail_db db_list
-	     (Hint_db.add_list hintl local_db) g'))) ::
-    (List.map fst (e_trivial_resolve db_list local_db (pf_concl goal)) )
+          (e_trivial_fail_db mod_delta db_list
+	     (add_hint_list hintl local_db) g'))) ::
+    (List.map fst (e_trivial_resolve mod_delta db_list local_db (pf_concl goal)) )
   in 
   tclFIRST (List.map tclCOMPLETE tacl) goal 
 
-and e_my_find_search db_list local_db hdc concl = 
+and e_my_find_search mod_delta =
+  if mod_delta then e_my_find_search_delta
+  else e_my_find_search_nodelta
+
+and e_my_find_search_nodelta db_list local_db hdc concl = 
   let hdc = head_of_constr_reference hdc in
   let hintl =
     if occur_existential concl then 
-      list_map_append (Hint_db.map_all hdc) (local_db::db_list)
+      list_map_append (fun (st, db) -> Hint_db.map_all hdc db) (local_db::db_list)
     else 
-      list_map_append (Hint_db.map_auto (hdc,concl)) (local_db::db_list)
+      list_map_append (fun (st, db) -> 
+	Hint_db.map_auto (hdc,concl) db) (local_db::db_list)
   in 
   let tac_of_hint = 
     fun {pri=b; pat = p; code=t} -> 
       (b, 
        let tac =
 	 match t with
-	   | Res_pf (term,cl) -> unify_resolve (term,cl)
-	   | ERes_pf (term,cl) -> unify_e_resolve (term,cl)
+	   | Res_pf (term,cl) -> unify_resolve_nodelta (term,cl)
+	   | ERes_pf (term,cl) -> unify_e_resolve_nodelta (term,cl)
 	   | Give_exact (c) -> e_give_exact_constr c
 	   | Res_pf_THEN_trivial_fail (term,cl) ->
-               tclTHEN (unify_e_resolve (term,cl)) 
-		 (e_trivial_fail_db db_list local_db)
-	   | Unfold_nth c -> unfold_in_concl [[],c]
+               tclTHEN (unify_e_resolve_nodelta (term,cl)) 
+		 (e_trivial_fail_db false db_list local_db)
+	   | Unfold_nth c -> unfold_in_concl [all_occurrences,c]
 	   | Extern tacast -> conclPattern concl 
-	       (out_some p) tacast
+	       (Option.get p) tacast
+       in 
+       (tac,fmt_autotactic t))
+       (*i
+	 fun gls -> pPNL (fmt_autotactic t); Format.print_flush (); 
+                     try tac gls
+		     with e when Logic.catchable_exception(e) -> 
+                            (Format.print_string "Fail\n"; 
+			     Format.print_flush (); 
+			     raise e)
+       i*)
+  in 
+  List.map tac_of_hint hintl
+
+and e_my_find_search_delta db_list local_db hdc concl = 
+  let hdc = head_of_constr_reference hdc in
+  let hintl =
+    if occur_existential concl then 
+      list_map_append (fun (st, db) -> 
+	let flags = {auto_unif_flags with modulo_delta = st} in
+	  List.map (fun x -> flags, x) (Hint_db.map_all hdc db)) (local_db::db_list)
+    else 
+      list_map_append (fun (st, db) -> 
+	let flags = {auto_unif_flags with modulo_delta = st} in
+	  List.map (fun x -> flags, x) (Hint_db.map_auto (hdc,concl) db)) (local_db::db_list)
+  in 
+  let tac_of_hint = 
+    fun (st, {pri=b; pat = p; code=t}) -> 
+      (b, 
+       let tac =
+	 match t with
+	   | Res_pf (term,cl) -> unify_resolve st (term,cl)
+	   | ERes_pf (term,cl) -> unify_e_resolve st (term,cl)
+	   | Give_exact (c) -> e_give_exact_constr c
+	   | Res_pf_THEN_trivial_fail (term,cl) ->
+               tclTHEN (unify_e_resolve st (term,cl)) 
+		 (e_trivial_fail_db true db_list local_db)
+	   | Unfold_nth c -> unfold_in_concl [all_occurrences,c]
+	   | Extern tacast -> conclPattern concl 
+	       (Option.get p) tacast
        in 
        (tac,fmt_autotactic t))
        (*i
@@ -219,16 +195,17 @@ and e_my_find_search db_list local_db hdc concl =
   in 
   List.map tac_of_hint hintl
     
-and e_trivial_resolve db_list local_db gl = 
+and e_trivial_resolve mod_delta db_list local_db gl = 
   try 
     Auto.priority 
-      (e_my_find_search db_list local_db 
+      (e_my_find_search mod_delta db_list local_db 
 	 (List.hd (head_constr_bound gl [])) gl)
   with Bound | Not_found -> []
 
-let e_possible_resolve db_list local_db gl =
-  try List.map snd (e_my_find_search db_list local_db 
-		      (List.hd (head_constr_bound gl [])) gl)
+let e_possible_resolve mod_delta db_list local_db gl =
+  try List.map snd 
+    (e_my_find_search mod_delta db_list local_db 
+	(List.hd (head_constr_bound gl [])) gl)
   with Bound | Not_found -> []
 
 let assumption_tac_list id = apply_tac_list (e_give_exact_constr (mkVar id))
@@ -238,31 +215,42 @@ let find_first_goal gls =
 
 (*s The following module [SearchProblem] is used to instantiate the generic
     exploration functor [Explore.Make]. *)
-      
-module SearchProblem = struct
 
-  type state = { 
-    depth : int; (*r depth of search before failing *)
-    tacres : goal list sigma * validation;
-    last_tactic : std_ppcmds;
-    dblist : Auto.Hint_db.t list;
-    localdb :  Auto.Hint_db.t list }
-		 
+type search_state = { 
+  depth : int; (*r depth of search before failing *)
+  tacres : goal list sigma * validation;
+  last_tactic : std_ppcmds;
+  dblist : Auto.hint_db list;
+  localdb :  Auto.hint_db list }
+    
+module SearchProblem = struct
+    
+  type state = search_state
+
   let success s = (sig_it (fst s.tacres)) = []
 
-  let rec filter_tactics (glls,v) = function
-    | [] -> []
-    | (tac,pptac) :: tacl -> 
-	try 
-	  let (lgls,ptl) = apply_tac_list tac glls in 
-	  let v' p = v (ptl p) in
-	  ((lgls,v'),pptac) :: filter_tactics (glls,v) tacl
-	with e when Logic.catchable_exception e ->
-	  filter_tactics (glls,v) tacl
-
-  let rec list_addn n x l = 
-    if n = 0 then l else x :: (list_addn (pred n) x l)
-
+  let pr_ev evs ev = Printer.pr_constr_env (Evd.evar_env ev) (Evarutil.nf_evar evs ev.Evd.evar_concl)
+    
+  let pr_goals gls =
+    let evars = Evarutil.nf_evars (Refiner.project gls) in
+      prlist (pr_ev evars) (sig_it gls)
+	
+  let filter_tactics (glls,v) l =
+(*     let _ = Proof_trees.db_pr_goal (List.hd (sig_it glls)) in *)
+(*     let evars = Evarutil.nf_evars (Refiner.project glls) in *)
+(*     msg (str"Goal:" ++ pr_ev evars (List.hd (sig_it glls)) ++ str"\n"); *)
+    let rec aux = function
+      | [] -> []
+      | (tac,pptac) :: tacl -> 
+	  try 
+	    let (lgls,ptl) = apply_tac_list tac glls in 
+	    let v' p = v (ptl p) in
+(* 	    let gl = Proof_trees.db_pr_goal (List.hd (sig_it glls)) in *)
+(* 	      msg (hov 1 (pptac ++ str" gives: \n" ++ pr_goals lgls ++ str"\n")); *)
+	      ((lgls,v'),pptac) :: aux tacl
+	  with e -> Refiner.catch_failerror e; aux tacl
+    in aux l
+      
   (* Ordering of states is lexicographic on depth (greatest first) then
      number of remaining goals. *)
   let compare s s' =
@@ -297,7 +285,8 @@ module SearchProblem = struct
 	     let hintl = 
 	       make_resolve_hyp (pf_env g') (project g') (pf_last_hyp g')
 	     in
-             let ldb = Hint_db.add_list hintl (List.hd s.localdb) in
+	       
+             let ldb = add_hint_list hintl (List.hd s.localdb) in
 	     { depth = s.depth; tacres = res; 
 	       last_tactic = pp; dblist = s.dblist;
 	       localdb = ldb :: List.tl s.localdb })
@@ -305,8 +294,7 @@ module SearchProblem = struct
       in
       let rec_tacs = 
 	let l = 
-	  filter_tactics s.tacres
-	    (e_possible_resolve s.dblist (List.hd s.localdb) (pf_concl g))
+	  filter_tactics s.tacres (e_possible_resolve false s.dblist (List.hd s.localdb) (pf_concl g))
 	in
 	List.map 
 	  (fun ((lgls,_) as res, pp) -> 
@@ -332,17 +320,19 @@ end
 module Search = Explore.Make(SearchProblem)
 
 let make_initial_state n gl dblist localdb =
-  { SearchProblem.depth = n;
-    SearchProblem.tacres = tclIDTAC gl;
-    SearchProblem.last_tactic = (mt ());
-    SearchProblem.dblist = dblist;
-    SearchProblem.localdb = [localdb] }
+  { depth = n;
+    tacres = tclIDTAC gl;
+    last_tactic = (mt ());
+    dblist = dblist;
+    localdb = [localdb] }
+
+let debug_depth_first = Search.debug_depth_first
 
 let e_depth_search debug p db_list local_db gl =
   try
     let tac = if debug then Search.debug_depth_first else Search.depth_first in
     let s = tac (make_initial_state p gl db_list local_db) in
-    s.SearchProblem.tacres
+    s.tacres
   with Not_found -> error "EAuto: depth first search failed"
 
 let e_breadth_search debug n db_list local_db gl =
@@ -351,17 +341,22 @@ let e_breadth_search debug n db_list local_db gl =
       if debug then Search.debug_breadth_first else Search.breadth_first 
     in
     let s = tac (make_initial_state n gl db_list local_db) in
-    s.SearchProblem.tacres
+    s.tacres
   with Not_found -> error "EAuto: breadth first search failed"
 
 let e_search_auto debug (in_depth,p) lems db_list gl = 
-  let local_db = make_local_hint_db lems gl in 
+  let local_db = make_local_hint_db true lems gl in 
   if in_depth then 
     e_depth_search debug p db_list local_db gl
   else 
     e_breadth_search debug p db_list local_db gl
 
-let eauto debug np lems dbnames =
+open Evd
+
+let eauto_with_bases debug np lems db_list = 
+  tclTRY (e_search_auto debug np lems db_list)
+
+let eauto debug np lems dbnames = 
   let db_list =
     List.map
       (fun x -> 
@@ -370,7 +365,7 @@ let eauto debug np lems dbnames =
       ("core"::dbnames) 
   in
   tclTRY (e_search_auto debug np lems db_list)
-
+  
 let full_eauto debug n lems gl = 
   let dbnames = current_db_names () in
   let dbnames =  list_subtract dbnames ["v62"] in
@@ -427,4 +422,42 @@ TACTIC EXTEND eauto
 | [ "eauto" int_or_var_opt(n) int_or_var_opt(p) auto_using(lems) 
     hintbases(db) ] ->
     [ gen_eauto false (make_dimension n p) lems db ]
+END
+
+TACTIC EXTEND new_eauto
+| [ "new" "auto" int_or_var_opt(n) auto_using(lems) 
+    hintbases(db) ] ->
+    [ match db with
+      | None -> new_full_auto (make_depth n) lems
+      | Some l ->
+	  new_auto (make_depth n) lems l ]
+END
+      
+TACTIC EXTEND debug_eauto
+| [ "debug" "eauto" int_or_var_opt(n) int_or_var_opt(p) auto_using(lems) 
+    hintbases(db) ] ->
+    [ gen_eauto true (make_dimension n p) lems db ]
+END
+
+TACTIC EXTEND dfs_eauto
+| [ "dfs" "eauto" int_or_var_opt(p) auto_using(lems) 
+      hintbases(db) ] ->
+    [ gen_eauto false (true, make_depth p) lems db ]
+END
+
+let autosimpl db cl =
+  let unfold_of_elts constr (b, elts) =
+    if not b then 
+      List.map (fun c -> all_occurrences, constr c) elts
+    else []
+  in
+  let unfolds = List.concat (List.map (fun dbname -> 
+    let ((ids, csts), _) = searchtable_map dbname in
+      unfold_of_elts (fun x -> EvalConstRef x) (Cpred.elements csts) @
+      unfold_of_elts (fun x -> EvalVarRef x) (Idpred.elements ids)) db)
+  in unfold_option unfolds cl
+
+TACTIC EXTEND autosimpl
+| [ "autosimpl" hintbases(db) ] ->
+    [ autosimpl (match db with None -> ["core"] | Some x -> "core"::x) None ]
 END

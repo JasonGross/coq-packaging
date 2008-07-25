@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: gmap.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: gmap.mli 10250 2007-10-23 15:02:23Z aspiwack $ i*)
 
 (* Maps using the generic comparison function of ocaml. Same interface as
    the module [Map] from the ocaml standard library. *)
@@ -14,6 +14,7 @@
 type ('a,'b) t
 
 val empty : ('a,'b) t
+val is_empty : ('a,'b) t -> bool
 val add : 'a -> 'b -> ('a,'b) t -> ('a,'b) t
 val find : 'a -> ('a,'b) t -> 'b
 val remove : 'a -> ('a,'b) t -> ('a,'b) t

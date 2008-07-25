@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: auto.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
+(* $Id: auto.ml 11094 2008-06-10 19:35:23Z herbelin $ *)
 
 open Pp
 open Util
@@ -93,8 +93,8 @@ let empty_se = ([],[],Btermdn.create ())
 
 let add_tac t (l,l',dn) =
   match t.pat with
-      None -> (insert t l, l', dn)
-    | Some pat -> (l, insert t l', Btermdn.add dn (pat,t))
+      None -> if not (List.mem t l) then (insert t l, l', dn) else (l, l', dn)
+    | Some pat -> if not (List.mem t l') then (l, insert t l', Btermdn.add dn (pat,t)) else (l, l', dn)
 
 
 let lookup_tacs (hdc,c) (l,l',dn) =
@@ -137,14 +137,16 @@ end
 
 module Hintdbmap = Gmap
 
-type frozen_hint_db_table = (string,Hint_db.t) Hintdbmap.t 
+type hint_db = Names.transparent_state * Hint_db.t
 
-type hint_db_table = (string,Hint_db.t) Hintdbmap.t ref
+type frozen_hint_db_table = (string,hint_db) Hintdbmap.t 
+
+type hint_db_table = (string,hint_db) Hintdbmap.t ref
 
 type hint_db_name = string
 
 let searchtable = (ref Hintdbmap.empty : hint_db_table)
-
+  
 let searchtable_map name = 
   Hintdbmap.find name !searchtable
 let searchtable_add (name,db) = 
@@ -182,23 +184,20 @@ let try_head_pattern c =
   try head_pattern_bound c
   with BoundPattern -> error "Bound head variable"
 
-let make_exact_entry (c,cty) =
+let make_exact_entry pri (c,cty) =
   let cty = strip_outer_cast cty in
   match kind_of_term cty with
     | Prod (_,_,_) -> 
 	failwith "make_exact_entry"
     | _ ->
 	(head_of_constr_reference (List.hd (head_constr cty)),
-	   { pri=0; pat=None; code=Give_exact c })
+	   { pri=(match pri with Some pri -> pri | None -> 0); pat=None; code=Give_exact c })
 
-let dummy_goal =
-  {it={evar_hyps=empty_named_context_val;
-       evar_concl=mkProp;
-       evar_body=Evar_empty;
-       evar_extra=None};
-   sigma=Evd.empty}
+let dummy_goal = 
+  {it = make_evar empty_named_context_val mkProp;
+   sigma = empty}
 
-let make_apply_entry env sigma (eapply,verbose) (c,cty) =
+let make_apply_entry env sigma (eapply,verbose) pri (c,cty) =
   let cty = hnf_constr env sigma cty in
   match kind_of_term cty with
     | Prod _ ->
@@ -207,45 +206,47 @@ let make_apply_entry env sigma (eapply,verbose) (c,cty) =
 	let pat = Pattern.pattern_of_constr c' in
         let hd = (try head_pattern_bound pat
                   with BoundPattern -> failwith "make_apply_entry") in
-        let nmiss = List.length (clenv_missing ce) 
-        in 
-	if eapply & (nmiss <> 0) then begin
-          if verbose then 
-	    warn (str "the hint: eapply " ++ pr_lconstr c ++
-		  str " will only be used by eauto"); 
-          (hd,
-           { pri = nb_hyp cty + nmiss;
-             pat = Some pat;
-             code = ERes_pf(c,{ce with templenv=empty_env}) })
-        end else 
+        let nmiss = List.length (clenv_missing ce) in
+	if nmiss = 0 then 
 	  (hd,
-           { pri = nb_hyp cty;
-             pat = Some pat;
-             code = Res_pf(c,{ce with templenv=empty_env}) })
+          { pri = (match pri with None -> nb_hyp cty | Some p -> p);
+            pat = Some pat;
+            code = Res_pf(c,{ce with env=empty_env}) })
+	else begin
+	  if not eapply then failwith "make_apply_entry";
+          if verbose then
+	    warn (str "the hint: eapply " ++ pr_lconstr c ++
+	    str " will only be used by eauto");
+          (hd,
+            { pri = (match pri with None -> nb_hyp cty + nmiss | Some p -> p);
+              pat = Some pat;
+              code = ERes_pf(c,{ce with env=empty_env}) })
+        end
     | _ -> failwith "make_apply_entry"
  
-(* eap is (e,v) with e=true if eapply and v=true if verbose 
+(* flags is (e,v) with e=true if eapply and v=true if verbose 
    c is a constr
    cty is the type of constr *)
 
-let make_resolves env sigma eap c =
+let make_resolves env sigma flags pri c =
   let cty = type_of env sigma c in
   let ents = 
     map_succeed 
       (fun f -> f (c,cty)) 
-      [make_exact_entry; make_apply_entry env sigma (eap,Options.is_verbose())]
+      [make_exact_entry pri; make_apply_entry env sigma flags pri]
   in 
   if ents = [] then
     errorlabstrm "Hint" 
-      (pr_lconstr c ++ spc() ++ str"cannot be used as a hint");
+      (pr_lconstr c ++ spc() ++ 
+        (if fst flags then str"cannot be used as a hint"
+	else str "can be used as a hint only for eauto"));
   ents
-
 
 (* used to add an hypothesis to the local hint database *)
 let make_resolve_hyp env sigma (hname,_,htyp) = 
   try
-    [make_apply_entry env sigma (true, false)
-       (mkVar hname,  htyp)]
+    [make_apply_entry env sigma (true, false) None
+       (mkVar hname, htyp)]
   with 
     | Failure _ -> []
     | e when Logic.catchable_exception e -> anomaly "make_resolve_hyp"
@@ -270,7 +271,7 @@ let make_trivial env sigma c =
   let ce = mk_clenv_from dummy_goal (c,t) in
   (hd, { pri=1;
          pat = Some (Pattern.pattern_of_constr (clenv_type ce));
-         code=Res_pf_THEN_trivial_fail(c,{ce with templenv=empty_env}) })
+         code=Res_pf_THEN_trivial_fail(c,{ce with env=empty_env}) })
 
 open Vernacexpr
 
@@ -278,18 +279,32 @@ open Vernacexpr
 (*               declaration of the AUTOHINT library object               *)
 (**************************************************************************)
 
+let add_hint_list hintlist (st,db) =
+  let db' = Hint_db.add_list hintlist db in
+  let st' = 
+    List.fold_left 
+      (fun (ids, csts as st) (_, hint) -> 
+	match hint.code with
+	  | Unfold_nth egr ->
+	      (match egr with
+		| EvalVarRef id -> (Idpred.add id ids, csts)
+		| EvalConstRef cst -> (ids, Cpred.add cst csts))
+	  | _ -> st)
+      st hintlist
+  in (st', db')
+
 (* If the database does not exist, it is created *)
 (* TODO: should a warning be printed in this case ?? *)
 let add_hint dbname hintlist = 
   try 
     let db = searchtable_map dbname in
-    let db' = Hint_db.add_list hintlist db in
+    let db' = add_hint_list hintlist db in
     searchtable_add (dbname,db')
   with Not_found -> 
-    let db = Hint_db.add_list hintlist Hint_db.empty in
+    let db = add_hint_list hintlist (empty_transparent_state, Hint_db.empty) in
     searchtable_add (dbname,db)
 
-let cache_autohint (_,(local,name,hintlist)) = add_hint name hintlist
+let cache_autohint (_,(local,name,hints)) = add_hint name hints
 
 let forward_subst_tactic = 
   ref (fun _ -> failwith "subst_tactic is not installed for auto")
@@ -300,7 +315,7 @@ let subst_autohint (_,subst,(local,name,hintlist as obj)) =
   let trans_clenv clenv = Clenv.subst_clenv subst clenv in
   let trans_data data code = 	      
     { data with
-	pat = option_smartmap (subst_pattern subst) data.pat ;
+	pat = Option.smartmap (subst_pattern subst) data.pat ;
 	code = code ;
     }
   in
@@ -367,7 +382,8 @@ let add_resolves env sigma clist local dbnames =
        Lib.add_anonymous_leaf
 	 (inAutoHint
 	    (local,dbname,
-     	     List.flatten (List.map (make_resolves env sigma true) clist))))
+     	     List.flatten (List.map (fun (x, y) ->
+	       make_resolves env sigma (true,Flags.is_verbose()) x y) clist))))
     dbnames
 
 
@@ -411,29 +427,30 @@ let add_hints local dbnames0 h =
   let f = Constrintern.interp_constr sigma env in
   match h with
   | HintsResolve lhints ->	
-      add_resolves env sigma (List.map f lhints) local dbnames
+      add_resolves env sigma (List.map (fun (pri, x) -> pri, f x) lhints) local dbnames
   | HintsImmediate lhints ->
       add_trivials env sigma (List.map f lhints) local dbnames
   | HintsUnfold lhints ->
-      let f qid =
-	let r = Nametab.global qid in
-        let r' = match r with
+      let f r =
+	let gr = Syntax_def.global_with_alias r in
+        let r' = match gr with
          | ConstRef c -> EvalConstRef c
          | VarRef c -> EvalVarRef c
          | _ -> 
            errorlabstrm "evalref_of_ref"
-            (str "Cannot coerce" ++ spc () ++ pr_global r ++ spc () ++
+            (str "Cannot coerce" ++ spc () ++ pr_global gr ++ spc () ++
              str "to an evaluable reference")
         in
-	 (r,r') in
+	  if !Flags.dump then Constrintern.add_glob (loc_of_reference r) gr;
+	 (gr,r') in
       add_unfolds (List.map f lhints) local dbnames
   | HintsConstructors lqid ->
       let add_one qid =
         let env = Global.env() and sigma = Evd.empty in
-        let isp = global_inductive qid in
+        let isp = inductive_of_reference qid in
         let consnames = (snd (Global.lookup_inductive isp)).mind_consnames in
         let lcons = list_tabulate
-          (fun i -> mkConstruct (isp,i+1)) (Array.length consnames) in
+          (fun i -> None, mkConstruct (isp,i+1)) (Array.length consnames) in
         add_resolves env sigma lcons local dbnames in
       List.iter add_one lqid
   | HintsExtern (pri, patcom, tacexp) ->
@@ -476,7 +493,7 @@ let fmt_hint_list_for_head c =
   let dbs = Hintdbmap.to_list !searchtable in
   let valid_dbs = 
     map_succeed 
-      (fun (name,db) -> (name,db,Hint_db.map_all c db)) 
+      (fun (name,(_,db)) -> (name,db,Hint_db.map_all c db)) 
       dbs 
   in
   if valid_dbs = [] then 
@@ -502,11 +519,11 @@ let fmt_hint_term cl =
     let valid_dbs = 
       if occur_existential cl then 
 	map_succeed 
-	  (fun (name, db) -> (name, db, Hint_db.map_all hd db)) 
+	  (fun (name, (_, db)) -> (name, db, Hint_db.map_all hd db)) 
 	  dbs
       else 
 	map_succeed 
-	  (fun (name, db) -> 
+	  (fun (name, (_, db)) -> 
 	     (name, db, Hint_db.map_auto (hd,applist(hdc,args)) db)) 
 	  dbs
     in 
@@ -527,7 +544,10 @@ let print_applicable_hint () =
   print_hint_term (pf_concl gl)
     
 (* displays the whole hint database db *)
-let print_hint_db db =
+let print_hint_db ((ids, csts),db) =
+  msg (hov 0
+	  (str"Unfoldable variable definitions: " ++ pr_idpred ids ++ fnl () ++
+	   str"Unfoldable constant definitions: " ++ pr_cpred csts ++ fnl ()));
   Hint_db.iter 
     (fun head hintlist ->
        msg (hov 0 
@@ -559,22 +579,38 @@ let print_searchtable () =
 
 let priority l = List.map snd (List.filter (fun (pr,_) -> pr = 0) l)
 
+(* tell auto not to reuse already instantiated metas in unification (for
+   compatibility, since otherwise, apply succeeds oftener) *)
+
+open Unification
+
+let auto_unif_flags = {
+  modulo_conv_on_closed_terms = Some full_transparent_state; 
+  use_metas_eagerly = false;
+  modulo_delta = empty_transparent_state;
+}
 
 (* Try unification with the precompiled clause, then use registered Apply *)
 
-let unify_resolve (c,clenv) gls = 
+let unify_resolve_nodelta (c,clenv) gls = 
   let clenv' = connect_clenv gls clenv in
-  let _ = clenv_unique_resolver false clenv' gls in  
+  let _ = clenv_unique_resolver false ~flags:auto_unif_flags clenv' gls in  
   h_simplest_apply c gls
+
+let unify_resolve flags (c,clenv) gls = 
+  let clenv' = connect_clenv gls clenv in
+  let _ = clenv_unique_resolver false ~flags clenv' gls in  
+  h_apply true false (c,NoBindings) gls
+
 
 (* builds a hint database from a constr signature *)
 (* typically used with (lid, ltyp) = pf_hyps_types <some goal> *)
 
-let make_local_hint_db lems g =
+let make_local_hint_db eapply lems g =
   let sign = pf_hyps g in
   let hintlist = list_map_append (pf_apply make_resolve_hyp g) sign in
-  let hintlist' = list_map_append (pf_apply make_resolves g true) lems in
-  Hint_db.add_list hintlist' (Hint_db.add_list hintlist Hint_db.empty)
+  let hintlist' = list_map_append (pf_apply make_resolves g (eapply,false) None) lems in
+    (empty_transparent_state, Hint_db.add_list hintlist' (Hint_db.add_list hintlist Hint_db.empty))
 
 (* Serait-ce possible de compiler d'abord la tactique puis de faire la
    substitution sans passer par bdize dont l'objectif est de préparer un
@@ -607,47 +643,90 @@ let conclPattern concl pat tac gl =
 (* Papageno : cette fonction a été pas mal simplifiée depuis que la base
   de Hint impérative a été remplacée par plusieurs bases fonctionnelles *)
 
-let rec trivial_fail_db db_list local_db gl =
+let rec trivial_fail_db mod_delta db_list local_db gl =
   let intro_tac = 
     tclTHEN intro 
       (fun g'->
 	 let hintl = make_resolve_hyp (pf_env g') (project g') (pf_last_hyp g')
-	 in trivial_fail_db db_list (Hint_db.add_list hintl local_db) g')
+	 in trivial_fail_db mod_delta db_list (add_hint_list hintl local_db) g')
   in
   tclFIRST 
     (assumption::intro_tac::
      (List.map tclCOMPLETE 
-	(trivial_resolve db_list local_db (pf_concl gl)))) gl
+       (trivial_resolve mod_delta db_list local_db (pf_concl gl)))) gl
 
-and my_find_search db_list local_db hdc concl =
+and my_find_search_nodelta db_list local_db hdc concl =
   let tacl = 
     if occur_existential concl then 
-      list_map_append (fun db -> Hint_db.map_all hdc db) (local_db::db_list)
-    else 
-      list_map_append (fun db -> Hint_db.map_auto (hdc,concl) db)
+      list_map_append
+	(fun (st, db) -> (Hint_db.map_all hdc db))
+	(local_db::db_list)
+    else
+      list_map_append (fun (_, db) -> 
+	Hint_db.map_auto (hdc,concl) db)
       	(local_db::db_list)
   in
-  List.map 
-    (fun {pri=b; pat=p; code=t} -> 
-       (b,
+    List.map 
+      (fun {pri=b; pat=p; code=t} -> 
+	(b,
 	match t with
-	  | Res_pf (term,cl)  -> unify_resolve (term,cl)
+	  | Res_pf (term,cl) -> unify_resolve_nodelta (term,cl)
 	  | ERes_pf (_,c) -> (fun gl -> error "eres_pf")
 	  | Give_exact c  -> exact_check c
 	  | Res_pf_THEN_trivial_fail (term,cl) -> 
 	      tclTHEN 
-		(unify_resolve (term,cl)) 
-		(trivial_fail_db db_list local_db)
-	  | Unfold_nth c -> unfold_in_concl [[],c]
+		(unify_resolve_nodelta (term,cl)) 
+		(trivial_fail_db false db_list local_db)
+	  | Unfold_nth c -> unfold_in_concl [all_occurrences,c]
 	  | Extern tacast -> 
-	      conclPattern concl (out_some p) tacast))
+	      conclPattern concl (Option.get p) tacast))
     tacl
 
-and trivial_resolve db_list local_db cl = 
+and my_find_search mod_delta =
+  if mod_delta then my_find_search_delta
+  else my_find_search_nodelta
+    
+and my_find_search_delta db_list local_db hdc concl =
+  let flags = {auto_unif_flags with use_metas_eagerly = true} in
+  let tacl = 
+    if occur_existential concl then 
+      list_map_append
+	(fun (st, db) -> 
+	  let st = {flags with modulo_delta = st} in
+	    List.map (fun x -> (st,x)) (Hint_db.map_all hdc db))
+	(local_db::db_list)
+    else
+      list_map_append (fun ((ids, csts as st), db) -> 
+	let st, l = 
+	  let l =
+	    if (Idpred.is_empty ids && Cpred.is_empty csts)
+	    then Hint_db.map_auto (hdc,concl) db
+	    else Hint_db.map_all hdc db
+	  in {flags with modulo_delta = st}, l
+	in List.map (fun x -> (st,x)) l)
+      	(local_db::db_list)
+  in
+    List.map 
+      (fun (st, {pri=b; pat=p; code=t}) -> 
+	(b,
+	match t with
+	  | Res_pf (term,cl) -> unify_resolve st (term,cl)
+	  | ERes_pf (_,c) -> (fun gl -> error "eres_pf")
+	  | Give_exact c  -> exact_check c
+	  | Res_pf_THEN_trivial_fail (term,cl) -> 
+	      tclTHEN 
+		(unify_resolve st (term,cl)) 
+		(trivial_fail_db true db_list local_db)
+	  | Unfold_nth c -> unfold_in_concl [all_occurrences,c]
+	  | Extern tacast -> 
+	      conclPattern concl (Option.get p) tacast))
+      tacl
+      
+and trivial_resolve mod_delta db_list local_db cl = 
   try 
     let hdconstr = List.hd (head_constr_bound cl []) in
     priority 
-      (my_find_search db_list local_db (head_of_constr_reference hdconstr) cl)
+      (my_find_search mod_delta db_list local_db (head_of_constr_reference hdconstr) cl)
   with Bound | Not_found -> 
     []
 
@@ -661,30 +740,33 @@ let trivial lems dbnames gl =
 	   error ("trivial: "^x^": No such Hint database"))
       ("core"::dbnames) 
   in
-  tclTRY (trivial_fail_db db_list (make_local_hint_db lems gl)) gl 
+  tclTRY (trivial_fail_db false db_list (make_local_hint_db false lems gl)) gl 
     
 let full_trivial lems gl =
   let dbnames = Hintdbmap.dom !searchtable in
   let dbnames = list_subtract dbnames ["v62"] in
   let db_list = List.map (fun x -> searchtable_map x) dbnames in
-  tclTRY (trivial_fail_db db_list (make_local_hint_db lems gl)) gl
+  tclTRY (trivial_fail_db false db_list (make_local_hint_db false lems gl)) gl
 
 let gen_trivial lems = function
   | None -> full_trivial lems
   | Some l -> trivial lems l
 
+let inj_open c = (Evd.empty,c)
+
 let h_trivial lems l =
-  Refiner.abstract_tactic (TacTrivial (lems,l)) (gen_trivial lems l)
+  Refiner.abstract_tactic (TacTrivial (List.map inj_open lems,l))
+    (gen_trivial lems l)
 
 (**************************************************************************)
 (*                       The classical Auto tactic                        *)
 (**************************************************************************)
 
-let possible_resolve db_list local_db cl =
+let possible_resolve mod_delta db_list local_db cl =
   try 
     let hdconstr = List.hd (head_constr_bound cl []) in
     List.map snd 
-      (my_find_search db_list local_db (head_of_constr_reference hdconstr) cl)
+      (my_find_search mod_delta db_list local_db (head_of_constr_reference hdconstr) cl)
   with Bound | Not_found -> 
     []
 
@@ -710,7 +792,7 @@ let decomp_empty_term c gls =
 (* n is the max depth of search *)
 (* local_db contains the local Hypotheses *)
 
-let rec search_gen decomp n db_list local_db extra_sign goal =
+let rec search_gen decomp n mod_delta db_list local_db extra_sign goal =
   if n=0 then error "BOUND 2";
   let decomp_tacs = match decomp with 
     | 0 -> [] 
@@ -721,7 +803,7 @@ let rec search_gen decomp n db_list local_db extra_sign goal =
 	   (fun id -> tclTHENSEQ
                [decomp_unary_term (mkVar id);
                 clear [id];
-		search_gen decomp p db_list local_db []])
+		search_gen decomp p mod_delta db_list local_db []])
 	   (pf_ids_of_hyps goal)) 
   in
   let intro_tac = 
@@ -731,18 +813,18 @@ let rec search_gen decomp n db_list local_db extra_sign goal =
 	 let hintl = 
 	   try 
 	     [make_apply_entry (pf_env g') (project g')
-		(true,false) 
+		(true,false) None
 		(mkVar hid, htyp)]
 	   with Failure _ -> [] 
 	 in
-         search_gen decomp n db_list (Hint_db.add_list hintl local_db) [d] g') 
+         search_gen decomp n mod_delta db_list (add_hint_list hintl local_db) [d] g') 
   in
   let rec_tacs = 
     List.map 
       (fun ntac -> 
 	 tclTHEN ntac
-	   (search_gen decomp (n-1) db_list local_db empty_named_context))
-      (possible_resolve db_list local_db (pf_concl goal))
+	   (search_gen decomp (n-1) mod_delta db_list local_db empty_named_context))
+      (possible_resolve mod_delta db_list local_db (pf_concl goal))
   in 
   tclFIRST (assumption::(decomp_tacs@(intro_tac::rec_tacs))) goal
 
@@ -751,7 +833,7 @@ let search = search_gen 0
 
 let default_search_depth = ref 5
 
-let auto n lems dbnames gl =
+let delta_auto mod_delta n lems dbnames gl =
   let db_list = 
     List.map
       (fun x -> 
@@ -762,17 +844,24 @@ let auto n lems dbnames gl =
       ("core"::dbnames) 
   in
   let hyps = pf_hyps gl in
-  tclTRY (search n db_list (make_local_hint_db lems gl) hyps) gl
+  tclTRY (search n mod_delta db_list (make_local_hint_db false lems gl) hyps) gl
+
+let auto = delta_auto false
+
+let new_auto = delta_auto true
 
 let default_auto = auto !default_search_depth [] []
 
-let full_auto n lems gl = 
+let delta_full_auto mod_delta n lems gl = 
   let dbnames = Hintdbmap.dom !searchtable in
   let dbnames = list_subtract dbnames ["v62"] in
   let db_list = List.map (fun x -> searchtable_map x) dbnames in
   let hyps = pf_hyps gl in
-  tclTRY (search n db_list (make_local_hint_db lems gl) hyps) gl
-  
+  tclTRY (search n mod_delta db_list (make_local_hint_db false lems gl) hyps) gl
+
+let full_auto = delta_full_auto false
+let new_full_auto = delta_full_auto true
+
 let default_full_auto gl = full_auto !default_search_depth [] gl
 
 let gen_auto n lems dbnames =
@@ -781,10 +870,11 @@ let gen_auto n lems dbnames =
   | None -> full_auto n lems
   | Some l -> auto n lems l
 
-let inj_or_var = option_map (fun n -> ArgArg n)
+let inj_or_var = Option.map (fun n -> ArgArg n)
 
 let h_auto n lems l =
-  Refiner.abstract_tactic (TacAuto (inj_or_var n,lems,l)) (gen_auto n lems l)
+  Refiner.abstract_tactic (TacAuto (inj_or_var n,List.map inj_open lems,l))
+    (gen_auto n lems l)
 
 (**************************************************************************)
 (*                  The "destructing Auto" from Eduardo                   *)
@@ -796,23 +886,23 @@ let h_auto n lems l =
    l'instant *)
 let default_search_decomp = ref 1
 
-let destruct_auto des_opt n gl = 
+let destruct_auto des_opt lems n gl = 
   let hyps = pf_hyps gl in
-  search_gen des_opt n [searchtable_map "core"] 
-    (make_local_hint_db [] gl) hyps gl
+  search_gen des_opt n false (List.map searchtable_map ["core";"extcore"])
+    (make_local_hint_db false lems gl) hyps gl
     
-let dautomatic des_opt n = tclTRY (destruct_auto des_opt n)
+let dautomatic des_opt lems n = tclTRY (destruct_auto des_opt lems n)
 
-let default_dauto = dautomatic !default_search_decomp !default_search_depth
+let dauto (n,p) lems =
+  let p = match p with Some p -> p | None -> !default_search_decomp in
+  let n = match n with Some n -> n | None -> !default_search_depth in
+  dautomatic p lems n
 
-let dauto = function
-  | None, None     -> default_dauto
-  | Some n, None   -> dautomatic !default_search_decomp n
-  | Some n, Some p -> dautomatic p n
-  | None, Some p   -> dautomatic p !default_search_depth
+let default_dauto = dauto (None,None) []
 
-let h_dauto (n,p) =
-  Refiner.abstract_tactic (TacDAuto (inj_or_var n,p)) (dauto (n,p))
+let h_dauto (n,p) lems =
+  Refiner.abstract_tactic (TacDAuto (inj_or_var n,p,List.map inj_open lems))
+    (dauto (n,p) lems)
 
 (***************************************)
 (*** A new formulation of Auto *********)
@@ -822,7 +912,7 @@ let make_resolve_any_hyp env sigma (id,_,ty) =
   let ents = 
     map_succeed
       (fun f -> f (mkVar id,ty)) 
-      [make_exact_entry; make_apply_entry env sigma (true,false)]
+      [make_exact_entry None; make_apply_entry env sigma (true,false) None]
   in 
   ents
 
@@ -866,14 +956,14 @@ let rec super_search n db_list local_db argl goal =
      (tclTHEN intro 
         (fun g -> 
 	   let hintl = pf_apply make_resolve_any_hyp g (pf_last_hyp g) in
-	   super_search n db_list (Hint_db.add_list hintl local_db)
+	   super_search n db_list (add_hint_list hintl local_db)
 	     argl g))
      ::
      ((List.map 
          (fun ntac -> 
             tclTHEN ntac 
               (super_search (n-1) db_list local_db argl))
-         (possible_resolve db_list local_db (pf_concl goal)))
+         (possible_resolve false db_list local_db (pf_concl goal)))
       @
       (compileAutoArgList  
          (super_search (n-1) db_list local_db argl) argl))) goal
@@ -884,7 +974,7 @@ let search_superauto n to_add argl g =
       (fun (id,c) -> add_named_decl (id, None, pf_type_of g c))
       to_add empty_named_context in
   let db0 = list_map_append (make_resolve_hyp (pf_env g) (project g)) sigma in
-  let db = Hint_db.add_list db0 (make_local_hint_db [] g) in
+  let db = add_hint_list db0 (make_local_hint_db false [] g) in
   super_search n [Hintdbmap.find "core" !searchtable] db argl g
 
 let superauto n to_add argl  = 
@@ -892,8 +982,8 @@ let superauto n to_add argl  =
 
 let default_superauto g = superauto !default_search_depth [] [] g
 
-let interp_to_add gl locqid =
-  let r = Nametab.global locqid in
+let interp_to_add gl r =
+  let r = Syntax_def.locate_global_with_alias (qualid_of_reference r) in
   let id = id_of_global r in
   (next_ident_away id (pf_ids_of_hyps gl), constr_of_global r)
 

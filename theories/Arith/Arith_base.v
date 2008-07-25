@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Arith_base.v 11072 2008-06-08 16:13:37Z herbelin $ i*)
 
 Require Export Le.
 Require Export Lt.
@@ -18,3 +18,5 @@ Require Export Between.
 Require Export Peano_dec.
 Require Export Compare_dec.
 Require Export Factorial.
+Require Export EqNat.
+Require Export Wf_nat.

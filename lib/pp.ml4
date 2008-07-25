@@ -6,17 +6,18 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pp.ml4 8747 2006-04-27 16:00:49Z courtieu $ *)
+(* $Id: pp.ml4 10803 2008-04-16 09:30:05Z cek $ *)
 
 open Pp_control
 
 (* This should not be used outside of this file. Use
-   Options.print_emacs instead. This one is updated when reading
+   Flags.print_emacs instead. This one is updated when reading
    command line options. This was the only way to make [Pp] depend on
-   an option without creating a circularity: [Options] -> [Util] ->
-   [Pp] -> [Options] *)
+   an option without creating a circularity: [Flags. -> [Util] ->
+   [Pp] -> [Flags. *)
 let print_emacs = ref false
 let make_pp_emacs() = print_emacs:=true
+let make_pp_nonemacs() = print_emacs:=false
 
 (* The different kinds of blocks are: 
    \begin{description}
@@ -129,19 +130,17 @@ let align () = [< 'Ppcmd_print_break (0,0) >]
 let int n = str (string_of_int n)
 let real r = str (string_of_float r)
 let bool b = str (string_of_bool b)
+let strbrk s =
+  let rec aux p n =
+    if n < String.length s then 
+      if s.[n] = ' ' then
+	if p=n then [< spc (); aux (n+1) (n+1) >]
+	else [< str (String.sub s p (n-p)); spc (); aux (n+1) (n+1) >]
+      else aux p (n+1)
+    else if p=n then [< >] else [< str (String.sub s p (n-p)) >]
+  in aux 0 0
 
-(* In new syntax only double quote char is escaped by repeating it *)
-let rec escape_string s =
-  let rec escape_at s i =
-    if i<0 then s
-    else if s.[i] == '"' then
-      let s' = String.sub s 0 i^"\""^String.sub s i (String.length s - i) in
-      escape_at s' (i-1)
-    else escape_at s (i-1) in
-  escape_at s (String.length s - 1)
-
-let qstring s = str ("\""^escape_string s^"\"")
-let qs = qstring
+let ismt s = try let _ = Stream.empty s in true with Stream.Failure -> false
 
 (* boxing commands *)
 let h n s = [< 'Ppcmd_box(Pp_hbox n,s) >]
@@ -160,6 +159,41 @@ let close () = [< 'Ppcmd_close_box >]
 let tclose () = [< 'Ppcmd_close_tbox >]
 
 let (++) = Stream.iapp
+
+(* In new syntax only double quote char is escaped by repeating it *)
+let rec escape_string s =
+  let rec escape_at s i =
+    if i<0 then s
+    else if s.[i] == '"' then
+      let s' = String.sub s 0 i^"\""^String.sub s i (String.length s - i) in
+      escape_at s' (i-1)
+    else escape_at s (i-1) in
+  escape_at s (String.length s - 1)
+
+let qstring s = str ("\""^escape_string s^"\"")
+let qs = qstring
+let quote s = h 0 (str "\"" ++ s ++ str "\"")
+
+let rec xmlescape ppcmd =
+  let rec escape what withwhat (len, str) =
+    try
+      let pos = String.index str what in
+      let (tlen, tail) =
+        escape what withwhat ((len - pos - 1),
+          (String.sub str (pos + 1) (len - pos - 1)))
+      in
+      (pos + tlen + String.length withwhat, String.sub str 0 pos ^ withwhat ^ tail)
+    with Not_found -> (len, str)
+  in
+  match ppcmd with
+    | Ppcmd_print (len, str) ->
+        Ppcmd_print (escape '"' "&quot;"
+          (escape '<' "&lt;" (escape '&' "&amp;" (len, str))))
+      (* In XML we always print whole content so we can npeek the whole stream *)
+    | Ppcmd_box (x, str) -> Ppcmd_box (x, Stream.of_list
+        (List.map xmlescape (Stream.npeek max_int str)))
+    | x -> x
+
 
 (* This flag tells if the last printed comment ends with a newline, to
   avoid empty lines *)
@@ -242,7 +276,7 @@ let pp_dirs ft =
 (* pretty print on stdout and stderr *)
 
 let pp_std_dirs = pp_dirs !std_ft
-let pp_err_dirs = pp_dirs err_ft
+let pp_err_dirs = pp_dirs !err_ft
 
 let ppcmds x = Ppdir_ppcmds x
 
@@ -251,11 +285,13 @@ let emacs_warning_start_string = String.make 1 (Char.chr 254)
 let emacs_warning_end_string = String.make 1 (Char.chr 255)
 
 let warnstart() = 
-  if not !print_emacs then str "" else str emacs_warning_start_string
+  if not !print_emacs then mt() else str emacs_warning_start_string
 
 let warnend() = 
-  if not !print_emacs then str "" else str emacs_warning_end_string
-  
+  if not !print_emacs then mt() else str emacs_warning_end_string
+
+let warnbody strm =
+  [< warnstart() ; hov 0 (str "Warning: " ++ strm) ; warnend() >]
 
 (* pretty printing functions WITHOUT FLUSH *)
 let pp_with ft strm =
@@ -264,15 +300,17 @@ let pp_with ft strm =
 let ppnl_with ft strm =
   pp_dirs ft [< 'Ppdir_ppcmds [< strm ; 'Ppcmd_force_newline >] >]
 
-let warning_with ft string =
-  ppnl_with ft [< warnstart() ; str "Warning: " ; str string ; warnend() >]
+let default_warn_with ft strm = ppnl_with ft (warnbody strm)
 
-let warn_with ft pps =
-  ppnl_with ft [< warnstart() ; str "Warning: " ; pps ; warnend() >]
+let pp_warn_with = ref default_warn_with
 
-let pp_flush_with ft =
-  Format.pp_print_flush ft
+let set_warning_function pp_warn = pp_warn_with := pp_warn
 
+let warn_with ft strm = !pp_warn_with ft strm
+
+let warning_with ft string = warn_with ft (str string)
+
+let pp_flush_with ft = Format.pp_print_flush ft
 
 (* pretty printing functions WITH FLUSH *)
 let msg_with ft strm =
@@ -281,25 +319,23 @@ let msg_with ft strm =
 let msgnl_with ft strm =
   pp_dirs ft [< 'Ppdir_ppcmds strm ; 'Ppdir_print_newline >]
 
-let msg_warning_with ft strm=
-  pp_dirs ft [< 'Ppdir_ppcmds [< warnstart() ; str "Warning: "; strm ; warnend() >]; 
-		'Ppdir_print_newline >]
-
+let msg_warning_with ft strm =
+  msgnl_with ft (warnbody strm)
 
 (* pretty printing functions WITHOUT FLUSH *)
-let pp        x = pp_with !std_ft x
+let pp        x = pp_with   !std_ft x
 let ppnl      x = ppnl_with !std_ft x
-let pperr     = pp_with err_ft
-let pperrnl   = ppnl_with err_ft
-let message s = ppnl (str s)
-let warning   x = warning_with err_ft x
-let warn      x = warn_with err_ft x
+let pperr     x = pp_with   !err_ft x
+let pperrnl   x = ppnl_with !err_ft x
+let message   s = ppnl      (str s)
+let warning   x = warning_with !err_ft x
+let warn      x = warn_with    !err_ft x
 let pp_flush  x = Format.pp_print_flush !std_ft x
 let flush_all() = flush stderr; flush stdout; pp_flush()
 
 (* pretty printing functions WITH FLUSH *)
 let msg x = msg_with !std_ft x
 let msgnl x = msgnl_with !std_ft x
-let msgerr = msg_with err_ft
-let msgerrnl = msgnl_with err_ft
-let msg_warning x = msg_warning_with err_ft x
+let msgerr x = msg_with !err_ft x
+let msgerrnl x = msgnl_with !err_ft x
+let msg_warning x = msg_warning_with !err_ft x

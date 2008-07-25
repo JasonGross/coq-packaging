@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: printer.ml 9573 2007-01-31 20:18:18Z notin $ *)
+(* $Id: printer.ml 11001 2008-05-27 16:56:07Z aspiwack $ *)
 
 open Pp
 open Util
@@ -30,7 +30,7 @@ open Ppconstr
 open Constrextern
 
 let emacs_str s alts = 
-  match !Options.print_emacs, !Options.print_emacs_safechar with
+  match !Flags.print_emacs, !Flags.print_emacs_safechar with
     | true, true -> alts
     | true , false -> s
     | false,_ -> "" 
@@ -48,9 +48,15 @@ let pr_lconstr_env_at_top env = pr_lconstr_core true env
 let pr_lconstr_env env = pr_lconstr_core false env
 let pr_constr_env env = pr_constr_core false env
 
+let pr_open_lconstr_env env (_,c) = pr_lconstr_env env c
+let pr_open_constr_env env (_,c) = pr_constr_env env c
+
   (* NB do not remove the eta-redexes! Global.env() has side-effects... *)
 let pr_lconstr t = pr_lconstr_env (Global.env()) t
 let pr_constr t = pr_constr_env (Global.env()) t
+
+let pr_open_lconstr (_,c) = pr_lconstr c
+let pr_open_constr (_,c) = pr_constr c
 
 let pr_type_core at_top env t =
   pr_constr_expr (extern_type at_top env t)
@@ -165,15 +171,7 @@ let pr_named_context env ne_context =
           ne_context ~init:(mt ()))
 
 let pr_rel_context env rel_context =
-  let rec prec env = function
-    | [] -> (mt ()) 
-    | [b] -> str "(" ++ pr_rel_decl env b ++ str")"
-    | b::rest ->
-        let pb = pr_rel_decl env b in
-        let penvtl = prec (push_rel b env) rest in
-        str "(" ++ pb ++ str")" ++ spc () ++ penvtl
-  in 
-  hov 0 (prec env (List.rev rel_context))
+  pr_binders (extern_rel_context None env rel_context)
 
 let pr_rel_context_of env =
   pr_rel_context env (rel_context env)
@@ -229,11 +227,38 @@ let pr_context_limit n env =
     in 
     (sign_env ++ db_env)
 
-let pr_context_of env = match Options.print_hyps_limit () with 
+let pr_context_of env = match Flags.print_hyps_limit () with 
   | None -> hv 0 (pr_context_unlimited env)
   | Some n -> hv 0 (pr_context_limit n env)
 
 (* display goal parts (Proof mode) *)
+
+let pr_restricted_named_context among env =
+  hv 0 (fold_named_context
+	  (fun env ((id,_,_) as d) pps ->
+	     if true || Idset.mem id among then
+	       pps ++ 
+		 fnl () ++ str (emacs_str (String.make 1 (Char.chr 253)) "") ++
+		 pr_var_decl env d
+	     else 
+	       pps)
+          env ~init:(mt ()))
+
+
+let pr_predicate pr_elt (b, elts) = 
+  let pr_elts = prlist_with_sep spc pr_elt elts in
+    if b then
+      str"all" ++ 
+	(if elts = [] then mt () else str" except: " ++ pr_elts)
+    else
+      if elts = [] then str"none" else pr_elts
+      
+let pr_cpred p = pr_predicate pr_con (Cpred.elements p)
+let pr_idpred p = pr_predicate Nameops.pr_id (Idpred.elements p)
+
+let pr_transparent_state (ids, csts) = 
+  hv 0 (str"VARIABLES: " ++ pr_idpred ids ++ fnl () ++
+	str"CONSTANTS: " ++ pr_cpred csts ++ fnl ())
 
 let pr_subgoal_metas metas env=
   let pr_one (meta,typ) = 
@@ -243,25 +268,24 @@ let pr_subgoal_metas metas env=
     hv 0 (prlist_with_sep mt pr_one metas)
 
 (* display complete goal *)
-
-let pr_goal g =
-  let env = evar_env g in
-  let preamb,penv,pc =
+let default_pr_goal g =
+  let env = evar_unfiltered_env g in
+  let preamb,thesis,penv,pc =
     if g.evar_extra = None then
-          mt (),
+          mt (), mt (),
 	  pr_context_of env,
 	  pr_ltype_env_at_top env g.evar_concl
     else 
-      let {pm_subgoals=metas} = get_info g in
-	(str "     *** Declarative Mode ***" ++ fnl ()++fnl ()),
-    pr_context_of env,
-    pr_subgoal_metas metas env
+      (str "     *** Declarative Mode ***" ++ fnl ()++fnl ()),
+      (str"thesis := "  ++ fnl ()),
+       pr_context_of env,
+       pr_ltype_env_at_top env g.evar_concl
   in
     preamb ++
     str"  " ++ hv 0 (penv ++ fnl () ++
 		       str (emacs_str (String.make 1 (Char.chr 253)) "")  ++
 		       str "============================" ++ fnl ()  ++
-		       str" "  ++ pc) ++ fnl ()
+		       thesis ++ str " " ++  pc) ++ fnl ()
      
 (* display the conclusion of a goal *)
 let pr_concl n g =
@@ -270,12 +294,17 @@ let pr_concl n g =
     str (emacs_str (String.make 1 (Char.chr 253)) "")  ++
       str "subgoal " ++ int n ++ str " is:" ++ cut () ++ str" "  ++ pc
 
-
 (* display evar type: a context and a type *)
 let pr_evgl_sign gl = 
-  let ps = pr_named_context_of (evar_env gl) in
+  let ps = pr_named_context_of (evar_unfiltered_env gl) in
+  let _,l = list_filter2 (fun b c -> not b) (evar_filter gl,evar_context gl) in
+  let ids = List.rev (List.map pi1 l) in
+  let warn =
+    if ids = [] then mt () else
+      (str "(" ++ prlist_with_sep pr_coma pr_id ids ++ str " cannot be used)")
+  in
   let pc = pr_lconstr gl.evar_concl in
-  hov 0 (str"["  ++ ps ++ spc () ++ str"|- "  ++ pc ++ str"]")
+  hov 0 (str"[" ++ ps ++ spc () ++ str"|- "  ++ pc ++ str"]" ++ spc () ++ warn)
 
 (* Print an enumerated list of existential variables *)
 let rec pr_evars_int i = function
@@ -287,12 +316,12 @@ let rec pr_evars_int i = function
               str (string_of_existential ev)  ++ str " : " ++ pegl)) ++ 
       fnl () ++ pei
 
-let pr_subgoal n =
+let default_pr_subgoal n =
   let rec prrec p = function
     | [] -> error "No such goal"
     | g::rest ->
        	if p = 1 then
-          let pg = pr_goal g in
+          let pg = default_pr_goal g in
           v 0 (str "subgoal " ++ int n ++ str " is:" ++ cut () ++ pg)
        	else 
 	  prrec (p-1) rest
@@ -300,7 +329,7 @@ let pr_subgoal n =
   prrec n
 
 (* Print open subgoals. Checks for uninstantiated existential variables *)
-let pr_subgoals close_cmd sigma = function 
+let default_pr_subgoals close_cmd sigma = function 
   | [] -> 
       begin
 	match close_cmd with
@@ -317,7 +346,7 @@ let pr_subgoals close_cmd sigma = function
 		     str "variables :"  ++fnl () ++ (hov 0 pei))
       end
   | [g] ->
-      let pg = pr_goal g in
+      let pg = default_pr_goal g in
       v 0 (str ("1 "^"subgoal") ++cut () ++ pg)
   | g1::rest ->
       let rec pr_rec n = function
@@ -327,10 +356,38 @@ let pr_subgoals close_cmd sigma = function
             let prest = pr_rec (n+1) rest in
             (cut () ++ pc ++ prest) 
       in
-      let pg1 = pr_goal g1 in
+      let pg1 = default_pr_goal g1 in
       let prest = pr_rec 2 rest in
       v 0 (int(List.length rest+1) ++ str" subgoals" ++ cut () 
 	   ++ pg1 ++ prest ++ fnl ())
+
+
+(**********************************************************************)
+(* Abstraction layer                                                  *)
+
+
+type printer_pr = {
+ pr_subgoals            : string option -> evar_map -> goal list -> std_ppcmds;
+ pr_subgoal             : int -> goal list -> std_ppcmds;
+ pr_goal                : goal -> std_ppcmds;
+}
+
+let default_printer_pr = {
+ pr_subgoals = default_pr_subgoals;
+ pr_subgoal  = default_pr_subgoal;
+ pr_goal     = default_pr_goal;
+}
+
+let printer_pr = ref default_printer_pr
+
+let set_printer_pr = (:=) printer_pr
+
+let pr_subgoals x = !printer_pr.pr_subgoals x
+let pr_subgoal  x = !printer_pr.pr_subgoal  x
+let pr_goal     x = !printer_pr.pr_goal     x
+
+(* End abstraction layer                                              *)
+(**********************************************************************)
 
 let pr_subgoals_of_pfts pfts =
   let close_cmd = Decl_mode.get_end_command pfts in
@@ -350,6 +407,7 @@ let pr_open_subgoals () =
 	if List.length gls < 2 then 
 	  pr_subgoal n gls
 	else 
+	  (* LEM TODO: this way of saying how many subgoals has to be abstracted out*)
 	  v 0 (int(List.length gls) ++ str" subgoals" ++ cut () ++
 	  pr_subgoal n gls)
 
@@ -429,4 +487,43 @@ let pr_prim_rule = function
 (* Backwards compatibility *)
 
 let prterm = pr_lconstr
+
+
+(* spiwack: printer function for sets of Environ.assumption.
+            It is used primarily by the Print Assumption command. *)
+let pr_assumptionset env s = 
+  if (Environ.ContextObjectMap.is_empty s) then
+    str "Closed under the global context"
+  else
+    let (vars,axioms) =
+      Environ.ContextObjectMap.fold (fun o typ r ->
+	let (v,a) = r in
+	match o with
+	| Variable id -> (  Some (
+	                      Option.default (fnl ()) v 
+			   ++ str (string_of_id id)
+			   ++ str " : "
+	                   ++ pr_ltype typ
+	                   ++ fnl ()
+			    )
+	                 ,
+	                   a )
+	| Axiom kn    -> ( v ,
+			     Some (
+			      Option.default (fnl ()) a
+			   ++ (pr_constant env kn)
+	                   ++ str " : "
+	                   ++ pr_ltype typ
+	                   ++ fnl ()
+			     )
+			 )
+	)
+	s (None,None)
+    in
+    let (vars,axioms) = 
+      ( Option.map (fun p -> str "Section Variables:" ++ p) vars ,
+	Option.map (fun p -> str "Axioms:" ++ p) axioms 
+      )
+    in
+    (Option.default (mt ()) vars) ++ (Option.default (mt ()) axioms)
 

@@ -6,17 +6,18 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: reduction.mli 7639 2005-12-02 10:01:15Z gregoire $ i*)
+(*i $Id: reduction.mli 10840 2008-04-23 21:29:34Z herbelin $ i*)
 
 (*i*)
 open Term
 open Environ
+open Closure
 (*i*)
 
 (************************************************************************)
 (*s Reduction functions *)
 
-val whd_betaiotazeta        : env -> constr -> constr
+val whd_betaiotazeta        : constr -> constr
 val whd_betadeltaiota       : env -> constr -> constr
 val whd_betadeltaiota_nolet : env -> constr -> constr
 
@@ -28,6 +29,7 @@ val nf_betaiota      : constr -> constr
 exception NotConvertible
 exception NotConvertibleVect of int
 type 'a conversion_function = env -> 'a -> 'a -> Univ.constraints
+type 'a trans_conversion_function = Names.transparent_state -> env -> 'a -> 'a -> Univ.constraints
 
 type conv_pb = CONV | CUMUL
 
@@ -36,6 +38,11 @@ val sort_cmp :
 
 val conv_sort      : sorts conversion_function
 val conv_sort_leq  : sorts conversion_function
+
+val trans_conv_cmp       : conv_pb -> constr trans_conversion_function
+
+val trans_conv           : constr trans_conversion_function
+val trans_conv_leq       : types trans_conversion_function
 
 val conv_cmp       : conv_pb -> constr conversion_function
 

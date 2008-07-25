@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: names.mli 9558 2007-01-30 14:58:42Z soubiran $ i*)
+(*i $Id: names.mli 10919 2008-05-11 22:04:26Z msozeau $ i*)
 
 (*s Identifiers *)
 
@@ -42,13 +42,15 @@ val string_of_dirpath : dir_path -> string
 
 (*s Unique identifier to be used as "self" in structures and 
   signatures - invisible for users *)
-  
+type label 
 type mod_self_id
 
 (* The first argument is a file name - to prevent conflict between 
    different files *)
 val make_msid : dir_path -> string -> mod_self_id
 val id_of_msid : mod_self_id -> identifier
+val label_of_msid : mod_self_id -> label
+val refresh_msid : mod_self_id -> mod_self_id
 val debug_string_of_msid : mod_self_id -> string
 val string_of_msid : mod_self_id -> string
 
@@ -57,14 +59,14 @@ type mod_bound_id
 
 val make_mbid : dir_path -> string -> mod_bound_id
 val id_of_mbid : mod_bound_id -> identifier
+val label_of_mbid : mod_bound_id -> label
 val debug_string_of_mbid : mod_bound_id -> string
 val string_of_mbid : mod_bound_id -> string
 
 (*s Names of structure elements *)
-type label
+
 val mk_label : string -> label
 val string_of_label : label -> string
-
 
 val label_of_id : identifier -> label
 val id_of_label : label -> identifier
@@ -166,6 +168,11 @@ type 'a tableKey =
   | RelKey of 'a 
 
 type transparent_state = Idpred.t * Cpred.t
+
+val empty_transparent_state : transparent_state
+val full_transparent_state : transparent_state
+val var_full_transparent_state : transparent_state
+val cst_full_transparent_state : transparent_state
 
 type inv_rel_key = int (* index in the [rel_context] part of environment
 			  starting by the end, {\em inverse} 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Qreduction.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Qreduction.v 10739 2008-04-01 14:45:20Z herbelin $ i*)
 
 (** Normalisation functions for rational numbers. *)
 
@@ -145,6 +145,7 @@ Qed.
 
 Definition Qplus' (p q : Q) := Qred (Qplus p q).
 Definition Qmult' (p q : Q) := Qred (Qmult p q). 
+Definition Qminus' x y := Qred (Qminus x y).
 
 Lemma Qplus'_correct : forall p q : Q, (Qplus' p q)==(Qplus p q).
 Proof.
@@ -156,6 +157,11 @@ Proof.
   intros; unfold Qmult' in |- *; apply Qred_correct; auto.
 Qed.
 
+Lemma Qminus'_correct : forall p q : Q, (Qminus' p q)==(Qminus p q).
+Proof.
+  intros; unfold Qminus' in |- *; apply Qred_correct; auto.
+Qed.
+
 Add Morphism Qplus' : Qplus'_comp.
 Proof.
   intros; unfold Qplus' in |- *.
@@ -165,5 +171,23 @@ Qed.
 Add Morphism Qmult' : Qmult'_comp.
   intros; unfold Qmult' in |- *.
   rewrite H; rewrite H0; auto with qarith.
+Qed.
+
+Add Morphism Qminus' : Qminus'_comp.
+  intros; unfold Qminus' in |- *.
+  rewrite H; rewrite H0; auto with qarith.
+Qed.
+
+Lemma Qred_opp: forall q, Qred (-q) = - (Qred q).
+Proof.
+  intros (x, y); unfold Qred; simpl.
+  rewrite Zggcd_opp; case Zggcd; intros p1 (p2, p3); simpl.
+  unfold Qopp; auto.
+Qed.
+
+Theorem Qred_compare: forall x y,
+  Qcompare x y = Qcompare (Qred x) (Qred y).
+Proof.
+  intros x y; apply Qcompare_comp; apply Qeq_sym; apply Qred_correct.
 Qed.
 

@@ -6,13 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FMaps.v 8844 2006-05-22 17:22:36Z letouzey $ *)
+(* $Id: FMaps.v 10699 2008-03-19 20:56:43Z letouzey $ *)
 
-Require Export OrderedType.
-Require Export OrderedTypeEx.
-Require Export OrderedTypeAlt.
+
+Require Export OrderedType OrderedTypeEx OrderedTypeAlt.
+Require Export DecidableType DecidableTypeEx.
 Require Export FMapInterface.
-Require Export FMapList.
 Require Export FMapPositive.
-Require Export FMapIntMap.
 Require Export FMapFacts.
+Require Export FMapWeakList.
+Require Export FMapList.

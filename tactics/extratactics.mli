@@ -6,19 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extratactics.mli 9073 2006-08-22 08:54:29Z jforest $ i*)
+(*i $Id: extratactics.mli 11166 2008-06-22 13:23:35Z herbelin $ i*)
 
-open Util
-open Names
-open Term
 open Proof_type
-open Rawterm
-open Tacexpr
-open Topconstr
-open Genarg
 
-val h_discrHyp : quantified_hypothesis -> tactic
-val h_injHyp : quantified_hypothesis -> tactic
+val h_discrHyp : Names.identifier -> tactic
+val h_injHyp : Names.identifier -> tactic
 
-val refine_tac : Genarg.open_constr -> tactic
+val refine_tac : Evd.open_constr -> tactic
 

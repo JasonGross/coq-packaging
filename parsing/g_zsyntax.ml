@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_zsyntax.ml 7988 2006-02-04 20:28:29Z herbelin $ *)
+(* $Id: g_zsyntax.ml 10806 2008-04-16 23:51:06Z letouzey $ *)
 
 open Pcoq
 open Pp

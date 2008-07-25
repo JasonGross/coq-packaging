@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqlib.ml 10067 2007-08-09 17:13:16Z msozeau $ *)
+(* $Id: coqlib.ml 11072 2008-06-08 16:13:37Z herbelin $ *)
 
 open Util
 open Pp
@@ -35,13 +35,6 @@ let coq_constant locstr dir s = constr_of_global (coq_reference locstr dir s)
 
 let gen_reference = coq_reference
 let gen_constant = coq_constant
-
-let list_try_find f = 
-  let rec try_find_f = function
-    | [] -> raise Not_found
-    | h::t -> try f h with Not_found -> try_find_f t
-  in 
-  try_find_f
 
 let has_suffix_in_dirs dirs ref =
   let dir = dirpath (sp_of_global ref) in
@@ -77,7 +70,7 @@ let check_required_library d =
      (dummy_loc,make_qualid (make_dirpath (List.rev prefix)) m)
 *)
 (* or failing ...*)
-    error ("Library "^(list_last d)^" has to be required first")
+    error ("Library "^(string_of_dirpath dir)^" has to be required first")
 
 (************************************************************************)
 (* Specific Coq objects *)
@@ -109,13 +102,22 @@ let init_id = id_of_string "Init"
 let arith_id = id_of_string "Arith"
 let datatypes_id = id_of_string "Datatypes"
 
-let logic_module = make_dir ["Coq";"Init";"Logic"]
+let logic_module_name = ["Coq";"Init";"Logic"]
+let logic_module = make_dir logic_module_name
 let logic_type_module = make_dir ["Coq";"Init";"Logic_Type"]
 let datatypes_module = make_dir ["Coq";"Init";"Datatypes"]
 let arith_module = make_dir ["Coq";"Arith";"Arith"]
 
 (* TODO: temporary hack *)
 let make_kn dir id = Libnames.encode_kn dir id
+let make_con dir id = Libnames.encode_con dir id
+
+(** Identity *)
+
+let id = make_con datatypes_module (id_of_string "id")
+let type_of_id = make_con datatypes_module (id_of_string "ID")
+
+let _ = Cases.set_impossible_default_clause (mkConst id,mkConst type_of_id)
 
 (** Natural numbers *)
 let nat_kn = make_kn datatypes_module (id_of_string "nat")
@@ -150,7 +152,18 @@ type coq_sigma_data = {
   intro : constr;
   typ   : constr }
 
+type coq_bool_data  = {
+  andb : constr;
+  andb_prop : constr;
+  andb_true_intro : constr}
+
 type 'a delayed = unit -> 'a
+
+let build_bool_type () = 
+  { andb =  init_constant ["Datatypes"] "andb";
+    andb_prop =  init_constant ["Datatypes"] "andb_prop";
+    andb_true_intro =  init_constant ["Datatypes"] "andb_true_intro" }
+
 
 let build_sigma_set () = anomaly "Use build_sigma_type"
 
@@ -190,7 +203,8 @@ let coq_eq_congr = lazy_init_constant ["Logic"] "f_equal"
 let coq_eq_sym  = lazy_init_constant ["Logic"] "sym_eq"
 let coq_f_equal2 = lazy_init_constant ["Logic"] "f_equal2"
 
-let build_coq_eq_data () = {
+let build_coq_eq_data () =
+  let _ = check_required_library logic_module_name in {
   eq = Lazy.force coq_eq_eq;
   refl = Lazy.force coq_eq_refl;
   ind = Lazy.force coq_eq_ind;

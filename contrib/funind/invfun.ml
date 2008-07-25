@@ -16,6 +16,7 @@ open Tacticals
 open Tactics
 open Indfun_common
 open Tacmach
+open Termops
 open Sign
 open Hiddentac
 
@@ -23,13 +24,13 @@ open Hiddentac
 
 let pr_binding prc  = 
   function
-    | loc, Rawterm.NamedHyp id, c -> hov 1 (Ppconstr.pr_id id ++ str " := " ++ Pp.cut () ++ prc c)
-    | loc, Rawterm.AnonHyp n, c -> hov 1 (int n ++ str " := " ++ Pp.cut () ++ prc c)
+    | loc, Rawterm.NamedHyp id, (_,c) -> hov 1 (Ppconstr.pr_id id ++ str " := " ++ Pp.cut () ++ prc c)
+    | loc, Rawterm.AnonHyp n, (_,c) -> hov 1 (int n ++ str " := " ++ Pp.cut () ++ prc c)
 
 let pr_bindings prc prlc = function
   | Rawterm.ImplicitBindings l ->
       brk (1,1) ++ str "with" ++ brk (1,1) ++
-      Util.prlist_with_sep spc prc l
+      Util.prlist_with_sep spc (fun (_,c) -> prc c) l
   | Rawterm.ExplicitBindings l ->
       brk (1,1) ++ str "with" ++ brk (1,1) ++ 
         Util.prlist_with_sep spc (fun b -> str"(" ++ pr_binding prlc b ++ str")") l
@@ -59,13 +60,13 @@ let observennl strm =
 
 
 let do_observe_tac s tac g =
- try    let goal = begin try (Printer.pr_goal (sig_it g)) with _ -> assert false end in
- let v = tac g in msgnl (goal ++ fnl () ++ s ++(str " ")++(str "finished")); v
- with e ->
-   let goal = begin try (Printer.pr_goal (sig_it g)) with _ -> assert false end in
-   msgnl (str "observation "++ s++str " raised exception " ++ 
-	    Cerrors.explain_exn e ++ str " on goal " ++ goal ); 
-   raise e;;
+  let goal = begin try (Printer.pr_goal (sig_it g)) with _ -> assert false end in
+  try    
+    let v = tac g in msgnl (goal ++ fnl () ++ s ++(str " ")++(str "finished")); v
+  with e ->
+    msgnl (str "observation "++ s++str " raised exception " ++ 
+	     Cerrors.explain_exn e ++ str " on goal " ++ goal ); 
+    raise e;;
 
 
 let observe_tac s tac g =
@@ -314,7 +315,7 @@ let prove_fun_correct functional_induction funs_constr graphs_constr schemes lem
 		 | None -> (id::pre_args,pre_tac)
 		 | Some b ->
 		     (pre_args,
-		      tclTHEN (h_reduce (Rawterm.Unfold([[],EvalVarRef id])) allHyps) pre_tac
+		      tclTHEN (h_reduce (Rawterm.Unfold([Rawterm.all_occurrences_expr,EvalVarRef id])) allHyps) pre_tac
 		     )
 		     
 	     else (pre_args,pre_tac)
@@ -425,7 +426,7 @@ let prove_fun_correct functional_induction funs_constr graphs_constr schemes lem
 	List.fold_left2
 	  (fun (bindings,avoid) (x,_,_) p ->
 	     let id = Nameops.next_ident_away (Nameops.out_name x) avoid in
-	     (dummy_loc,Rawterm.NamedHyp id,p)::bindings,id::avoid
+	     (dummy_loc,Rawterm.NamedHyp id,inj_open p)::bindings,id::avoid
 	  )
 	  ([],pf_ids_of_hyps g)
 	  princ_infos.params
@@ -435,7 +436,7 @@ let prove_fun_correct functional_induction funs_constr graphs_constr schemes lem
 	List.rev (fst  (List.fold_left2
 	  (fun (bindings,avoid) (x,_,_) p ->
 	     let id = Nameops.next_ident_away (Nameops.out_name x) avoid in 
-	     (dummy_loc,Rawterm.NamedHyp id,nf_zeta p)::bindings,id::avoid)
+	     (dummy_loc,Rawterm.NamedHyp id,inj_open (nf_zeta p))::bindings,id::avoid)
 	  ([],avoid)
 	  princ_infos.predicates
 	  (lemmas)))
@@ -461,14 +462,14 @@ let prove_fun_correct functional_induction funs_constr graphs_constr schemes lem
       ]
       g
 
-(* [generalize_depedent_of x hyp g] 
+(* [generalize_dependent_of x hyp g] 
    generalize every hypothesis which depends of [x] but [hyp] 
 *)
-let generalize_depedent_of x hyp g = 
+let generalize_dependent_of x hyp g = 
   tclMAP 
     (function 
        | (id,None,t) when not (id = hyp) && 
-	   (Termops.occur_var (pf_env g) x t) -> h_generalize [mkVar id]
+	   (Termops.occur_var (pf_env g) x t) -> tclTHEN (h_generalize [mkVar id]) (thin [id])
        | _ -> tclIDTAC
     )
     (pf_hyps g)
@@ -490,12 +491,17 @@ and intros_with_rewrite_aux : tactic =
 	  | Prod(_,t,t') -> 
 	      begin 
 		match kind_of_term t with 
-		  | App(eq,args) when (eq_constr eq eq_ind) -> 
-		      if isVar args.(1)
+		  | App(eq,args) when (eq_constr eq eq_ind)  -> 
+ 		      if Reductionops.is_conv (pf_env g) (project g) args.(1) args.(2)
+		      then
+			let id = pf_get_new_id (id_of_string "y") g  in
+			tclTHENSEQ [ h_intro id; thin [id]; intros_with_rewrite ] g
+
+		      else if isVar args.(1)
 		      then 			
 			let id = pf_get_new_id (id_of_string "y") g  in 
 			tclTHENSEQ [ h_intro id;
-				     generalize_depedent_of (destVar args.(1)) id; 
+				     generalize_dependent_of (destVar args.(1)) id; 
 				     tclTRY (Equality.rewriteLR (mkVar id));
 				     intros_with_rewrite
 				   ] 
@@ -513,7 +519,7 @@ and intros_with_rewrite_aux : tactic =
 		      Tauto.tauto g
 		  | Case(_,_,v,_) -> 
 		      tclTHENSEQ[
-			h_case (v,Rawterm.NoBindings);
+			h_case false (v,Rawterm.NoBindings);
 			intros_with_rewrite
 		      ] g
 		  | LetIn _ -> 
@@ -550,7 +556,7 @@ let rec reflexivity_with_destruct_cases g =
       match kind_of_term (snd (destApp (pf_concl g))).(2) with 
 	| Case(_,_,v,_) -> 
 	    tclTHENSEQ[
-	      h_case (v,Rawterm.NoBindings);
+	      h_case false (v,Rawterm.NoBindings);
 	      intros;
 	      observe_tac "reflexivity_with_destruct_cases" reflexivity_with_destruct_cases 
 	    ]
@@ -567,9 +573,9 @@ let rec reflexivity_with_destruct_cases g =
 	       match kind_of_term  (pf_type_of g (mkVar id)) with 
 		 | App(eq,[|_;t1;t2|]) when eq_constr eq eq_ind -> 
 		     if Equality.discriminable (pf_env g) (project g) t1 t2 
-		     then Equality.discr id g
+		     then Equality.discrHyp id g
 		     else if Equality.injectable (pf_env g) (project g) t1 t2
-		     then tclTHENSEQ [Equality.inj [] id;thin [id];intros_with_rewrite]  g
+		     then tclTHENSEQ [Equality.injHyp id;thin [id];intros_with_rewrite]  g
 		     else tclIDTAC g
 		 | _ -> tclIDTAC g
     )
@@ -665,8 +671,8 @@ let prove_fun_complete funcs graphs schemes lemmas_types_infos i : tactic =
       if infos.is_general ||  Rtree.is_infinite graph_def.mind_recargs
       then 
 	let eq_lemma = 
-	  try out_some (infos).equation_lemma
-	  with Failure "out_some"  -> anomaly "Cannot find equation lemma"
+	  try Option.get (infos).equation_lemma
+	  with Option.IsNone -> anomaly "Cannot find equation lemma"
 	in 
 	tclTHENSEQ[
 	  tclMAP h_intro ids;
@@ -682,7 +688,7 @@ let prove_fun_complete funcs graphs schemes lemmas_types_infos i : tactic =
 	  h_generalize (List.map mkVar ids);
 	  thin ids
 	]
-      else unfold_in_concl [([],Names.EvalConstRef (destConst f))]
+      else unfold_in_concl [(all_occurrences,Names.EvalConstRef (destConst f))]
     in
     (* The proof of each branche itself *)
     let ind_number = ref 0 in 
@@ -706,7 +712,7 @@ let prove_fun_complete funcs graphs schemes lemmas_types_infos i : tactic =
 	(* we expand the definition of the function *)
         observe_tac "rewrite_tac" (rewrite_tac this_ind_number this_branche_ids);
 	(* introduce hypothesis with some rewrite *)
-        (intros_with_rewrite);
+        observe_tac "intros_with_rewrite" intros_with_rewrite;
 	(* The proof is (almost) complete *)
         observe_tac "reflexivity" (reflexivity_with_destruct_cases)
       ]
@@ -720,7 +726,7 @@ let prove_fun_complete funcs graphs schemes lemmas_types_infos i : tactic =
 	(h_generalize [mkApp(applist(graph_principle,params),Array.map (fun c -> applist(c,params)) lemmas)]);
 	h_intro graph_principle_id;
 	observe_tac "" (tclTHEN_i 
-	  (observe_tac "elim" ((elim (mkVar hres,Rawterm.NoBindings) (Some (mkVar graph_principle_id,Rawterm.NoBindings)))))
+	  (observe_tac "elim" ((elim false (mkVar hres,Rawterm.NoBindings) (Some (mkVar graph_principle_id,Rawterm.NoBindings)))))
 	  (fun i g -> observe_tac "prove_branche" (prove_branche i) g ))
       ]
       g
@@ -769,7 +775,7 @@ let derive_correctness make_scheme functional_induction (funs: constant list) (g
 	  Array.of_list 
 	    (List.map 
 	       (fun entry -> 
-		  (entry.Entries.const_entry_body, out_some entry.Entries.const_entry_type )
+		  (entry.Entries.const_entry_body, Option.get entry.Entries.const_entry_type )
 	       )
 	       (make_scheme (array_map_to_list (fun const -> const,Rawterm.RType None) funs))
 	    )
@@ -960,13 +966,13 @@ let invfun qhyp f  =
   in
   try 
     let finfos = find_Function_infos f in 
-    let f_correct = mkConst(out_some finfos.correctness_lemma) 
+    let f_correct = mkConst(Option.get finfos.correctness_lemma) 
     and kn = fst finfos.graph_ind
     in
     Tactics.try_intros_until (fun hid -> functional_inversion kn hid (mkConst f)  f_correct) qhyp 
   with 
     | Not_found ->  error "No graph found" 
-    | Failure "out_some"  -> error "Cannot use equivalence with graph!"
+    | Option.IsNone  -> error "Cannot use equivalence with graph!"
 
 
 let invfun qhyp f g = 
@@ -983,23 +989,23 @@ let invfun qhyp f g =
 		     try 
 		       if not (isConst f1) then failwith "";
 		       let finfos = find_Function_infos (destConst f1) in 
-		       let f_correct = mkConst(out_some finfos.correctness_lemma) 
+		       let f_correct = mkConst(Option.get finfos.correctness_lemma) 
 		       and kn = fst finfos.graph_ind
 		       in
 		       functional_inversion kn hid f1 f_correct g
-		     with | Failure "" | Failure "out_some" | Not_found -> 
+		     with | Failure "" | Option.IsNone | Not_found -> 
 		       try 
 			 let f2,_ = decompose_app args.(2) in 
 			 if not (isConst f2) then failwith "";
 			 let finfos = find_Function_infos (destConst f2) in 
-			 let f_correct = mkConst(out_some finfos.correctness_lemma) 
+			 let f_correct = mkConst(Option.get finfos.correctness_lemma) 
 			 and kn = fst finfos.graph_ind
 			 in
 			 functional_inversion kn hid  f2 f_correct g
 		       with
 			 | Failure "" -> 
 			     errorlabstrm "" (str "Hypothesis" ++ Ppconstr.pr_id hid ++ str " must contain at leat one Function")
-			 | Failure "out_some"  ->  
+			 | Option.IsNone  ->  
 			     if do_observe () 
 			     then
 			       error "Cannot use equivalence with graph for any side of the equality"

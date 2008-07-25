@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: notation.mli 9694 2007-03-09 18:09:53Z herbelin $ i*)
+(*i $Id: notation.mli 9804 2007-04-28 13:56:03Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -93,7 +93,7 @@ val uninterp_prim_token_cases_pattern :
   cases_pattern -> name * scope_name * prim_token
 
 val availability_of_prim_token : 
-  scope_name -> local_scopes -> prim_token -> delimiters option option
+  scope_name -> local_scopes -> delimiters option option
 
 (*s Declare and interpret back and forth a notation *)
 
@@ -129,6 +129,9 @@ val declare_notation_level : notation -> level -> unit
 val level_of_notation : notation -> level (* raise [Not_found] if no level *)
 
 (*s** Miscellaneous *)
+
+val interp_notation_as_global_reference : loc -> (global_reference -> bool) -> 
+      notation -> global_reference
 
 (* Checks for already existing notations *)
 val exists_notation_in_scope : scope_name option -> notation ->

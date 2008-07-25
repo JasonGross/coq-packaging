@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: clenvtac.ml 8023 2006-02-10 18:34:51Z coq $ *)
+(* $Id: clenvtac.ml 11166 2008-06-22 13:23:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -49,7 +49,7 @@ let clenv_cast_meta clenv =
     match kind_of_term (strip_outer_cast u) with
       | Meta mv ->
 	  (try 
-            let b = Typing.meta_type clenv.env mv in
+            let b = Typing.meta_type clenv.evd mv in
 	    if occur_meta b then u
             else mkCast (mkMeta mv, DEFAULTcast, b)
 	  with Not_found -> u)
@@ -60,25 +60,35 @@ let clenv_cast_meta clenv =
   in 
   crec
 
-let clenv_refine clenv gls =
+let clenv_value_cast_meta clenv =
+    clenv_cast_meta clenv (clenv_value clenv)
+
+let clenv_pose_dependent_evars with_evars clenv =
+  let dep_mvs = clenv_dependent false clenv in
+  if dep_mvs <> [] & not with_evars then
+    raise
+      (RefinerError (UnresolvedBindings (List.map (meta_name clenv.evd) dep_mvs)));
+  clenv_pose_metas_as_evars clenv dep_mvs
+
+
+let clenv_refine with_evars clenv gls =
+  let clenv = clenv_pose_dependent_evars with_evars clenv in
   tclTHEN
-    (tclEVARS (evars_of clenv.env)) 
+    (tclEVARS (evars_of clenv.evd)) 
     (refine (clenv_cast_meta clenv (clenv_value clenv)))
     gls
 
+let dft = Unification.default_unify_flags
 
-let res_pf clenv ?(allow_K=false) gls =
-  clenv_refine (clenv_unique_resolver allow_K clenv gls) gls
+let res_pf clenv ?(with_evars=false) ?(allow_K=false) ?(flags=dft) gls =
+  clenv_refine with_evars
+    (clenv_unique_resolver allow_K ~flags:flags clenv gls) gls
 
-let elim_res_pf_THEN_i clenv tac gls =  
+let elim_res_pf_THEN_i clenv tac gls =
   let clenv' = (clenv_unique_resolver true clenv gls) in
-  tclTHENLASTn (clenv_refine clenv') (tac clenv') gls
+  tclTHENLASTn (clenv_refine false clenv') (tac clenv') gls
 
-
-let e_res_pf clenv gls =
-  clenv_refine (evar_clenv_unique_resolver clenv gls) gls
-
-
+let e_res_pf clenv = res_pf clenv ~with_evars:true ~allow_K:false ~flags:dft
 
 
 (* [unifyTerms] et [unify] ne semble pas gérer les Meta, en
@@ -86,11 +96,19 @@ let e_res_pf clenv gls =
    d'une même Meta sont compatibles. D'ailleurs le "fst" jette les metas
    provenant de w_Unify. (Utilisé seulement dans prolog.ml) *)
 
+open Unification
+
+let fail_quick_unif_flags = {
+  modulo_conv_on_closed_terms = Some full_transparent_state; 
+  use_metas_eagerly = false;
+  modulo_delta = empty_transparent_state;
+}
+
 (* let unifyTerms m n = walking (fun wc -> fst (w_Unify CONV m n [] wc)) *)
 let unifyTerms m n gls = 
   let env = pf_env gls in
-  let evd = create_evar_defs (project gls) in
-  let evd' = Unification.w_unify false env CONV m n evd in
+  let evd = create_goal_evar_defs (project gls) in
+  let evd' = w_unify false env CONV ~flags:fail_quick_unif_flags m n evd in
   tclIDTAC {it = gls.it; sigma = evars_of evd'}
 
 let unify m gls =
