@@ -6,12 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Sqrt_reg.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Sqrt_reg.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
 Require Import Ranalysis1.
-Require Import R_sqrt. Open Local Scope R_scope.
+Require Import R_sqrt. 
+Open Local Scope R_scope.
 
 (**********)
 Lemma sqrt_var_maj :
@@ -309,7 +310,7 @@ Qed.
 Lemma derivable_pt_sqrt : forall x:R, 0 < x -> derivable_pt sqrt x.
 Proof.
   unfold derivable_pt in |- *; intros.
-  apply existT with (/ (2 * sqrt x)).
+  exists (/ (2 * sqrt x)).
   apply derivable_pt_lim_sqrt; assumption.
 Qed.
 

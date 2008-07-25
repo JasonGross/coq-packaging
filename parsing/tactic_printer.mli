@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tactic_printer.mli 9154 2006-09-20 17:18:18Z corbinea $ i*)
+(*i $Id: tactic_printer.mli 10580 2008-02-22 13:39:13Z lmamane $ i*)
 
 (*i*)
 open Pp
@@ -21,6 +21,7 @@ open Proof_type
 val print_proof : evar_map -> named_context -> proof_tree -> std_ppcmds
 val pr_rule     : rule -> std_ppcmds
 val pr_tactic   : tactic_expr -> std_ppcmds
+val pr_proof_instr : Decl_expr.proof_instr -> Pp.std_ppcmds
 val print_script :
   bool -> evar_map -> proof_tree -> std_ppcmds
 val print_treescript :

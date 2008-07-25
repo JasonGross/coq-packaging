@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: record.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
+(* $Id: record.ml 11024 2008-05-30 12:41:39Z msozeau $ *)
 
 open Pp
 open Util
@@ -41,15 +41,17 @@ let interp_decl sigma env = function
       let j = interp_constr_judgment Evd.empty env c in
       (id,Some j.uj_val, refresh_universes j.uj_type)
 
-let typecheck_params_and_fields ps fs =
+let typecheck_params_and_fields id t ps fs =
   let env0 = Global.env () in
-  let env1,newps = interp_context Evd.empty env0 ps in
+  let (env1,newps), _ = interp_context Evd.empty env0 ps in
+  let fullarity = it_mkProd_or_LetIn t newps in
+  let env_ar = push_rel_context newps (push_rel (Name id,None,fullarity) env0) in
   let env2,newfs =
     List.fold_left
       (fun (env,newfs) d ->
          let decl = interp_decl Evd.empty env d in
          (push_rel decl env, decl::newfs))
-      (env1,[]) fs
+      (env_ar,[]) fs
   in
   newps, newfs
 
@@ -75,20 +77,20 @@ let warning_or_error coe indsp err =
     | BadTypedProj (fi,ctx,te) ->
 	match te with
 	  | ElimArity (_,_,_,_,Some (_,_,NonInformativeToInformative)) ->
-              (str (string_of_id fi) ++ 
+              (pr_id fi ++ 
 		str" cannot be defined because it is informative and " ++
 		Printer.pr_inductive (Global.env()) indsp ++
 		str " is not.")   
 	  | ElimArity (_,_,_,_,Some (_,_,StrongEliminationOnNonSmallType)) ->
-	      (str (string_of_id fi) ++ 
+	      (pr_id fi ++ 
 		str" cannot be defined because it is large and " ++
 		Printer.pr_inductive (Global.env()) indsp ++
 		str " is not.")
 	  | _ -> 
-	      (str " cannot be defined because it is not typable")
+              (pr_id fi ++ str " cannot be defined because it is not typable")
   in
   if coe then errorlabstrm "structure" st;
-  Options.if_verbose ppnl (hov 0 (str"Warning: " ++ st))
+  Flags.if_verbose ppnl (hov 0 (str"Warning: " ++ st))
 
 type field_status =
   | NoProjection of name
@@ -124,15 +126,20 @@ let subst_projection fid l c =
     raise (NotDefinable (MissingProj (fid,List.rev !bad_projs)));
   c''
 
+let instantiate_possibly_recursive_type indsp paramdecls fields =
+  let subst = list_map_i (fun i _ -> mkRel i) 1 paramdecls in
+  substl_rel_context (subst@[mkInd indsp]) fields
+
 (* We build projections *)
-let declare_projections indsp coers fields =
+let declare_projections indsp ?(kind=StructureComponent) ?name coers fields =
   let env = Global.env() in
   let (mib,mip) = Global.lookup_inductive indsp in
   let paramdecls = mib.mind_params_ctxt in
   let r = mkInd indsp in
   let rp = applist (r, extended_rel_list 0 paramdecls) in
   let paramargs = extended_rel_list 1 paramdecls in (*def in [[params;x:rp]]*)
-  let x = Termops.named_hd (Global.env()) r Anonymous in
+  let x = match name with Some n -> Name n | None -> Termops.named_hd (Global.env()) r Anonymous in
+  let fields = instantiate_possibly_recursive_type indsp paramdecls fields in
   let lifted_fields = lift_rel_context 1 fields in
   let (_,kinds,sp_projs,_) =
     List.fold_left2
@@ -152,8 +159,7 @@ let declare_projections indsp coers fields =
 		let ccl' = liftn 1 2 ccl in
 		let p = mkLambda (x, lift 1 rp, ccl') in
 		let branch = it_mkLambda_or_LetIn (mkRel nfi) lifted_fields in
-		let ci = Inductiveops.make_case_info env indsp
-		  LetStyle [| RegularPat |] in
+		let ci = Inductiveops.make_case_info env indsp LetStyle in
 		mkCase (ci, p, mkRel 1, [|branch|]) in
 	      let proj =
 	        it_mkLambda_or_LetIn (mkLambda (x,rp,body)) paramdecls in
@@ -165,10 +171,10 @@ let declare_projections indsp coers fields =
 		    const_entry_body = proj;
                     const_entry_type = Some projtyp;
                     const_entry_opaque = false;
-		    const_entry_boxed = Options.boxed_definitions() } in
-		  let k = (DefinitionEntry cie,IsDefinition StructureComponent) in
+		    const_entry_boxed = Flags.boxed_definitions() } in
+		  let k = (DefinitionEntry cie,IsDefinition kind) in
 		  let kn = declare_internal_constant fid k in
-		  Options.if_verbose message (string_of_id fid ^" is defined");
+		  Flags.if_verbose message (string_of_id fid ^" is defined");
 		  kn
                 with Type_errors.TypeError (ctx,te) ->
                   raise (NotDefinable (BadTypedProj (fid,ctx,te))) in
@@ -199,23 +205,28 @@ let definition_structure ((is_coe,(_,idstruc)),ps,cfs,idbuild,s) =
   let allnames =  idstruc::(List.fold_left extract_name [] fs) in
   if not (list_distinct allnames) then error "Two objects have the same name";
   (* Now, younger decl in params and fields is on top *)
-  let params,fields = typecheck_params_and_fields ps fs in
-  let args = extended_rel_list (List.length fields) params in
-  let ind = applist (mkRel (1+List.length params+List.length fields), args) in
+  let params,fields = typecheck_params_and_fields idstruc (mkSort s) ps fs in
+  let nparams = List.length params and nfields = List.length fields in
+  let args = extended_rel_list nfields params in
+  let ind = applist (mkRel (1+nparams+nfields), args) in
   let type_constructor = it_mkProd_or_LetIn ind fields in
   let mie_ind =
     { mind_entry_typename = idstruc;
       mind_entry_arity = mkSort s;
       mind_entry_consnames = [idbuild];
       mind_entry_lc = [type_constructor] } in
+  let declare_as_coind =
+    (* CoInd if recursive; otherwise Ind to have compat on _ind schemes *) 
+    dependent (mkRel (nparams+1)) (it_mkProd_or_LetIn mkProp fields) in
   let mie =
     { mind_entry_params = List.map degenerate_decl params;
       mind_entry_record = true;
-      mind_entry_finite = true;
+      mind_entry_finite = not declare_as_coind;
       mind_entry_inds = [mie_ind] } in
-  let sp = declare_mutual_with_eliminations true mie in
-  let rsp = (sp,0) in (* This is ind path of idstruc *)
+  let kn = declare_mutual_with_eliminations true mie [] in
+  let rsp = (kn,0) in (* This is ind path of idstruc *)
   let kinds,sp_projs = declare_projections rsp coers fields in
   let build = ConstructRef (rsp,1) in (* This is construct path of idbuild *)
   if is_coe then Class.try_add_new_coercion build Global;
-  Recordops.declare_structure(rsp,idbuild,List.rev kinds,List.rev sp_projs)
+  Recordops.declare_structure(rsp,idbuild,List.rev kinds,List.rev sp_projs);
+  kn

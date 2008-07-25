@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: global.ml 9310 2006-10-28 19:35:09Z herbelin $ *)
+(* $Id: global.ml 10664 2008-03-14 11:27:37Z soubiran $ *)
 
 open Util
 open Names
@@ -68,10 +68,13 @@ let add_constant = add_thing add_constant
 let add_mind = add_thing add_mind
 let add_modtype = add_thing (fun _ -> add_modtype) ()
 let add_module = add_thing (fun _ -> add_module) ()
+let add_alias = add_thing (fun _ -> add_alias) ()
 
 let add_constraints c = global_env := add_constraints c !global_env
 
 let set_engagement c = global_env := set_engagement c !global_env
+
+let add_include me = global_env := add_include me !global_env
 
 let start_module id =
   let l = label_of_id id in
@@ -151,3 +154,10 @@ let type_of_reference env = function
        Inductive.type_of_constructor cstr specif
 
 let type_of_global t = type_of_reference (env ()) t
+
+
+(* spiwack: register/unregister functions for retroknowledge *)
+let register field value by_clause =
+  let entry = kind_of_term value in
+  let senv = Safe_typing.register !global_env field entry by_clause in
+  global_env := senv

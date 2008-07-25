@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacmach.mli 7639 2005-12-02 10:01:15Z gregoire $ i*)
+(*i $Id: tacmach.mli 11094 2008-06-10 19:35:23Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -37,7 +37,7 @@ val re_sig : 'a -> evar_map -> 'a sigma
 val unpackage : 'a sigma -> evar_map ref * 'a
 val repackage : evar_map ref -> 'a -> 'a sigma
 val apply_sig_tac :
-  evar_map ref -> ('a sigma -> 'b sigma * 'c) -> 'a -> 'b * 'c
+  evar_map ref -> (goal sigma -> (goal list) sigma * validation) -> goal -> (goal list) * validation
 
 val pf_concl              : goal sigma -> types
 val pf_env                : goal sigma -> env
@@ -79,7 +79,7 @@ val pf_nf_betaiota             : goal sigma -> constr -> constr
 val pf_reduce_to_quantified_ind : goal sigma -> types -> inductive * types
 val pf_reduce_to_atomic_ind     : goal sigma -> types -> inductive * types
 val pf_compute                 : goal sigma -> constr -> constr
-val pf_unfoldn    : (int list * evaluable_global_reference) list
+val pf_unfoldn    : (Termops.occurrences * evaluable_global_reference) list
         -> goal sigma -> constr -> constr
 
 val pf_const_value : goal sigma -> constant -> constr
@@ -132,11 +132,10 @@ val convert_hyp_no_check      : named_declaration -> tactic
 val thin_no_check             : identifier list -> tactic
 val thin_body_no_check        : identifier list -> tactic
 val move_hyp_no_check         : bool -> identifier -> identifier -> tactic
-val rename_hyp_no_check       : identifier -> identifier -> tactic
+val rename_hyp_no_check       : (identifier*identifier) list -> tactic
 val mutual_fix      :
   identifier -> int -> (identifier * int * constr) list -> tactic
 val mutual_cofix    : identifier -> (identifier * constr) list -> tactic
-val rename_bound_var_goal : tactic
 
 (*s The most primitive tactics with consistency and type checking *)
 
@@ -150,7 +149,7 @@ val convert_hyp      : named_declaration -> tactic
 val thin             : identifier list -> tactic
 val thin_body        : identifier list -> tactic
 val move_hyp         : bool -> identifier -> identifier -> tactic
-val rename_hyp       : identifier -> identifier -> tactic
+val rename_hyp       : (identifier*identifier) list -> tactic
 
 (*s Tactics handling a list of goals. *)
 

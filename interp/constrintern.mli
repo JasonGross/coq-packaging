@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: constrintern.mli 9976 2007-07-12 11:58:30Z msozeau $ i*)
+(*i $Id: constrintern.mli 11024 2008-05-30 12:41:39Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -45,7 +45,11 @@ type var_internalisation_data =
 type implicits_env = (identifier * var_internalisation_data) list
 type full_implicits_env = identifier list * implicits_env
 
+type manual_implicits = (explicitation * (bool * bool)) list
+
 type ltac_sign = identifier list * unbound_ltac_var_map
+
+type raw_binder = (name * binding_kind * rawconstr option * rawconstr)
 
 (*s Internalisation performs interpretation of global names and notations *)
 
@@ -54,19 +58,21 @@ val intern_constr : evar_map -> env -> constr_expr -> rawconstr
 val intern_type : evar_map -> env -> constr_expr -> rawconstr
 
 val intern_gen : bool -> evar_map -> env ->
-  ?impls:full_implicits_env -> ?allow_soapp:bool -> ?ltacvars:ltac_sign ->
+  ?impls:full_implicits_env -> ?allow_patvar:bool -> ?ltacvars:ltac_sign ->
   constr_expr -> rawconstr
 
 val intern_pattern : env -> cases_pattern_expr ->
   Names.identifier list *
     ((Names.identifier * Names.identifier) list * Rawterm.cases_pattern) list
 
+val intern_context : evar_map -> env -> local_binder list -> raw_binder list
+
 (*s Composing internalisation with pretyping *)
 
 (* Main interpretation function *)
 
 val interp_gen : typing_constraint -> evar_map -> env ->
-  ?impls:full_implicits_env -> ?allow_soapp:bool -> ?ltacvars:ltac_sign ->
+  ?impls:full_implicits_env -> ?allow_patvar:bool -> ?ltacvars:ltac_sign ->
   constr_expr -> constr
 
 (* Particular instances *)
@@ -74,13 +80,24 @@ val interp_gen : typing_constraint -> evar_map -> env ->
 val interp_constr : evar_map -> env -> 
   constr_expr -> constr
 
-val interp_casted_constr : evar_map -> env -> ?impls:full_implicits_env -> 
-  constr_expr -> types -> constr
-
 val interp_type : evar_map -> env -> ?impls:full_implicits_env -> 
   constr_expr -> types
 
 val interp_open_constr   : evar_map -> env -> constr_expr -> evar_map * constr
+
+val interp_casted_constr : evar_map -> env -> ?impls:full_implicits_env -> 
+  constr_expr -> types -> constr
+
+(* Accepting evars and giving back the manual implicits in addition. *)
+
+val interp_casted_constr_evars_impls : ?evdref:(evar_defs ref) -> env -> 
+  ?impls:full_implicits_env -> constr_expr -> types -> constr * manual_implicits
+
+val interp_type_evars_impls : ?evdref:(evar_defs ref) -> env -> ?impls:full_implicits_env ->
+  constr_expr -> types * manual_implicits
+
+val interp_constr_evars_impls : ?evdref:(evar_defs ref) -> env -> ?impls:full_implicits_env ->
+  constr_expr -> constr * manual_implicits
 
 val interp_casted_constr_evars : evar_defs ref -> env -> 
   ?impls:full_implicits_env -> constr_expr -> types -> constr
@@ -103,12 +120,14 @@ val interp_reference : ltac_sign -> reference -> rawconstr
 
 val interp_binder  : evar_map -> env -> name -> constr_expr -> types
 
+val interp_binder_evars : evar_defs ref -> env -> name -> constr_expr -> types
+
 (* Interpret contexts: returns extended env and context *)
 
-val interp_context : evar_map -> env -> local_binder list -> env * rel_context
+val interp_context : evar_map -> env -> local_binder list -> (env * rel_context) * manual_implicits
 
 val interp_context_evars : 
-  evar_defs ref -> env -> local_binder list -> env * rel_context
+  evar_defs ref -> env -> local_binder list -> (env * rel_context) * manual_implicits
 
 (* Locating references of constructions, possibly via a syntactic definition *)
 
@@ -130,3 +149,5 @@ val for_grammar : ('a -> 'b) -> 'a -> 'b
 type coqdoc_state
 val coqdoc_freeze : unit -> coqdoc_state
 val coqdoc_unfreeze : coqdoc_state -> unit
+
+val add_glob : Util.loc -> global_reference -> unit

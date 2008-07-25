@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inv.ml 7880 2006-01-16 13:59:08Z herbelin $ *)
+(* $Id: inv.ml 11166 2008-06-22 13:23:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -47,7 +47,7 @@ let collect_meta_variables c =
 let check_no_metas clenv ccl =
   if occur_meta ccl then
     let metas = List.filter (fun na -> na<>Anonymous)
-      (List.map (Evd.meta_name clenv.env) (collect_meta_variables ccl)) in
+      (List.map (Evd.meta_name clenv.evd) (collect_meta_variables ccl)) in
     errorlabstrm "inversion" 
       (str ("Cannot find an instantiation for variable"^
 	       (if List.length metas = 1 then " " else "s ")) ++
@@ -111,12 +111,13 @@ let make_inv_predicate env sigma indf realargs id status concl =
               | None ->
 		let sort = get_sort_of env sigma concl in
 		let p = make_arity env true indf sort in
-		Unification.abstract_list_all env sigma p concl (realargs@[mkVar id]) in
+		Unification.abstract_list_all env (Evd.create_evar_defs sigma)
+		  p concl (realargs@[mkVar id]) in
 	  let hyps,bodypred = decompose_lam_n_assum (nrealargs+1) pred in
 	  (* We lift to make room for the equations *)
 	  (hyps,lift nrealargs bodypred)
   in
-  let nhyps = List.length hyps in
+  let nhyps = rel_context_length hyps in
   let env' = push_rel_context hyps env in
   let realargs' = List.map (lift nhyps) realargs in
   let pairs = list_map_i (compute_eqn env' sigma nhyps) 0 realargs' in
@@ -330,7 +331,7 @@ let projectAndApply thin id eqname names depids gls =
   substHypIfVariable
     (* If no immediate variable in the equation, try to decompose it *)
     (* and apply a trailer which again try to substitute *)
-    (fun id -> dEqThen (deq_trailer id) (Some (NamedHyp id)))
+    (fun id -> dEqThen false (deq_trailer id) (Some (ElimOnIdent (dummy_loc,id))))
     id
     gls
 
@@ -379,10 +380,14 @@ let rec get_names allow_conj = function
       error "Discarding pattern not allowed for inversion equations"
   | IntroAnonymous ->
       error "Anonymous pattern not allowed for inversion equations"
+  | IntroFresh _->
+      error "Fresh pattern not allowed for inversion equations"
+  | IntroRewrite _->
+      error "Rewriting pattern not allowed for inversion equations"
   | IntroOrAndPattern [l] -> 
       if allow_conj then
 	if l = [] then (None,[]) else
-	  let l = List.map (fun id -> out_some (fst (get_names false id))) l in
+	  let l = List.map (fun id -> Option.get (fst (get_names false id))) l in
 	  (Some (List.hd l), l)
       else
 	error "Nested conjunctive patterns not allowed for inversion equations"
@@ -441,20 +446,18 @@ let rewrite_equations_tac (gene, othin) id neqns names ba =
     tac
 
 
-let raw_inversion inv_kind indbinding id status names gl =
+let raw_inversion inv_kind id status names gl =
   let env = pf_env gl and sigma = project gl in
   let c = mkVar id in
-  let t = strong_prodspine (pf_whd_betadeltaiota gl) (pf_type_of gl c) in
-  let indclause = mk_clenv_from gl (c,t) in
-  let indclause' = clenv_constrain_with_bindings indbinding indclause in
-  let newc = clenv_value indclause' in
-  let ccl = clenv_type indclause' in
-  check_no_metas indclause' ccl;
-  let IndType (indf,realargs) =
-    try find_rectype env sigma ccl
-    with Not_found ->
+  let (ind,t) = 
+    try pf_reduce_to_atomic_ind gl (pf_type_of gl c)
+    with UserError _ -> 
       errorlabstrm "raw_inversion"
 	(str ("The type of "^(string_of_id id)^" is not inductive")) in
+  let indclause = mk_clenv_from gl (c,t) in
+  let ccl = clenv_type indclause in
+  check_no_metas indclause ccl;
+  let IndType (indf,realargs) = find_rectype env sigma ccl in
   let (elim_predicate,neqns) =
     make_inv_predicate env sigma indf realargs id status (pf_concl gl) in
   let (cut_concl,case_tac) =
@@ -469,7 +472,7 @@ let raw_inversion inv_kind indbinding id status names gl =
      (true_cut Anonymous cut_concl)
      [case_tac names 
        (introCaseAssumsThen (rewrite_equations_tac inv_kind id neqns))
-       (Some elim_predicate) ([],[]) newc;
+       (Some elim_predicate) ([],[]) ind indclause;
       onLastHyp
         (fun id ->
            (tclTHEN
@@ -503,13 +506,13 @@ let wrap_inv_error id = function
   | UserError ("Case analysis",s) -> errorlabstrm "Inv needs Nodep Prop Set" s
   | UserError("mind_specif_of_mind",_)  -> not_inductive_here id
   | UserError (a,b)  -> errorlabstrm "Inv" b
-  | Invalid_argument (*"it_list2"*) "List.fold_left2" -> dep_prop_prop_message id
+  | Invalid_argument "List.fold_left2" -> dep_prop_prop_message id
   | Not_found  ->  errorlabstrm "Inv" (not_found_message [id]) 
   | e -> raise e
 
 (* The most general inversion tactic *)
 let inversion inv_kind status names id gls =
-  try (raw_inversion inv_kind [] id status names) gls
+  try (raw_inversion inv_kind id status names) gls
   with e -> wrap_inv_error id e
 
 (* Specializing it... *)

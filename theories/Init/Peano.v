@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Peano.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Peano.v 11115 2008-06-12 16:03:32Z werner $ i*)
 
 (** The type [nat] of Peano natural numbers (built from [O] and [S])
     is defined in [Datatypes.v] *)
@@ -40,7 +40,7 @@ Hint Resolve (f_equal (A:=nat)): core.
 (** The predecessor function *)
 
 Definition pred (n:nat) : nat := match n with
-                                 | O => 0
+                                 | O => n
                                  | S u => u
                                  end.
 Hint Resolve (f_equal pred): v62.
@@ -123,6 +123,11 @@ Proof.
   auto.
 Qed.
 
+(** Standard associated names *)
+
+Notation plus_0_r_reverse := plus_n_O (only parsing).
+Notation plus_succ_r_reverse := plus_n_Sm (only parsing).
+
 (** Multiplication *)
 
 Fixpoint mult (n m:nat) {struct n} : nat :=
@@ -149,12 +154,21 @@ Proof.
 Qed.
 Hint Resolve mult_n_Sm: core v62.
 
+(** Standard associated names *)
+
+Notation mult_0_r_reverse := mult_n_O (only parsing).
+Notation mult_succ_r_reverse := mult_n_Sm (only parsing).
+
 (** Truncated subtraction: [m-n] is [0] if [n>=m] *)
 
 Fixpoint minus (n m:nat) {struct n} : nat :=
   match n, m with
-  | O, _ => 0
-  | S k, O => S k
+  | O, _ => n
+  | S k, O => n
+(*=======
+
+  | O, _ => n
+  | S k, O => S k *)
   | S k, S l => k - l
   end
 
@@ -211,5 +225,3 @@ Proof.
   induction n; auto.
   destruct m as [| n0]; auto.
 Qed.
-
-(** Notations *)

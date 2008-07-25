@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: dhyp.ml 8878 2006-05-30 16:44:25Z herbelin $ *)
+(* $Id: dhyp.ml 11094 2008-06-10 19:35:23Z herbelin $ *)
 
 (* Chet's comments about this tactic :
  
@@ -261,11 +261,13 @@ let add_destructor_hint local na loc pat pri code =
     (inDD (local,na,{ d_pat = pat; d_pri=pri; d_code=code }))
 
 let match_dpat dp cls gls =
+  let onconcl = cls.concl_occs <> no_occurrences_expr in
   match (cls,dp) with
-    | ({onhyps=lo;onconcl=false},HypLocation(_,hypd,concld)) ->
+    | ({onhyps=lo},HypLocation(_,hypd,concld)) when not onconcl ->
         let hl = match lo with
             Some l -> l
-          | None -> List.map (fun id -> (([],id),InHyp)) (pf_ids_of_hyps gls) in
+          | None -> List.map (fun id -> ((all_occurrences_expr,id),InHyp))
+	              (pf_ids_of_hyps gls) in
         if not
           (List.for_all
             (fun ((_,id),hl) ->
@@ -278,7 +280,7 @@ let match_dpat dp cls gls =
               (is_matching concld.d_sort (pf_type_of gls cl)))
             hl)
         then error "No match"
-    | ({onhyps=Some[];onconcl=true},ConclLocation concld) ->
+    | ({onhyps=Some[]},ConclLocation concld) when onconcl ->
         let cl = pf_concl gls in
         if not
           ((is_matching concld.d_typ cl) &
@@ -300,7 +302,7 @@ let applyDestructor cls discard dd gls =
         | Some ((_,id),_), (Some x, tac) -> 
 	    let arg =
               ConstrMayEval(ConstrTerm (RRef(dummy_loc,VarRef id),None)) in
-            TacLetIn ([(dummy_loc, x), None, arg], tac)
+            TacLetIn (false, [(dummy_loc, x), arg], tac)
         | None, (None, tac) -> tac
         | _, (Some _,_) -> error "Destructor expects an hypothesis"
         | _, (None,_) -> error "Destructor is for conclusion")

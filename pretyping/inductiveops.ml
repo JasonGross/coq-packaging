@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inductiveops.ml 9310 2006-10-28 19:35:09Z herbelin $ *)
+(* $Id: inductiveops.ml 10114 2007-09-06 07:36:14Z herbelin $ *)
 
 open Util
 open Names
@@ -131,21 +131,16 @@ let allowed_sorts env (kn,i as ind) =
   mip.mind_kelim
 
 (* Annotation for cases *)
-let make_case_info env ind style pats_source =
+let make_case_info env ind style =
   let (mib,mip) = Inductive.lookup_mind_specif env ind in
-  let print_info =
-    { ind_nargs = mip.mind_nrealargs;
-      style     = style;
-      source    = pats_source } in
+  let print_info = { ind_nargs = mip.mind_nrealargs; style = style } in
   { ci_ind     = ind;
     ci_npar    = mib.mind_nparams;
     ci_cstr_nargs = mip.mind_consnrealdecls;
     ci_pp_info = print_info }
 
 let make_default_case_info env style ind =
-  let (mib,mip) = Inductive.lookup_mind_specif env ind in
   make_case_info env ind style
-    (Array.map (fun _ -> RegularPat) mip.mind_consnames)
 
 (*s Useful functions *)
 
@@ -398,30 +393,19 @@ let arity_of_case_predicate env (ind,params) dep k =
 (* A function which checks that a term well typed verifies both
    syntactic conditions *)
 
-let control_only_guard env = 
-  let rec control_rec c = match kind_of_term c with
-    | Rel _ | Var _    -> ()
-    | Sort _ | Meta _ -> ()
-    | Ind _       -> ()
-    | Construct _ -> ()
-    | Const _        -> ()
-    | CoFix (_,(_,tys,bds) as cofix) ->
-	Inductive.check_cofix env cofix;
-	Array.iter control_rec tys;
-	Array.iter control_rec bds;
-    | Fix (_,(_,tys,bds) as fix) ->
-	Inductive.check_fix env fix; 
-	Array.iter control_rec tys;
-	Array.iter control_rec bds;
-    | Case(_,p,c,b) -> control_rec p;control_rec c;Array.iter control_rec b
-    | Evar (_,cl)        -> Array.iter control_rec cl
-    | App (c,cl)         -> control_rec c; Array.iter control_rec cl
-    | Cast (c1,_, c2)  -> control_rec c1; control_rec c2
-    | Prod (_,c1,c2)     -> control_rec c1; control_rec c2
-    | Lambda (_,c1,c2)   -> control_rec c1; control_rec c2
-    | LetIn (_,c1,c2,c3) -> control_rec c1; control_rec c2; control_rec c3
-  in 
-  control_rec 
+let control_only_guard env c = 
+  let check_fix_cofix e c = match kind_of_term c with
+    | CoFix (_,(_,_,_) as cofix) ->
+	Inductive.check_cofix e cofix
+    | Fix (_,(_,_,_) as fix) ->
+	Inductive.check_fix e fix
+    | _ -> ()
+  in
+  let rec iter env c = 
+    check_fix_cofix env c; 
+    iter_constr_with_full_binders push_rel iter env c
+  in
+  iter env c
 
 let subst_inductive subst (kn,i as ind) = 
   let kn' = Mod_subst.subst_kn subst kn in

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: egrammar.ml 9333 2006-11-02 13:59:14Z barras $ *)
+(* $Id: egrammar.ml 10987 2008-05-26 12:28:36Z herbelin $ *)
 
 open Pp
 open Util
@@ -73,7 +73,7 @@ let make_constr_action
 	  make ((p,CPrim (dummy_loc,Numeral v)) :: env) tl)
     | Some (p, ETConstrList _) :: tl ->
         Gramext.action (fun (v:constr_expr list) ->
-          let dummyid = Ident (dummy_loc,id_of_string "") in
+          let dummyid = Ident (dummy_loc,id_of_string "_") in
 	  make ((p,CAppExpl (dummy_loc,(None,dummyid),v)) :: env) tl)
     | Some (p, ETPattern) :: tl -> 
 	failwith "Unexpected entry of type cases pattern" in
@@ -99,7 +99,7 @@ let make_cases_pattern_action
 	  make ((p,CPatPrim (dummy_loc,Numeral v)) :: env) tl)
     | Some (p, ETConstrList _) :: tl ->
         Gramext.action (fun (v:cases_pattern_expr list) ->
-          let dummyid = Ident (dummy_loc,id_of_string "") in
+          let dummyid = Ident (dummy_loc,id_of_string "_") in
 	  make ((p,CPatCstr (dummy_loc,dummyid,v)) :: env) tl)
     | Some (p, (ETPattern | ETOther _)) :: tl -> 
 	failwith "Unexpected entry of type cases pattern or other" in
@@ -111,24 +111,29 @@ let make_constr_prod_item univ assoc from forpat = function
       let eobj = symbol_of_production assoc from forpat nt in
       (eobj, ovar)
 
-let extend_constr entry (n,assoc,pos,p4assoc,name) mkact (forpat,pt) =
+let prepare_empty_levels entry (pos,p4assoc,name,reinit) =
+  grammar_extend entry pos reinit [(name, p4assoc, [])]
+
+let extend_constr entry (n,assoc,pos,p4assoc,name,reinit) mkact (forpat,pt) =
   let univ = get_univ "constr" in
   let pil = List.map (make_constr_prod_item univ assoc n forpat) pt in
   let (symbs,ntl) = List.split pil in
-  grammar_extend entry pos [(name, p4assoc, [symbs, mkact ntl])]
+  let needed_levels = register_empty_levels forpat symbs in
+  List.iter (prepare_empty_levels entry) needed_levels;
+  grammar_extend entry pos reinit [(name, p4assoc, [symbs, mkact ntl])]
 
 let extend_constr_notation (n,assoc,ntn,rule) =
   (* Add the notation in constr *)
   let mkact loc env = CNotation (loc,ntn,List.map snd env) in
-  let (e,level,keepassoc) = get_constr_entry false (ETConstr (n,())) in
-  let pos,p4assoc,name = find_position false keepassoc assoc level in
-  extend_constr e (ETConstr(n,()),assoc,pos,p4assoc,name)
+  let (e,level) = get_constr_entry false (ETConstr (n,())) in
+  let pos,p4assoc,name,reinit = find_position false assoc level in
+  extend_constr e (ETConstr(n,()),assoc,pos,p4assoc,name,reinit)
     (make_constr_action mkact) (false,rule);
   (* Add the notation in cases_pattern *)
   let mkact loc env = CPatNotation (loc,ntn,List.map snd env) in
-  let (e,level,keepassoc) = get_constr_entry true (ETConstr (n,())) in
-  let pos,p4assoc,name = find_position true keepassoc assoc level in
-  extend_constr e (ETConstr (n,()),assoc,pos,p4assoc,name)
+  let (e,level) = get_constr_entry true (ETConstr (n,())) in
+  let pos,p4assoc,name,reinit = find_position true assoc level in
+  extend_constr e (ETConstr (n,()),assoc,pos,p4assoc,name,reinit)
     (make_cases_pattern_action mkact) (true,rule)
 
 (**********************************************************************)
@@ -160,7 +165,7 @@ type grammar_tactic_production =
 
 let make_prod_item = function
   | TacTerm s -> (Gramext.Stoken (Lexer.terminal s), None)
-  | TacNonTerm (_,(nont,t), po) -> (nont, option_map (fun p -> (p,t)) po)
+  | TacNonTerm (_,(nont,t), po) -> (nont, Option.map (fun p -> (p,t)) po)
 
 (* Tactic grammar extensions *)
 
@@ -194,7 +199,7 @@ let extend_vernac_command_grammar s gl =
 let find_index s t =
   let t,n = repr_ident (id_of_string t) in
   if s <> t or n = None then raise Not_found;
-  out_some n
+  Option.get n
 
 let rec interp_entry_name up_level s =
   let l = String.length s in
@@ -233,7 +238,7 @@ let make_vprod_item n = function
   | VTerm s -> (Gramext.Stoken (Lexer.terminal s), None)
   | VNonTerm (loc, nt, po) ->
       let (etyp, e) = interp_entry_name n nt in
-      e, option_map (fun p -> (p,etyp)) po
+      e, Option.map (fun p -> (p,etyp)) po
 
 let get_tactic_entry n =
   if n = 0 then
@@ -265,8 +270,8 @@ let add_tactic_entry (key,lev,prods,tac) =
       let mkact s tac loc l = 
 	(TacAtom(loc,TacAlias(loc,s,l,tac)):raw_tactic_expr) in
       make_rule univ (mkact key tac) mkprod prods in
-  let _ = find_position true true None None (* to synchronise with remove *) in
-  grammar_extend entry pos [(None, None, List.rev [rules])]
+  synchronize_level_positions ();
+  grammar_extend entry pos None [(None, None, List.rev [rules])]
 
 (**********************************************************************)
 (** State of the grammar extensions                                   *)

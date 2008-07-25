@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declare.mli 7941 2006-01-28 23:07:59Z herbelin $ i*)
+(*i $Id: declare.mli 10840 2008-04-23 21:29:34Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -34,7 +34,7 @@ open Nametab
 
 type section_variable_entry =
   | SectionLocalDef of constr * types option * bool (* opacity *)
-  | SectionLocalAssum of types
+  | SectionLocalAssum of types * bool * bool (* Implicit status, Keep *)
 
 type variable_declaration = dir_path * section_variable_entry * logical_kind
 
@@ -58,26 +58,6 @@ val declare_internal_constant :
    their constructors in the current section; it returns the path of
    the whole block (boolean must be true iff it is a record) *)
 val declare_mind : bool -> mutual_inductive_entry -> object_name
-
-val strength_min : strength * strength -> strength
-val string_of_strength : strength -> string
-
-(*s Corresponding test and access functions. *)
-
-val is_constant : section_path -> bool
-val constant_strength : section_path -> strength
-val constant_kind : section_path -> logical_kind
-
-val get_variable : variable -> named_declaration
-val variable_strength : variable -> strength 
-val variable_kind : variable -> logical_kind
-val find_section_variable : variable -> section_path
-val last_section_hyps : dir_path -> identifier list
-val clear_proofs : named_context -> Environ.named_context_val
-
-(*s Global references *)
-
-val strength_of_global : global_reference -> strength
 
 (* hooks for XML output *)
 val set_xml_declare_variable : (object_name -> unit) -> unit

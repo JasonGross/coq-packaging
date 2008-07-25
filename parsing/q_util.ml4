@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: q_util.ml4 10087 2007-08-24 10:39:30Z herbelin $ *)
+(*i camlp4use: "q_MLast.cmo" i*)
+
+(* $Id: q_util.ml4 10091 2007-08-24 10:57:37Z herbelin $ *)
 
 (* This file defines standard combinators to build ml expressions *)
 

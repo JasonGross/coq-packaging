@@ -24,7 +24,7 @@
 (* in Summer 1995. Several developments by E. Ledinot were an inspiration.  *)
 (****************************************************************************)
 
-(*i $Id: Infinite_sets.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Infinite_sets.v 10637 2008-03-07 23:52:56Z letouzey $ i*)
 
 Require Export Finite_sets.
 Require Export Constructive_sets.
@@ -162,7 +162,7 @@ Section Infinite_sets.
     generalize (H'3 x).
     intro H'4; lapply H'4; [ intro H'8; try exact H'8; clear H'4 | clear H'4 ];
       auto with sets.
-    specialize  5Im_inv with (U := U) (V := V) (X := A) (f := f) (y := x);
+    specialize Im_inv with (U := U) (V := V) (X := A) (f := f) (y := x);
       intro H'11; lapply H'11; [ intro H'13; elim H'11; clear H'11 | clear H'11 ];
 	auto with sets.
     intros x1 H'4; try assumption.

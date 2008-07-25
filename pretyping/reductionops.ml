@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: reductionops.ml 9106 2006-09-01 11:18:17Z herbelin $ *)
+(* $Id: reductionops.ml 11010 2008-05-28 15:25:19Z barras $ *)
 
 open Pp
 open Util
@@ -601,6 +601,9 @@ let fakey = Profile.declare_profile "fhnf_apply";;
 let fhnf_apply info k h a = Profile.profile4 fakey fhnf_apply info k h a;;
 *)
 
+let is_transparent k =
+  Conv_oracle.get_strategy k <> Conv_oracle.Opaque
+
 (* Conversion utility functions *)
 
 type conversion_test = constraints -> constraints
@@ -611,26 +614,7 @@ let pb_equal = function
   | CUMUL -> CONV
   | CONV -> CONV
 
-let sort_cmp pb s0 s1 cuniv =
-  match (s0,s1) with
-    | (Prop c1, Prop c2) -> if c1 = c2 then cuniv else raise NotConvertible
-    | (Prop c1, Type u)  ->
-        (match pb with
-            CUMUL -> cuniv
-          | _ -> raise NotConvertible)
-    | (Type u1, Type u2) ->
-	(match pb with
-           | CONV -> enforce_eq u1 u2 cuniv
-	   | CUMUL -> enforce_geq u2 u1 cuniv)
-    | (_, _) -> raise NotConvertible
-
-let base_sort_cmp pb s0 s1 =
-  match (s0,s1) with
-    | (Prop c1, Prop c2) -> c1 = c2
-    | (Prop c1, Type u)  -> pb = CUMUL
-    | (Type u1, Type u2) -> true
-    | (_, _) -> false
-
+let sort_cmp = sort_cmp
 
 let test_conversion f env sigma x y =
   try let _ = f env (nf_evar sigma x) (nf_evar sigma y) in true
@@ -639,6 +623,14 @@ let test_conversion f env sigma x y =
 let is_conv env sigma = test_conversion Reduction.conv env sigma
 let is_conv_leq env sigma = test_conversion Reduction.conv_leq env sigma
 let is_fconv = function | CONV -> is_conv | CUMUL -> is_conv_leq
+
+let test_trans_conversion f reds env sigma x y =
+  try let _ = f reds env (nf_evar sigma x) (nf_evar sigma y) in true
+  with NotConvertible -> false
+
+let is_trans_conv env sigma = test_trans_conversion Reduction.trans_conv env sigma
+let is_trans_conv_leq env sigma = test_trans_conversion Reduction.trans_conv_leq env sigma
+let is_trans_fconv = function | CONV -> is_trans_conv | CUMUL -> is_trans_conv_leq
 
 (********************************************************************)
 (*             Special-Purpose Reduction                            *)
@@ -675,10 +667,42 @@ let plain_instance s c =
   in 
   if s = [] then c else irec c
 
-(* Pourquoi ne fait-on pas nf_betaiota si s=[] ? *)
-let instance s c = 
-  if s = [] then c else local_strong whd_betaiota (plain_instance s c)
+(* [instance] is used for [res_pf]; the call to [local_strong whd_betaiota]
+   has (unfortunately) different subtle side effects: 
 
+   - ** Order of subgoals **
+     If the lemma is a case analysis with parameters, it will move the
+     parameters as first subgoals (e.g. "case H" applied on
+     "H:D->A/\B|-C" will present the subgoal |-D first while w/o
+     betaiota the subgoal |-D would have come last).
+
+   - ** Betaiota-contraction in statement **
+     If the lemma has a parameter which is a function and this
+     function is applied in the lemma, then the _strong_ betaiota will
+     contract the application of the function to its argument (e.g.
+     "apply (H (fun x => x))" in "H:forall f, f 0 = 0 |- 0=0" will
+     result in applying the lemma 0=0 in which "(fun x => x) 0" has
+     been contracted). A goal to rewrite may then fail or succeed
+     differently.
+
+   - ** Naming of hypotheses ** 
+     If a lemma is a function of the form "fun H:(forall a:A, P a)
+     => .. F H .." where the expected type of H is "forall b:A, P b",
+     then, without reduction, the application of the lemma will
+     generate a subgoal "forall a:A, P a" (and intro will use name
+     "a"), while with reduction, it will generate a subgoal "forall
+     b:A, P b" (and intro will use name "b").
+
+   - ** First-order pattern-matching **
+     If a lemma has the type "(fun x => p) t" then rewriting t may fail
+     if the type of the lemma is first beta-reduced (this typically happens
+     when rewriting a single variable and the type of the lemma is obtained
+     by meta_instance (with empty map) which itself call instance with this
+     empty map.
+ *)
+
+let instance s c =
+  (* if s = [] then c else *) local_strong whd_betaiota (plain_instance s c)
 
 (* pseudo-reduction rule:
  * [hnf_prod_app env s (Prod(_,B)) N --> B[N]
@@ -777,21 +801,23 @@ let is_sort env sigma arity =
 (* reduction to head-normal-form allowing delta/zeta only in argument
    of case/fix (heuristic used by evar_conv) *)
 
-let rec apprec env sigma s =
-  let (t, stack as s) = whd_betaiota_state s in
-  match kind_of_term t with
+let whd_betaiota_deltazeta_for_iota_state env sigma s =
+  let rec whrec s = 
+    let (t, stack as s) = whd_betaiota_state s in
+    match kind_of_term t with
     | Case (ci,p,d,lf) ->
         let (cr,crargs) = whd_betadeltaiota_stack env sigma d in
         let rslt = mkCase (ci, p, applist (cr,crargs), lf) in
         if reducible_mind_case cr then 
-	  apprec env sigma (rslt, stack)
+	  whrec (rslt, stack)
         else 
 	  s
     | Fix fix ->
 	  (match reduce_fix (whd_betadeltaiota_state env sigma) fix stack with
-             | Reduced s -> apprec env sigma s
+             | Reduced s -> whrec s
 	     | NotReducible -> s)
     | _ -> s
+  in whrec s
 
 (* A reduction function like whd_betaiota but which keeps casts
  * and does not reduce redexes containing existential variables.
@@ -861,13 +887,12 @@ let is_arity env sigma c =
 
 let meta_value evd mv = 
   let rec valrec mv =
-    try
-      let b = meta_fvalue evd mv in
+    match meta_opt_fvalue evd mv with
+    | Some (b,_) -> 
       instance
         (List.map (fun mv' -> (mv',valrec mv')) (Metaset.elements b.freemetas))
         b.rebus
-    with Anomaly _ | Not_found -> 
-      mkMeta mv
+    | None -> mkMeta mv
   in 
   valrec mv
 
@@ -876,6 +901,55 @@ let meta_instance env b =
     List.map 
       (fun mv -> (mv,meta_value env mv)) (Metaset.elements b.freemetas)
   in 
-  instance c_sigma b.rebus
+  if c_sigma = [] then b.rebus else instance c_sigma b.rebus
 
 let nf_meta env c = meta_instance env (mk_freelisted c)
+
+(* Instantiate metas that create beta/iota redexes *)
+
+let meta_value evd mv = 
+  let rec valrec mv =
+    match meta_opt_fvalue evd mv with
+    | Some (b,_) ->
+      instance
+        (List.map (fun mv' -> (mv',valrec mv')) (Metaset.elements b.freemetas))
+        b.rebus
+    | None -> mkMeta mv
+  in 
+  valrec mv
+
+let meta_reducible_instance evd b =
+  let fm = Metaset.elements b.freemetas in
+  let metas = List.fold_left (fun l mv -> 
+    match (try meta_opt_fvalue evd mv with Not_found -> None) with
+    | Some (g,(_,s)) -> (mv,(g.rebus,s))::l 
+    | None -> l) [] fm in
+  let rec irec u =
+    let u = whd_betaiota u in
+    match kind_of_term u with
+    | Case (ci,p,c,bl) when isMeta c or isCast c & isMeta (pi1 (destCast c)) ->
+	let m = try destMeta c with _ -> destMeta (pi1 (destCast c)) in
+	(match
+	  try
+	    let g,s = List.assoc m metas in
+	    if isConstruct g or s <> CoerceToType then Some g else None
+	  with Not_found -> None
+	  with
+	    | Some g -> irec (mkCase (ci,p,g,bl))
+	    | None -> mkCase (ci,irec p,c,Array.map irec bl))
+    | App (f,l) when isMeta f or isCast f & isMeta (pi1 (destCast f)) ->
+	let m = try destMeta f with _ -> destMeta (pi1 (destCast f)) in
+	(match
+	  try
+	    let g,s = List.assoc m metas in
+	    if isLambda g or s <> CoerceToType then Some g else None
+	  with Not_found -> None
+	 with
+	   | Some g -> irec (mkApp (g,l))
+	   | None -> mkApp (f,Array.map irec l))
+    | Meta m ->
+	(try let g,s = List.assoc m metas in if s<>CoerceToType then irec g else u
+	 with Not_found -> u)
+    | _ -> map_constr irec u
+  in 
+  if fm = [] then (* nf_betaiota? *) b.rebus else irec b.rebus

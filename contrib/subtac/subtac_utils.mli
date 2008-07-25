@@ -89,11 +89,11 @@ val string_of_hole_kind : hole_kind -> string
 val evars_of_term : evar_map -> evar_map -> constr -> evar_map
 val non_instanciated_map : env -> evar_defs ref -> evar_map -> evar_map
 val global_kind : logical_kind
-val goal_kind : locality_flag * goal_object_kind
+val goal_kind : locality * goal_object_kind
 val global_proof_kind : logical_kind
-val goal_proof_kind : locality_flag * goal_object_kind
+val goal_proof_kind : locality * goal_object_kind
 val global_fix_kind : logical_kind
-val goal_fix_kind : locality_flag * goal_object_kind
+val goal_fix_kind : locality * goal_object_kind
 
 val mkSubset : name -> constr -> constr -> constr
 val mkProj1 : constr -> constr -> constr -> constr
@@ -115,8 +115,10 @@ val destruct_ex : constr -> constr -> constr list
 
 val id_of_name : name -> identifier
 
-val definition_message : identifier -> unit
-val recursive_message : global_reference array -> std_ppcmds
+val definition_message : identifier -> std_ppcmds
+val recursive_message : constant array -> std_ppcmds
+
+val print_message : std_ppcmds -> unit
 
 val solve_by_tac : evar_info -> Tacmach.tactic -> constr
 
@@ -125,6 +127,6 @@ val string_of_intset : Intset.t -> string
 
 val pr_evar_defs : evar_defs -> Pp.std_ppcmds
 
-val utils_call : string -> Tacexpr.glob_tactic_arg list -> Tacexpr.glob_tactic_expr
+val tactics_call : string -> Tacexpr.glob_tactic_arg list -> Tacexpr.glob_tactic_expr
 
 val pp_list : ('a -> Pp.std_ppcmds) -> 'a list -> Pp.std_ppcmds

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: reductionops.mli 9106 2006-09-01 11:18:17Z herbelin $ i*)
+(*i $Id: reductionops.mli 11010 2008-05-28 15:25:19Z barras $ i*)
 
 (*i*)
 open Names
@@ -181,13 +181,17 @@ val is_arity : env ->  evar_map -> constr -> bool
 
 val whd_programs :  reduction_function
 
-(* [reduce_fix] contracts a fix redex if it is actually reducible *)
+(* [reduce_fix redfun fix stk] contracts [fix stk] if it is actually
+   reducible; the structural argument is reduced by [redfun] *)
 
 type fix_reduction_result = NotReducible | Reduced of state
 
 val fix_recarg : fixpoint -> constr stack -> (int * constr) option
 val reduce_fix : local_state_reduction_function -> fixpoint
    -> constr stack -> fix_reduction_result
+
+(*s Querying the kernel conversion oracle: opaque/transparent constants *)
+val is_transparent : 'a tableKey -> bool
 
 (*s Conversion Functions (uses closures, lazy strategy) *)
 
@@ -197,11 +201,14 @@ val pb_is_equal : conv_pb -> bool
 val pb_equal : conv_pb -> conv_pb
 
 val sort_cmp : conv_pb -> sorts -> sorts -> conversion_test
-val base_sort_cmp : conv_pb -> sorts -> sorts -> bool
 
 val is_conv : env ->  evar_map -> constr -> constr -> bool
 val is_conv_leq : env ->  evar_map -> constr -> constr -> bool
 val is_fconv : conv_pb -> env ->  evar_map -> constr -> constr -> bool
+
+val is_trans_conv : transparent_state -> env -> evar_map -> constr -> constr -> bool
+val is_trans_conv_leq : transparent_state -> env ->  evar_map -> constr -> constr -> bool
+val is_trans_fconv : conv_pb -> transparent_state -> env ->  evar_map -> constr -> constr -> bool
 
 (*s Special-Purpose Reduction Functions *)
 
@@ -211,8 +218,9 @@ val instance : (metavariable * constr) list -> constr -> constr
 
 (*s Heuristic for Conversion with Evar *)
 
-val apprec :  state_reduction_function
+val whd_betaiota_deltazeta_for_iota_state :  state_reduction_function
 
 (*s Meta-related reduction functions *)
 val meta_instance : evar_defs -> constr freelisted -> constr
 val nf_meta       : evar_defs -> constr -> constr
+val meta_reducible_instance : evar_defs -> constr freelisted -> constr

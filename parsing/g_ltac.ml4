@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_ltac.ml4 9333 2006-11-02 13:59:14Z barras $ *)
+(*i camlp4use: "pa_extend.cmo" i*)
+
+(* $Id: g_ltac.ml4 10919 2008-05-11 22:04:26Z msozeau $ *)
 
 open Pp
 open Util
@@ -18,26 +20,10 @@ open Pcoq
 open Prim
 open Tactic
 
-type let_clause_kind =
-  | LETTOPCLAUSE of Names.identifier * constr_expr
-  | LETCLAUSE of
-      (Names.identifier Util.located * raw_tactic_expr option * raw_tactic_arg)
-
 let fail_default_value = ArgArg 0
-
-let out_letin_clause loc = function
-  | LETTOPCLAUSE _ -> user_err_loc (loc, "", (str "Syntax Error"))
-  | LETCLAUSE (id,c,d) -> (id,c,d)
-
-let make_letin_clause loc = List.map (out_letin_clause loc)
 
 let arg_of_expr = function
     TacArg a -> a
-  | e -> Tacexp (e:raw_tactic_expr)
-    
-let tacarg_of_expr = function
-  | TacArg (Reference r) -> TacCall (dummy_loc,r,[])
-  | TacArg a -> a
   | e -> Tacexp (e:raw_tactic_expr)
 
 (* Tactics grammar rules *)
@@ -46,16 +32,31 @@ GEXTEND Gram
   GLOBAL: tactic Vernac_.command tactic_expr binder_tactic tactic_arg
           constr_may_eval;
 
+  tactic_then_last:
+    [ [ "|"; lta = LIST0 OPT tactic_expr SEP "|" ->
+          Array.map (function None -> TacId [] | Some t -> t) (Array.of_list lta)
+      | -> [||] 
+    ] ]
+  ;
+  tactic_then_gen:
+    [ [ ta = tactic_expr; "|"; (first,last) = tactic_then_gen -> (ta::first, last)
+      | ta = tactic_expr; ".."; l = tactic_then_last -> ([], Some (ta, l))
+      | ".."; l = tactic_then_last -> ([], Some (TacId [], l))
+      | ta = tactic_expr -> ([ta], None)
+      | "|"; (first,last) = tactic_then_gen -> (TacId [] :: first, last)
+      | -> ([TacId []], None)
+    ] ]
+  ;
   tactic_expr:
     [ "5" RIGHTA
       [ te = binder_tactic -> te ]
     | "4" LEFTA
-      [ ta0 = tactic_expr; ";"; ta1 = binder_tactic -> TacThen (ta0, ta1)
-      | ta0 = tactic_expr; ";"; ta1 = tactic_expr -> TacThen (ta0, ta1)
-      | ta = tactic_expr; ";"; 
-	"["; lta = LIST0 OPT tactic_expr SEP "|"; "]" ->
-	  let lta = List.map (function None -> TacId [] | Some t -> t) lta in 
-	  TacThens (ta, lta) ]
+      [ ta0 = tactic_expr; ";"; ta1 = binder_tactic -> TacThen (ta0, [||], ta1, [||])
+      | ta0 = tactic_expr; ";"; ta1 = tactic_expr -> TacThen (ta0,  [||], ta1, [||])
+      | ta0 = tactic_expr; ";"; "["; (first,tail) = tactic_then_gen; "]" ->
+	  match tail with 
+	  | Some (t,last) -> TacThen (ta0, Array.of_list first, t, last)
+	  | None -> TacThens (ta0,first) ]
     | "3" RIGHTA
       [ IDENT "try"; ta = tactic_expr -> TacTry ta
       | IDENT "do"; n = int_or_var; ta = tactic_expr -> TacDo (n,ta)
@@ -89,13 +90,14 @@ GEXTEND Gram
 	  TacArg (TacExternal (loc,com,req,la))
       | st = simple_tactic -> TacAtom (loc,st)
       | a = may_eval_arg -> TacArg(a)
+      | IDENT "constr"; ":"; id = METAIDENT ->
+          TacArg(MetaIdArg (loc,false,id))
       | IDENT "constr"; ":"; c = Constr.constr ->
           TacArg(ConstrMayEval(ConstrTerm c))
       | IDENT "ipattern"; ":"; ipat = simple_intropattern -> 
 	  TacArg(IntroPattern ipat)
-      | r = reference; la = LIST1 tactic_arg ->
-          TacArg(TacCall (loc,r,la))
-      | r = reference -> TacArg (Reference r) ]
+      | r = reference; la = LIST0 tactic_arg ->
+          TacArg(TacCall (loc,r,la)) ]
     | "0"
       [ "("; a = tactic_expr; ")" -> a
       | a = tactic_atom -> TacArg a ] ]
@@ -105,20 +107,22 @@ GEXTEND Gram
     [ RIGHTA
       [ "fun"; it = LIST1 input_fun ; "=>"; body = tactic_expr LEVEL "5" ->
           TacFun (it,body)
-      | "let"; IDENT "rec"; rcl = LIST1 rec_clause SEP "with"; "in";
-          body = tactic_expr LEVEL "5" -> TacLetRecIn (rcl,body)
-      | "let"; llc = LIST1 let_clause SEP "with"; "in";
-          u = tactic_expr LEVEL "5" -> TacLetIn (make_letin_clause loc llc,u)
+      | "let"; isrec = [IDENT "rec" -> true | -> false]; 
+          llc = LIST1 let_clause SEP "with"; "in";
+          body = tactic_expr LEVEL "5" -> TacLetIn (isrec,llc,body)
       | IDENT "info"; tc = tactic_expr LEVEL "5" -> TacInfo tc ] ]
   ;
   (* Tactic arguments *)
   tactic_arg:
-    [ [ IDENT "ltac"; ":"; a = tactic_expr LEVEL "0" -> tacarg_of_expr a
+    [ [ IDENT "ltac"; ":"; a = tactic_expr LEVEL "0" -> arg_of_expr a
+      | IDENT "ltac"; ":"; n = natural -> Integer n
       | IDENT "ipattern"; ":"; ipat = simple_intropattern -> IntroPattern ipat
       | a = may_eval_arg -> a
       | r = reference -> Reference r
-      | a = tactic_atom -> a
-      | c = Constr.constr -> ConstrMayEval (ConstrTerm c) ] ]
+      | c = Constr.constr -> ConstrMayEval (ConstrTerm c)
+      (* Unambigous entries: tolerated w/o "ltac:" modifier *)
+      | id = METAIDENT -> MetaIdArg (loc,true,id)
+      | "()" -> TacVoid ] ]
   ;
   may_eval_arg:
     [ [ c = constr_eval -> ConstrMayEval c
@@ -140,7 +144,9 @@ GEXTEND Gram
       | c = Constr.constr -> ConstrTerm c ] ]
   ;
   tactic_atom:
-    [ [ id = METAIDENT -> MetaIdArg (loc,id)
+    [ [ id = METAIDENT -> MetaIdArg (loc,true,id)
+      | n = integer -> Integer n
+      | r = reference -> TacCall (loc,r,[])
       | "()" -> TacVoid ] ]
   ;
   match_key:
@@ -152,13 +158,9 @@ GEXTEND Gram
   ;
   let_clause:
     [ [ id = identref; ":="; te = tactic_expr ->
-          LETCLAUSE (id, None, arg_of_expr te)
+         (id, arg_of_expr te)
       | id = identref; args = LIST1 input_fun; ":="; te = tactic_expr ->
-          LETCLAUSE (id, None, arg_of_expr (TacFun(args,te))) ] ]
-  ;
-  rec_clause:
-    [ [ name = identref; it = LIST1 input_fun; ":="; body = tactic_expr ->
-          (name,(it,body)) ] ]
+         (id, arg_of_expr (TacFun(args,te))) ] ]
   ;
   match_pattern:
     [ [ IDENT "context";  oid = OPT Constr.ident;
@@ -194,12 +196,17 @@ GEXTEND Gram
       | n = integer -> MsgInt n ] ]
   ;
 
+  ltac_def_kind:
+    [ [ ":=" -> false
+      | "::=" -> true ] ]
+  ;
+	
   (* Definitions for tactics *)
   tacdef_body:
-    [ [ name = identref; it=LIST1 input_fun; ":="; body = tactic_expr ->
-	  (name, TacFun (it, body))
-      | name = identref; ":="; body = tactic_expr ->
-	  (name, body) ] ]
+    [ [ name = Constr.global; it=LIST1 input_fun; redef = ltac_def_kind; body = tactic_expr ->
+	  (name, redef, TacFun (it, body))
+      | name = Constr.global; redef = ltac_def_kind; body = tactic_expr ->
+	  (name, redef, body) ] ]
   ;
   tactic:
     [ [ tac = tactic_expr -> tac ] ]

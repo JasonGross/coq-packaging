@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: gmap.ml 7925 2006-01-24 23:20:39Z herbelin $ *)
+(* $Id: gmap.ml 10250 2007-10-23 15:02:23Z aspiwack $ *)
 
 (* Maps using the generic comparison function of ocaml. Code borrowed from
    the ocaml standard library (Copyright 1996, INRIA). *)
@@ -15,6 +15,8 @@
       | Node of ('a,'b) t * 'a * 'b * ('a,'b) t * int
 
     let empty = Empty
+
+    let is_empty = function Empty -> true | _ -> false
 
     let height = function
         Empty -> 0

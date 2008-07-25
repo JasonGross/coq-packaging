@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Ndigits.v 8736 2006-04-26 21:18:44Z letouzey $ i*)
+(*i $Id: Ndigits.v 10739 2008-04-01 14:45:20Z herbelin $ i*)
 
 Require Import Bool.
 Require Import Bvector.
@@ -576,13 +576,6 @@ Proof.
 Qed.
 
 (** Number of digits in a number *)
-
-Fixpoint Psize (p:positive) : nat := 
-  match p with 
-    | xH => 1%nat
-    | xI p => S (Psize p) 
-    | xO p => S (Psize p)
-  end.
 
 Definition Nsize (n:N) : nat := match n with 
   | N0 => 0%nat

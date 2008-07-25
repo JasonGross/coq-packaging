@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: auto.mli 7937 2006-01-28 19:58:11Z herbelin $ i*)
+(*i $Id: auto.mli 10868 2008-04-29 12:30:25Z msozeau $ i*)
 
 (*i*)
 open Util
@@ -58,9 +58,13 @@ module Hint_db :
 
 type hint_db_name = string
 
-val searchtable_map : hint_db_name -> Hint_db.t
+type hint_db = transparent_state * Hint_db.t
+
+val searchtable_map : hint_db_name -> hint_db
 
 val current_db_names : unit -> hint_db_name list
+
+val add_hint_list : (global_reference * pri_auto_tactic) list -> hint_db -> hint_db
 
 val add_hints : locality_flag -> hint_db_name list -> hints -> unit
 
@@ -72,19 +76,19 @@ val print_hint_ref : global_reference -> unit
 
 val print_hint_db_by_name : hint_db_name -> unit
 
-(* [make_exact_entry hint_name (c, ctyp)]. 
+(* [make_exact_entry pri (c, ctyp)]. 
    [c] is the term given as an exact proof to solve the goal;
-   [ctyp] is the type of [hc]. *)
+   [ctyp] is the type of [c]. *)
 
-val make_exact_entry : constr * constr -> global_reference * pri_auto_tactic
+val make_exact_entry : int option -> constr * constr -> global_reference * pri_auto_tactic
 
-(* [make_apply_entry (eapply,verbose) (c,cty)].
+(* [make_apply_entry (eapply,verbose) pri (c,cty)].
    [eapply] is true if this hint will be used only with EApply;
    [c] is the term given as an exact proof to solve the goal;
    [cty] is the type of [hc]. *)
 
 val make_apply_entry :
-  env -> evar_map -> bool * bool -> constr * constr
+  env -> evar_map -> bool * bool -> int option -> constr * constr
       -> global_reference * pri_auto_tactic
 
 (* A constr which is Hint'ed will be:
@@ -95,7 +99,7 @@ val make_apply_entry :
        has missing arguments. *)
 
 val make_resolves :
-  env -> evar_map -> bool -> constr -> 
+  env -> evar_map -> bool * bool -> int option -> constr -> 
       (global_reference * pri_auto_tactic) list
 
 (* [make_resolve_hyp hname htyp].
@@ -125,16 +129,21 @@ val set_extern_subst_tactic :
   -> unit
 
 (* Create a Hint database from the pairs (name, constr).
-   Useful to take the current goal hypotheses as hints *)
+   Useful to take the current goal hypotheses as hints;
+   Boolean tells if lemmas with evars are allowed *)
 
-val make_local_hint_db : constr list -> goal sigma -> Hint_db.t
+val make_local_hint_db : bool -> constr list -> goal sigma -> hint_db
 
 val priority : (int * 'a) list -> 'a list
 
 val default_search_depth : int ref
 
+val auto_unif_flags : Unification.unify_flags
+
 (* Try unification with the precompiled clause, then use registered Apply *)
-val unify_resolve : (constr * clausenv) -> tactic
+val unify_resolve_nodelta : (constr * clausenv) -> tactic
+
+val unify_resolve : Unification.unify_flags -> (constr * clausenv) -> tactic
 
 (* [ConclPattern concl pat tacast]:
    if the term concl matches the pattern pat, (in sense of 
@@ -147,11 +156,19 @@ val conclPattern : constr -> constr_pattern -> Tacexpr.glob_tactic_expr -> tacti
 
 val auto : int -> constr list -> hint_db_name list -> tactic
 
+(* Auto with more delta. *)
+
+val new_auto : int -> constr list -> hint_db_name list -> tactic
+
 (* auto with default search depth and with the hint database "core" *)
 val default_auto : tactic
 
 (* auto with all hint databases except the "v62" compatibility database *)
 val full_auto : int -> constr list -> tactic
+
+(* auto with all hint databases except the "v62" compatibility database
+   and doing delta *)
+val new_full_auto : int -> constr list -> tactic
 
 (* auto with default search depth and with all hint databases 
    except the "v62" compatibility database *)
@@ -174,11 +191,11 @@ val fmt_autotactic : auto_tactic -> Pp.std_ppcmds
 (*s The following is not yet up to date -- Papageno. *)
 
 (* DAuto *)
-val dauto : int option * int option -> tactic
+val dauto : int option * int option -> constr list -> tactic
 val default_search_decomp : int ref
 val default_dauto : tactic
 
-val h_dauto : int option * int option -> tactic
+val h_dauto : int option * int option -> constr list -> tactic
 (* SuperAuto *)
 
 type autoArguments =

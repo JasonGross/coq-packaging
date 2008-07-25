@@ -6,12 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalEpsilon.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: ClassicalEpsilon.v 10170 2007-10-03 14:41:25Z herbelin $ i*)
 
-(** This file provides classical logic and indefinite description
-    (Hilbert's epsilon operator) *)
+(** This file provides classical logic and indefinite description under
+    the form of Hilbert's epsilon operator *)
 
-(** Classical epsilon's operator (i.e. indefinite description) implies
+(** Hilbert's epsilon operator and classical logic implies
     excluded-middle in [Set] and leads to a classical world populated
     with non computable functions. It conflicts with the
     impredicativity of [Set] *)

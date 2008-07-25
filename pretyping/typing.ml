@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: typing.ml 9511 2007-01-22 08:27:31Z herbelin $ *)
+(* $Id: typing.ml 10785 2008-04-13 21:41:54Z herbelin $ *)
 
 open Util
 open Names
@@ -20,14 +20,11 @@ open Inductiveops
 open Typeops
 open Evd
 
-let meta_type env mv =
+let meta_type evd mv =
   let ty =
-    try Evd.meta_ftype env mv
-    with Not_found -> error ("unknown meta ?"^string_of_int mv) in
-  meta_instance env ty
-
-let vect_lift = Array.mapi lift
-let vect_lift_type = Array.mapi (fun i t -> type_app (lift i) t)
+    try Evd.meta_ftype evd mv
+    with Not_found -> anomaly ("unknown meta ?"^Nameops.string_of_meta mv) in
+  meta_instance evd ty
 
 let constant_type_knowing_parameters env cst jl =
   let paramstyp = Array.map (fun j -> j.uj_type) jl in
@@ -169,8 +166,9 @@ let mcheck env evd c t =
  
 let mtype_of env evd c =
   let j = execute env evd (nf_evar (evars_of evd) c) in
-  (* No normalization: it breaks Pattern! *)
-  (*nf_betaiota*) (body_of_type j.uj_type)
+  (* We are outside the kernel: we take fresh universes *)
+  (* to avoid tactics and co to refresh universes themselves *)
+  Termops.refresh_universes j.uj_type
 
 let msort_of env evd c =
   let j = execute env evd (nf_evar (evars_of evd) c) in

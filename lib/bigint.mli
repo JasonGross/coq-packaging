@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: bigint.mli 6616 2005-01-21 17:18:23Z herbelin $ i*)
+(*i $Id: bigint.mli 9821 2007-05-11 17:00:58Z aspiwack $ i*)
 
 (*i*)
 open Pp
@@ -41,5 +41,7 @@ val is_strictly_neg : bigint -> bool
 val is_pos_or_zero : bigint -> bool
 val is_neg_or_zero : bigint -> bool
 val neg : bigint -> bigint
+
+val pow : bigint -> bigint -> bigint
 
 val pr_bigint : bigint -> std_ppcmds

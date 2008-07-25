@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: equality.mli 9835 2007-05-17 22:23:03Z jforest $ i*)
+(*i $Id: equality.mli 11166 2008-06-22 13:23:35Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -21,12 +21,15 @@ open Pattern
 open Tacticals
 open Tactics
 open Tacexpr
+open Termops
 open Rawterm
 open Genarg
 (*i*)
 
-val general_rewrite_bindings : bool -> constr with_bindings -> tactic
-val general_rewrite          : bool -> constr -> tactic
+val general_rewrite_bindings : 
+  bool -> occurrences -> constr with_bindings -> evars_flag -> tactic
+val general_rewrite : 
+  bool -> occurrences -> constr -> tactic
 
 (* Obsolete, use [general_rewrite_bindings l2r]
 [val rewriteLR_bindings       : constr with_bindings -> tactic]
@@ -39,17 +42,24 @@ val rewriteRL   : constr  -> tactic
 
 (* Warning: old [general_rewrite_in] is now [general_rewrite_bindings_in] *)
 
+val register_general_setoid_rewrite_clause :
+  (identifier option -> bool ->
+    occurrences -> constr -> new_goals:constr list -> tactic) -> unit
+
 val general_rewrite_bindings_in :
-  bool -> identifier -> constr with_bindings -> tactic
+  bool -> occurrences -> identifier -> constr with_bindings -> evars_flag -> tactic
 val general_rewrite_in          :
-  bool -> identifier -> constr -> tactic
+  bool -> occurrences -> identifier -> constr -> evars_flag -> tactic
 
 val general_multi_rewrite : 
-  bool -> constr with_bindings -> clause -> tactic
+  bool -> evars_flag -> constr with_ebindings -> clause -> tactic
+val general_multi_multi_rewrite : 
+  evars_flag -> (bool * multi * constr with_ebindings) list -> clause -> 
+  tactic option -> tactic
 
-val conditional_rewrite : bool -> tactic -> constr with_bindings -> tactic
+val conditional_rewrite : bool -> tactic -> constr with_ebindings -> tactic
 val conditional_rewrite_in :
-  bool -> identifier -> tactic -> constr with_bindings -> tactic
+  bool -> identifier -> tactic -> constr with_ebindings -> tactic
 
 val replace_in_clause_maybe_by : constr -> constr -> clause -> tactic option -> tactic
 val replace    : constr -> constr -> tactic
@@ -57,18 +67,22 @@ val replace_in : identifier -> constr -> constr -> tactic
 val replace_by : constr -> constr -> tactic -> tactic
 val replace_in_by : identifier -> constr -> constr -> tactic -> tactic
 
-val discr        : identifier -> tactic
+val discr        : evars_flag -> constr with_ebindings -> tactic
 val discrConcl   : tactic
-val discrClause  : clause -> tactic
+val discrClause  : evars_flag -> clause -> tactic
 val discrHyp     : identifier -> tactic
-val discrEverywhere     : tactic
-val discr_tac    : quantified_hypothesis option -> tactic
-val inj          : intro_pattern_expr list -> identifier -> tactic
-val injClause    : intro_pattern_expr list -> quantified_hypothesis option ->
-                   tactic
+val discrEverywhere : evars_flag -> tactic
+val discr_tac    : evars_flag -> 
+  constr with_ebindings induction_arg option -> tactic
+val inj          : intro_pattern_expr list -> evars_flag ->
+  constr with_ebindings -> tactic
+val injClause    : intro_pattern_expr list -> evars_flag -> 
+  constr with_ebindings induction_arg option -> tactic
+val injHyp       : identifier -> tactic
+val injConcl     : tactic
 
-val dEq : quantified_hypothesis option -> tactic
-val dEqThen : (int -> tactic) -> quantified_hypothesis option -> tactic
+val dEq : evars_flag -> constr with_ebindings induction_arg option -> tactic
+val dEqThen : evars_flag -> (int -> tactic) -> constr with_ebindings induction_arg option -> tactic
 
 val make_iterated_tuple : 
   env -> evar_map -> constr -> (constr * types) -> constr * constr * constr

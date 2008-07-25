@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coercion.mli 8875 2006-05-29 19:59:11Z msozeau $ i*)
+(*i $Id: coercion.mli 10840 2008-04-23 21:29:34Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -44,6 +44,9 @@ module type S = sig
      [t]; i.e. it inserts a coercion into [j], if needed, in such a way [t] and
      [j.uj_type] are convertible; it fails if no coercion is applicable *)
   val inh_conv_coerce_to : loc -> 
+    env -> evar_defs -> unsafe_judgment -> type_constraint_type -> evar_defs * unsafe_judgment
+
+  val inh_conv_coerce_rigid_to : loc -> 
     env -> evar_defs -> unsafe_judgment -> type_constraint_type -> evar_defs * unsafe_judgment
     
   (* [inh_conv_coerces_to loc env isevars t t'] checks if an object of type [t]

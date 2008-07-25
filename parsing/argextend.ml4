@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: argextend.ml4 10185 2007-10-06 18:05:13Z herbelin $ *)
+(*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
+
+(* $Id: argextend.ml4 10122 2007-09-15 10:35:59Z letouzey $ *)
 
 open Genarg
 open Q_util

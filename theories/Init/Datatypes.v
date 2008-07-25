@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Datatypes.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Datatypes.v 11073 2008-06-08 20:24:51Z herbelin $ i*)
 
 Set Implicit Arguments.
 
@@ -25,6 +25,52 @@ Inductive bool : Set :=
   | false : bool.
 
 Add Printing If bool.
+
+Delimit Scope bool_scope with bool.
+
+Bind Scope bool_scope with bool.
+
+(** Basic boolean operators *)
+
+Definition andb (b1 b2:bool) : bool := if b1 then b2 else false.
+
+Definition orb (b1 b2:bool) : bool := if b1 then true else b2.
+
+Definition implb (b1 b2:bool) : bool := if b1 then b2 else true.
+
+Definition xorb (b1 b2:bool) : bool :=
+  match b1, b2 with
+    | true, true => false
+    | true, false => true
+    | false, true => true
+    | false, false => false
+  end.
+
+Definition negb (b:bool) := if b then false else true.
+
+Infix "||" := orb : bool_scope.
+Infix "&&" := andb : bool_scope.
+
+(*******************************)
+(** * Properties of [andb]     *)
+(*******************************)
+
+Lemma andb_prop : forall a b:bool, andb a b = true -> a = true /\ b = true.
+Proof.
+  destruct a; destruct b; intros; split; try (reflexivity || discriminate).
+Qed.
+Hint Resolve andb_prop: bool v62.
+
+Lemma andb_true_intro :
+  forall b1 b2:bool, b1 = true /\ b2 = true -> andb b1 b2 = true.
+Proof.
+  destruct b1; destruct b2; simpl in |- *; tauto || auto with bool.
+Qed.
+Hint Resolve andb_true_intro: bool v62.
+
+(** Interpretation of booleans as propositions *)
+
+Inductive eq_true : bool -> Prop := is_eq_true : eq_true true.
 
 (** [nat] is the datatype of natural numbers built from [O] and successor [S];
     note that the constructor name is the letter O.
@@ -70,7 +116,7 @@ Definition option_map (A B:Type) (f:A->B) o :=
   end.
 
 (** [sum A B], written [A + B], is the disjoint sum of [A] and [B] *)
-(* Syntax defined in Specif.v *)
+
 Inductive sum (A B:Type) : Type :=
   | inl : A -> sum A B
   | inr : B -> sum A B.
@@ -82,6 +128,7 @@ Notation "x + y" := (sum x y) : type_scope.
 
 Inductive prod (A B:Type) : Type :=
   pair : A -> B -> prod A B.
+
 Add Printing Let prod.
 
 Notation "x * y" := (prod x y) : type_scope.
@@ -135,6 +182,13 @@ Definition CompOpp (r:comparison) :=
     | Gt => Lt
   end.
 
+(** Identity *)
+
+Definition ID := forall A:Type, A -> A.
+Definition id : ID := fun A x => x.
+
+(* begin hide *)
+
 (* Compatibility *)
 
 Notation prodT := prod (only parsing).
@@ -146,3 +200,5 @@ Notation fstT := fst (only parsing).
 Notation sndT := snd (only parsing).
 Notation prodT_uncurry := prod_uncurry (only parsing).
 Notation prodT_curry := prod_curry (only parsing).
+
+(* end hide *)

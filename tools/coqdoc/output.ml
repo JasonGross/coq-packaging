@@ -1,3 +1,4 @@
+(* -*- compile-command: "make -C ../.. bin/coqdoc" -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -6,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: output.ml 10248 2007-10-23 13:02:56Z notin $ i*)
+(*i $Id: output.ml 11154 2008-06-19 18:42:19Z msozeau $ i*)
 
 open Cdglobals
 open Index
@@ -31,27 +32,43 @@ let build_table l =
 
 let is_keyword = 
   build_table
-    [ "AddPath"; "Axiom"; "Chapter"; "CoFixpoint";
-      "CoInductive"; "Defined"; "Definition"; 
-      "End"; "Export"; "Fact"; "Fix"; "Fixpoint"; "Global"; "Grammar"; "Goal"; "Hint";
+    [ "AddPath"; "Axiom"; "Chapter"; "Check"; "CoFixpoint";
+      "CoInductive"; "Defined"; "Definition"; "End"; "Eval"; "Example"; 
+      "Export"; "Fact"; "Fix"; "Fixpoint"; "Global"; "Grammar"; "Goal"; "Hint";
       "Hypothesis"; "Hypotheses"; 
-      "Immediate"; "Implicit"; "Import"; "Inductive"; 
+      "Resolve"; "Unfold"; "Immediate"; "Extern"; "Implicit"; "Import"; "Inductive"; 
       "Infix"; "Lemma"; "Let"; "Load"; "Local"; "Ltac"; 
-      "Module"; "Module Type"; "Declare Module";
+      "Module"; "Module Type"; "Declare Module"; "Include";
       "Mutual"; "Parameter"; "Parameters"; "Print"; "Proof"; "Qed";
       "Record"; "Recursive"; "Remark"; "Require"; "Save"; "Scheme";
-      "Section"; "Show"; "Structure"; "Syntactic"; "Syntax"; "Tactic"; "Theorem"; 
-      "Set"; "Unset"; "Variable"; "Variables"; 
+      "Induction"; "for"; "Sort"; "Section"; "Show"; "Structure"; "Syntactic"; "Syntax"; "Tactic"; "Theorem"; 
+      "Set"; "Unset"; "Variable"; "Variables"; "Context";
       "Notation"; "Reserved Notation"; "Tactic Notation";
-      "Delimit"; "Bind"; "Open"; "Scope";
-      "Boxed"; "Unboxed";
-      "Arguments";
+      "Delimit"; "Bind"; "Open"; "Scope"; 
+      "Boxed"; "Unboxed"; "Inline";
+      "Arguments"; "Add"; "Strict";
+      "Typeclasses"; "Instance"; "Class"; "Instantiation";
       (* Program *)
-      "Program Definition"; "Program Fixpoint"; "Program Lemma";
+      "Program Definition"; "Program Example"; "Program Fixpoint"; "Program Lemma";
       "Obligation"; "Obligations"; "Solve"; "using"; "Next Obligation"; "Next";
+      "Program Instance";
       (*i (* coq terms *) *)
-	"match"; "as"; "in"; "return"; "with"; "end"; "let"; "dest"; "fun"; "if"; "then"; "else"; "Prop"; "Set"; "Type"; ":="
+	"match"; "as"; "in"; "return"; "with"; "end"; "let"; "dest"; "fun"; 
+	"if"; "then"; "else"; "Prop"; "Set"; "Type"; ":="; "where"
        ]
+
+let is_tactic = 
+  build_table
+    [ "intro"; "intros"; "apply"; "rewrite"; "setoid_rewrite";
+      "destruct"; "induction"; "elim"; "dependent"; 
+      "generalize"; "clear"; "rename"; "move"; "set"; "assert";
+      "cut"; "assumption"; "exact"; "split"; "try"; "discriminate";
+      "simpl"; "unfold"; "red"; "compute"; "at"; "in"; "by";
+      "reflexivity"; "symmetry"; "transitivity";
+      "replace"; "setoid_replace"; "inversion"; "inversion_clear";
+      "pattern"; "intuition"; "congruence";
+      "trivial"; "exact"; "tauto"; "firstorder"; "ring";
+      "clapply"; "program_simpl"; "eapply"; "auto"; "eauto" ]
 
 (*s Current Coq module *)
 
@@ -78,6 +95,7 @@ let remove_printing_token = Hashtbl.remove token_pp
 let _ = List.iter 
 	  (fun (s,l) -> Hashtbl.add token_pp s (Some l, None))
 	  [ "*" ,  "\\ensuremath{\\times}";
+	    "|", "\\ensuremath{|}";
 	    "->",  "\\ensuremath{\\rightarrow}";
 	    "->~",  "\\ensuremath{\\rightarrow\\lnot}";
 	    "->~~",  "\\ensuremath{\\rightarrow\\lnot\\lnot}";
@@ -153,6 +171,12 @@ module Latex = struct
     | _ -> 
 	output_char c
 
+  let label_char c = match c with
+    | '\\' | '$' | '#' | '%' | '&' | '{' | '}' | '_'
+    | '^' | '~' -> ()
+    | _ -> 
+	output_char c
+
   let latex_char = output_char
   let latex_string = output_string
 
@@ -162,9 +186,14 @@ module Latex = struct
   let raw_ident s =
     for i = 0 to String.length s - 1 do char s.[i] done
 
+  let label_ident s =
+    for i = 0 to String.length s - 1 do label_char s.[i] done
+
   let start_module () = 
     if not !short then begin
-      printf "\\coqdocmodule{"; 
+      printf "\\coqlibrary{"; 
+      label_ident !current_module; 
+      printf "}{";
       raw_ident !current_module; 
       printf "}\n\n"
     end
@@ -192,11 +221,53 @@ module Latex = struct
     with Not_found -> 
       f tok
 
-  let ident s _ = 
+  let module_ref m s = 
+    printf "\\moduleid{%s}{" m; raw_ident s; printf "}"
+      (*i
+    match find_module m with
+    | Local ->
+	printf "<a href=\"%s.html\">" m; raw_ident s; printf "</a>"
+    | Coqlib when !externals ->
+	let m = Filename.concat !coqlib m in
+	printf "<a href=\"%s.html\">" m; raw_ident s; printf "</a>"
+    | Coqlib | Unknown ->
+	raw_ident s
+    i*)
+
+  let ident_ref m fid typ s =
+    let id = if fid <> "" then (m ^ "." ^ fid) else m in
+    match find_module m with
+      | Local ->
+	  printf "\\coq%sref{" (type_name typ); label_ident id; printf "}{"; raw_ident s; printf "}"
+      | Coqlib when !externals ->
+	  let _m = Filename.concat !coqlib m in
+	    printf "\\coq%sref{" (type_name typ); label_ident id; printf "}{"; raw_ident s; printf "}"
+      | Coqlib | Unknown ->
+	  raw_ident s
+
+  let defref m id ty s =
+    printf "\\coq%s{" (type_name ty); label_ident (m ^ "." ^ id); printf "}{"; raw_ident s; printf "}"
+
+  let ident s loc = 
     if is_keyword s then begin
       printf "\\coqdockw{"; raw_ident s; printf "}"
     end else begin
-      printf "\\coqdocid{"; raw_ident s; printf "}"
+      begin
+	try
+	  (match Index.find !current_module loc with
+	     | Def (fullid,typ) -> 
+		 defref !current_module fullid typ s
+             | Mod (m,s') when s = s' ->
+		 module_ref m s
+	     | Ref (m,fullid,typ) -> 
+		 ident_ref m fullid typ s
+	     | Mod _ ->
+		 printf "\\coqdocid{"; raw_ident s; printf "}")
+	with Not_found ->
+	  if is_tactic s then begin
+	    printf "\\coqdoctac{"; raw_ident s; printf "}"
+	  end else begin printf "\\coqdocvar{"; raw_ident s; printf "}" end
+      end
     end
 
   let ident s l = with_latex_printing (fun s -> ident s l) s
@@ -271,31 +342,51 @@ end
 module Html = struct
 
   let header () =
-    if !header_trailer then begin
-      printf "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n";
-      printf "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n";
-      printf "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n";
-      printf "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=%s\"/>\n" !charset;
-      printf "<link href=\"coqdoc.css\" rel=\"stylesheet\" type=\"text/css\"/>\n";
-      printf "<title>%s</title>\n</head>\n\n" !page_title;
-      printf "<body>\n\n<div id=\"page\">\n\n<div id=\"header\">\n</div>\n\n";
-      printf "<div id=\"main\">\n\n"
-    end
+    if !header_trailer then
+      if !header_file_spec then
+	let cin = Pervasives.open_in !header_file in
+	  try 
+	    while true do 
+	      let s = Pervasives.input_line cin in 
+		printf "%s\n" s
+	    done
+	  with End_of_file -> Pervasives.close_in cin
+      else
+	begin
+	  printf "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n";
+	  printf "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n";
+	  printf "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n";
+	  printf "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=%s\"/>\n" !charset;
+	  printf "<link href=\"coqdoc.css\" rel=\"stylesheet\" type=\"text/css\"/>\n";
+	  printf "<title>%s</title>\n</head>\n\n" !page_title;
+	  printf "<body>\n\n<div id=\"page\">\n\n<div id=\"header\">\n</div>\n\n";
+	  printf "<div id=\"main\">\n\n"
+	end
 
   let self = "http://coq.inria.fr"
 
   let trailer () =
     if !index && !current_module <> "Index" then 
       printf "</div>\n\n<div id=\"footer\">\n<hr/><a href=\"index.html\">Index</a>";
-    if !header_trailer then begin
-      printf "<hr/>This page has been generated by ";
-      printf "<a href=\"%s\">coqdoc</a>\n" self;
-      printf "</div>\n\n</div>\n\n</body>\n</html>"
-    end
+    if !header_trailer then 
+      if !footer_file_spec then
+	let cin = Pervasives.open_in !footer_file in
+	  try 
+	    while true do 
+	      let s = Pervasives.input_line cin in 
+		printf "%s\n" s
+	    done
+	  with End_of_file -> Pervasives.close_in cin
+      else
+	begin
+	  printf "<hr/>This page has been generated by ";
+	  printf "<a href=\"%s\">coqdoc</a>\n" self;
+	  printf "</div>\n\n</div>\n\n</body>\n</html>"
+	end
 
   let start_module () = 
     if not !short then begin
-      (* add_toc_entry (Toc_library !current_module); *)
+      add_toc_entry (Toc_library !current_module);
       printf "<h1 class=\"libtitle\">Library %s</h1>\n\n" !current_module
     end
 
@@ -338,14 +429,15 @@ module Html = struct
 	raw_ident s
     i*)
 
-  let ident_ref m fid s = match find_module m with
-    | Local ->
-	printf "<a class=\"idref\" href=\"%s.html#%s\">" m fid; raw_ident s; printf "</a>"
-    | Coqlib when !externals ->
-	let m = Filename.concat !coqlib m in
-	printf "<a class=\"idref\" href=\"%s.html#%s\">" m fid; raw_ident s; printf "</a>"
-    | Coqlib | Unknown ->
-	raw_ident s
+  let ident_ref m fid s = 
+    match find_module m with
+      | Local ->
+	  printf "<a class=\"idref\" href=\"%s.html#%s\">" m fid; raw_ident s; printf "</a>"
+      | Coqlib when !externals ->
+	  let m = Filename.concat !coqlib m in
+	    printf "<a class=\"idref\" href=\"%s.html#%s\">" m fid; raw_ident s; printf "</a>"
+      | Coqlib | Unknown ->
+	  raw_ident s
 
   let ident s loc = 
     if is_keyword s then begin
@@ -360,9 +452,9 @@ module Html = struct
 		 printf "<a name=\"%s\"></a>" fullid; raw_ident s
              | Mod (m,s') when s = s' ->
 		 module_ref m s
-	     | Ref (m,fullid) -> 
+	     | Ref (m,fullid,ty) -> 
 		 ident_ref m fullid s
-	     | Mod _ | Ref _ ->
+	     | Mod _ ->
 		 raw_ident s)
 	with Not_found ->
 	  raw_ident s
@@ -429,17 +521,6 @@ module Html = struct
 
   let rule () = printf "<hr/>\n"
 
-  let entry_type = function
-    | Library -> "library"
-    | Module -> "module"
-    | Definition -> "definition"
-    | Inductive -> "inductive"
-    | Constructor -> "constructor"
-    | Lemma -> "lemma"
-    | Variable -> "variable"
-    | Axiom -> "axiom"
-    | TacticDefinition -> "tactic definition"
-
   (* make a HTML index from a list of triples (name,text,link) *)
   let index_ref i c =
     let idxc = sprintf "%s_%c" i.idx_name c in
@@ -465,7 +546,7 @@ module Html = struct
 	 if t = Library then 
 	   "[library]", m ^ ".html"
 	 else
-	   sprintf "[%s, in <a href=\"%s.html\">%s</a>]" (entry_type t) m m ,
+	   sprintf "[%s, in <a href=\"%s.html\">%s</a>]" (type_name t) m m ,
 	 sprintf "%s.html#%s" m s)
 
   let format_bytype_index = function
@@ -548,8 +629,8 @@ module Html = struct
 	  item n; 
 	  printf "<a href=\"%s\">" r; f (); printf "</a>\n"
     in
-    Queue.iter make_toc_entry toc_q;
-    stop_item ();
+      Queue.iter make_toc_entry toc_q;
+      stop_item ();
 
 end
 

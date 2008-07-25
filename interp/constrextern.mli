@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: constrextern.mli 8831 2006-05-19 09:29:54Z herbelin $ i*)
+(*i $Id: constrextern.mli 10790 2008-04-14 22:34:19Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -42,15 +42,22 @@ val extern_constr_in_scope : bool -> scope_name -> env -> constr -> constr_expr
 val extern_reference : loc -> Idset.t -> global_reference -> reference
 val extern_type : bool -> env -> types -> constr_expr
 val extern_sort : sorts -> rawsort
+val extern_rel_context : constr option -> env -> 
+  rel_context -> local_binder list
 
 (* Printing options *)
 val print_implicits : bool ref
+val print_implicits_defensive : bool ref
 val print_arguments : bool ref
 val print_evar_arguments : bool ref
 val print_coercions : bool ref
 val print_universes : bool ref
 val print_no_symbol : bool ref
 val print_projections : bool ref
+
+(* Debug printing options *)
+val set_debug_global_reference_printer :
+  (loc -> global_reference -> reference) -> unit
 
 (* This governs printing of implicit arguments. If [with_implicits] is
    on and not [with_arguments] then implicit args are printed prefixed

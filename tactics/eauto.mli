@@ -12,6 +12,9 @@ open Proof_type
 open Tacexpr
 open Auto
 open Topconstr
+open Evd
+open Environ
+open Explore
 (*i*)
 
 val rawwit_hintbases : hint_db_name list option raw_abstract_argument_type
@@ -22,12 +25,13 @@ val e_assumption : tactic
 
 val registered_e_assumption : tactic
 
-val e_resolve_constr :  constr -> tactic
-
-val vernac_e_resolve_constr :  constr -> tactic
-
 val e_give_exact_constr : constr -> tactic
 
 val gen_eauto : bool -> bool * int -> constr list -> 
   hint_db_name list option -> tactic
 
+
+val eauto_with_bases :
+  bool ->
+  bool * int ->
+  Term.constr list -> Auto.hint_db list -> Proof_type.tactic

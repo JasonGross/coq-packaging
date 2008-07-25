@@ -6,16 +6,16 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: command_windows.mli 6621 2005-01-21 17:24:37Z herbelin $ i*)
+(*i $Id: command_windows.mli 11011 2008-05-28 16:22:11Z jnarboux $ i*)
 
 class command_window :
   unit ->
   object
     method new_command : ?command:string -> ?term:string -> unit -> unit
-    method window : GWindow.window
+    method frame : GBin.frame
   end
 
-val main : unit -> unit
+ val main : unit -> unit
 
 val command_window : unit -> command_window
 

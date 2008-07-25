@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: indtypes.mli 7660 2005-12-17 21:13:48Z herbelin $ i*)
+(*i $Id: indtypes.mli 10425 2008-01-05 17:04:16Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -26,10 +26,10 @@ open Typeops
 type inductive_error =
   | NonPos of env * constr * constr
   | NotEnoughArgs of env * constr * constr
-  | NotConstructor of env * constr * constr
+  | NotConstructor of env * identifier * constr * constr * int * int
   | NonPar of env * constr * int * constr * constr
   | SameNamesTypes of identifier
-  | SameNamesConstructors of identifier * identifier
+  | SameNamesConstructors of identifier
   | SameNamesOverlap of identifier list
   | NotAnArity of identifier
   | BadEntry

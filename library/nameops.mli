@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: nameops.mli 9429 2006-12-12 08:01:03Z herbelin $ i*)
+(*i $Id: nameops.mli 9433 2006-12-12 09:38:53Z herbelin $ i*)
 
 open Names
 

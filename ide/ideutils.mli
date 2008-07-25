@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ideutils.mli 7608 2005-11-25 17:09:25Z barras $ i*)
+(*i $Id: ideutils.mli 11006 2008-05-28 10:42:45Z jnarboux $ i*)
 
 val async : ('a -> unit) -> 'a -> unit
 val sync  : ('a -> 'b) -> 'a -> 'b
@@ -17,6 +17,7 @@ val mutex : string -> ('a -> unit) -> 'a -> unit
 val browse : (string -> unit) -> string -> unit
 val browse_keyword : (string -> unit) -> string -> unit
 val byte_offset_to_char_offset : string -> int -> int
+val init_stdout : unit -> unit
 val clear_stdout : unit -> unit
 val debug : bool ref
 val disconnect_revert_timer : unit -> unit
@@ -39,7 +40,10 @@ val print_id : 'a -> unit
 val read_stdout : unit -> string
 val revert_timer : GMain.Timeout.id option ref
 val auto_save_timer : GMain.Timeout.id option ref
-val select_file :
+val select_file_for_open :
+  title:string ->
+  ?dir:string ref -> ?filename:string -> unit -> string option
+val select_file_for_save :
   title:string ->
   ?dir:string ref -> ?filename:string -> unit -> string option
 val set_highlight_timer : (unit -> 'a) -> unit

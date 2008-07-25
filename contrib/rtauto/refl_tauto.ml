@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: refl_tauto.ml 9154 2006-09-20 17:18:18Z corbinea $ *)
+(* $Id: refl_tauto.ml 10478 2008-01-29 10:31:39Z notin $ *)
 
 module Search = Explore.Make(Proof_search)
 
@@ -292,7 +292,7 @@ let rtauto_tac gls=
   let prf = 
     try project (search_fun (init_state [] formula)) 
     with Not_found ->
-      errorlabstrm "rtauto" (Pp.str "rtauto could'nt find any proof") in
+      errorlabstrm "rtauto" (Pp.str "rtauto couldn't find any proof") in
   let search_end_time = System.get_time () in
   let _ = if !verbose then
     begin

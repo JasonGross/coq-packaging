@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Permut.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Permut.v 10616 2008-03-04 17:33:35Z letouzey $ i*)
 
 (* G. Huet 1-9-95 *)
 
@@ -15,7 +15,7 @@
 
 Section Axiomatisation.
 
-  Variable U : Set.
+  Variable U : Type.
   Variable op : U -> U -> U.
   Variable cong : U -> U -> Prop.
 

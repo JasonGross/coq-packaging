@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: term_typing.ml 9323 2006-10-30 23:05:29Z herbelin $ *)
+(* $Id: term_typing.ml 10877 2008-04-30 21:58:41Z herbelin $ *)
 
 open Util
 open Names
@@ -24,10 +24,7 @@ open Typeops
 
 let constrain_type env j cst1 = function
   | None ->
-(* To have definitions in Type polymorphic
-      make_polymorphic_if_arity env j.uj_type, cst1
-*) 
-      NonPolymorphicType j.uj_type, cst1
+      make_polymorphic_if_constant_for_ind env j, cst1
   | Some t -> 
       let (tj,cst2) = infer_type env t in
       let (_,cst3) = judge_of_cast env j DEFAULTcast tj in
@@ -93,11 +90,11 @@ let infer_declaration env dcl =
       let (j,cst) = infer env c.const_entry_body in
       let (typ,cst) = constrain_type env j cst c.const_entry_type in
       Some (Declarations.from_val j.uj_val), typ, cst,
-        c.const_entry_opaque, c.const_entry_boxed
-  | ParameterEntry t ->
+        c.const_entry_opaque, c.const_entry_boxed, false
+  | ParameterEntry (t,nl) ->
       let (j,cst) = infer env t in
       None, NonPolymorphicType (Typeops.assumption_of_judgment env j), cst,
-        false, false
+        false, false, nl
 
 let global_vars_set_constant_type env = function
   | NonPolymorphicType t -> global_vars_set env t
@@ -107,7 +104,7 @@ let global_vars_set_constant_type env = function
 	  (fun t c -> Idset.union (global_vars_set env t) c))
       ctx ~init:Idset.empty
 
-let build_constant_declaration env kn (body,typ,cst,op,boxed) =
+let build_constant_declaration env kn (body,typ,cst,op,boxed,inline) =
   let ids =
     match body with 
     | None -> global_vars_set_constant_type env typ
@@ -124,7 +121,8 @@ let build_constant_declaration env kn (body,typ,cst,op,boxed) =
       const_body_code = tps;
      (* const_type_code = to_patch env typ;*)
       const_constraints = cst;
-      const_opaque = op }
+      const_opaque = op; 
+      const_inline = inline}
 
 (*s Global and local constant declaration. *)
 

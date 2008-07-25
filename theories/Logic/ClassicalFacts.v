@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalFacts.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: ClassicalFacts.v 10156 2007-09-30 19:02:14Z herbelin $ i*)
 
 (** Some facts and definitions about classical logic
 
@@ -31,8 +31,8 @@ Table of contents:
 
 3.1. Weak excluded middle
 
-3.2. Gödel-Dummet axiom and right distributivity of implication over
-      disjunction
+3.2. Gödel-Dummett axiom and right distributivity of implication over
+     disjunction
 
 3 3. Independence of general premises and drinker's paradox
 
@@ -91,6 +91,17 @@ Proof.
     right; apply (Ext A False); split; [ exact H | apply False_ind ].
 Qed.
 
+(** A weakest form of propositional extensionality: extensionality for
+    provable propositions only *)
+
+Definition provable_prop_extensionality := forall A:Prop, A -> A = True.
+
+Lemma provable_prop_ext :
+  prop_extensionality -> provable_prop_extensionality.
+Proof.
+  intros Ext A Ha; apply Ext; split; trivial.
+Qed.
+
 (************************************************************************)
 (** * Classical logic and proof-irrelevance *)
 
@@ -105,6 +116,7 @@ Qed.
         (just take the identity), which
      implies the existence of a fixpoint operator in [A]
         (e.g. take the Y combinator of lambda-calculus)
+
 *)
 
 Definition inhabited (A:Prop) := A.
@@ -142,6 +154,10 @@ Proof.
   rewrite (g1_o_g2 (fun x:A => f (g1 x x))).
   reflexivity.
 Qed.
+
+(** Remark: [prop_extensionality] can be replaced in lemma [ext_prop_fixpoint]
+    by the weakest property [provable_prop_extensionality].
+*)
 
 (************************************************************************)
 (** ** CC |- prop_ext /\ dep elim on bool -> proof-irrelevance  *)
@@ -229,6 +245,11 @@ Section Proof_irrelevance_Prop_Ext_CC.
   Qed.
 
 End Proof_irrelevance_Prop_Ext_CC.
+
+(** Remark: [prop_extensionality] can be replaced in lemma
+    [ext_prop_dep_proof_irrel_gen] by the weakest property
+    [provable_prop_extensionality].  
+*)
 
 (************************************************************************)
 (** ** CIC |- prop. ext. -> proof-irrelevance                   *)
@@ -396,7 +417,7 @@ End Proof_irrelevance_CCI.
 
 (** We show the following increasing in the strength of axioms:
  - weak excluded-middle
- - right distributivity of implication over disjunction and Gödel-Dummet axiom
+ - right distributivity of implication over disjunction and Gödel-Dummett axiom
  - independence of general premises and drinker's paradox
  - excluded-middle
 *)
@@ -533,7 +554,11 @@ Proof.
 Qed.
 
 (** Independence of general premises is weaker than (generalized) 
-    excluded middle *)
+    excluded middle
+
+Remark: generalized excluded middle is preferred here to avoid relying on
+the "ex falso quodlibet" property (i.e. [False -> forall A, A])
+*)
 
 Definition generalized_excluded_middle := 
   forall A B:Prop, A \/ (A -> B).

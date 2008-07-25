@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: himsg.mli 8003 2006-02-07 22:11:50Z herbelin $ i*)
+(*i $Id: himsg.mli 10410 2007-12-31 13:11:55Z msozeau $ i*)
 
 (*i*)
 open Pp
@@ -15,6 +15,7 @@ open Indtypes
 open Environ
 open Type_errors
 open Pretype_errors
+open Typeclasses_errors
 open Indrec
 open Cases
 open Logic
@@ -27,6 +28,8 @@ val explain_type_error : env -> type_error -> std_ppcmds
 val explain_pretype_error : env -> pretype_error -> std_ppcmds
 
 val explain_inductive_error : inductive_error -> std_ppcmds
+
+val explain_typeclass_error : env -> typeclass_error -> Pp.std_ppcmds 
 
 val explain_recursion_scheme_error : recursion_scheme_error -> std_ppcmds
 

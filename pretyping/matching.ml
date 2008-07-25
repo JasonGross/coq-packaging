@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: matching.ml 9280 2006-10-25 21:37:37Z herbelin $ *)
+(* $Id: matching.ml 10451 2008-01-18 17:20:28Z barras $ *)
 
 (*i*)
 open Util
@@ -153,7 +153,7 @@ let matches_core convert allow_partial_app pat c =
 	  sorec ((na2,t2)::stk) (sorec stk sigma c1 c2) d1 d2
 
       | PRef (ConstRef _ as ref), _ when convert <> None ->
-	  let (env,evars) = out_some convert in
+	  let (env,evars) = Option.get convert in
 	  let c = constr_of_global ref in
 	  if is_conv env evars c cT then sigma
 	  else raise PatternMatchingFailure
@@ -161,7 +161,8 @@ let matches_core convert allow_partial_app pat c =
       | PIf (a1,b1,b1'), Case (ci,_,a2,[|b2;b2'|]) ->
 	  let ctx,b2 = decompose_lam_n_assum ci.ci_cstr_nargs.(0) b2 in
 	  let ctx',b2' = decompose_lam_n_assum ci.ci_cstr_nargs.(1) b2' in
-	  let n = List.length ctx and n' = List.length ctx' in
+	  let n = rel_context_length ctx in
+          let n' = rel_context_length ctx' in
 	  if noccur_between 1 n b2 & noccur_between 1 n' b2' then
 	    let s = List.fold_left (fun l (na,_,t) -> (na,t)::l) stk ctx in
 	    let s' = List.fold_left (fun l (na,_,t) -> (na,t)::l) stk ctx' in

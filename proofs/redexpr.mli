@@ -6,18 +6,19 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: redexpr.mli 8878 2006-05-30 16:44:25Z herbelin $ i*)
+(*i $Id: redexpr.mli 11094 2008-06-10 19:35:23Z herbelin $ i*)
 
 open Names
 open Term
 open Closure
 open Rawterm
 open Reductionops
+open Termops
 
 
 type red_expr = (constr, evaluable_global_reference) red_expr_gen
 
-val out_with_occurrences : 'a with_occurrences -> int list * 'a
+val out_with_occurrences : 'a with_occurrences -> occurrences * 'a
 
 val reduction_of_red_expr : red_expr -> reduction_function * cast_kind
 (* [true] if we should use the vm to verify the reduction *)
@@ -25,13 +26,12 @@ val reduction_of_red_expr : red_expr -> reduction_function * cast_kind
 val declare_red_expr : string -> reduction_function -> unit
 
 (* Opaque and Transparent commands. *)
-val set_opaque_const      : constant -> unit
-val set_transparent_const : constant -> unit
 
-val set_opaque_var      : identifier -> unit
-val set_transparent_var : identifier -> unit
-
-
+(* Sets the expansion strategy of a constant. When the boolean is
+   true, the effect is non-synchronous (i.e. it does not survive
+   section and module closure). *)
+val set_strategy :
+  bool -> (Conv_oracle.level * evaluable_global_reference list) list -> unit
 
 (* call by value normalisation function using the virtual machine *)
 val cbv_vm : reduction_function

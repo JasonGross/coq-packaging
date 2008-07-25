@@ -6,14 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: PermutSetoid.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: PermutSetoid.v 10739 2008-04-01 14:45:20Z herbelin $ i*)
 
-Require Import Omega.
-Require Import Relations.
-Require Import List.
-Require Import Multiset.
-Require Import Permutation. 
-Require Import SetoidList.
+Require Import Omega Relations Multiset Permutation SetoidList.
 
 Set Implicit Arguments.
 
@@ -23,7 +18,7 @@ Set Implicit Arguments.
 
 Section Perm.
 
-Variable A : Set.
+Variable A : Type.
 Variable eqA : relation A.
 Hypothesis eqA_dec : forall x y:A, {eqA x y} + {~ eqA x y}.
 
@@ -81,7 +76,7 @@ Proof.
   rewrite IHl in H1.
   intros; destruct (eqA_dec a a0) as [H2|H2]; simpl; auto.
   rewrite multiplicity_InA_O; auto.
-  swap H0.
+  contradict H0.
   apply InA_eqA with a0; auto.
   intros; constructor.
   rewrite multiplicity_InA.
@@ -185,9 +180,9 @@ Proof.
   destruct H2; apply eqA_trans with a; auto.
 Qed.
 
-Lemma NoDupA_eqlistA_permut : 
+Lemma NoDupA_equivlistA_permut : 
   forall l l', NoDupA eqA l -> NoDupA eqA l' -> 
-    eqlistA eqA l l' -> permutation l l'.
+    equivlistA eqA l l' -> permutation l l'.
 Proof.
   intros.
   red; unfold meq; intros.
@@ -198,7 +193,7 @@ Proof.
 Qed.
 
 
-Variable B : Set.
+Variable B : Type.
 Variable eqB : B->B->Prop.
 Variable eqB_dec : forall x y:B, { eqB x y }+{ ~eqB x y }. 
 Variable eqB_trans : forall x y z, eqB x y -> eqB y z -> eqB x z.

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: nameops.ml 9429 2006-12-12 08:01:03Z herbelin $ *)
+(* $Id: nameops.ml 9433 2006-12-12 09:38:53Z herbelin $ *)
 
 open Pp
 open Util

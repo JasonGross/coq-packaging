@@ -6,14 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Lexicographic_Exponentiation.v 9610 2007-02-07 14:45:18Z herbelin $ i*)
+(*i $Id: Lexicographic_Exponentiation.v 9609 2007-02-07 14:42:26Z herbelin $ i*)
 
 (** Author: Cristina Cornes
 
     From : Constructing Recursion Operators in Type Theory                
            L. Paulson  JSC (1986) 2, 325-355  *)
 
-Require Import Eqdep.
 Require Import List.
 Require Import Relation_Operators.
 Require Import Transitive_Closure.

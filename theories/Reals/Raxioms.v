@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Raxioms.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Raxioms.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 (*********************************************************)
 (**    Axiomatisation of the classical reals             *)
@@ -130,7 +130,7 @@ Definition IZR (z:Z) : R :=
 Arguments Scope IZR [Z_scope].
 
 (**********************************************************)
-(** *    [R] Archimedian                                  *)
+(** *    [R] Archimedean                                  *)
 (**********************************************************)
 
 (**********)
@@ -154,4 +154,4 @@ Definition is_lub (E:R -> Prop) (m:R) :=
 Axiom
   completeness :
     forall E:R -> Prop,
-      bound E -> (exists x : R, E x) -> sigT (fun m:R => is_lub E m).
+      bound E -> (exists x : R, E x) -> { m:R | is_lub E m }.

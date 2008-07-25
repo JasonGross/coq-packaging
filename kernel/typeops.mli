@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: typeops.mli 9551 2007-01-29 15:13:35Z bgregoir $ i*)
+(*i $Id: typeops.mli 10877 2008-04-30 21:58:41Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -105,5 +105,6 @@ val type_of_constant_knowing_parameters :
   env -> constant_type -> constr array -> types
 
 (* Make a type polymorphic if an arity *)
-val make_polymorphic_if_arity : env -> types -> constant_type
+val make_polymorphic_if_constant_for_ind : env -> unsafe_judgment ->
+  constant_type
 

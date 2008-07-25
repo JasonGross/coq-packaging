@@ -6,6 +6,10 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: g_natsyntax.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: g_natsyntax.mli 11087 2008-06-10 13:29:52Z letouzey $ i*)
 
 (* Nice syntax for naturals. *)
+
+open Notation
+
+val nat_of_int : Bigint.bigint prim_token_interpreter

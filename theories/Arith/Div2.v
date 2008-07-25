@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Div2.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Div2.v 10625 2008-03-06 11:21:01Z notin $ i*)
 
 Require Import Lt.
 Require Import Plus.
@@ -169,12 +169,12 @@ Hint Resolve even_double double_even odd_double double_odd: arith.
 Lemma even_2n : forall n, even n -> {p : nat | n = double p}.
 Proof.
   intros n H. exists (div2 n). auto with arith.
-Qed.
+Defined.
 
 Lemma odd_S2n : forall n, odd n -> {p : nat | n = S (double p)}.
 Proof.
   intros n H. exists (div2 n). auto with arith.
-Qed.
+Defined.
 
 (** Doubling before dividing by two brings back to the initial number. *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Ring.v 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id: LegacyRing.v 10739 2008-04-01 14:45:20Z herbelin $ *)
 
 Require Export Bool.
 Require Export LegacyRing_theory.

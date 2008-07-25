@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(*i $Id: decl_mode.ml 10739 2008-04-01 14:45:20Z herbelin $ i*)
 
 open Names
 open Term
@@ -41,15 +41,18 @@ let check_not_proof_mode str =
    error str
 
 type split_tree=
-    Push of (Idset.t * split_tree)
-  | Split of (Idset.t * inductive * (Idset.t * split_tree) option array)
-  | Pop of split_tree
-  | End_of_branch of (identifier * int)
+    Skip_patt of Idset.t * split_tree
+  | Split_patt of Idset.t * inductive * 
+		(bool array * (Idset.t * split_tree) option) array
+  | Close_patt of split_tree
+  | End_patt of (identifier * int)
 
 type elim_kind =
     EK_dep of split_tree
   | EK_nodep
   | EK_unknown
+
+type recpath = int option*Declarations.wf_paths
 
 type per_info = 
     {per_casee:constr;
@@ -58,7 +61,8 @@ type per_info =
      per_pred:constr;
      per_args:constr list;
      per_params:constr list;
-     per_nparams:int}
+     per_nparams:int;
+     per_wf:recpath}
 
 type stack_info = 
     Per of Decl_expr.elim_type * per_info * elim_kind * identifier list
@@ -67,10 +71,7 @@ type stack_info =
   | Focus_claim
 
 type pm_info =
-    { pm_last: (Names.identifier * bool) option (* anonymous if none *);
-      pm_partial_goal : constr; (* partial goal construction *)
-      pm_subgoals : (metavariable*constr) list;
-      pm_stack : stack_info list}
+    { pm_stack : stack_info list}
 
 let pm_in,pm_out = Dyn.create "pm_info" 
 
@@ -118,3 +119,8 @@ let get_end_command pts =
 	end
     | Mode_none ->
         error "no proof in progress"
+
+let get_last env =  
+  try 
+    let (id,_,_) =  List.hd (Environ.named_context env) in id
+  with Invalid_argument _ -> error "no previous statement to use"

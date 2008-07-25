@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetList.v 8834 2006-05-20 00:41:35Z letouzey $ *)
+(* $Id: FSetList.v 10616 2008-03-04 17:33:35Z letouzey $ *)
 
 (** * Finite sets library *)
 
@@ -25,7 +25,6 @@ Unset Strict Implicit.
 
 Module Raw (X: OrderedType).
  
-  Module E := X.
   Module MX := OrderedTypeFacts X.
   Import MX.
 
@@ -145,7 +144,7 @@ Module Raw (X: OrderedType).
     | _, _ => false
     end.
 
-  Fixpoint fold (B : Set) (f : elt -> B -> B) (s : t) {struct s} : 
+  Fixpoint fold (B : Type) (f : elt -> B -> B) (s : t) {struct s} : 
    B -> B := fun i => match s with
                       | nil => i
                       | x :: l => fold f l (f x i)
@@ -649,6 +648,11 @@ Module Raw (X: OrderedType).
   unfold elements; auto.
   Qed.
 
+  Lemma elements_3w : forall (s : t) (Hs : Sort s), NoDupA X.eq (elements s).  
+  Proof. 
+  unfold elements; auto.
+  Qed.
+
   Lemma min_elt_1 : forall (s : t) (x : elt), min_elt s = Some x -> In x s. 
   Proof.
   intro s; case s; simpl; intros; inversion H; auto.
@@ -718,8 +722,21 @@ Module Raw (X: OrderedType).
 
   Definition choose_2 : forall s : t, choose s = None -> Empty s := min_elt_3.
 
+  Lemma choose_3: forall s s', Sort s -> Sort s' -> forall x x',
+   choose s = Some x -> choose s' = Some x' -> Equal s s' -> X.eq x x'.
+  Proof.
+   unfold choose, Equal; intros s s' Hs Hs' x x' Hx Hx' H.
+   assert (~X.lt x x').
+    apply min_elt_2 with s'; auto.
+    rewrite <-H; auto using min_elt_1.
+   assert (~X.lt x' x).
+    apply min_elt_2 with s; auto.
+    rewrite H; auto using min_elt_1.
+   destruct (X.compare x x'); intuition.
+  Qed.
+   
   Lemma fold_1 :
-   forall (s : t) (Hs : Sort s) (A : Set) (i : A) (f : elt -> A -> A),
+   forall (s : t) (Hs : Sort s) (A : Type) (i : A) (f : elt -> A -> A),
    fold f s i = fold_left (fun a e => f e a) (elements s) i.
   Proof.
   induction s.
@@ -1037,7 +1054,7 @@ Module Make (X: OrderedType) <: S with Module E := X.
  Module Raw := Raw X. 
  Module E := X.
 
- Record slist : Set :=  {this :> Raw.t; sorted : sort E.lt this}.
+ Record slist := {this :> Raw.t; sorted : sort E.lt this}.
  Definition t := slist. 
  Definition elt := E.t.
  
@@ -1066,7 +1083,7 @@ Module Make (X: OrderedType) <: S with Module E := X.
  Definition min_elt (s : t) : option elt := Raw.min_elt s.
  Definition max_elt (s : t) : option elt := Raw.max_elt s.
  Definition choose (s : t) : option elt  := Raw.choose s.
- Definition fold (B : Set) (f : elt -> B -> B) (s : t) : B -> B := Raw.fold (B:=B) f s. 
+ Definition fold (B : Type) (f : elt -> B -> B) (s : t) : B -> B := Raw.fold (B:=B) f s. 
  Definition cardinal (s : t) : nat := Raw.cardinal s.
  Definition filter (f : elt -> bool) (s : t) : t :=
    Build_slist (Raw.filter_sort (sorted s) f).
@@ -1149,7 +1166,7 @@ Module Make (X: OrderedType) <: S with Module E := X.
   Lemma diff_3 : In x s -> ~ In x s' -> In x (diff s s').
   Proof. exact (fun H => Raw.diff_3 s.(sorted) s'.(sorted) H). Qed.
  
-  Lemma fold_1 : forall (A : Set) (i : A) (f : elt -> A -> A),
+  Lemma fold_1 : forall (A : Type) (i : A) (f : elt -> A -> A),
       fold f s i = fold_left (fun a e => f e a) (elements s) i.
   Proof. exact (Raw.fold_1 s.(sorted)). Qed.
 
@@ -1202,6 +1219,8 @@ Module Make (X: OrderedType) <: S with Module E := X.
   Proof. exact (fun H => Raw.elements_2 H). Qed.
   Lemma elements_3 : sort E.lt (elements s).
   Proof. exact (Raw.elements_3 s.(sorted)). Qed.
+  Lemma elements_3w : NoDupA E.eq (elements s).
+  Proof. exact (Raw.elements_3w s.(sorted)). Qed.
 
   Lemma min_elt_1 : min_elt s = Some x -> In x s. 
   Proof. exact (fun H => Raw.min_elt_1 H). Qed.
@@ -1221,6 +1240,9 @@ Module Make (X: OrderedType) <: S with Module E := X.
   Proof. exact (fun H => Raw.choose_1 H). Qed.
   Lemma choose_2 : choose s = None -> Empty s.
   Proof. exact (fun H => Raw.choose_2 H). Qed.
+  Lemma choose_3 : choose s = Some x -> choose s' = Some y -> 
+   Equal s s' -> E.eq x y.
+  Proof. exact (@Raw.choose_3 _ _ s.(sorted) s'.(sorted) x y). Qed.
 
   Lemma eq_refl : eq s s.
   Proof. exact (Raw.eq_refl s). Qed.

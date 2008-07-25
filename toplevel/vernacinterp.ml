@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernacinterp.ml 7732 2005-12-26 13:51:24Z herbelin $ *)
+(* $Id: vernacinterp.ml 10348 2007-12-06 17:36:14Z aspiwack $ *)
 
 open Pp
 open Util
@@ -64,7 +64,7 @@ let call (opn,converted_args) =
     | Drop -> raise Drop
     | ProtectedLoop -> raise ProtectedLoop
     | e ->
-        if !Options.debug then
+        if !Flags.debug then
 	  msgnl (str"Vernac Interpreter " ++ str !loc);
         raise e
 

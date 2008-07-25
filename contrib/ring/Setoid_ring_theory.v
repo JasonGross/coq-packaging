@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Setoid_ring_theory.v 6662 2005-02-02 21:33:14Z sacerdot $ *)
+(* $Id: Setoid_ring_theory.v 10631 2008-03-06 18:17:24Z msozeau $ *)
 
 Require Export Bool.
 Require Export Setoid.
@@ -177,7 +177,7 @@ Section Theory_of_setoid_rings.
 Record Setoid_Ring_Theory : Prop := 
   {STh_plus_comm : forall n m:A, n + m == m + n;
    STh_plus_assoc : forall n m p:A, n + (m + p) == n + m + p;
-   STh_mult_sym : forall n m:A, n * m == m * n;
+   STh_mult_comm : forall n m:A, n * m == m * n;
    STh_mult_assoc : forall n m p:A, n * (m * p) == n * m * p;
    STh_plus_zero_left : forall n:A, 0 + n == n;
    STh_mult_one_left : forall n:A, 1 * n == n;
@@ -189,7 +189,7 @@ Variable T : Setoid_Ring_Theory.
 
 Let plus_comm := STh_plus_comm T.
 Let plus_assoc := STh_plus_assoc T.
-Let mult_comm := STh_mult_sym T.
+Let mult_comm := STh_mult_comm T.
 Let mult_assoc := STh_mult_assoc T.
 Let plus_zero_left := STh_plus_zero_left T.
 Let mult_one_left := STh_mult_one_left T. 
@@ -245,7 +245,7 @@ Lemma Saux1 : forall a:A, a + a == a -> a == 0.
 intros.
 rewrite <- (plus_zero_left a).
 rewrite (plus_comm 0 a).
-setoid_replace (a + 0) with (a + (a + - a)); auto.
+setoid_replace (a + 0) with (a + (a + - a)) by auto.
 rewrite (plus_assoc a a (- a)).
 rewrite H.
 apply opp_def.

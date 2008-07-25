@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id:$ i*)
+(*i $Id: ConstructiveEpsilon.v 10739 2008-04-01 14:45:20Z herbelin $ i*)
 
 (** This module proves the constructive description schema, which
 infers the sigma-existence (i.e., [Set]-existence) of a witness to a
@@ -20,16 +20,18 @@ show [{n : nat | P n}]. However, one can perform a recursion on an
 inductive predicate in sort [Prop] so that the returning type of the
 recursion is in [Set]. This trick is described in Coq'Art book, Sect.
 14.2.3 and 15.4. In particular, this trick is used in the proof of
-[Acc_iter] in the module Coq.Init.Wf. There, recursion is done on an
+[Fix_F] in the module Coq.Init.Wf. There, recursion is done on an
 inductive predicate [Acc] and the resulting type is in [Type].
 
 The predicate [Acc] delineates elements that are accessible via a
 given relation [R]. An element is accessible if there are no infinite
 [R]-descending chains starting from it.
 
-To use [Acc_iter], we define a relation R and prove that if [exists n,
+To use [Fix_F], we define a relation R and prove that if [exists n,
 P n] then 0 is accessible with respect to R. Then, by induction on the
 definition of [Acc R 0], we show [{n : nat | P n}]. *)
+
+(** Based on ideas from Benjamin Werner and Jean-François Monin *)
 
 (** Contributed by Yevgeniy Makarov *)
 
@@ -49,7 +51,8 @@ numbers we try. Namely, [y] is [R]-less then [x] if we try [y] after
 infinite [R]-descending chain from 0 is equivalent to the termination
 of our searching algorithm. *)
 
-Let R (x y : nat) := (x = S y /\ ~ P y).
+Let R (x y : nat) : Prop := x = S y /\ ~ P y.
+
 Notation Local "'acc' x" := (Acc R x) (at level 10).
 
 Lemma P_implies_acc : forall x : nat, P x -> acc x.
@@ -78,7 +81,7 @@ Defined.
 
 Theorem acc_implies_P_eventually : acc 0 -> {n : nat | P n}.
 Proof.
-intros Acc_0. pattern 0. apply Acc_iter with (R := R); [| assumption].
+intros Acc_0. pattern 0. apply Fix_F with (R := R); [| assumption].
 clear Acc_0; intros x IH.
 destruct (P_decidable x) as [Px | not_Px].
 exists x; simpl; assumption.
@@ -102,7 +105,7 @@ Section ConstructiveEpsilon.
 there are functions [f : A -> nat] and [g : nat -> A] such that [g] is
 a left inverse of [f]. *)
 
-Variable A : Type.
+Variable A : Set.
 Variable f : A -> nat.
 Variable g : nat -> A.
 
@@ -132,24 +135,11 @@ Proof.
   intros; apply constructive_indefinite_description; firstorder.
 Defined.
 
-Definition epsilon (E : exists x : A, P x) : A
+Definition constructive_epsilon (E : exists x : A, P x) : A
   := proj1_sig (constructive_indefinite_description E).
 
-Definition epsilon_spec (E : (exists x, P x)) : P (epsilon E)
+Definition constructive_epsilon_spec (E : (exists x, P x)) : P (constructive_epsilon E)
   := proj2_sig (constructive_indefinite_description E).
 
 End ConstructiveEpsilon.
 
-Theorem choice :
-  forall (A B : Type) (f : B -> nat) (g : nat -> B),
-    (forall x : B, g (f x) = x) ->
-    forall (R : A -> B -> Prop),
-    (forall (x : A) (y : B), {R x y} + {~ R x y}) ->
-    (forall x : A, exists y : B, R x y) ->
-    (exists f : A -> B, forall x : A, R x (f x)).
-Proof.
-intros A B f g gof_eq_id R R_dec H.
-exists (fun x : A => epsilon B f g gof_eq_id (R x) (R_dec x) (H x)).
-intro x.
-apply (epsilon_spec B f g gof_eq_id (R x) (R_dec x) (H x)).
-Qed.

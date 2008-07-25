@@ -8,9 +8,9 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: whelp.ml4 10105 2007-08-30 16:53:32Z herbelin $ *)
+(* $Id: whelp.ml4 10904 2008-05-08 16:31:26Z herbelin $ *)
 
-open Options
+open Flags
 open Pp
 open Util
 open System
@@ -28,6 +28,7 @@ open Command
 open Pfedit
 open Refiner
 open Tacmach
+open Syntax_def
 
 (* Coq interface to the Whelp query engine developed at 
    the University of Bologna *)
@@ -150,12 +151,12 @@ let rec uri_of_constr c =
       let inst,rest = merge (section_parameters f) args in
       uri_of_constr f; url_char ' '; uri_params uri_of_constr inst; 
       url_list_with_sep " " uri_of_constr rest
-  | RLambda (_,na,ty,c) ->
+  | RLambda (_,na,k,ty,c) ->
       url_string "\\lambda "; url_of_name na; url_string ":";
       uri_of_constr ty; url_string "."; uri_of_constr c
-  | RProd (_,Anonymous,ty,c) ->
+  | RProd (_,Anonymous,k,ty,c) ->
       uri_of_constr ty; url_string "\\to "; uri_of_constr c
-  | RProd (_,Name id,ty,c) ->
+  | RProd (_,Name id,k,ty,c) ->
       url_string "\\forall "; url_id id; url_string ":";
       uri_of_constr ty; url_string "."; uri_of_constr c
   | RLetIn (_,na,b,c) ->
@@ -174,7 +175,7 @@ let make_string f x = Buffer.reset b; f x; Buffer.contents b
 
 let send_whelp req s =
   let url = make_whelp_request req s in
-  let command = (fst browser_cmd_fmt) ^ url ^ (snd browser_cmd_fmt) in
+  let command = subst_command_placeholder browser_cmd_fmt url in
   let _ = run_command (fun x -> x) print_string command in ()
 
 let whelp_constr req c =
@@ -191,13 +192,6 @@ let whelp_locate s =
 
 let whelp_elim ind = 
   send_whelp "elim" (make_string uri_of_global (IndRef ind))
-
-let locate_inductive r =
-  let (loc,qid) = qualid_of_reference r in
-  try match Syntax_def.locate_global qid with
-    | IndRef ind -> ind
-    | _ -> user_err_loc (loc,"",str "Inductive type expected")
-  with Not_found -> error_global_not_found_loc loc qid
 
 let on_goal f =
   let gls = nth_goal_of_pftreestate 1 (get_pftreestate ()) in
@@ -221,7 +215,7 @@ END
 VERNAC COMMAND EXTEND Whelp
 | [ "Whelp" "Locate" string(s) ] -> [ whelp_locate s ] 
 | [ "Whelp" "Locate" preident(s) ] -> [ whelp_locate s ] 
-| [ "Whelp" "Elim" global(r) ] -> [ whelp_elim (locate_inductive r) ] 
+| [ "Whelp" "Elim" global(r) ] -> [ whelp_elim (inductive_of_reference_with_alias r) ] 
 | [ "Whelp" whelp_constr_request(req) constr(c) ] -> [ whelp_constr_expr req c]
 END
 

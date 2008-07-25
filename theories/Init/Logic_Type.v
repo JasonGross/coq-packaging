@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Logic_Type.v 8866 2006-05-28 16:21:04Z herbelin $ i*)
+(*i $Id: Logic_Type.v 10840 2008-04-23 21:29:34Z herbelin $ i*)
 
 (** This module defines type constructors for types in [Type]
     ([Datatypes.v] and [Logic.v] defined them for types in [Set]) *)
@@ -32,17 +32,17 @@ Section identity_is_a_congruence.
  Lemma sym_id : identity x y -> identity y x.
  Proof.
   destruct 1; trivial.
- Qed.
+ Defined.
 
  Lemma trans_id : identity x y -> identity y z -> identity x z.
  Proof.
   destruct 2; trivial.
- Qed.
+ Defined.
 
  Lemma congr_id : identity x y -> identity (f x) (f y).
  Proof.
   destruct 1; trivial.
- Qed.
+ Defined.
 
  Lemma sym_not_id : notT (identity x y) -> notT (identity y x).
  Proof.

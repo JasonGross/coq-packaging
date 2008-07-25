@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: metasyntax.ml 10192 2007-10-08 00:33:39Z letouzey $ *)
+(* $Id: metasyntax.ml 11121 2008-06-12 21:15:49Z herbelin $ *)
 
 open Pp
 open Util
@@ -74,7 +74,7 @@ let (inTacticGrammar, outTacticGrammar) =
 
 let cons_production_parameter l = function
   | VTerm _ -> l
-  | VNonTerm (_,_,ido) -> option_cons ido l
+  | VNonTerm (_,_,ido) -> Option.List.cons ido l
 
 let rec tactic_notation_key = function
   | VTerm id :: _ -> id
@@ -97,7 +97,7 @@ let add_tactic_notation (n,prods,e) =
 (**********************************************************************)
 (* Printing grammar entries                                           *)
 
-let print_grammar univ = function
+let print_grammar = function
   | "constr" | "operconstr" | "binder_constr" ->
       msgnl (str "Entry constr is");
       Gram.Entry.print Pcoq.Constr.constr;
@@ -562,7 +562,7 @@ let is_not_small_constr = function
 let rec define_keywords_aux = function
     NonTerm(_,Some(_,e)) as n1 :: Term("IDENT",k) :: l
       when is_not_small_constr e ->
-      prerr_endline ("Defining '"^k^"' as keyword");
+      message ("Defining '"^k^"' as keyword");
       Lexer.add_token("",k);
       n1 :: Term("",k) :: define_keywords_aux l
   | n :: l -> n :: define_keywords_aux l
@@ -570,7 +570,7 @@ let rec define_keywords_aux = function
 
 let define_keywords = function
     Term("IDENT",k)::l ->
-      prerr_endline ("Defining '"^k^"' as keyword");
+      message ("Defining '"^k^"' as keyword");
       Lexer.add_token("",k);
       Term("",k) :: define_keywords_aux l
   | l -> define_keywords_aux l
@@ -755,7 +755,7 @@ let find_precedence lev etyps symbols =
 	    error "The level of the leftmost non-terminal cannot be changed"
 	| ETIdent | ETBigint | ETReference -> 
 	    if lev = None then 
-	      Options.if_verbose msgnl (str "Setting notation at level 0")
+	      Flags.if_verbose msgnl (str "Setting notation at level 0")
 	    else
 	    if lev <> Some 0 then
 	      error "A notation starting with an atomic expression must be at level 0";
@@ -763,21 +763,21 @@ let find_precedence lev etyps symbols =
 	| ETPattern | ETOther _ -> (* Give a default ? *)
 	    if lev = None then
 	      error "Need an explicit level"
-	    else out_some lev
+	    else Option.get lev
         | ETConstrList _ -> assert false (* internally used in grammar only *)
       with Not_found -> 
 	if lev = None then
 	  error "A left-recursive notation must have an explicit level"
-	else out_some lev)
+	else Option.get lev)
   | Terminal _ ::l when
       (match list_last symbols with Terminal _ -> true |_ -> false)
       -> 
       if lev = None then
-	(Options.if_verbose msgnl (str "Setting notation at level 0"); 0)
-      else out_some lev
+	(Flags.if_verbose msgnl (str "Setting notation at level 0"); 0)
+      else Option.get lev
   | _ ->
       if lev = None then error "Cannot determine the level";
-      out_some lev
+      Option.get lev
 
 let check_curly_brackets_notation_exists () =
   try let _ = Notation.level_of_notation "{ _ }" in ()
@@ -839,7 +839,7 @@ let compute_syntax_data (df,modifiers) =
 (* Registration of notations interpretation                            *)
 
 let load_notation _ (_,(_,scope,pat,onlyparse,_)) =
-  option_iter Notation.declare_scope scope
+  Option.iter Notation.declare_scope scope
 
 let open_notation i (_,(_,scope,pat,onlyparse,(ntn,df))) =
   if i=1 & not (Notation.exists_notation_in_scope scope ntn pat) then begin
@@ -854,8 +854,8 @@ let cache_notation o =
   load_notation 1 o;
   open_notation 1 o
 
-let subst_notation (_,subst,(lc,scope,(metas,pat),b,ndf)) =
-  (lc,scope,(metas,subst_aconstr subst (List.map fst metas) pat),b,ndf)
+let subst_notation (_,subst,(lc,scope,pat,b,ndf)) =
+  (lc,scope,subst_interpretation subst pat,b,ndf)
 
 let classify_notation (_,(local,_,_,_,_ as o)) =
   if local then Dispose else Substitute o

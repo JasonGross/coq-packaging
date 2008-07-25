@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacentries.mli 8781 2006-05-03 10:15:05Z jforest $ i*)
+(*i $Id: vernacentries.mli 10580 2008-02-22 13:39:13Z lmamane $ i*)
 
 (*i*)
 open Names
@@ -39,14 +39,15 @@ type pcoq_hook = {
   abort : string -> unit;
   search : searchable -> dir_path list * bool -> unit;
   print_name : Libnames.reference -> unit;
-  print_check : Environ.unsafe_judgment -> unit;
-  print_eval : (constr -> constr) -> Environ.env -> constr_expr -> Environ.unsafe_judgment -> unit;
+  print_check : Environ.env -> Environ.unsafe_judgment -> unit;
+  print_eval : Reductionops.reduction_function -> Environ.env -> Evd.evar_map -> constr_expr ->
+    Environ.unsafe_judgment -> unit;
   show_goal : int option -> unit
 }
 
 val set_pcoq_hook : pcoq_hook -> unit
 
-(* This function makes sure that the function given is argument is preceded
+(* This function makes sure that the function given in argument is preceded
    by a command aborting all proofs if necessary.
    It is used in pcoq. *)
 val abort_refine : ('a -> unit) -> 'a -> unit;;

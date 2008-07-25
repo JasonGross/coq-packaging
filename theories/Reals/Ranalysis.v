@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Ranalysis.v 9319 2006-10-30 12:41:21Z barras $ i*)
+(*i $Id: Ranalysis.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -27,7 +27,8 @@ Require Export Rgeom.
 Require Export RList.
 Require Export Sqrt_reg.
 Require Export Ranalysis4.
-Require Export Rpower. Open Local Scope R_scope.
+Require Export Rpower.
+Open Local Scope R_scope.
 
 Axiom AppVar : R.
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: decl_expr.mli 10739 2008-04-01 14:45:20Z herbelin $ *)
 
 open Names
 open Util
@@ -18,7 +18,6 @@ type 'it statement =
 
 type thesis_kind =
     Plain
-  | Sub of int
   | For of identifier
 
 type 'this or_thesis =

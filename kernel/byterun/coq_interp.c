@@ -10,12 +10,31 @@
 
 /* The bytecode interpreter */
 
+/* Spiwack: expanded the virtual machine with operators used
+   for fast computation of bounded (31bits) integers */
+
 #include <stdio.h>
 #include "coq_gc.h"
 #include "coq_instruct.h"
 #include "coq_fix_code.h"
-#include "coq_memory.h"  
-#include "coq_values.h"
+#include "coq_memory.h" 
+#include "coq_values.h" 
+
+/*spiwack : imports support functions for 64-bit integers */
+#include "config.h"
+#ifdef ARCH_INT64_TYPE
+#include "int64_native.h"
+#else
+#include "int64_emul.h"
+#endif
+
+/* spiwack: I append here a few macros for value/number manipulation */
+#define uint32_of_value(val) (((uint32)val >> 1))
+#define value_of_uint32(i)   ((value)(((uint32)(i) << 1) | 1))
+#define UI64_of_uint32(lo)  ((uint64)(I64_literal(0,(uint32)(lo))))
+#define UI64_of_value(val) (UI64_of_uint32(uint32_of_value(val)))
+/* /spiwack */
+
 
 
 /* Registers for the abstract machine:
@@ -61,11 +80,11 @@ sp is a local copy of the global variable extern_sp. */
 #   define print_int(i) 
 #endif
 
-/* Wrapper pour caml_modify */
-#ifdef OCAML_307
-#define CAML_MODIFY(a,b) modify(a,b)
-#else
-#define CAML_MODIFY(a,b) caml_modify(a,b)
+/* Wrapper pour caml_modify */ 	 
+#ifdef OCAML_307 	 
+#define CAML_MODIFY(a,b) modify(a,b) 	 
+#else 	 
+#define CAML_MODIFY(a,b) caml_modify(a,b) 	 
 #endif
 
 /* GC interface */
@@ -1035,7 +1054,326 @@ value coq_interprete
 	sp += 2;
 	Next;
       }
-      
+
+      /* spiwack: code for interpreting compiled integers */
+      Instruct(BRANCH) {
+	/* unconditional branching */
+        print_instr("BRANCH");
+        pc += *pc;
+        /* pc = (code_t)(pc+*pc); */
+        Next;
+      }
+
+      Instruct(ADDINT31) {
+        /* Adds the integer in the accumulator with 
+           the one ontop of the stack (which is poped)*/
+        print_instr("ADDINT31");
+        accu = 
+           (value)((uint32) accu + (uint32) *sp++ - 1); 
+        /* nota,unlike CaML we don't want
+           to have a different behavior depending on the 
+           architecture. Thus we cast the operand to uint32 */
+        Next;
+      }
+
+      Instruct (ADDCINT31) {
+	print_instr("ADDCINT31");
+	/* returns the sum with a carry */
+	uint32 s;
+	s = (uint32)accu + (uint32)*sp++ - 1;
+        if( (uint32)s < (uint32)accu ) {
+          /* carry */
+	  Alloc_small(accu, 1, 2); /* ( _ , arity, tag ) */
+	}
+	else {
+	  /*no carry */
+	  Alloc_small(accu, 1, 1);
+	}
+	Field(accu, 0)=(value)s;
+	Next;
+      }
+
+      Instruct (ADDCARRYCINT31) {
+	print_instr("ADDCARRYCINT31");
+	/* returns the sum plus one with a carry */
+	uint32 s;
+	s = (uint32)accu + (uint32)*sp++ + 1;
+	value block;
+        if( (uint32)s <= (uint32)accu ) {
+          /* carry */
+	  Alloc_small(accu, 1, 2); /* ( _ , arity, tag ) */
+	}
+	else {
+	  /*no carry */
+	  Alloc_small(accu, 1, 1);
+	}
+	Field(accu, 0)=(value)s;
+	Next;
+      }
+
+      Instruct (SUBINT31) {
+	print_instr("SUBINT31");
+	/* returns the subtraction */
+	accu = 
+	  (value)((uint32) accu - (uint32) *sp++ + 1); 
+        Next;
+      }
+
+      Instruct (SUBCINT31) {
+	print_instr("SUBCINT31");
+	/* returns the subtraction with a carry */
+	uint32 b;
+	uint32 s;
+	b = (uint32)*sp++;
+	s = (uint32)accu - b + 1;
+        if( (uint32)accu < b ) {
+          /* carry */
+	  Alloc_small(accu, 1, 2); /* ( _ , arity, tag ) */
+	}
+	else {
+	  /*no carry */
+	  Alloc_small(accu, 1, 1);
+	}
+	Field(accu, 0)=(value)s;
+	Next;
+      }
+
+      Instruct (SUBCARRYCINT31) {
+	print_instr("SUBCARRYCINT31");
+	/* returns the subtraction minus one with a carry */
+	uint32 b;
+	uint32 s;
+	b = (uint32)*sp++;
+	s = (value)((uint32)accu - b - 1);
+        if( (uint32)accu <= b ) {
+          /* carry */
+	  Alloc_small(accu, 1, 2); /* ( _ , arity, tag ) */
+	}
+	else {
+	  /*no carry */
+	  Alloc_small(accu, 1, 1);
+	}
+	Field(accu, 0)=(value)s;
+	Next;
+      }
+
+      Instruct (MULINT31) {
+	/* returns the multiplication */
+	print_instr("MULINT31");
+        accu = 
+	  value_of_uint32((uint32_of_value(accu)) * (uint32_of_value(*sp++)));
+	Next;
+      }
+
+      Instruct (MULCINT31) {
+        /*returns the multiplication on a double size word
+          (special case for 0) */
+        print_instr("MULCINT31");
+	uint64 p;
+        /*accu = 2v+1, *sp=2w+1 ==> p = 2v*w */
+        p = I64_mul (UI64_of_value (accu), UI64_of_uint32 ((*sp++)^1));
+	if ( I64_is_zero(p) ) {
+	  accu = (value)1;
+	}
+	else {
+          /* the output type is supposed to have a constant constructor
+	     and a non-constant constructor (in that order), the tag
+	     of the non-constant constructor is then 1 */
+	  Alloc_small(accu, 2, 1); /* ( _ , arity, tag ) */
+	  /*unsigned shift*/
+	  Field(accu, 0) = (value)(I64_lsr(p,31)|1) ;  /*higher part*/
+	  Field(accu, 1) = (value)(I64_to_int32(p)|1); /*lower part*/
+	}
+	Next;
+      }
+
+      Instruct (DIV21INT31) {
+	print_instr("DIV21INT31");
+	/* spiwack: takes three int31 (the two first ones represent an
+                    int62) and performs the euclidian division of the
+                    int62 by the int31 */
+        uint64 bigint;
+        bigint = UI64_of_value(accu);
+        bigint = I64_or(I64_lsl(bigint, 31),UI64_of_value(*sp++));
+        uint64 divisor;
+        divisor = UI64_of_value(*sp++);
+        Alloc_small(accu, 2, 1); /* ( _ , arity, tag ) */
+        if (I64_is_zero (divisor)) {
+          Field(accu, 0) = 1; /* 2*0+1 */
+          Field(accu, 1) = 1; /* 2*0+1 */
+	}
+	else {
+	  uint64 quo, mod;
+          I64_udivmod(bigint, divisor, &quo, &mod);
+          Field(accu, 0) = value_of_uint32(I64_to_int32(quo));
+	  Field(accu, 1) = value_of_uint32(I64_to_int32(mod));
+	}
+	Next;
+      }
+
+      Instruct (DIVINT31) {
+	print_instr("DIVINT31");
+        /* spiwack: a priori no need of the NON_STANDARD_DIV_MOD flag
+                    since it probably only concerns negative number.
+                    needs to be checked at this point */
+        uint32 divisor;
+        divisor = uint32_of_value(*sp++);
+        if (divisor == 0) { 
+          Alloc_small(accu, 2, 1); /* ( _ , arity, tag ) */
+	  Field(accu, 0) = 1; /* 2*0+1 */
+          Field(accu, 1) = 1; /* 2*0+1 */
+        }
+        else {
+          uint32 modulus;
+          modulus = uint32_of_value(accu);
+          Alloc_small(accu, 2, 1); /* ( _ , arity, tag ) */
+	  Field(accu, 0) = value_of_uint32(modulus/divisor);
+          Field(accu, 1) = value_of_uint32(modulus%divisor);
+        }
+	Next;
+      }
+
+      Instruct (ADDMULDIVINT31) {
+        print_instr("ADDMULDIVINT31");
+        /* higher level shift (does shifts and cycles and such) */
+        uint32 shiftby;
+        shiftby = uint32_of_value(accu);
+        if (shiftby > 31) {
+          if (shiftby < 62) {
+            *sp++;
+	    accu = (value)((((*sp++)^1) << (shiftby - 31)) | 1);
+          }
+          else {
+            accu = (value)(1);
+          }
+	}
+        else{
+        /* *sp = 2*x+1 --> accu = 2^(shiftby+1)*x */
+        accu = (value)(((*sp++)^1) << shiftby);
+        /* accu = 2^(shiftby+1)*x --> 2^(shifby+1)*x+2*y/2^(31-shiftby)+1 */
+        accu = (value)((accu | (((uint32)(*sp++)) >> (31-shiftby)))|1);
+	}
+        Next;
+      }
+
+      Instruct (COMPAREINT31) {
+	/* returns Eq if equal, Lt if accu is less than *sp, Gt otherwise */
+	/* assumes Inudctive _ : _ := Eq | Lt | Gt */
+	print_instr("COMPAREINT31");
+	if ((uint32)accu == (uint32)*sp) {
+	  accu = 1;  /* 2*0+1 */
+	  sp++;
+	}
+	else{if ((uint32)accu < (uint32)(*sp++)) {
+	  accu = 3;  /* 2*1+1 */
+	}
+	else{
+	  accu = 5;   /* 2*2+1 */
+	}}
+        Next;
+      }
+ 
+      Instruct (HEAD0INT31) {
+	int r = 0;
+        uint32 x;
+        print_instr("HEAD0INT31");
+	x = (uint32) accu;
+        if (!(x & 0xFFFF0000)) { x <<= 16; r += 16; }
+        if (!(x & 0xFF000000)) { x <<= 8;  r += 8; }
+        if (!(x & 0xF0000000)) { x <<= 4;  r += 4; }
+        if (!(x & 0xC0000000)) { x <<= 2;  r += 2; }
+        if (!(x & 0x80000000)) { x <<=1;   r += 1; }
+        if (!(x & 0x80000000)) {           r += 1; }
+        accu = value_of_uint32(r);
+        Next;
+      }
+        
+      Instruct (TAIL0INT31) {
+	int r = 0;
+        uint32 x;
+        print_instr("TAIL0INT31");
+	x = (((uint32) accu >> 1) | 0x80000000);
+        if (!(x & 0xFFFF)) { x >>= 16; r += 16; }
+        if (!(x & 0x00FF)) { x >>= 8;  r += 8; }
+        if (!(x & 0x000F)) { x >>= 4;  r += 4; }
+        if (!(x & 0x0003)) { x >>= 2;  r += 2; }
+        if (!(x & 0x0001)) { x >>=1;   r += 1; }
+        if (!(x & 0x0001)) {           r += 1; }
+        accu = value_of_uint32(r);
+        Next;
+      }
+
+      Instruct (ISCONST) {
+        /* Branches if the accu does not contain a constant
+           (i.e., a non-block value) */
+        print_instr("ISCONST");
+        if ((accu & 1) == 0) /* last bit is 0 -> it is a block */
+	  pc +=  *pc;
+        else
+	  pc++;
+        Next;
+
+      }
+
+      Instruct (ARECONST) {
+        /* Branches if the n first values on the stack are not
+           all constansts */
+        print_instr("ARECONST");
+        int i, n, ok;
+        ok = 1;
+        n = *pc++;
+        for(i=0; i < n; i++) {
+          if ((sp[i] & 1) == 0) {
+	    ok = 0;
+            break;
+          }
+        }
+        if(ok) pc++; else pc += *pc;
+        Next;
+      }
+
+      Instruct (COMPINT31) {
+        /* makes an 31-bit integer out of the accumulator and
+           the 30 first values of the stack 
+           and put it in the accumulator (the accumulator then the 
+           topmost get to be the heavier bits) */
+        print_instr("COMPINT31");
+        int i;
+        /*accu=accu or accu = (value)((unsigned long)1-accu) if bool
+	               is used for the bits */
+        for(i=0; i < 30; i++) {
+	  accu = (value) ((((uint32)accu-1) << 1) | *sp++);
+          /* -1 removes the tag bit, << 1 multiplies the value by 2, 
+              | *sp++ pops the last value and add it (no carry involved)
+	      not that it reintroduces a tag bit */
+          /* alternative, if bool is used for the bits :
+	     accu = (value) ((((unsigned long)accu) << 1) & !*sp++); */
+        }
+        Next;
+      }
+
+      Instruct (DECOMPINT31) {
+        /* builds a block out of a 31-bit integer (from the accumulator), 
+           used before cases */
+        int i;
+	value block;
+	print_instr("DECOMPINT31");
+        Alloc_small(block, 31, 1); // Alloc_small(*, size, tag)
+        for(i = 30; i >= 0; i--) {
+          Field(block, i) = (value)(accu & 3); /* two last bits of the accumulator */
+          //Field(block, i) = 3;
+          accu = (value) ((uint32)accu >> 1) | 1;  /* last bit must be a one */
+        };
+	accu = block;
+        Next;
+      }
+
+
+
+      /*  /spiwack   */
+
+
+
 /* Debugging and machine control */
 
       Instruct(STOP){

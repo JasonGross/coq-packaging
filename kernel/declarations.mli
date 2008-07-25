@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declarations.mli 9310 2006-10-28 19:35:09Z herbelin $ i*)
+(*i $Id: declarations.mli 10664 2008-03-14 11:27:37Z soubiran $ i*)
 
 (*i*)
 open Names
@@ -47,7 +47,8 @@ type constant_body = {
     const_body_code : to_patch_substituted;
    (*i const_type_code : to_patch;i*)
     const_constraints : constraints;
-    const_opaque : bool }
+    const_opaque : bool;
+    const_inline : bool}
 
 val subst_const_body : substitution -> constant_body -> constant_body
 
@@ -176,50 +177,35 @@ val subst_mind : substitution -> mutual_inductive_body -> mutual_inductive_body
 (*s Modules: signature component specifications, module types, and
   module declarations *)
 
-type specification_body = 
-  | SPBconst of constant_body
-  | SPBmind of mutual_inductive_body
-  | SPBmodule of module_specification_body
-  | SPBmodtype of module_type_body
+type structure_field_body = 
+  | SFBconst of constant_body
+  | SFBmind of mutual_inductive_body
+  | SFBmodule of module_body
+  | SFBalias of module_path * constraints option
+  | SFBmodtype of module_type_body
 
-and module_signature_body = (label * specification_body) list
+and structure_body = (label * structure_field_body) list
+
+and struct_expr_body =
+  | SEBident of module_path
+  | SEBfunctor of mod_bound_id * module_type_body * struct_expr_body 
+  | SEBstruct of mod_self_id * structure_body
+  | SEBapply of struct_expr_body * struct_expr_body
+      * constraints
+  | SEBwith of struct_expr_body * with_declaration_body
+
+and with_declaration_body =
+    With_module_body of identifier list * module_path * constraints
+  | With_definition_body of  identifier list * constant_body
+        
+and module_body = 
+    { mod_expr : struct_expr_body option;
+      mod_type : struct_expr_body option;
+      mod_constraints : constraints;
+      mod_alias : substitution;
+      mod_retroknowledge : Retroknowledge.action list}
 
 and module_type_body = 
-  | MTBident of kernel_name
-  | MTBfunsig of mod_bound_id * module_type_body * module_type_body
-  | MTBsig of mod_self_id * module_signature_body
-
-and module_specification_body = 
-    { msb_modtype : module_type_body;
-      msb_equiv : module_path option; 
-      msb_constraints : constraints }
-    (*    [type_of](equiv) <: modtype  (if given)  
-       +  substyping of past [With_Module] mergers *)
-
-
-type structure_elem_body = 
-  | SEBconst of constant_body
-  | SEBmind of mutual_inductive_body
-  | SEBmodule of module_body
-  | SEBmodtype of module_type_body
-
-and module_structure_body = (label * structure_elem_body) list
-
-and module_expr_body =
-  | MEBident of module_path
-  | MEBfunctor of mod_bound_id * module_type_body * module_expr_body 
-  | MEBstruct of mod_self_id * module_structure_body
-  | MEBapply of module_expr_body * module_expr_body  (* (F A) *)
-      * constraints  (* [type_of](A) <: [input_type_of](F) *)
-
-and module_body = 
-    { mod_expr : module_expr_body option;
-      mod_user_type : module_type_body option;
-      mod_type : module_type_body;
-      mod_equiv : module_path option;
-      mod_constraints : constraints }
-    (*    [type_of(mod_expr)]  <: [mod_user_type] (if given)  *)
-    (*  if equiv given then constraints are empty *)
-
-
-
+    { typ_expr : struct_expr_body;
+      typ_strength : module_path option;
+      typ_alias : substitution}

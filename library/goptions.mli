@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: goptions.mli 6304 2004-11-16 15:49:08Z sacerdot $ i*)
+(*i $Id: goptions.mli 9810 2007-04-29 09:44:58Z herbelin $ i*)
 
 (* This module manages customization parameters at the vernacular level     *)
 
@@ -68,6 +68,7 @@ open Mod_subst
 type option_name =
   | PrimaryTable of string
   | SecondaryTable of string * string
+  | TertiaryTable of string * string * string
 
 val error_undeclared_key : option_name -> 'a
 

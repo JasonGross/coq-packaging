@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declarations.ml 9310 2006-10-28 19:35:09Z herbelin $ i*)
+(*i $Id: declarations.ml 10664 2008-03-14 11:27:37Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -49,13 +49,14 @@ type constant_body = {
     const_body_code : Cemitcodes.to_patch_substituted;
    (* const_type_code : Cemitcodes.to_patch; *)
     const_constraints : constraints;
-    const_opaque : bool }
+    const_opaque : bool; 
+    const_inline : bool}
 
 (*s Inductive types (internal representation with redundant
     information). *)
 
 let subst_rel_declaration sub (id,copt,t as x) =
-  let copt' = option_smartmap (subst_mps sub) copt in
+  let copt' = Option.smartmap (subst_mps sub) copt in
   let t' = subst_mps sub t in
   if copt == copt' & t == t' then x else (id,copt',t')
 
@@ -197,12 +198,13 @@ let subst_arity sub = function
 (* TODO: should be changed to non-coping after Term.subst_mps *)
 let subst_const_body sub cb = {
     const_hyps = (assert (cb.const_hyps=[]); []);
-    const_body = option_map (subst_constr_subst sub) cb.const_body;
+    const_body = Option.map (subst_constr_subst sub) cb.const_body;
     const_type = subst_arity sub cb.const_type;
     const_body_code = Cemitcodes.subst_to_patch_subst sub cb.const_body_code;
     (*const_type_code = Cemitcodes.subst_to_patch sub cb.const_type_code;*)
     const_constraints = cb.const_constraints;
-    const_opaque = cb.const_opaque } 
+    const_opaque = cb.const_opaque;
+    const_inline = cb.const_inline} 
 
 let subst_arity sub = function
 | Monomorphic s ->
@@ -239,49 +241,41 @@ let subst_mind sub mib =
       map_rel_context (subst_mps sub) mib.mind_params_ctxt;
     mind_packets = array_smartmap (subst_mind_packet sub) mib.mind_packets ;
     mind_constraints = mib.mind_constraints ;
-    mind_equiv = option_map (subst_kn sub) mib.mind_equiv }
+    mind_equiv = Option.map (subst_kn sub) mib.mind_equiv }
 
 
 (*s Modules: signature component specifications, module types, and
   module declarations *)
 
-type specification_body = 
-  | SPBconst of constant_body
-  | SPBmind of mutual_inductive_body
-  | SPBmodule of module_specification_body
-  | SPBmodtype of module_type_body
+type structure_field_body = 
+  | SFBconst of constant_body
+  | SFBmind of mutual_inductive_body
+  | SFBmodule of module_body
+  | SFBalias of module_path * constraints option
+  | SFBmodtype of module_type_body
 
-and module_signature_body = (label * specification_body) list
+and structure_body = (label * structure_field_body) list
+
+and struct_expr_body =
+  | SEBident of module_path
+  | SEBfunctor of mod_bound_id * module_type_body * struct_expr_body 
+  | SEBstruct of mod_self_id * structure_body
+  | SEBapply of struct_expr_body * struct_expr_body
+      * constraints
+  | SEBwith of struct_expr_body * with_declaration_body
+
+and with_declaration_body =
+    With_module_body of identifier list * module_path * constraints
+  | With_definition_body of  identifier list * constant_body
+        
+and module_body = 
+    { mod_expr : struct_expr_body option;
+      mod_type : struct_expr_body option;
+      mod_constraints : constraints;
+      mod_alias : substitution;
+      mod_retroknowledge : Retroknowledge.action list}
 
 and module_type_body = 
-  | MTBident of kernel_name
-  | MTBfunsig of mod_bound_id * module_type_body * module_type_body
-  | MTBsig of mod_self_id * module_signature_body
-
-and module_specification_body = 
-    { msb_modtype : module_type_body;
-      msb_equiv : module_path option; 
-      msb_constraints : constraints }
-
-type structure_elem_body = 
-  | SEBconst of constant_body
-  | SEBmind of mutual_inductive_body
-  | SEBmodule of module_body
-  | SEBmodtype of module_type_body
-
-and module_structure_body = (label * structure_elem_body) list
-
-and module_expr_body =
-  | MEBident of module_path
-  | MEBfunctor of mod_bound_id * module_type_body * module_expr_body 
-  | MEBstruct of mod_self_id * module_structure_body
-  | MEBapply of module_expr_body * module_expr_body
-      * constraints
-
-and module_body = 
-    { mod_expr : module_expr_body option;
-      mod_user_type : module_type_body option;
-      mod_type : module_type_body;
-      mod_equiv : module_path option;
-      mod_constraints : constraints }
-
+    { typ_expr : struct_expr_body;
+      typ_strength : module_path option;
+      typ_alias : substitution}

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: clenvtac.mli 6099 2004-09-12 11:38:09Z barras $ i*)
+(*i $Id: clenvtac.mli 11166 2008-06-22 13:23:35Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -16,11 +16,18 @@ open Sign
 open Evd
 open Clenv
 open Proof_type
+open Tacexpr
+open Unification
 (*i*)
 
 (* Tactics *)
 val unify : constr -> tactic
-val clenv_refine : clausenv -> tactic
-val res_pf : clausenv -> ?allow_K:bool -> tactic
-val e_res_pf : clausenv -> tactic
+val clenv_refine : evars_flag -> clausenv -> tactic
+val res_pf : clausenv -> ?with_evars:evars_flag -> ?allow_K:bool -> ?flags:unify_flags -> tactic
 val elim_res_pf_THEN_i : clausenv -> (clausenv -> tactic array) -> tactic
+
+val clenv_pose_dependent_evars : evars_flag -> clausenv -> clausenv
+val clenv_value_cast_meta : clausenv -> constr
+
+(* Compatibility, use res_pf ?with_evars:true instead *)
+val e_res_pf : clausenv -> tactic

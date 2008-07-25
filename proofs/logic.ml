@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: logic.ml 9805 2007-04-28 21:28:37Z herbelin $ *)
+(* $Id: logic.ml 10877 2008-04-30 21:58:41Z herbelin $ *)
 
 open Pp
 open Util
@@ -32,8 +32,7 @@ type refiner_error =
 
   (* Errors raised by the refiner *)
   | BadType of constr * constr * constr
-  | OccurMeta of constr
-  | OccurMetaGoal of constr
+  | UnresolvedBindings of name list
   | CannotApply of constr * constr
   | NotWellTyped of constr
   | NonLinearProof of constr
@@ -52,14 +51,15 @@ let rec catchable_exception = function
   | RefinerError _ | Indrec.RecursionSchemeError _
   | Nametab.GlobalizationError _ | PretypeError (_,VarNotFound _)
   (* unification errors *)
-  | PretypeError(_,(CannotUnify _|CannotGeneralize _|NoOccurrenceFound _|
-      CannotUnifyBindingType _|NotClean _)) -> true
+  | PretypeError(_,(CannotUnify _|CannotUnifyLocal _|CannotGeneralize _
+		   |NoOccurrenceFound _|CannotUnifyBindingType _|NotClean _
+		   |CannotFindWellTypedAbstraction _)) -> true
   | _ -> false
 
 (* Tells if the refiner should check that the submitted rules do not
    produce invalid subgoals *)
 let check = ref false
-let with_check = Options.with_option check
+let with_check = Flags.with_option check
 
 (************************************************************************)
 (************************************************************************)
@@ -69,10 +69,12 @@ let with_check = Options.with_option check
 (* The Clear tactic: it scans the context for hypotheses to be removed
    (instead of iterating on the list of identifier to be removed, which
    forces the user to give them in order). *)
+
 let clear_hyps sigma ids gl =
-  let evd = ref (Evd.create_evar_defs sigma) in
-  let ngl = Evarutil.clear_hyps_in_evi evd gl ids in
-    (ngl, evars_of !evd)
+  let evdref = ref (Evd.create_goal_evar_defs sigma) in
+  let (hyps,concl) =
+    Evarutil.clear_hyps_in_evi evdref gl.evar_hyps gl.evar_concl ids in
+    (mk_goal hyps concl gl.evar_extra, evars_of !evdref)
 
 (* The ClearBody tactic *)
 
@@ -264,8 +266,8 @@ let rec mk_refgoals sigma goal goalacc conclty trm =
 *)
   match kind_of_term trm with
     | Meta _ ->
-	if occur_meta conclty then
-          raise (RefinerError (OccurMetaGoal conclty));
+	if !check && occur_meta conclty then
+	  anomaly "refined called with a dependent meta";
 	(mk_goal hyps (nf_betaiota conclty))::goalacc, conclty
 
     | Cast (t,_, ty) ->
@@ -276,8 +278,10 @@ let rec mk_refgoals sigma goal goalacc conclty trm =
     | App (f,l) ->
 	let (acc',hdty) =
 	  match kind_of_term f with
-	    | (Ind _ (* needed if defs in Type are polymorphic: | Const _*))
-		when not (array_exists occur_meta l) (* we could be finer *) ->
+	    | Ind _ | Const _
+		when not (array_exists occur_meta l) (* we could be finer *)
+		  & (isInd f or has_polymorphic_type (destConst f))
+		  ->
 		(* Sort-polymorphism of definition and inductive types *)
 		goalacc, 
 		type_of_global_reference_knowing_parameters env sigma f l
@@ -300,7 +304,8 @@ let rec mk_refgoals sigma goal goalacc conclty trm =
 	(acc'',conclty')
 
     | _ -> 
-	if occur_meta trm then raise (RefinerError (OccurMeta trm));
+	if occur_meta trm then
+	  anomaly "refiner called with a meta in non app/case subterm";
       	let t'ty = goal_type_of env sigma trm in
 	check_conv_leq_goal env sigma trm t'ty conclty;
         (goalacc,t'ty)
@@ -340,7 +345,10 @@ and mk_hdgoals sigma goal goalacc trm =
 	in
 	(acc'',conclty')
 
-    | _ -> goalacc, goal_type_of env sigma trm
+    | _ ->
+	if !check && occur_meta trm then
+	  anomaly "refined called with a dependent meta";
+	goalacc, goal_type_of env sigma trm
 
 and mk_arggoals sigma goal goalacc funty = function
   | [] -> goalacc,funty
@@ -378,7 +386,7 @@ let convert_hyp sign sigma (id,b,bt as d) =
        let env = Global.env_of_context sign in
        if !check && not (is_conv env sigma bt ct) then
 	 error ("Incorrect change of the type of "^(string_of_id id));
-       if !check && not (option_compare (is_conv env sigma) b c) then
+       if !check && not (Option.Misc.compare (is_conv env sigma) b c) then
 	 error ("Incorrect change of the body of "^(string_of_id id));
        d)
 

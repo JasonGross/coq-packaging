@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: autorewrite.ml 9157 2006-09-21 15:10:08Z herbelin $ *)
+(* $Id: autorewrite.ml 11094 2008-06-10 19:35:23Z herbelin $ *)
 
 open Equality
 open Hipattern
@@ -17,7 +17,9 @@ open Tacticals
 open Tacinterp
 open Tactics
 open Term
+open Termops
 open Util
+open Rawterm
 open Vernacinterp
 open Tacexpr
 open Mod_subst
@@ -80,9 +82,12 @@ let one_base general_rewrite_maybe_in tac_main bas =
 let autorewrite tac_main lbas =
   tclREPEAT_MAIN (tclPROGRESS
     (List.fold_left (fun tac bas -> 
-       tclTHEN tac (one_base general_rewrite tac_main bas)) tclIDTAC lbas))
+       tclTHEN tac
+        (one_base (fun dir -> general_rewrite dir all_occurrences)
+	  tac_main bas))
+      tclIDTAC lbas))
 
-let autorewrite_mutlti_in idl tac_main lbas : tactic =
+let autorewrite_multi_in idl tac_main lbas : tactic =
   fun gl -> 
  (* let's check at once if id exists (to raise the appropriate error) *)
  let _ = List.map (Tacmach.pf_get_hyp gl) idl in
@@ -96,7 +101,7 @@ let autorewrite_mutlti_in idl tac_main lbas : tactic =
       | _ -> (* even the hypothesis id is missing *)
              error ("No such hypothesis : " ^ (string_of_id !id))
     in
-    let gl' = general_rewrite_in dir !id cstr gl in
+    let gl' = general_rewrite_in dir all_occurrences !id cstr false gl in
     let gls = (fst gl').Evd.it in
     match gls with
        g::_ ->
@@ -126,13 +131,15 @@ let autorewrite_mutlti_in idl tac_main lbas : tactic =
        tclTHEN tac (one_base (general_rewrite_in id) tac_main bas)) tclIDTAC lbas)))
    idl gl
 
-let autorewrite_in id = autorewrite_mutlti_in [id]
+let autorewrite_in id = autorewrite_multi_in [id]
 
 let gen_auto_multi_rewrite tac_main lbas cl = 
   let try_do_hyps treat_id l = 
-    autorewrite_mutlti_in (List.map treat_id l) tac_main lbas
+    autorewrite_multi_in (List.map treat_id l) tac_main lbas
   in 
-  if cl.concl_occs <> [] then 
+  if cl.concl_occs <> all_occurrences_expr &
+     cl.concl_occs <> no_occurrences_expr
+  then 
     error "The \"at\" syntax isn't available yet for the autorewrite tactic"
   else 
     let compose_tac t1 t2 = 
@@ -141,7 +148,7 @@ let gen_auto_multi_rewrite tac_main lbas cl =
 	| _ ->      tclTHENFIRST t1 t2
     in
     compose_tac
-	(if cl.onconcl then autorewrite tac_main lbas else tclIDTAC)
+	(if cl.concl_occs <> no_occurrences_expr then autorewrite tac_main lbas else tclIDTAC)
 	(match cl.onhyps with 
 	   | Some l -> try_do_hyps (fun ((_,id),_) -> id) l
 	   | None -> 
@@ -153,11 +160,12 @@ let gen_auto_multi_rewrite tac_main lbas cl =
 
 let auto_multi_rewrite = gen_auto_multi_rewrite Refiner.tclIDTAC
 
-let auto_multi_rewrite_with tac_main lbas cl gl = 
-  match cl.Tacexpr.onconcl,cl.Tacexpr.onhyps with 
+let auto_multi_rewrite_with tac_main lbas cl gl =
+  let onconcl = cl.Tacexpr.concl_occs <> no_occurrences_expr in
+  match onconcl,cl.Tacexpr.onhyps with 
     | false,Some [_] | true,Some [] | false,Some [] ->   
 	(* autorewrite with .... in clause using tac n'est sur que 
-	   si clause reprensente soit le but soit UNE hypothse 
+	   si clause represente soit le but soit UNE hypothese 
 	*)
 	gen_auto_multi_rewrite tac_main  lbas cl gl
     | _ -> 
@@ -207,7 +215,7 @@ let classify_hintrewrite (_,x) = Libobject.Substitute x
 
 
 (* Declaration of the Hint Rewrite library object *)
-let (in_hintrewrite,out_hintrewrite)=
+let (inHintRewrite,outHintRewrite)=
   Libobject.declare_object {(Libobject.default_object "HINT_REWRITE") with
        Libobject.cache_function = cache_hintrewrite;
        Libobject.load_function = (fun _ -> cache_hintrewrite);
@@ -223,4 +231,4 @@ let add_rew_rules base lrul =
       (c,mkProp (* dummy value *), b,Tacinterp.glob_tactic t)
     ) lrul
   in
-   Lib.add_anonymous_leaf (in_hintrewrite (base,lrul))
+   Lib.add_anonymous_leaf (inHintRewrite (base,lrul))

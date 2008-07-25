@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacred.mli 8878 2006-05-30 16:44:25Z herbelin $ i*)
+(*i $Id: tacred.mli 11094 2008-06-10 19:35:23Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -16,6 +16,7 @@ open Evd
 open Reductionops
 open Closure
 open Rawterm
+open Termops
 (*i*)
 
 type reduction_tactic_error = 
@@ -35,21 +36,25 @@ val red_product : reduction_function
 (* Red (raise Redelimination if nothing reducible) *)
 val try_red_product : reduction_function
 
-(* Hnf *)
-val hnf_constr :  reduction_function
-
 (* Simpl *)
-val nf :  reduction_function
+val simpl : reduction_function 
+
+(* Simpl only at the head *)
+val whd_simpl : reduction_function
+
+(* Hnf: like whd_simpl but force delta-reduction of constants that do
+   not immediately hide a non reducible fix or cofix *)
+val hnf_constr : reduction_function
 
 (* Unfold *)
 val unfoldn : 
-  (int list * evaluable_global_reference) list ->  reduction_function
+  (occurrences * evaluable_global_reference) list ->  reduction_function
 
 (* Fold *)
 val fold_commands : constr list ->  reduction_function
 
 (* Pattern *)
-val pattern_occs : (int list * constr) list ->  reduction_function
+val pattern_occs : (occurrences * constr) list ->  reduction_function
 (* Rem: Lazy strategies are defined in Reduction *)
 
 (* Call by value strategy (uses Closures) *)
@@ -77,5 +82,10 @@ val reduce_to_quantified_ref :
 val reduce_to_atomic_ref :
   env ->  evar_map -> Libnames.global_reference -> types -> types
 
-val contextually : bool -> int list * constr -> reduction_function
+val contextually : bool -> occurrences * constr -> reduction_function
   -> reduction_function
+
+(* Compatibility *)
+(* use [simpl] instead of [nf] *)
+val nf :  reduction_function
+

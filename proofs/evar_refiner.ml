@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evar_refiner.ml 9583 2007-02-01 19:35:03Z notin $ *)
+(* $Id: evar_refiner.ml 11047 2008-06-03 23:08:00Z msozeau $ *)
 
 open Util
 open Names
@@ -28,8 +28,8 @@ let w_refine ev rawc evd =
   let e_info = Evd.find (evars_of evd) ev in
   let env = Evd.evar_env e_info in
   let sigma,typed_c = 
-    try Pretyping.Default.understand_tcc (evars_of evd) env 
-      ~expected_type:e_info.evar_concl rawc 
+    try Pretyping.Default.understand_tcc ~resolve_classes:false
+      (evars_of evd) env ~expected_type:e_info.evar_concl rawc
     with _ -> error ("The term is not well-typed in the environment of " ^
 			string_of_existential ev)
   in
@@ -41,12 +41,16 @@ let instantiate_pf_com n com pfts =
   let gls = top_goal_of_pftreestate pfts in
   let sigma = gls.sigma in 
   let (sp,evi) (* as evc *) = 
-    try
-      List.nth (Evarutil.non_instantiated sigma) (n-1) 
-    with Failure _ -> 
-      error "not so many uninstantiated existential variables" in 
+    let evl = Evarutil.non_instantiated sigma in
+      if (n <= 0) then
+	error "incorrect existential variable index"
+      else if List.length evl < n then
+	  error "not so many uninstantiated existential variables"
+      else
+	List.nth evl (n-1)
+  in 
   let env = Evd.evar_env evi in
   let rawc = Constrintern.intern_constr sigma env com in 
-  let evd = create_evar_defs sigma in
+  let evd = create_goal_evar_defs sigma in
   let evd' = w_refine sp rawc evd in
-  change_constraints_pftreestate (evars_of evd') pfts
+    change_constraints_pftreestate (evars_of evd') pfts

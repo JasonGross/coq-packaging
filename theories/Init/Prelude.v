@@ -6,12 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Prelude.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id: Prelude.v 10064 2007-08-08 15:32:36Z msozeau $ i*)
 
 Require Export Notations.
 Require Export Logic.
 Require Export Datatypes.
 Require Export Specif.
 Require Export Peano.
-Require Export Wf.
-Require Export Tactics.
+Require Export Coq.Init.Wf.
+Require Export Coq.Init.Tactics.

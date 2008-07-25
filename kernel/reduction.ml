@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: reduction.ml 9215 2006-10-05 15:40:31Z herbelin $ *)
+(* $Id: reduction.ml 10930 2008-05-15 10:50:32Z barras $ *)
 
 open Util
 open Names
@@ -17,6 +17,12 @@ open Environ
 open Closure
 open Esubst
 
+let unfold_reference ((ids, csts), infos) k =
+  match k with
+    | VarKey id when not (Idpred.mem id ids) -> None
+    | ConstKey cst when not (Cpred.mem cst csts) -> None
+    | _ -> unfold_reference infos k
+	  
 let rec is_empty_stack = function
     [] -> true
   | Zupdate _::s -> is_empty_stack s
@@ -84,11 +90,11 @@ let pure_stack lfts stk =
 let nf_betaiota t =
   norm_val (create_clos_infos betaiota empty_env) (inject t)
 
-let whd_betaiotazeta env x =
+let whd_betaiotazeta x =
   match kind_of_term x with
     | (Sort _|Var _|Meta _|Evar _|Const _|Ind _|Construct _|
        Prod _|Lambda _|Fix _|CoFix _) -> x
-    | _ -> whd_val (create_clos_infos betaiotazeta env) (inject x)
+    | _ -> whd_val (create_clos_infos betaiotazeta empty_env) (inject x)
 
 let whd_betadeltaiota env t = 
   match kind_of_term t with
@@ -117,6 +123,7 @@ let beta_appvect c v =
 
 (* Conversion utility functions *)
 type 'a conversion_function = env -> 'a -> 'a -> Univ.constraints
+type 'a trans_conversion_function = transparent_state -> env -> 'a -> 'a -> Univ.constraints
 
 exception NotConvertible
 exception NotConvertibleVect of int
@@ -144,18 +151,25 @@ let compare_stacks f fmind lft1 stk1 lft2 stk2 cuniv =
 
 (* Convertibility of sorts *)
 
+(* The sort cumulativity is
+
+    Prop <= Set <= Type 1 <= ... <= Type i <= ...
+
+    and this holds whatever Set is predicative or impredicative
+*)
+
 type conv_pb = 
   | CONV 
   | CUMUL
 
 let sort_cmp pb s0 s1 cuniv =
   match (s0,s1) with
-    | (Prop c1, Prop c2) -> if c1 = c2 then cuniv else raise NotConvertible
-    | (Prop c1, Type u)  ->
-        (match pb with
-            CUMUL -> cuniv
-          | _ -> raise NotConvertible)
+    | (Prop c1, Prop c2) ->
+        if c1 = Null or c2 = Pos then cuniv   (* Prop <= Set *)
+        else raise NotConvertible
+    | (Prop c1, Type u) when pb = CUMUL -> assert (is_univ_variable u); cuniv
     | (Type u1, Type u2) ->
+	assert (is_univ_variable u2);
 	(match pb with
            | CONV -> enforce_eq u1 u2 cuniv
 	   | CUMUL -> enforce_geq u2 u1 cuniv)
@@ -166,19 +180,60 @@ let conv_sort env s0 s1 = sort_cmp CONV s0 s1 Constraint.empty
 
 let conv_sort_leq env s0 s1 = sort_cmp CUMUL s0 s1 Constraint.empty
 
+let rec no_arg_available = function
+  | [] -> true
+  | Zupdate _ :: stk -> no_arg_available stk
+  | Zshift _ :: stk -> no_arg_available stk
+  | Zapp v :: stk -> Array.length v = 0 && no_arg_available stk
+  | Zcase _ :: _ -> true
+  | Zfix _ :: _ -> true
+
+let rec no_nth_arg_available n = function
+  | [] -> true
+  | Zupdate _ :: stk -> no_nth_arg_available n stk
+  | Zshift _ :: stk -> no_nth_arg_available n stk
+  | Zapp v :: stk ->
+      let k = Array.length v in
+      if n >= k then no_nth_arg_available (n-k) stk
+      else false
+  | Zcase _ :: _ -> true
+  | Zfix _ :: _ -> true
+
+let rec no_case_available = function
+  | [] -> true
+  | Zupdate _ :: stk -> no_case_available stk
+  | Zshift _ :: stk -> no_case_available stk
+  | Zapp _ :: stk -> no_case_available stk
+  | Zcase _ :: _ -> false
+  | Zfix _ :: _ -> true
+
+let in_whnf (t,stk) =
+  match fterm_of t with
+    | (FLetIn _ | FCases _ | FApp _ | FCLOS _ | FLIFT _ | FCast _) -> false
+    | FLambda _ -> no_arg_available stk
+    | FConstruct _ -> no_case_available stk
+    | FCoFix _ -> no_case_available stk
+    | FFix(((ri,n),(_,_,_)),_) -> no_nth_arg_available ri.(n) stk
+    | (FFlex _ | FProd _ | FEvar _ | FInd _ | FAtom _ | FRel _) -> true
+    | FLOCKED -> assert false
 
 (* Conversion between  [lft1]term1 and [lft2]term2 *)
 let rec ccnv cv_pb infos lft1 lft2 term1 term2 cuniv = 
-  Util.check_for_interrupt ();
-  eqappr cv_pb infos
-    (lft1, whd_stack infos term1 [])
-    (lft2, whd_stack infos term2 [])
-    cuniv
+  eqappr cv_pb infos (lft1, (term1,[])) (lft2, (term2,[])) cuniv
 
 (* Conversion between [lft1](hd1 v1) and [lft2](hd2 v2) *)
-and eqappr cv_pb infos appr1 appr2 cuniv =
-  let (lft1,(hd1,v1)) = appr1 in
-  let (lft2,(hd2,v2)) = appr2 in
+and eqappr cv_pb infos (lft1,st1) (lft2,st2) cuniv =
+  Util.check_for_interrupt ();
+  (* First head reduce both terms *)
+  let rec  whd_both (t1,stk1) (t2,stk2) =
+    let st1' = whd_stack (snd infos) t1 stk1 in
+    let st2' = whd_stack (snd infos) t2 stk2 in
+    (* Now, whd_stack on term2 might have modified st1 (due to sharing),
+       and st1 might not be in whnf anymore. If so, we iterate ccnv. *)
+    if in_whnf st1' then (st1',st2') else whd_both st1' st2' in
+  let ((hd1,v1),(hd2,v2)) = whd_both st1 st2 in
+  let appr1 = (lft1,(hd1,v1)) and appr2 = (lft2,(hd2,v2)) in
+  (* compute the lifts that apply to the head of the term (hd1 and hd2) *)
   let el1 = el_stack lft1 v1 in
   let el2 = el_stack lft2 v2 in
   match (fterm_of hd1, fterm_of hd2) with
@@ -216,17 +271,17 @@ and eqappr cv_pb infos appr1 appr2 cuniv =
           let (app1,app2) =
             if Conv_oracle.oracle_order fl1 fl2 then
               match unfold_reference infos fl1 with
-                | Some def1 -> ((lft1, whd_stack infos def1 v1), appr2)
+                | Some def1 -> ((lft1, whd_stack (snd infos) def1 v1), appr2)
                 | None ->
                     (match unfold_reference infos fl2 with
-                      | Some def2 -> (appr1, (lft2, whd_stack infos def2 v2))
+                      | Some def2 -> (appr1, (lft2, whd_stack (snd infos) def2 v2))
 		      | None -> raise NotConvertible)
             else
 	      match unfold_reference infos fl2 with
-                | Some def2 -> (appr1, (lft2, whd_stack infos def2 v2))
+                | Some def2 -> (appr1, (lft2, whd_stack (snd infos) def2 v2))
                 | None ->
                     (match unfold_reference infos fl1 with
-                    | Some def1 -> ((lft1, whd_stack infos def1 v1), appr2)
+                    | Some def1 -> ((lft1, whd_stack (snd infos) def1 v1), appr2)
 		    | None -> raise NotConvertible) in
           eqappr cv_pb infos app1 app2 cuniv)
 
@@ -234,16 +289,17 @@ and eqappr cv_pb infos appr1 appr2 cuniv =
     | (FFlex fl1, _)      ->
         (match unfold_reference infos fl1 with
            | Some def1 -> 
-	       eqappr cv_pb infos (lft1, whd_stack infos def1 v1) appr2 cuniv
+	       eqappr cv_pb infos (lft1, whd_stack (snd infos) def1 v1) appr2 cuniv
            | None -> raise NotConvertible)
     | (_, FFlex fl2)      ->
         (match unfold_reference infos fl2 with
-           | Some def2 -> 
-	       eqappr cv_pb infos appr1 (lft2, whd_stack infos def2 v2) cuniv
+           | Some def2 ->
+	       eqappr cv_pb infos appr1 (lft2, whd_stack (snd infos) def2 v2) cuniv
            | None -> raise NotConvertible)
 	
     (* other constructors *)
     | (FLambda _, FLambda _) ->
+        assert (is_empty_stack v1 && is_empty_stack v2);
         let (_,ty1,bd1) = destFLambda mk_clos hd1 in
         let (_,ty2,bd2) = destFLambda mk_clos hd2 in
         let u1 = ccnv CONV infos el1 el2 ty1 ty2 cuniv in
@@ -258,13 +314,13 @@ and eqappr cv_pb infos appr1 appr2 cuniv =
     (* Inductive types:  MutInd MutConstruct Fix Cofix *)
 
      | (FInd ind1, FInd ind2) ->
-         if mind_equiv_infos infos ind1 ind2
+         if mind_equiv_infos (snd infos) ind1 ind2
 	 then
            convert_stacks infos lft1 lft2 v1 v2 cuniv
          else raise NotConvertible
 
      | (FConstruct (ind1,j1), FConstruct (ind2,j2)) ->
-	 if j1 = j2 && mind_equiv_infos infos ind1 ind2
+	 if j1 = j2 && mind_equiv_infos (snd infos) ind1 ind2
 	 then
            convert_stacks infos lft1 lft2 v1 v2 cuniv
          else raise NotConvertible
@@ -299,25 +355,18 @@ and eqappr cv_pb infos appr1 appr2 cuniv =
            convert_stacks infos lft1 lft2 v1 v2 u2
          else raise NotConvertible
 
-    (* Can happen because whd_stack on one arg may have side-effects
-       on the other arg and coulb be no more in hnf... *)
-    | ( (FLetIn _, _) | (FCases _,_) | (FApp _,_)
-      | (FCLOS _, _) | (FLIFT _, _)) ->
-        eqappr cv_pb infos (lft1, whd_stack infos hd1 v1) appr2 cuniv
-
-    | ( (_, FLetIn _) | (_,FCases _) | (_,FApp _)
-      | (_,FCLOS _) | (_,FLIFT _)) ->
-        eqappr cv_pb infos (lft1, whd_stack infos hd1 v1) appr2 cuniv
-
-    (* Should not happen because whd_stack unlocks references *)
-    | ((FLOCKED,_) | (_,FLOCKED)) -> assert false
-
+     (* Should not happen because both (hd1,v1) and (hd2,v2) are in whnf *)
+     | ( (FLetIn _, _) | (FCases _,_) | (FApp _,_) | (FCLOS _,_) | (FLIFT _,_)
+       | (_, FLetIn _) | (_,FCases _) | (_,FApp _) | (_,FCLOS _) | (_,FLIFT _)
+       | (FLOCKED,_) | (_,FLOCKED) ) -> assert false
+    
+     (* In all other cases, terms are not convertible *)
      | _ -> raise NotConvertible
 
 and convert_stacks infos lft1 lft2 stk1 stk2 cuniv =
   compare_stacks
     (fun (l1,t1) (l2,t2) c -> ccnv CONV infos l1 l2 t1 t2 c)
-    (mind_equiv_infos infos)
+    (mind_equiv_infos (snd infos))
     lft1 stk1 lft2 stk2 cuniv
 
 and convert_vect infos lft1 lft2 v1 v2 cuniv =
@@ -333,13 +382,19 @@ and convert_vect infos lft1 lft2 v1 v2 cuniv =
     fold 0 cuniv
   else raise NotConvertible
 
-let clos_fconv cv_pb env t1 t2 =
-  let infos = create_clos_infos betaiotazeta env in
+let clos_fconv trans cv_pb env t1 t2 =
+  let infos = trans, create_clos_infos betaiotazeta env in
   ccnv cv_pb infos ELID ELID (inject t1) (inject t2) Constraint.empty
 
-let fconv cv_pb env t1 t2 =
+let trans_fconv reds cv_pb env t1 t2 =
   if eq_constr t1 t2 then Constraint.empty
-  else clos_fconv cv_pb env t1 t2
+  else clos_fconv reds cv_pb env t1 t2
+
+let trans_conv_cmp conv reds = trans_fconv reds conv
+let trans_conv reds = trans_fconv reds CONV
+let trans_conv_leq reds = trans_fconv reds CUMUL
+
+let fconv = trans_fconv (Idpred.full, Cpred.full)
 
 let conv_cmp = fconv
 let conv = fconv CONV
@@ -365,7 +420,7 @@ let vm_conv cv_pb env t1 t2 =
     !vm_conv cv_pb env t1 t2
   with Not_found | Invalid_argument _ ->
       (* If compilation fails, fall-back to closure conversion *)
-      clos_fconv cv_pb env t1 t2
+      fconv cv_pb env t1 t2
   
 
 let default_conv = ref fconv 
@@ -377,7 +432,7 @@ let default_conv cv_pb env t1 t2 =
     !default_conv cv_pb env t1 t2
   with Not_found | Invalid_argument _ ->
       (* If compilation fails, fall-back to closure conversion *)
-      clos_fconv cv_pb env t1 t2
+      fconv cv_pb env t1 t2
   
 let default_conv_leq = default_conv CUMUL
 (*

@@ -6,14 +6,15 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: contradiction.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: contradiction.mli 9842 2007-05-20 17:44:23Z herbelin $ i*)
 
 (*i*)
 open Names
 open Term
 open Proof_type
 open Rawterm
+open Genarg
 (*i*)
 
 val absurd                      : constr -> tactic
-val contradiction               : constr with_bindings option -> tactic
+val contradiction               : constr with_ebindings option -> tactic

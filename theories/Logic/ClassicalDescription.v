@@ -6,14 +6,15 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalDescription.v 9514 2007-01-22 14:58:50Z herbelin $ i*)
+(*i $Id: ClassicalDescription.v 10170 2007-10-03 14:41:25Z herbelin $ i*)
 
-(** This file provides classical logic and definite description *)
+(** This file provides classical logic and definite description, which is
+    equivalent to providing classical logic and Church's iota operator *)
 
-(** Classical definite description operator (i.e. iota) implies
-    excluded-middle in [Set] and leads to a classical world populated
-    with non computable functions. It conflicts with the
-    impredicativity of [Set] *)
+(** Classical logic and definite descriptions implies excluded-middle
+    in [Set] and leads to a classical world populated with non
+    computable functions. It conflicts with the impredicativity of
+    [Set] *)
 
 Set Implicit Arguments.
 

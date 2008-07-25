@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rlimit.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Rlimit.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 (*********************************************************)
 (**          Definition of the limit                     *)
@@ -16,7 +16,8 @@
 Require Import Rbase.
 Require Import Rfunctions.
 Require Import Classical_Prop.
-Require Import Fourier. Open Local Scope R_scope.
+Require Import Fourier.
+Open Local Scope R_scope.
 
 (*******************************)
 (** *   Calculus               *)
@@ -560,9 +561,9 @@ Proof.
       | apply Rlt_le_trans with (Rmin delta1 delta2);
         [ assumption | apply Rmin_l ] ].
   change (0 < eps * (Rsqr l / 2)) in |- *; unfold Rdiv in |- *;
-    repeat rewrite Rmult_assoc; repeat apply Rmult_lt_0_compat.
+    repeat rewrite Rmult_assoc; apply Rmult_lt_0_compat.
   assumption.
-  apply Rsqr_pos_lt; assumption.
+  apply Rmult_lt_0_compat. apply Rsqr_pos_lt; assumption.
   apply Rinv_0_lt_compat; cut (0%nat <> 2%nat);
     [ intro H3; generalize (lt_INR_0 2 (neq_O_lt 2 H3)); unfold INR in |- *;
       intro; assumption

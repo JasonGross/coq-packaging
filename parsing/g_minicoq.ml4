@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_minicoq.ml4 5920 2004-07-16 20:01:26Z herbelin $ *)
+(*i camlp4use: "pa_extend.cmo" i*)
+
+(* $Id: g_minicoq.ml4 10007 2007-07-16 09:18:44Z corbinea $ *)
 
 open Pp
 open Util

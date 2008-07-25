@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Multiset.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Multiset.v 10616 2008-03-04 17:33:35Z letouzey $ i*)
 
 (* G. Huet 1-9-95 *)
 
@@ -16,11 +16,11 @@ Set Implicit Arguments.
 
 Section multiset_defs.
 
-  Variable A : Set.
+  Variable A : Type.
   Variable eqA : A -> A -> Prop.
   Hypothesis Aeq_dec : forall x y:A, {eqA x y} + {~ eqA x y}.
 
-  Inductive multiset : Set :=
+  Inductive multiset : Type :=
     Bag : (A -> nat) -> multiset.
   
   Definition EmptyBag := Bag (fun a:A => 0).

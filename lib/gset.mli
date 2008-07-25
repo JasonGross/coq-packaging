@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: gset.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: gset.mli 10840 2008-04-23 21:29:34Z herbelin $ i*)
 
 (* Sets using the generic comparison function of ocaml. Same interface as
    the module [Set] from the ocaml standard library. *)
@@ -26,7 +26,7 @@ val compare : 'a t -> 'a t -> int
 val equal : 'a t -> 'a t -> bool
 val subset : 'a t -> 'a t -> bool
 val iter : ('a -> unit) -> 'a t -> unit
-val fold : ('a -> 'a -> 'a) -> 'a t -> 'a -> 'a
+val fold : ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b
 val cardinal : 'a t -> int
 val elements : 'a t -> 'a list
 val min_elt : 'a t -> 'a

@@ -6,10 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i        $Id: DiscrR.v 9178 2006-09-26 11:18:22Z barras $       i*)
+(*i        $Id: DiscrR.v 10710 2008-03-23 09:24:09Z herbelin $       i*)
 
 Require Import RIneq.
-Require Import Omega. Open Local Scope R_scope.
+Require Import Omega.
+Open Local Scope R_scope.
 
 Lemma Rlt_R0_R2 : 0 < 2.
 change 2 with (INR 2); apply lt_INR_0; apply lt_O_Sn.

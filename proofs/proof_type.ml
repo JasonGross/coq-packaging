@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: proof_type.ml 9573 2007-01-31 20:18:18Z notin $ *)
+(*i $Id: proof_type.ml 9842 2007-05-20 17:44:23Z herbelin $ *)
 
 (*i*)
 open Environ
@@ -63,7 +63,7 @@ and tactic = goal sigma -> (goal list sigma * validation)
 and validation = (proof_tree list -> proof_tree)
 
 and tactic_expr =
-  (constr,
+  (open_constr,
    constr_pattern,
    evaluable_global_reference,
    inductive,
@@ -73,7 +73,7 @@ and tactic_expr =
      Tacexpr.gen_tactic_expr
 
 and atomic_tactic_expr =
-  (constr,
+  (open_constr,
    constr_pattern,
    evaluable_global_reference,
    inductive,
@@ -83,7 +83,7 @@ and atomic_tactic_expr =
      Tacexpr.gen_atomic_tactic_expr
 
 and tactic_arg =
-  (constr,
+  (open_constr,
    constr_pattern,
    evaluable_global_reference,
    inductive,

@@ -1,15 +1,14 @@
-  (************************************************************************)
-  (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-  (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
-  (*   \VV/  **************************************************************)
-  (*    //   *      This file is distributed under the terms of the       *)
-  (*         *       GNU Lesser General Public License Version 2.1        *)
-  (************************************************************************)
+(************************************************************************)
+(*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
+(* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
+(*   \VV/  **************************************************************)
+(*    //   *      This file is distributed under the terms of the       *)
+(*         *       GNU Lesser General Public License Version 2.1        *)
+(************************************************************************)
 
-  (*i $Id: List.v 9290 2006-10-26 19:20:42Z herbelin $ i*)
+(*i $Id: List.v 10999 2008-05-27 15:55:22Z letouzey $ i*)
 
 Require Import Le Gt Minus Min Bool.
-Require Import Setoid.
 
 Set Implicit Arguments.
 
@@ -82,8 +81,6 @@ End Lists.
 Implicit Arguments nil [A].
 Infix "::" := cons (at level 60, right associativity) : list_scope.
 Infix "++" := app (right associativity, at level 60) : list_scope.
- 
-Ltac now_show c := change c in |- *.
 
 Open Scope list_scope.
 
@@ -314,7 +311,27 @@ Section Facts.
     now_show (H = a \/ In a (y ++ m)).
     elim H2; auto.
   Qed.
-
+  
+  Lemma app_inv_head:
+   forall l l1 l2 : list A, l ++ l1 = l ++ l2 ->  l1 = l2.
+  Proof.
+    induction l; simpl; auto; injection 1; auto.
+  Qed.
+ 
+  Lemma app_inv_tail:
+    forall l l1 l2 : list A, l1 ++ l = l2 ++ l ->  l1 = l2.
+  Proof.
+    intros l l1 l2; revert l1 l2 l.
+    induction l1 as [ | x1 l1]; destruct l2 as [ | x2 l2]; 
+     simpl; auto; intros l H.
+    absurd (length (x2 :: l2 ++ l) <= length l).
+    simpl; rewrite app_length; auto with arith.
+    rewrite <- H; auto with arith.
+    absurd (length (x1 :: l1 ++ l) <= length l).
+    simpl; rewrite app_length; auto with arith.
+    rewrite H; auto with arith.
+    injection H; clear H; intros; f_equal; eauto.
+  Qed.
 
 End Facts.
 
@@ -512,6 +529,20 @@ Section Elts.
     exists (a::l'); exists a'; auto.
   Qed.
 
+  Lemma removelast_app : 
+    forall l l', l' <> nil -> removelast (l++l') = l ++ removelast l'.
+  Proof.
+    induction l.
+    simpl; auto.
+    simpl; intros.
+    assert (l++l' <> nil).
+    destruct l.
+    simpl; auto.
+    simpl; discriminate.
+    specialize (IHl l' H).
+    destruct (l++l'); [elim H0; auto|f_equal; auto].
+  Qed.
+
   
   (****************************************)
   (** ** Counting occurences of a element *)
@@ -534,8 +565,7 @@ Section Elts.
     simpl; intros; split; [destruct 1 | apply gt_irrefl].
     simpl. intro x; destruct (eqA_dec y x) as [Heq|Hneq].
     rewrite Heq; intuition. 
-    rewrite <- (IHl x).
-    tauto.
+    pose (IHl x). intuition.
   Qed.
   
   Theorem count_occ_inv_nil : forall (l : list A), (forall x:A, count_occ l x = 0) <-> l = nil.
@@ -668,8 +698,8 @@ Section ListOps.
     rewrite app_nth1; auto.
     rewrite (minus_plus_simpl_l_reverse (length l) n 1).
     replace (1 + length l) with (S (length l)); auto with arith.
-    rewrite <- minus_Sn_m; auto with arith; simpl.
-    apply IHl; auto.
+    rewrite <- minus_Sn_m; auto with arith.
+    apply IHl ; auto with arith.
     rewrite rev_length; auto.
   Qed.
 
@@ -899,7 +929,7 @@ Section ListOps.
     apply perm_trans with (l1'++a::l2); auto using Permutation_cons_app.
     apply perm_skip.
     apply (IH a l1' l2 l3' l4); auto.
-    (* swap *)
+    (* contradict *)
     intros x y l l' Hp IH; intros.
     break_list l1 b l1' H; break_list l3 c l3' H0.
     auto.
@@ -1345,7 +1375,7 @@ End Fold_Right_Recursor.
       destruct n; destruct d; simpl; auto.
       destruct a; destruct (split l); simpl; auto.
       destruct a; destruct (split l); simpl in *; auto.
-      rewrite IHl; simpl; auto.
+      apply IHl.
     Qed.
 
     Lemma split_length_l : forall (l:list (A*B)),
@@ -1618,7 +1648,7 @@ Hint Resolve incl_refl incl_tl incl_tran incl_appl incl_appr incl_cons
 
 
 (**************************************)
-(* ** Cutting a list at some position *)
+(** * Cutting a list at some position *)
 (**************************************)
 
 Section Cutting.
@@ -1651,6 +1681,45 @@ Section Cutting.
     f_equal; auto.
   Qed.
 
+  Lemma firstn_length : forall n l, length (firstn n l) = min n (length l).
+  Proof.
+    induction n; destruct l; simpl; auto.
+  Qed.
+
+   Lemma removelast_firstn : forall n l, n < length l -> 
+     removelast (firstn (S n) l) = firstn n l.
+   Proof.
+     induction n; destruct l.
+     simpl; auto.
+     simpl; auto.
+     simpl; auto.
+     intros.
+     simpl in H.
+     change (firstn (S (S n)) (a::l)) with ((a::nil)++firstn (S n) l).
+     change (firstn (S n) (a::l)) with (a::firstn n l).
+     rewrite removelast_app.
+     rewrite IHn; auto with arith.
+     
+     clear IHn; destruct l; simpl in *; try discriminate.
+     inversion_clear H.
+     inversion_clear H0.
+   Qed.
+
+   Lemma firstn_removelast : forall n l, n < length l -> 
+     firstn n (removelast l) = firstn n l.
+   Proof.
+     induction n; destruct l.
+     simpl; auto.
+     simpl; auto.
+     simpl; auto.
+     intros.
+     simpl in H.
+     change (removelast (a :: l)) with (removelast ((a::nil)++l)).
+     rewrite removelast_app.
+     simpl; f_equal; auto with arith.
+     intro H0; rewrite H0 in H; inversion_clear H; inversion_clear H1.
+   Qed.
+
 End Cutting.
 
 
@@ -1672,8 +1741,8 @@ Section ReDun.
   inversion_clear 1; auto.
   inversion_clear 1.
   constructor.
-  swap H0.
-  apply in_or_app; destruct (in_app_or _ _ _ H); simpl; tauto.
+  contradict H0.
+  apply in_or_app; destruct (in_app_or _ _ _ H0); simpl; tauto.
   apply IHl with a0; auto.
   Qed.
 
@@ -1682,8 +1751,8 @@ Section ReDun.
   induction l; simpl.
   inversion_clear 1; auto.
   inversion_clear 1.
-  swap H0.
-  destruct H.
+  contradict H0.
+  destruct H0.
   subst a0.
   apply in_or_app; right; red; auto.
   destruct (IHl _ _ H1); auto.

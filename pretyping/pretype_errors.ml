@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pretype_errors.ml 9217 2006-10-05 17:31:23Z notin $ *)
+(* $Id: pretype_errors.ml 10860 2008-04-27 21:39:08Z herbelin $ *)
 
 open Util
 open Stdpp
@@ -25,12 +25,14 @@ type pretype_error =
   (* Unification *)
   | OccurCheck of existential_key * constr
   | NotClean of existential_key * constr * Evd.hole_kind
-  | UnsolvableImplicit of Evd.hole_kind
+  | UnsolvableImplicit of Evd.evar_info * Evd.hole_kind * 
+      Evd.unsolvability_explanation option
   | CannotUnify of constr * constr
-  | CannotUnifyLocal of Environ.env * constr * constr * constr
+  | CannotUnifyLocal of constr * constr * constr
   | CannotUnifyBindingType of constr * constr
   | CannotGeneralize of constr
-  | NoOccurrenceFound of constr
+  | NoOccurrenceFound of constr * identifier option
+  | CannotFindWellTypedAbstraction of constr * constr list
   (* Pretyping *)
   | VarNotFound of identifier
   | UnexpectedType of constr * constr
@@ -51,7 +53,7 @@ let j_nf_evar sigma j =
 let jl_nf_evar sigma jl = List.map (j_nf_evar sigma) jl
 let jv_nf_evar sigma = Array.map (j_nf_evar sigma)
 let tj_nf_evar sigma {utj_val=v;utj_type=t} =
-  {utj_val=type_app (nf_evar sigma) v;utj_type=t}
+  {utj_val=nf_evar sigma v;utj_type=t}
 
 let env_ise sigma env =
   let sign = named_context_val env in
@@ -60,7 +62,7 @@ let env_ise sigma env =
   Sign.fold_rel_context
     (fun (na,b,ty) e ->
       push_rel
-        (na, option_map (nf_evar sigma) b, nf_evar sigma ty)
+        (na, Option.map (nf_evar sigma) b, nf_evar sigma ty)
         e)
     ctxt
     ~init:env0
@@ -76,7 +78,7 @@ let contract env lc =
 	  env
       | _ -> 
 	  let t' = substl !l t in
-	  let c' = option_map (substl !l) c in
+	  let c' = Option.map (substl !l) c in
 	  let na' = named_hd env t' na in
 	  l := (mkRel 1) :: List.map (lift 1) !l;
 	  push_rel (na',c',t') env in
@@ -152,17 +154,21 @@ let error_not_clean env sigma ev c (loc,k) =
   raise_with_loc loc
     (PretypeError (env_ise sigma env,  NotClean (ev,c,k)))
 
-let error_unsolvable_implicit loc env sigma e =
-  raise_with_loc loc (PretypeError (env_ise sigma env, UnsolvableImplicit e))
+let error_unsolvable_implicit loc env sigma evi e explain =
+  raise_with_loc loc
+    (PretypeError (env_ise sigma env, UnsolvableImplicit (evi, e, explain)))
 
 let error_cannot_unify env sigma (m,n) =
   raise (PretypeError (env_ise sigma env,CannotUnify (m,n)))
 
-let error_cannot_unify_local env sigma (e,m,n,sn) = 
-  raise (PretypeError (env_ise sigma env,CannotUnifyLocal (e,m,n,sn)))
+let error_cannot_unify_local env sigma (m,n,sn) = 
+  raise (PretypeError (env_ise sigma env,CannotUnifyLocal (m,n,sn)))
 
 let error_cannot_coerce env sigma (m,n) =
   raise (PretypeError (env_ise sigma env,CannotUnify (m,n)))
+
+let error_cannot_find_well_typed_abstraction env sigma p l =
+  raise (PretypeError (env_ise sigma env,CannotFindWellTypedAbstraction (p,l)))
 
 (*s Ml Case errors *)
 

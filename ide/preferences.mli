@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: preferences.mli 9240 2006-10-13 17:51:11Z notin $ i*)
+(*i $Id: preferences.mli 11009 2008-05-28 13:58:33Z jnarboux $ i*)
 
 type pref =
     {
@@ -32,10 +32,11 @@ type pref =
       mutable modifier_for_navigation : Gdk.Tags.modifier list;
       mutable modifier_for_templates : Gdk.Tags.modifier list;
       mutable modifier_for_tactics : Gdk.Tags.modifier list;
+      mutable modifier_for_display : Gdk.Tags.modifier list;
       mutable modifiers_valid : Gdk.Tags.modifier list;
 
-      mutable cmd_browse : string * string;
-      mutable cmd_editor : string * string;
+      mutable cmd_browse : string;
+      mutable cmd_editor : string;
 
       mutable text_font : Pango.font_description;
 
@@ -54,6 +55,8 @@ type pref =
       mutable auto_complete : bool;
       mutable stop_before : bool;
       mutable lax_syntax : bool;
+      mutable vertical_tabs : bool;
+      mutable opposite_tabs : bool;
     }
 
 val save_pref : unit -> unit
@@ -61,7 +64,7 @@ val load_pref : unit -> unit
 
 val current : pref ref
 
-val configure : unit -> unit
+val configure : ?apply:(unit -> unit) -> unit -> unit
 
 val change_font : ( Pango.font_description -> unit) ref
 val show_toolbar : (bool -> unit) ref

@@ -1,3 +1,4 @@
+(* -*- compile-command: "make -C ../.. bin/coqtop.byte" -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -6,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: subtac_pretyping_F.ml 9976 2007-07-12 11:58:30Z msozeau $ *)
+(* $Id: subtac_pretyping_F.ml 11143 2008-06-18 15:52:42Z msozeau $ *)
 
 open Pp
 open Util
@@ -67,8 +68,6 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
 	
   let mt_evd = Evd.empty
     
-  let vect_lift_type = Array.mapi (fun i t -> type_app (lift i) t)
-      
   (* Utilisé pour inférer le prédicat des Cases *)
   (* Semble exagérement fort *)
   (* Faudra préférer une unification entre les types de toutes les clauses *)
@@ -113,7 +112,7 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
     let id = strip_meta id in (* May happen in tactics defined by Grammar *)
       try
 	let (n,typ) = lookup_rel_id id (rel_context env) in
-	  { uj_val  = mkRel n; uj_type = type_app (lift n) typ }
+	  { uj_val  = mkRel n; uj_type = lift n typ }
       with Not_found ->
 	try
 	  List.assoc id lvar
@@ -202,11 +201,11 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
     | RRec (loc,fixkind,names,bl,lar,vdef) ->
 	let rec type_bl env ctxt = function
             [] -> ctxt
-          | (na,None,ty)::bl ->
+          | (na,k,None,ty)::bl ->
               let ty' = pretype_type empty_valcon env isevars lvar ty in
               let dcl = (na,None,ty'.utj_val) in
 		type_bl (push_rel dcl env) (add_rel_decl dcl ctxt) bl
-          | (na,Some bd,ty)::bl ->
+          | (na,k,Some bd,ty)::bl ->
               let ty' = pretype_type empty_valcon env isevars lvar ty in
               let bd' = pretype (mk_tycon ty'.utj_val) env isevars lvar ty in
               let dcl = (na,Some bd'.uj_val,ty'.utj_val) in
@@ -223,43 +222,47 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
 	let names = Array.map (fun id -> Name id) names in
 	  (* Note: bodies are not used by push_rec_types, so [||] is safe *)
 	let newenv = push_rec_types (names,ftys,[||]) env in
+	let fixi = match fixkind with RFix (vn, i) -> i | RCoFix i -> i in
 	let vdefj =
 	  array_map2_i 
 	    (fun i ctxt def ->
-               (* we lift nbfix times the type in tycon, because of
-		* the nbfix variables pushed to newenv *)
-               let (ctxt,ty) =
-		 decompose_prod_n_assum (rel_context_length ctxt)
-                   (lift nbfix ftys.(i)) in
-               let nenv = push_rel_context ctxt newenv in
-               let j = pretype (mk_tycon ty) nenv isevars lvar def in
-		 { uj_val = it_mkLambda_or_LetIn j.uj_val ctxt;
-		   uj_type = it_mkProd_or_LetIn j.uj_type ctxt })
+	      let fty = 
+		let ty = ftys.(i) in
+		  if i = fixi then (
+		    Option.iter (fun tycon ->
+		      isevars := Coercion.inh_conv_coerces_to loc env !isevars ftys.(i) tycon)
+		      tycon;
+		    nf_isevar !isevars ty)
+		  else ty
+	      in
+              (* we lift nbfix times the type in tycon, because of
+	       * the nbfix variables pushed to newenv *)
+              let (ctxt,ty) =
+		decompose_prod_n_assum (rel_context_length ctxt)
+                  (lift nbfix fty) in
+              let nenv = push_rel_context ctxt newenv in
+              let j = pretype (mk_tycon ty) nenv isevars lvar def in
+		{ uj_val = it_mkLambda_or_LetIn j.uj_val ctxt;
+		  uj_type = it_mkProd_or_LetIn j.uj_type ctxt })
             ctxtv vdef in
 	evar_type_fixpoint loc env isevars names ftys vdefj;
 	let fixj = match fixkind with
 	  | RFix (vn,i) ->
-	      let guard_indexes = Array.mapi 
+	      (* First, let's find the guard indexes. *)
+	      (* If recursive argument was not given by user, we try all args.
+	         An earlier approach was to look only for inductive arguments,
+		 but doing it properly involves delta-reduction, and it finally 
+                 doesn't seem worth the effort (except for huge mutual 
+		 fixpoints ?) *)
+	      let possible_indexes = Array.to_list (Array.mapi 
 		(fun i (n,_) -> match n with 
-		   | Some n -> n 
-		   | None -> 
-		       (* Recursive argument was not given by the user : We
-			  check that there is only one inductive argument *)
-		       let ctx = ctxtv.(i) in 
-		       let isIndApp t = 
-			 isInd (fst (decompose_app (strip_head_cast t))) in
-			 (* This could be more precise (e.g. do some delta) *)
-		       let lb = List.rev_map (fun (_,_,t) -> isIndApp t) ctx in
-		       try (list_unique_index true lb) - 1
-		       with Not_found -> 
-			 Util.user_err_loc
-			   (loc,"pretype",
-			    Pp.str "cannot guess decreasing argument of fix"))
-		vn 
-	      in
-	      let fix = ((guard_indexes, i),(names,ftys,Array.map j_val vdefj)) in
-	      (try check_fix env fix with e -> Stdpp.raise_with_loc loc e);
-	      make_judge (mkFix fix) ftys.(i)
+		   | Some n -> [n]
+		   | None -> list_map_i (fun i _ -> i) 0 ctxtv.(i))
+		vn)
+	      in 
+	      let fixdecls = (names,ftys,Array.map j_val vdefj) in 
+	      let indexes = search_guard loc env possible_indexes fixdecls in 
+	      make_judge (mkFix ((indexes,i),fixdecls)) ftys.(i)
 	  | RCoFix i -> 
 	      let cofix = (i,(names,ftys,Array.map j_val vdefj)) in
 	      (try check_cofix env cofix with e -> Stdpp.raise_with_loc loc e);
@@ -292,7 +295,7 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
 		      let value, typ = applist (j_val resj, [j_val hj]), subst1 hj.uj_val c2 in
 		      let typ' = nf_isevar !isevars typ in
 		      let tycon = 
-			option_map 
+			Option.map 
 			  (fun (abs, ty) ->
 			     match abs with
 				 None ->
@@ -308,7 +311,7 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
 			apply_rec env (n+1) 
 			  { uj_val = nf_isevar !isevars value;
 			    uj_type = nf_isevar !isevars typ' }
-			  (option_map (fun (abs, c) -> abs, nf_isevar !isevars c) tycon) rest
+			  (Option.map (fun (abs, c) -> abs, nf_isevar !isevars c) tycon) rest
 
 		  | _ ->
 		      let hj = pretype empty_tycon env isevars lvar c in
@@ -316,7 +319,7 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
 			  (join_loc floc argloc) env (evars_of !isevars)
 	      		  resj [hj]
 	in
-	let ftycon = option_map (lift_abstr_tycon_type (-1)) ftycon in
+	let ftycon = Option.map (lift_abstr_tycon_type (-1)) ftycon in
 	let resj = j_nf_evar (evars_of !isevars) (apply_rec env 1 fj ftycon args) in
 	let resj =
 	  match kind_of_term resj.uj_val with
@@ -328,7 +331,7 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
 	  | _ -> resj in
 	  inh_conv_coerce_to_tycon loc env isevars resj tycon
 
-    | RLambda(loc,name,c1,c2)      ->
+    | RLambda(loc,name,k,c1,c2)      ->
 	let (name',dom,rng) = evd_comb1 (split_tycon loc env) isevars tycon in
 	let dom_valcon = valcon_of_tycon dom in
 	let j = pretype_type dom_valcon env isevars lvar c1 in
@@ -336,7 +339,7 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
 	let j' = pretype rng (push_rel var env) isevars lvar c2 in 
 	  judge_of_abstraction env name j j'
 
-    | RProd(loc,name,c1,c2)        ->
+    | RProd(loc,name,k,c1,c2)        ->
 	let j = pretype_type empty_valcon env isevars lvar c1 in
 	let var = (name,j.utj_val) in
 	let env' = push_rel_assum var env in
@@ -397,7 +400,7 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
 		     let f = it_mkLambda_or_LetIn fj.uj_val fsign in
 		     let v =
 		       let mis,_ = dest_ind_family indf in
-		       let ci = make_default_case_info env LetStyle mis in
+		       let ci = make_case_info env mis LetStyle in
 			 mkCase (ci, p, cj.uj_val,[|f|]) in 
 		       { uj_val = v; uj_type = substl (realargs@[cj.uj_val]) ccl }
 
@@ -415,7 +418,7 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
 		     let p = it_mkLambda_or_LetIn (lift (nar+1) ccl) psign in
 		     let v =
 		       let mis,_ = dest_ind_family indf in
-		       let ci = make_default_case_info env LetStyle mis in
+		       let ci = make_case_info env mis LetStyle in
 			 mkCase (ci, p, cj.uj_val,[|f|] ) 
 		     in
 		       { uj_val = v; uj_type = ccl })
@@ -485,14 +488,14 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
 	  let b2 = f cstrs.(1) b2 in
 	  let v =
 	    let mis,_ = dest_ind_family indf in
-	    let ci = make_default_case_info env IfStyle mis in
+	    let ci = make_case_info env mis IfStyle in
 	      mkCase (ci, pred, cj.uj_val, [|b1;b2|])
 	  in
 	    { uj_val = v; uj_type = p }
 
-    | RCases (loc,po,tml,eqns) ->
-	Cases.compile_cases loc
-	  ((fun vtyc env -> pretype vtyc env isevars lvar),isevars)
+    | RCases (loc,sty,po,tml,eqns) ->
+	Cases.compile_cases loc sty
+	  ((fun vtyc env isevars -> pretype vtyc env isevars lvar),isevars)
 	  tycon env (* loc *) (po,tml,eqns)
 
     | RCast(loc,c,k) ->
@@ -552,14 +555,21 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
 		  error_unexpected_type_loc
                     (loc_of_rawconstr c) env (evars_of !isevars) tj.utj_val v
 
-  let pretype_gen isevars env lvar kind c =
+  let pretype_gen_aux isevars env lvar kind c =
     let c' = match kind with
       | OfType exptyp ->
 	  let tycon = match exptyp with None -> empty_tycon | Some t -> mk_tycon t in
 	    (pretype tycon env isevars lvar c).uj_val
       | IsType ->
 	  (pretype_type empty_valcon env isevars lvar c).utj_val in
+    let evd,_ = consider_remaining_unif_problems env !isevars in
+      isevars:=evd;
       nf_evar (evars_of !isevars) c'
+
+  let pretype_gen isevars env lvar kind c =
+    let c = pretype_gen_aux isevars env lvar kind c in
+      isevars := Typeclasses.resolve_typeclasses ~onlyargs:true ~fail:false env !isevars;
+      nf_evar (evars_of !isevars) c
 
   (* TODO: comment faire remonter l'information si le typage a resolu des
      variables du sigma original. il faudrait que la fonction de typage
@@ -587,11 +597,10 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
   let ise_pretype_gen fail_evar sigma env lvar kind c =
     let isevars = ref (Evd.create_evar_defs sigma) in
     let c = pretype_gen isevars env lvar kind c in
-    let isevars,_ = consider_remaining_unif_problems env !isevars in
-    let c = nf_evar (evars_of isevars) c in
-      if fail_evar then check_evars env sigma isevars c;
-      isevars, c
-
+    let evd = !isevars in
+      if fail_evar then check_evars env Evd.empty evd c;
+      evd, c
+	
   (** Entry points of the high-level type synthesis algorithm *)
 
   let understand_gen kind sigma env c =
@@ -601,16 +610,23 @@ module SubtacPretyping_F (Coercion : Coercion.S) = struct
     snd (ise_pretype_gen true sigma env ([],[]) (OfType exptyp) c)
 
   let understand_type sigma env c =
-    snd (ise_pretype_gen true sigma env ([],[]) IsType c)
+    snd (ise_pretype_gen false sigma env ([],[]) IsType c)
 
   let understand_ltac sigma env lvar kind c =
     ise_pretype_gen false sigma env lvar kind c
       
-  let understand_tcc_evars isevars env kind c =
-    pretype_gen isevars env ([],[]) kind c
+  let understand_tcc_evars evdref env kind c =
+    pretype_gen evdref env ([],[]) kind c 
 
-  let understand_tcc sigma env ?expected_type:exptyp c =
-    let ev, t = ise_pretype_gen false sigma env ([],[]) (OfType exptyp) c in
+  let understand_tcc ?(resolve_classes=true) sigma env ?expected_type:exptyp c =
+    let ev, t = 
+      if resolve_classes then
+	ise_pretype_gen false sigma env ([],[]) (OfType exptyp) c 
+      else
+	let isevars = ref (Evd.create_evar_defs sigma) in
+	let c = pretype_gen_aux isevars env ([],[]) (OfType exptyp) c in
+	  !isevars, c
+    in
       Evd.evars_of ev, t
 end
 

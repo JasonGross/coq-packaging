@@ -9,7 +9,7 @@
 (* coqwc - counts the lines of spec, proof and comments in Coq sources
  * Copyright (C) 2003 Jean-Christophe Filliâtre *)
 
-(*i $Id: coqwc.mll 9976 2007-07-12 11:58:30Z msozeau $ i*)
+(*i $Id: coqwc.mll 9691 2007-03-08 15:29:27Z msozeau $ i*)
 
 (*s {\bf coqwc.} Counts the lines of spec, proof and comments in a Coq source. 
     It assumes the files to be lexically well-formed. *)

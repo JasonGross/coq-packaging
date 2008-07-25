@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: typeops.ml 9314 2006-10-29 20:11:08Z herbelin $ *)
+(* $Id: typeops.ml 10877 2008-04-30 21:58:41Z herbelin $ *)
 
 open Util
 open Names
@@ -59,11 +59,11 @@ let sort_judgment env j = (type_judgment env j).utj_type
 
 let judge_of_prop =
   { uj_val = mkProp;
-    uj_type = mkSort type_0 }
+    uj_type = mkSort type1_sort }
 
 let judge_of_set =
   { uj_val = mkSet;
-    uj_type = mkSort type_0 }
+    uj_type = mkSort type1_sort }
 
 let judge_of_prop_contents = function
   | Null -> judge_of_prop
@@ -82,7 +82,7 @@ let judge_of_relative env n =
   try
     let (_,_,typ) = lookup_rel n env in
     { uj_val  = mkRel n;
-      uj_type = type_app (lift n) typ }
+      uj_type = lift n typ }
   with Not_found -> 
     error_unbound_rel env n
 
@@ -135,10 +135,10 @@ let extract_context_levels env =
   List.fold_left
     (fun l (_,b,p) -> if b=None then extract_level env p::l else l) []
 
-let make_polymorphic_if_arity env t =
+let make_polymorphic_if_constant_for_ind env {uj_val = c; uj_type = t} =
   let params, ccl = dest_prod_assum env t in
   match kind_of_term ccl with
-  | Sort (Type u) -> 
+  | Sort (Type u) when isInd (fst (decompose_app (whd_betadeltaiota env c))) ->
       let param_ccls = extract_context_levels env params in
       let s = { poly_param_levels = param_ccls; poly_level = u} in
       PolymorphicArity (params,s)
@@ -192,7 +192,7 @@ let judge_of_abstraction env name var j =
 
 let judge_of_letin env name defj typj j =
   { uj_val = mkLetIn (name, defj.uj_val, typj.utj_val, j.uj_val) ;
-    uj_type = type_app (subst1 defj.uj_val) j.uj_type }
+    uj_type = subst1 defj.uj_val j.uj_type }
 
 (* Type of an application. *)
 
@@ -237,9 +237,9 @@ let sort_of_product env domsort rangsort =
           rangsort
         else
           (* Rule is (Type_i,Set,Type_i) in the Set-predicative calculus *)
-          Type (sup u1 base_univ)
+          Type (sup u1 type0_univ)
     (* Product rule (Prop,Type_i,Type_i) *)
-    | (Prop Pos,  Type u2)  -> Type (sup base_univ u2)
+    | (Prop Pos,  Type u2)  -> Type (sup type0_univ u2)
     (* Product rule (Prop,Type_i,Type_i) *)
     | (Prop Null, Type _)  -> rangsort
     (* Product rule (Type_i,Type_i,Type_i) *) 

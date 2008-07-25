@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: refiner.mli 9244 2006-10-16 17:11:44Z barras $ i*)
+(*i $Id: refiner.mli 10879 2008-05-01 22:14:20Z msozeau $ i*)
 
 (*i*)
 open Term
@@ -28,7 +28,7 @@ val pf_hyps : goal sigma -> named_context
 val unpackage : 'a sigma -> evar_map ref * 'a
 val repackage : evar_map ref -> 'a -> 'a sigma
 val apply_sig_tac :
-  evar_map ref -> ('a sigma -> 'b sigma * 'c) -> 'a -> 'b * 'c
+  evar_map ref -> (goal sigma -> (goal list) sigma * validation) -> goal -> (goal list) * validation
 
 type transformation_tactic = proof_tree -> (goal list * validation)
 
@@ -40,15 +40,16 @@ val abstract_operation : compound_rule -> tactic -> tactic
 val abstract_tactic : ?dflt:bool -> atomic_tactic_expr -> tactic -> tactic
 val abstract_tactic_expr : ?dflt:bool -> tactic_expr -> tactic -> tactic
 val abstract_extended_tactic :
-  ?dflt:bool -> string -> closed_generic_argument list -> tactic -> tactic
+  ?dflt:bool -> string -> typed_generic_argument list -> tactic -> tactic
 
 val refiner : rule -> tactic
 val frontier : transformation_tactic
 val list_pf : proof_tree -> goal list
 val unTAC : tactic -> goal sigma -> proof_tree sigma
 
-val local_Constraints : tactic
 
+(* Install a hook frontier_map and frontier_mapi call on the new node they create *)
+val set_solve_hook : (Proof_type.proof_tree -> unit) -> unit
 (* [frontier_map f n p] applies f on the n-th open subgoal of p and
    rebuilds proof-tree.
    n=1 for first goal, n negative counts from the right *)
@@ -60,6 +61,9 @@ val frontier_mapi :
   (int -> proof_tree -> proof_tree) -> proof_tree -> proof_tree
 
 (*s Tacticals. *)
+
+(* [tclNORMEVAR] forces propagation of evar constraints *)
+val tclNORMEVAR       : tactic
 
 (* [tclIDTAC] is the identity tactic without message printing*)
 val tclIDTAC          : tactic
@@ -100,6 +104,13 @@ val tclTHENS         : tactic -> tactic list -> tactic
 val tclTHENST        : tactic -> tactic array -> tactic -> tactic
 *)
 
+(* [tclTHENS3PARTS tac1 [|t1 ; ... ; tn|] tac2 [|t'1 ; ... ; t'm|] gls]
+   applies the tactic [tac1] to [gls] then, applies [t1], ..., [tn] to
+   the first [n] resulting subgoals, [t'1], ..., [t'm] to the last [m]
+   subgoals and [tac2] to the rest of the subgoals in the middle. Raises an
+   error if the number of resulting subgoals is strictly less than [n+m] *)
+val tclTHENS3PARTS     : tactic -> tactic array -> tactic -> tactic array -> tactic
+
 (* [tclTHENSLASTn tac1 [t1 ; ... ; tn] tac2 gls] applies [t1],...,[tn] on the
    last [n] resulting subgoals and [tac2] on the remaining first subgoals *)
 val tclTHENSLASTn     : tactic -> tactic -> tactic array -> tactic
@@ -121,6 +132,10 @@ val tclTHENFIRSTn   : tactic -> tactic array -> tactic
 
 (* A special exception for levels for the Fail tactic *)
 exception FailError of int * Pp.std_ppcmds
+
+(* Takes an exception and either raise it at the next
+   level or do nothing. *)
+val catch_failerror  : exn -> unit
 
 val tclORELSE        : tactic -> tactic -> tactic
 val tclREPEAT        : tactic -> tactic
@@ -189,6 +204,7 @@ val solve_pftreestate : tactic -> pftreestate -> pftreestate
 val weak_undo_pftreestate : pftreestate -> pftreestate
 
 val mk_pftreestate : goal -> pftreestate
+val extract_open_proof : evar_map -> proof_tree -> constr * (int * types) list
 val extract_open_pftreestate : pftreestate -> constr * Termops.metamap
 val extract_pftreestate : pftreestate -> constr
 val first_unproven : pftreestate -> pftreestate

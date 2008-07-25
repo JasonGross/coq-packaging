@@ -6,11 +6,16 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: mltop.ml4 10185 2007-10-06 18:05:13Z herbelin $ *)
+(*i camlp4use: "pa_macro.cmo" i*)
+(* WARNING
+ * camlp4deps will not work for this file unless Makefile system enhanced.
+ *)
+
+(* $Id: mltop.ml4 10348 2007-12-06 17:36:14Z aspiwack $ *)
 
 open Util
 open Pp
-open Options
+open Flags
 open System
 open Libobject
 open Library
@@ -99,6 +104,10 @@ let dir_ml_load s =
 (* TO DO: .cma loading without toplevel *)
     | WithoutTop ->
       IFDEF Byte THEN
+	(* WARNING
+	 * if this code section starts to use a module not used elsewhere
+	 * in this file, the Makefile dependency logic needs to be updated.
+	 *)
         let _,gname = where_in_path !coq_mlpath_copy s in
         try
           Dynlink.loadfile gname;

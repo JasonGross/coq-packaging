@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: cerrors.ml 9306 2006-10-28 18:28:19Z herbelin $ *)
+(* $Id: cerrors.ml 10410 2007-12-31 13:11:55Z msozeau $ *)
 
 open Pp
 open Util
@@ -26,11 +26,7 @@ let print_loc loc =
 let guill s = "\""^s^"\""
 
 let where s =
-  if !Options.debug then  (str"in " ++ str s ++ str":" ++ spc ()) else (mt ())
-
-let anomaly_string () = str "Anomaly: "
-
-let report () = (str "." ++ spc () ++ str "Please report.")
+  if !Flags.debug then  (str"in " ++ str s ++ str":" ++ spc ()) else (mt ())
 
 (* assumption : explain_sys_exn does NOT end with a 'FNL anymore! *)
 
@@ -68,12 +64,21 @@ let rec explain_exn_default_aux anomaly_string report_fn = function
       hov 0 (anomaly_string () ++ str "uncaught exception Invalid_argument " ++ str (guill s) ++ report_fn ())
   | Sys.Break -> 
       hov 0 (fnl () ++ str "User interrupt.")
-  | Univ.UniverseInconsistency -> 
-      hov 0 (str "Error: Universe inconsistency.")
+  | Univ.UniverseInconsistency (o,u,v) ->
+      let msg = 
+	if !Constrextern.print_universes then
+	  spc() ++ str "(cannot enforce" ++ spc() ++ Univ.pr_uni u ++ spc() ++
+          str (match o with Univ.Lt -> "<" | Univ.Le -> "<=" | Univ.Eq -> "=")
+	  ++ spc() ++ Univ.pr_uni v ++ str")"
+	else
+	  mt() in
+      hov 0 (str "Error: Universe inconsistency" ++ msg ++ str ".")
   | TypeError(ctx,te) -> 
       hov 0 (str "Error:" ++ spc () ++ Himsg.explain_type_error ctx te)
   | PretypeError(ctx,te) ->
       hov 0 (str "Error:" ++ spc () ++ Himsg.explain_pretype_error ctx te)
+  | Typeclasses_errors.TypeClassError(env, te) ->
+      hov 0 (str "Error:" ++ spc () ++ Himsg.explain_typeclass_error env te)
   | InductiveError e -> 
       hov 0 (str "Error:" ++ spc () ++ Himsg.explain_inductive_error e)
   | RecursionSchemeError e -> 
@@ -127,11 +132,15 @@ let rec explain_exn_default_aux anomaly_string report_fn = function
       hov 0 (anomaly_string () ++ str "Uncaught exception " ++ 
 	       str (Printexc.to_string reraise) ++ report_fn ())
 
+let anomaly_string () = str "Anomaly: "
+
+let report () = (str "." ++ spc () ++ str "Please report.")
+
 let explain_exn_default =
-    explain_exn_default_aux (fun () -> str "Anomaly: ") report
+  explain_exn_default_aux anomaly_string report
 
 let raise_if_debug e =
-  if !Options.debug then raise e
+  if !Flags.debug then raise e
 
 let _ = Tactic_debug.explain_logic_error := explain_exn_default
 

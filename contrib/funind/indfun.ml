@@ -22,8 +22,8 @@ let is_rec_info scheme_info =
 
 let choose_dest_or_ind scheme_info =
     if is_rec_info scheme_info
-    then Tactics.new_induct
-    else Tactics.new_destruct
+    then Tactics.new_induct false
+    else Tactics.new_destruct false
 
 
 let functional_induction with_clean c princl pat =
@@ -48,8 +48,8 @@ let functional_induction with_clean c princl pat =
 			| InType -> finfo.rect_lemma
 		    in
 		    let princ =  (* then we get the principle *)
-		      try mkConst (out_some princ_option )
-		      with Failure "out_some" -> 
+		      try mkConst (Option.get princ_option )
+		      with Option.IsNone -> 
 			(*i If there is not default lemma defined then, 
 			  we cross our finger and try to find a lemma named f_ind 
 			  (or f_rec, f_rect) i*)
@@ -77,7 +77,7 @@ let functional_induction with_clean c princl pat =
 	if princ_infos.Tactics.farg_in_concl 
 	then [c] else [] 
       in
-      List.map (fun c -> Tacexpr.ElimOnConstr c) (args@c_list) 
+      List.map (fun c -> Tacexpr.ElimOnConstr (c,NoBindings)) (args@c_list) 
     in 
     let princ' = Some (princ,bindings) in 
     let princ_vars = 
@@ -120,7 +120,8 @@ let functional_induction with_clean c princl pat =
 	 princ_infos
 	 args_as_induction_constr
 	 princ'
-	 pat)
+	 pat
+         None)
       subst_and_reduce
       g
       
@@ -139,14 +140,14 @@ type newfixpoint_expr =
 let rec abstract_rawconstr c = function
   | [] -> c
   | Topconstr.LocalRawDef (x,b)::bl -> Topconstr.mkLetInC(x,b,abstract_rawconstr c bl)
-  | Topconstr.LocalRawAssum (idl,t)::bl ->
-      List.fold_right (fun x b -> Topconstr.mkLambdaC([x],t,b)) idl
+  | Topconstr.LocalRawAssum (idl,k,t)::bl ->
+      List.fold_right (fun x b -> Topconstr.mkLambdaC([x],k,t,b)) idl
         (abstract_rawconstr c bl)
 
 let interp_casted_constr_with_implicits sigma env impls c  =
 (*   Constrintern.interp_rawconstr_with_implicits sigma env [] impls c *)
   Constrintern.intern_gen false sigma env ~impls:([],impls) 
-    ~allow_soapp:false  ~ltacvars:([],[]) c
+    ~allow_patvar:false  ~ltacvars:([],[]) c
 
 
 (* 
@@ -160,7 +161,7 @@ let build_newrecursive
   in
   let (rec_sign,rec_impls) =
     List.fold_left
-      (fun (env,impls) (recname,_,bl,arityc,_) ->
+      (fun (env,impls) ((_,recname),_,bl,arityc,_) ->
         let arityc = Command.generalize_constr_expr arityc bl in
         let arity = Constrintern.interp_type sigma env0 arityc in
 	let impl =
@@ -213,7 +214,7 @@ let rec is_rec names =
     | RRec _ -> error "RRec not handled"
     | RIf(_,b,_,lhs,rhs) -> 
 	(lookup names b) || (lookup names lhs) || (lookup names rhs)
-    | RLetIn(_,na,t,b) | RLambda(_,na,t,b) | RProd(_,na,t,b)  -> 
+    | RLetIn(_,na,t,b) | RLambda(_,na,_,t,b) | RProd(_,na,_,t,b)  -> 
 	lookup names t || lookup (Nameops.name_fold Idset.remove na names) b
     | RLetTuple(_,nal,_,t,b) -> lookup names t || 
 	lookup 
@@ -224,7 +225,7 @@ let rec is_rec names =
 	  )
 	  b
     | RApp(_,f,args) -> List.exists (lookup names) (f::args)
-    | RCases(_,_,el,brl) -> 
+    | RCases(_,_,_,el,brl) -> 
 	List.exists (fun (e,_) -> lookup names e) el ||
 	  List.exists (lookup_br names) brl
   and lookup_br names (_,idl,_,rt) = 
@@ -266,7 +267,7 @@ let derive_inversion fix_names =
 	)
     with e -> 
       msg_warning 
-	(str "Cannot build functional inversion principle" ++ 
+	(str "Cannot built inversion information" ++ 
 	   if do_observe () then Cerrors.explain_exn e else mt ())
   with _ -> ()
 
@@ -297,7 +298,7 @@ let generate_principle  on_error
     is_general do_built fix_rec_l recdefs  interactive_proof 
     (continue_proof : int -> Names.constant array -> Term.constr array -> int -> 
       Tacmach.tactic) : unit =
-  let names = List.map (function (name,_,_,_,_) -> name) fix_rec_l in
+  let names = List.map (function ((_, name),_,_,_,_) -> name) fix_rec_l in
   let fun_bodies = List.map2 prepare_body fix_rec_l recdefs in
   let funs_args = List.map fst fun_bodies in
   let funs_types =  List.map (function (_,_,_,types,_) -> types) fix_rec_l in
@@ -318,7 +319,7 @@ let generate_principle  on_error
 		 f_R_mut)
 	in
 	let fname_kn (fname,_,_,_,_) =
-	  let f_ref = Ident (dummy_loc,fname) in
+	  let f_ref = Ident fname in
 	  locate_with_msg
 	    (pr_reference f_ref++str ": Not an inductive type!")
 	    locate_constant
@@ -351,17 +352,17 @@ let generate_principle  on_error
 
 let register_struct is_rec fixpoint_exprl = 
   match fixpoint_exprl with 
-    | [(fname,_,bl,ret_type,body),_] when not is_rec -> 
+    | [((_,fname),_,bl,ret_type,body),_] when not is_rec -> 
 	Command.declare_definition
 	  fname
-	  (Decl_kinds.Global,Options.boxed_definitions (),Decl_kinds.Definition)
+	  (Decl_kinds.Global,Flags.boxed_definitions (),Decl_kinds.Definition)
 	  bl
 	  None
   	  body
 	  (Some ret_type)
 	  (fun _ _ -> ())
     | _ -> 
-	Command.build_recursive fixpoint_exprl (Options.boxed_definitions())
+	Command.build_recursive fixpoint_exprl (Flags.boxed_definitions())
 
 let generate_correction_proof_wf f_ref tcc_lemma_ref   
     is_mes functional_ref eq_ref rec_arg_num rec_arg_type nb_args relation
@@ -402,7 +403,7 @@ let register_wf ?(is_mes=false) fname rec_impls wf_rel_expr wf_arg using_lemmas 
 	 )
 	) 
     in
-    Topconstr.CApp (dummy_loc,(None,Topconstr.mkIdentC (id_of_string "eq")),
+    Topconstr.CApp (dummy_loc,(None,Topconstr.mkRefC (Qualid (dummy_loc,(qualid_of_string "Logic.eq")))),
 		    [(f_app_args,None);(body,None)])
   in
   let eq = Command.generalize_constr_expr unbounded_eq args in 
@@ -434,7 +435,7 @@ let register_mes fname rec_impls wf_mes_expr wf_arg using_lemmas args ret_type b
       | None -> 
 	  begin
 	    match args with 
-	      | [Topconstr.LocalRawAssum ([(_,Name x)],t)] -> t,x 
+	      | [Topconstr.LocalRawAssum ([(_,Name x)],k,t)] -> t,x 
 	      | _ -> error "Recursive argument must be specified" 
 	  end
       | Some wf_args -> 
@@ -442,7 +443,7 @@ let register_mes fname rec_impls wf_mes_expr wf_arg using_lemmas args ret_type b
 	    match 
 	      List.find 
 		(function 
-		   | Topconstr.LocalRawAssum(l,t) -> 
+		   | Topconstr.LocalRawAssum(l,k,t) -> 
 		       List.exists 
 			 (function (_,Name id) -> id =  wf_args | _ -> false) 
 			 l 
@@ -450,7 +451,7 @@ let register_mes fname rec_impls wf_mes_expr wf_arg using_lemmas args ret_type b
 		)
 		args 
 	    with 
-	      | Topconstr.LocalRawAssum(_,t)  ->	    t,wf_args
+	      | Topconstr.LocalRawAssum(_,k,t)  ->	    t,wf_args
 	      | _ -> assert false 
 	  with Not_found -> assert false 
   in
@@ -462,7 +463,7 @@ let register_mes fname rec_impls wf_mes_expr wf_arg using_lemmas args ret_type b
   let fun_from_mes = 
     let applied_mes = 
       Topconstr.mkAppC(wf_mes_expr,[Topconstr.mkIdentC wf_arg])    in
-    Topconstr.mkLambdaC ([(dummy_loc,Name wf_arg)],wf_arg_type,applied_mes) 
+    Topconstr.mkLambdaC ([(dummy_loc,Name wf_arg)],Topconstr.default_binder_kind,wf_arg_type,applied_mes) 
   in
   let wf_rel_from_mes = 
     Topconstr.mkAppC(Topconstr.mkRefC  ltof,[wf_arg_type;fun_from_mes])
@@ -475,7 +476,7 @@ let do_generate_principle on_error register_built interactive_proof fixpoint_exp
   let recdefs,rec_impls = build_newrecursive fixpoint_exprl in 
   let _is_struct = 
     match fixpoint_exprl with 
-      | [((name,Some (Wf (wf_rel,wf_x,using_lemmas)),args,types,body))] -> 
+      | [(((_,name),Some (Wf (wf_rel,wf_x,using_lemmas)),args,types,body))] -> 
 	  let pre_hook = 
 	    generate_principle 
 	      on_error
@@ -488,7 +489,7 @@ let do_generate_principle on_error register_built interactive_proof fixpoint_exp
 	  if register_built 
 	  then register_wf name rec_impls wf_rel wf_x using_lemmas args types body pre_hook;
 	  false
-      | [((name,Some (Mes (wf_mes,wf_x,using_lemmas)),args,types,body))] -> 
+      | [(((_,name),Some (Mes (wf_mes,wf_x,using_lemmas)),args,types,body))] -> 
 	  let pre_hook = 
 	    generate_principle 
 	      on_error
@@ -503,20 +504,15 @@ let do_generate_principle on_error register_built interactive_proof fixpoint_exp
 	  true
       | _ -> 
 	  let fix_names = 
-	    List.map (function (name,_,_,_,_) -> name) fixpoint_exprl 
+	    List.map (function ((_,name),_,_,_,_) -> name) fixpoint_exprl 
 	  in
 	  let is_one_rec = is_rec fix_names  in
 	  let old_fixpoint_exprl =  
 	    List.map
 	      (function
 		 | (name,Some (Struct id),args,types,body),_ -> 
-		     let names = 
-		       List.map
-			 snd
-			 (Topconstr.names_of_local_assums args) 
-		     in 
 		     let annot = 
-		       try Some (list_index (Name id) names - 1), Topconstr.CStructRec 
+		       try Some (dummy_loc, id), Topconstr.CStructRec 
 		       with Not_found -> 
 			 raise (UserError("",str "Cannot find argument " ++ 
 					    Ppconstr.pr_id id)) 
@@ -529,7 +525,8 @@ let do_generate_principle on_error register_built interactive_proof fixpoint_exp
 			 (dummy_loc,"Function",
 			  Pp.str "the recursive argument needs to be specified in Function")
 		     else 
-		       (name,(Some 0, Topconstr.CStructRec),args,types,body),
+		       let loc, na = List.hd names in
+			 (name,(Some (loc, Nameops.out_name na), Topconstr.CStructRec),args,types,body),
 		     (None:Vernacexpr.decl_notation)
 		 | (_,Some (Wf _),_,_,_),_ | (_,Some (Mes _),_,_,_),_-> 
 		     error 
@@ -539,7 +536,7 @@ let do_generate_principle on_error register_built interactive_proof fixpoint_exp
 	  in
 	  (* ok all the expressions are structural *) 
 	  let fix_names = 
-	    List.map (function (name,_,_,_,_) -> name) fixpoint_exprl 
+	    List.map (function ((_,name),_,_,_,_) -> name) fixpoint_exprl 
 	  in
 	  let is_rec = List.exists (is_rec fix_names) recdefs in
 	  if register_built then register_struct is_rec old_fixpoint_exprl;
@@ -570,11 +567,11 @@ let rec add_args id new_args b =
       CArrow(loc,add_args id new_args  b1, add_args id new_args b2)
   | CProdN(loc,nal,b1) -> 
       CProdN(loc,
-	     List.map (fun (nal,b2) -> (nal,add_args id new_args b2)) nal, 
+	     List.map (fun (nal,k,b2) -> (nal,k,add_args id new_args b2)) nal, 
 	     add_args id new_args  b1)
   | CLambdaN(loc,nal,b1) -> 
       CLambdaN(loc,
-	       List.map (fun (nal,b2) -> (nal,add_args id new_args  b2)) nal, 
+	       List.map (fun (nal,k,b2) -> (nal,k,add_args id new_args  b2)) nal, 
 	       add_args id new_args  b1)
   | CLetIn(loc,na,b1,b2) -> 
       CLetIn(loc,na,add_args id new_args b1,add_args id new_args b2)
@@ -588,22 +585,22 @@ let rec add_args id new_args b =
   | CApp(loc,(pf,b),bl) -> 
       CApp(loc,(pf,add_args id new_args b), 
 	   List.map (fun (e,o) -> add_args id new_args e,o) bl)
-  | CCases(loc,b_option,cel,cal) -> 
-      CCases(loc,option_map (add_args id new_args) b_option,
+  | CCases(loc,sty,b_option,cel,cal) -> 
+      CCases(loc,sty,Option.map (add_args id new_args) b_option,
 	     List.map (fun (b,(na,b_option)) -> 
 			 add_args id new_args b,
-			 (na,option_map (add_args id new_args) b_option)) cel, 
+			 (na,Option.map (add_args id new_args) b_option)) cel, 
 	     List.map (fun (loc,cpl,e) -> (loc,cpl,add_args id new_args e)) cal
 	    )
   | CLetTuple(loc,nal,(na,b_option),b1,b2) -> 
-      CLetTuple(loc,nal,(na,option_map (add_args id new_args) b_option),
+      CLetTuple(loc,nal,(na,Option.map (add_args id new_args) b_option),
 		add_args id new_args b1,
 		add_args id new_args b2
 	       )
 		
   | CIf(loc,b1,(na,b_option),b2,b3) -> 
       CIf(loc,add_args id new_args b1, 
-	  (na,option_map (add_args id new_args) b_option),
+	  (na,Option.map (add_args id new_args) b_option),
 	  add_args id new_args b2,
 	  add_args id new_args b3
 	 )
@@ -644,13 +641,15 @@ let rec chop_n_arrow n t =
 	      let new_n =
 		let rec aux (n:int) = function 
 		    [] -> n
-		| (nal,t'')::nal_ta' -> 
+		| (nal,k,t'')::nal_ta' -> 
 		    let nal_l = List.length nal in 
 		    if n >= nal_l
 		    then 
 		      aux (n - nal_l) nal_ta'
 		    else 
-		      let new_t' = Topconstr.CProdN(dummy_loc,((snd (list_chop n nal)),t'')::nal_ta',t')
+		      let new_t' = 
+			Topconstr.CProdN(dummy_loc,
+					((snd (list_chop n nal)),k,t'')::nal_ta',t')
 		      in 
 		      raise (Stop new_t')
 		in
@@ -668,12 +667,12 @@ let rec get_args b t : Topconstr.local_binder list *
     | Topconstr.CLambdaN (loc, (nal_ta), b') -> 
 	begin
 	  let n = 
-	    (List.fold_left (fun n (nal,_) -> 
+	    (List.fold_left (fun n (nal,_,_) -> 
 			       n+List.length nal) 0 nal_ta )
 	  in
 	  let nal_tas,b'',t'' = get_args b' (chop_n_arrow n t) in 
-	  (List.map (fun (nal,ta) -> 
-		       (Topconstr.LocalRawAssum (nal,ta))) nal_ta)@nal_tas, b'',t'' 
+	  (List.map (fun (nal,k,ta) -> 
+		       (Topconstr.LocalRawAssum (nal,k,ta))) nal_ta)@nal_tas, b'',t'' 
 	end
     | _ -> [],b,t
 
@@ -711,26 +710,13 @@ let make_graph (f_ref:global_reference) =
 		let l = 
 		  List.map
 		    (fun (id,(n,recexp),bl,t,b) -> 
-		       let bl' =  
-			 List.flatten 
-			   (List.map 
-			      (function 
-				 | Topconstr.LocalRawDef (na,_)-> []
-				 | Topconstr.LocalRawAssum (nal,_) -> nal
-			      )
-			      bl
-			   )
-		       in 
-		       let rec_id = 
-			 match List.nth bl' (out_some n)  with 
-			   |(_,Name id) -> id | _ -> anomaly ""
-		       in
+		       let loc, rec_id = Option.get n in
 		       let new_args = 
 			 List.flatten 
 			   (List.map 
 			      (function
  				 | Topconstr.LocalRawDef (na,_)-> []
-			      	 | Topconstr.LocalRawAssum (nal,_) -> 
+			      	 | Topconstr.LocalRawAssum (nal,_,_) -> 
 				     List.map 
 				       (fun (loc,n) -> 
 					  CRef(Libnames.Ident(loc, Nameops.out_name n))) 
@@ -739,7 +725,7 @@ let make_graph (f_ref:global_reference) =
 			      nal_tas
 			   )
 		       in
-		       let b' = add_args id new_args b in 
+		       let b' = add_args (snd id) new_args b in 
 		       (id, Some (Struct rec_id),nal_tas@bl,t,b')
 		    )
 		    fixexprl
@@ -747,13 +733,13 @@ let make_graph (f_ref:global_reference) =
 		l
 	    | _ ->   
 		let id = id_of_label (con_label c) in 
-		[(id,None,nal_tas,t,b)]
+		[((dummy_loc,id),None,nal_tas,t,b)]
 	in
 	do_generate_principle error_error false false expr_list;
 	(* We register the infos *)
 	let mp,dp,_ = repr_con c in 
 	List.iter 
-	  (fun (id,_,_,_,_) -> add_Function false (make_con mp dp (label_of_id id))) 
+	  (fun ((_,id),_,_,_,_) -> add_Function false (make_con mp dp (label_of_id id))) 
 	  expr_list
 
 

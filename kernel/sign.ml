@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: sign.ml 9103 2006-09-01 11:02:52Z herbelin $ *)
+(* $Id: sign.ml 10451 2008-01-18 17:20:28Z barras $ *)
 
 open Names
 open Util
@@ -73,7 +73,7 @@ let fold_rel_context_reverse f ~init:x l = List.fold_left f x l
 
 let map_context f l =
   let map_decl (n, body_o, typ as decl) =
-    let body_o' = option_smartmap f body_o in
+    let body_o' = Option.smartmap f body_o in
     let typ' = f typ in
       if body_o' == body_o && typ' == typ then decl else
 	(n, body_o', typ')
@@ -83,8 +83,8 @@ let map_context f l =
 let map_rel_context = map_context
 let map_named_context = map_context
 
-let iter_rel_context f = List.iter (fun (_,b,t) -> f t; option_iter f b)
-let iter_named_context f = List.iter (fun (_,b,t) -> f t; option_iter f b)
+let iter_rel_context f = List.iter (fun (_,b,t) -> f t; Option.iter f b)
+let iter_named_context f = List.iter (fun (_,b,t) -> f t; Option.iter f b)
 
 (* Push named declarations on top of a rel context *)
 (* Bizarre. Should be avoided. *)
@@ -92,7 +92,7 @@ let push_named_to_rel_context hyps ctxt =
   let rec push = function
     | (id,b,t) :: l ->
 	let s, hyps = push l in
-	let d = (Name id, option_map (subst_vars s) b, type_app (subst_vars s) t) in
+	let d = (Name id, Option.map (subst_vars s) b, subst_vars s t) in
 	id::s, d::hyps
     | [] -> [],[] in
   let s, hyps = push hyps in
@@ -181,7 +181,9 @@ let decompose_prod_n_assum n =
   prodec_rec empty_rel_context n
 
 (* Given a positive integer n, transforms a lambda term [x1:T1]..[xn:Tn]T 
-   into the pair ([(xn,Tn);...;(x1,T1)],T) *)
+   into the pair ([(xn,Tn);...;(x1,T1)],T)
+   Lets in between are not expanded but turn into local definitions,
+   but n is the actual number of destructurated lambdas.  *)
 let decompose_lam_n_assum n =
   if n < 0 then
     error "decompose_lam_n_assum: integer parameter must be positive";
@@ -189,7 +191,7 @@ let decompose_lam_n_assum n =
     if n=0 then l,c 
     else match kind_of_term c with 
     | Lambda (x,t,c)  -> lamdec_rec (add_rel_decl (x,None,t) l) (n-1) c
-    | LetIn (x,b,t,c) -> lamdec_rec (add_rel_decl (x,Some b,t) l) (n-1) c
+    | LetIn (x,b,t,c) -> lamdec_rec (add_rel_decl (x,Some b,t) l) n c
     | Cast (c,_,_)      -> lamdec_rec l n c
     | c -> error "decompose_lam_n_assum: not enough abstractions"
   in 

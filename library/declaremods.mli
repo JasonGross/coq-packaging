@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declaremods.mli 6758 2005-02-20 18:13:28Z herbelin $ i*)
+(*i $Id: declaremods.mli 11065 2008-06-06 22:39:43Z msozeau $ i*)
 
 (*i*)
 open Util
@@ -37,28 +37,28 @@ open Lib
 *)
 
 val declare_module : 
-  (env -> 'modtype -> module_type_entry) -> (env -> 'modexpr -> module_expr) ->
+  (env -> 'modtype -> module_struct_entry) -> (env -> 'modexpr -> module_struct_entry) ->
   identifier -> 
   (identifier located list * 'modtype) list -> ('modtype * bool) option -> 
-  'modexpr option -> unit
+  'modexpr option -> module_path
  
-val start_module : (env -> 'modtype -> module_type_entry) -> 
+val start_module : (env -> 'modtype -> module_struct_entry) -> 
   bool option -> identifier -> (identifier located list * 'modtype) list ->
-   ('modtype * bool) option -> unit
+   ('modtype * bool) option -> module_path
 
-val end_module : identifier -> unit
+val end_module : identifier -> module_path
 
 
 
 (*s Module types *)
 
-val declare_modtype : (env -> 'modtype -> module_type_entry) -> 
-  identifier -> (identifier located list * 'modtype) list -> 'modtype -> unit
+val declare_modtype : (env -> 'modtype -> module_struct_entry) -> 
+  identifier -> (identifier located list * 'modtype) list -> 'modtype -> module_path
 
-val start_modtype : (env -> 'modtype -> module_type_entry) -> 
-  identifier -> (identifier located list * 'modtype) list -> unit
+val start_modtype : (env -> 'modtype -> module_struct_entry) -> 
+  identifier -> (identifier located list * 'modtype) list -> module_path
 
-val end_modtype : identifier -> unit
+val end_modtype : identifier -> module_path
 
 
 (*s Objects of a module. They come in two lists: the substitutive ones
@@ -95,6 +95,10 @@ val really_import_module : module_path -> unit
 
 val import_module : bool -> module_path -> unit
 
+(* Include  *)
+
+val declare_include : (env -> 'struct_expr -> module_struct_entry) -> 
+  'struct_expr -> bool -> unit
 
 (*s [iter_all_segments] iterate over all segments, the modules'
     segments first and then the current segment. Modules are presented
@@ -110,4 +114,5 @@ val debug_print_modtab : unit -> Pp.std_ppcmds
 
 (* For translator *)
 val process_module_bindings : module_ident list ->
-  (mod_bound_id * module_type_entry) list -> unit
+  (mod_bound_id * module_struct_entry) list -> unit
+

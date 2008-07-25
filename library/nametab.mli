@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: nametab.mli 7596 2005-11-21 09:17:07Z herbelin $ i*)
+(*i $Id: nametab.mli 10497 2008-02-01 12:18:37Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -73,7 +73,7 @@ type visibility = Until of int | Exactly of int
 val push : visibility -> section_path -> global_reference -> unit
 val push_syntactic_definition : 
   visibility -> section_path -> kernel_name -> unit
-val push_modtype : visibility -> section_path -> kernel_name -> unit
+val push_modtype : visibility -> section_path -> module_path -> unit
 val push_dir : visibility -> dir_path -> global_dir_reference -> unit
 val push_object : visibility -> section_path -> unit
 val push_tactic : visibility -> section_path -> kernel_name -> unit
@@ -89,9 +89,9 @@ val locate : qualid -> global_reference
 val global : reference -> global_reference
 
 (* The same for inductive types *)
-val global_inductive : reference -> inductive
+val inductive_of_reference : reference -> inductive
 
-(* This locates also syntactic definitions *)
+(* This locates also syntactic definitions; raise [Not_found] if not found *)
 val extended_locate : qualid -> extended_global_reference
 
 (* This locates all names with a given suffix, if qualid is valid as
@@ -106,7 +106,7 @@ val locate_obj : qualid -> section_path
 val locate_constant : qualid -> constant
 val locate_mind : qualid -> mutual_inductive
 val locate_section : qualid -> dir_path
-val locate_modtype : qualid -> kernel_name
+val locate_modtype : qualid -> module_path
 val locate_syntactic_definition : qualid -> kernel_name
 
 type ltac_constant = kernel_name
@@ -161,7 +161,7 @@ val pr_global_env : Idset.t -> global_reference -> std_ppcmds
    Coq.A.B.x that denotes the same object. *)
 
 val shortest_qualid_of_module : module_path -> qualid
-val shortest_qualid_of_modtype : kernel_name -> qualid
+val shortest_qualid_of_modtype : module_path -> qualid
 
 
 (*

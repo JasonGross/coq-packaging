@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: system.ml 9397 2006-11-21 21:50:54Z herbelin $ *)
+(* $Id: system.ml 10437 2008-01-11 14:50:44Z bertot $ *)
 
 open Pp
 open Util
@@ -98,15 +98,31 @@ let all_subdirs ~unix_path:root =
   List.rev !l
 
 let where_in_path path filename =
-  let rec search = function
+  let rec search acc = function
     | lpe :: rem ->
 	let f = Filename.concat lpe filename in
-	if Sys.file_exists f then (lpe,f) else search rem
-    | [] ->
-	raise Not_found
+	  if Sys.file_exists f 
+	  then (search ((lpe,f)::acc) rem) 
+	  else search acc rem
+    | [] -> acc in
+  let rec check_and_warn cont acc l = 
+    match l with
+      | [] -> if cont then assert false else raise Not_found
+      | [ (lpe, f) ] -> 
+	  if cont then begin
+	      warning (acc ^ (string_of_physical_path lpe) ^ " ]");
+	      warning ("Loading " ^ f)
+	    end;
+	  (lpe, f)
+      | (lpe, f) :: l' -> 
+	  if cont then
+	    check_and_warn true (acc ^ (string_of_physical_path lpe) ^ "; ") l'
+	  else
+	    check_and_warn true 
+	      (filename ^ " has been found in [ " ^ (string_of_physical_path lpe) ^ "; ") l' 
   in
-  search path
-
+    check_and_warn false "" (search [] path)
+  
 let find_file_in_path paths filename =
   if not (Filename.is_implicit filename) then
     let root = Filename.dirname filename in
@@ -199,7 +215,7 @@ let connect writefun readfun com =
   let pid = 
     let ch_to' = Unix.descr_of_in_channel ch_to_in in
     let ch_from' = Unix.descr_of_out_channel ch_from_out in
-    try Unix.create_process com [||] ch_to' ch_from' Unix.stdout
+    try Unix.create_process com [|com|] ch_to' ch_from' Unix.stdout
     with Unix.Unix_error (err,_,_) ->
       close_in ch_to_in; close_in ch_from_in; close_out ch_from_out;
       unlink tmp_from; unlink tmp_to;

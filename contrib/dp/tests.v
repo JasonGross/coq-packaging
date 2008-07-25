@@ -2,12 +2,81 @@
 Require Import ZArith.
 Require Import Classical.
 
+Dp_debug.
+Dp_timeout 3.
+
+(* module renamings *)
+
+Module M.
+  Parameter t : Set.
+End M.
+
+Lemma test_module_0 : forall x:M.t, x=x.
+ergo.
+Qed.
+
+Module N := M.
+
+Lemma test_module_renaming_0 : forall x:N.t, x=x.
+ergo.
+Qed.
+
+Dp_predefined M.t => "int".
+
+Lemma test_module_renaming_1 : forall x:N.t, x=x.
+ergo.
+Qed.
+
+(* Coq lists *)
+
+Require Export List.
+
+Lemma test_pol_0 : forall l:list nat, l=l.
+ergo.
+Qed.
+
+Parameter nlist: list nat -> Prop.
+
+Lemma poly_1 : forall l,  nlist l -> True.
+intros. 
+simplify.
+Qed.
+
+(* user lists *)
+
+Inductive list (A:Set) : Set :=
+| nil : list A
+| cons: forall a:A, list A -> list A.
+
+Fixpoint app (A:Set) (l m:list A) {struct l} : list A :=
+match l with
+| nil => m
+| cons a l1 => cons A a (app A l1 m)
+end.
+
+Lemma entail: (nil Z) = app Z (nil Z) (nil Z) -> True. 
+intros; ergo. 
+Qed.
+
+(* polymorphism *)
+Require Import List.
+
+Inductive mylist (A:Set) : Set :=
+  mynil : mylist A
+| mycons : forall a:A, mylist A -> mylist A.
+
+Parameter my_nlist: mylist nat -> Prop.
+
+ Goal forall l,  my_nlist l -> True.
+ intros.
+ simplify. 
+Qed.
+
 (* First example with the 0 and the equality translated *)
 
 Goal 0 = 0.
-zenon.
+simplify.
 Qed.
-
 
 (* Examples in the Propositional Calculus
    and theory of equality *)
@@ -15,35 +84,33 @@ Qed.
 Parameter A C : Prop.
 
 Goal A -> A.
-zenon.
+simplify.
 Qed.
 
 
 Goal A -> (A \/ C).
 
-zenon.
+simplify.
 Qed.
 
 
 Parameter x y z : Z.
 
 Goal x = y -> y = z -> x = z.
-
-zenon.
+ergo.
 Qed.
 
 
 Goal ((((A -> C) -> A) -> A) -> C) -> C.
 
-zenon.
+ergo.
 Qed.
-
 
 (* Arithmetic *)
 Open Scope Z_scope.
 
 Goal 1 + 1 = 2.
-simplify.
+yices.
 Qed.
 
 
@@ -57,14 +124,12 @@ Qed.
 
 Goal (forall (x y : Z), x = y) -> 0=1.
 try zenon.
-simplify.
+ergo.
 Qed.
 
 Goal forall (x: nat), (x + 0 = x)%nat.
 
-induction x0.
-zenon.
-zenon.
+induction x0; ergo.
 Qed.
 
 
@@ -106,7 +171,7 @@ Inductive even : Z -> Prop :=
    unlike CVC Lite *)
 
 Goal even 4.
-cvcl.
+ergo.
 Qed.
 
 
@@ -115,8 +180,7 @@ Definition skip_z (z : Z) (n : nat) := n.
 Definition skip_z1 := skip_z.
 
 Goal forall (z : Z) (n : nat), skip_z z n = skip_z1 z n.
-
-zenon.
+yices.
 Qed.
 
 
@@ -133,8 +197,7 @@ Dp_hint add_S.
    unlike zenon *)
 
 Goal forall n : nat, add n 0 = n.
-
-induction n ; zenon.
+induction n ; yices.
 Qed.
 
 
@@ -144,8 +207,8 @@ Definition pred (n : nat) : nat := match n with
 end.
 
 Goal forall n : nat, n <> 0%nat -> pred (S n) <> 0%nat.
-
-zenon.
+yices.
+(*zenon.*)
 Qed.
 
 
@@ -157,7 +220,7 @@ end.
 
 Goal forall n : nat, plus n 0%nat = n.
 
-induction n; zenon.
+induction n; ergo.
 Qed.
 
 
@@ -173,8 +236,11 @@ with odd_b (n : nat) : bool := match n with
 end.
 
 Goal even_b (S (S O)) = true.
-
+ergo.
+(*
+simplify.
 zenon.
+*)
 Qed.
 
 
@@ -184,7 +250,8 @@ Parameter foo : Set.
 Parameter ff : nat -> foo -> foo -> nat.
 Parameter g : foo -> foo.
 Goal (forall x:foo, ff 0 x x = O) -> forall y, ff 0 (g y) (g y) = O.
-zenon.
+yices.
+(*zenon.*)
 Qed.
 
 
@@ -194,7 +261,8 @@ Qed.
 Parameter poly_f : forall A:Set, A->A.
 
 Goal forall x:nat, poly_f nat x = poly_f nat x.
-zenon.
+ergo.
+(*zenon.*)
 Qed.
 
 

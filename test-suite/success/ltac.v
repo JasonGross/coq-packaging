@@ -173,5 +173,50 @@ Abort.
    empty args *)
 
 Goal True.
-match None with @None => exact I end.
+match constr:@None with @None => exact I end.
 Abort.
+
+(* Check second-order pattern unification *)
+
+Ltac to_exist :=
+  match goal with 
+  |- forall x y, @?P x y => 
+    let Q := eval lazy beta in (exists x, forall y, P x y) in
+    assert (Q->Q)
+  end.
+
+Goal forall x y : nat, x = y.
+to_exist. exact (fun H => H).
+Abort.
+
+(* Used to fail in V8.1 *)
+
+Tactic Notation "test" constr(t) integer(n) :=
+   set (k := t) in |- * at n.
+
+Goal forall x : nat, x = 1 -> x + x + x = 3.
+intros x H.
+test x 2.
+Abort.
+
+(* Utilisation de let rec sans arguments *)
+
+Ltac is := 
+  let rec i := match goal with |- ?A -> ?B => intro; i | _ => idtac end in
+  i.
+
+Goal True -> True -> True.
+is.
+exact I.
+Abort.
+
+(* Interférence entre espaces des noms *)
+
+Ltac O := intro.
+Ltac Z1 t := set (x:=t).
+Ltac Z2 t := t.
+Goal True -> True.
+Z1 O.
+Z2 ltac:O.
+exact I.
+Qed.

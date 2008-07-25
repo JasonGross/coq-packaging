@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: ppdecl_proof.ml 10739 2008-04-01 14:45:20Z herbelin $ *)
 
 open Util 
 open Pp
@@ -32,7 +32,7 @@ let pr_justification_items env = function
 let pr_justification_method env = function
     None -> mt ()
   | Some tac -> 
-      spc () ++ str "using" ++  pr_tac env tac
+      spc () ++ str "using" ++ spc () ++ pr_tac env tac
 
 let pr_statement pr_it env st = 
   pr_label st.st_label ++ pr_it env st.st_it
@@ -41,7 +41,6 @@ let pr_or_thesis pr_this env = function
     Thesis Plain -> str "thesis"
   | Thesis (For id) -> 
       str "thesis" ++ spc() ++ str "for" ++ spc () ++ pr_id id 
-  | Thesis (Sub n) -> str "thesis[" ++ int n ++ str "]"
   | This c -> pr_this env c
 
 let pr_cut pr_it env c = 
@@ -156,7 +155,7 @@ let rec pr_bare_proof_instr _then _thus env = function
   | Pcast (id,typ) -> 
       str "reconsider" ++ spc () ++ 
 	pr_or_thesis (fun _ -> pr_id) env id ++ spc () ++ 
-	str "as" ++ (pr_constr env typ)  
+	str "as" ++ spc () ++ (pr_constr env typ)  
   | Psuppose hyps -> 
       str "suppose" ++ 
 	print_hyps pr_constr _I env false false "we have" hyps

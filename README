@@ -1,5 +1,5 @@
 
-            		THE COQ V8.1 SYSTEM
+            		THE COQ V8.2 SYSTEM
             		===================
 
 INSTALLATION.
@@ -11,7 +11,7 @@ INSTALLATION.
 DOCUMENTATION.
 ==============
 
-   The documentation of Coq V8.1 is available by anonymous ftp (see below),
+   The documentation of Coq V8.2 is available by anonymous ftp (see below),
    in a directory doc/. It is also available on Coq web site at
    http://coq.inria.fr/doc-eng.html.
 
@@ -68,7 +68,11 @@ BUGS REPORT.
 
    Send your bug reports by filling a form at
 
-        http://logical.futurs.inria.fr/coq-bugs
+        http://coq.inria.fr/bin/coq-bugs
+
+   or by E-mail to
+
+	coq-bugs@coq.inria.fr
 
    To be effective, bug reports should mention the Caml version used
    to compile and run Coq, the Coq version (coqtop -v), the configuration

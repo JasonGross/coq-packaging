@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: term_typing.mli 9310 2006-10-28 19:35:09Z herbelin $ i*)
+(*i $Id: term_typing.mli 9795 2007-04-25 15:13:45Z soubiran $ i*)
 
 (*i*)
 open Names
@@ -26,10 +26,10 @@ val translate_local_assum : env -> types ->
   types * Univ.constraints
 
 val infer_declaration : env -> constant_entry -> 
-   constr_substituted option * constant_type * constraints * bool * bool
+   constr_substituted option * constant_type * constraints * bool * bool * bool
 
 val build_constant_declaration : env -> 'a ->
-    constr_substituted option * constant_type * constraints * bool * bool ->
+    constr_substituted option * constant_type * constraints * bool * bool * bool ->
       constant_body
 
 val translate_constant : env -> constant -> constant_entry -> constant_body

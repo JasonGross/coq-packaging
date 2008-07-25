@@ -6,6 +6,8 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
+(*i $Id: g_ascii_syntax.ml 10744 2008-04-03 14:09:56Z herbelin $ i*)
+
 open Pp
 open Util
 open Names
@@ -72,7 +74,7 @@ let make_ascii_string n =
   if n>=32 && n<=126 then String.make 1 (char_of_int n)
   else Printf.sprintf "%03d" n
 
-let uninterp_ascii_string r = option_map make_ascii_string (uninterp_ascii r)
+let uninterp_ascii_string r = Option.map make_ascii_string (uninterp_ascii r)
 
 let _ =
   Notation.declare_string_interpreter "char_scope"

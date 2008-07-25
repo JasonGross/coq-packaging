@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: command.mli 10067 2007-08-09 17:13:16Z msozeau $ i*)
+(*i $Id: command.mli 11024 2008-05-30 12:41:39Z msozeau $ i*)
 
 (*i*)
 open Util
@@ -30,28 +30,74 @@ open Redexpr
    functions of [Declare]; they return an absolute reference to the
    defined object *)
 
+val get_declare_definition_hook : unit -> (Entries.definition_entry -> unit)
+val set_declare_definition_hook : (Entries.definition_entry -> unit) -> unit
+
+val definition_message : identifier -> unit
+val assumption_message : identifier -> unit
+
 val declare_definition : identifier -> definition_kind ->
   local_binder list -> red_expr option -> constr_expr ->
-    constr_expr option -> declaration_hook -> unit
+  constr_expr option -> declaration_hook -> unit
 
-val syntax_definition : identifier -> constr_expr -> bool -> bool -> unit
+val syntax_definition : identifier -> identifier list * constr_expr -> 
+  bool -> bool -> unit
 
-val declare_one_assumption : coercion_flag -> assumption_kind -> Term.types -> 
-  Names.variable located -> unit
+val declare_one_assumption : coercion_flag -> assumption_kind -> Term.types ->
+  Impargs.manual_explicitation list ->
+  bool (* implicit *) -> bool (* keep *) -> bool (* inline *) -> Names.variable located  -> unit
+  
+val set_declare_assumption_hook : (types -> unit) -> unit
 
 val declare_assumption : identifier located list ->
-  coercion_flag -> assumption_kind -> local_binder list -> constr_expr -> unit
+  coercion_flag -> assumption_kind -> local_binder list -> constr_expr -> 
+  bool -> bool -> bool -> unit
+
+val declare_interning_data : 'a * Constrintern.implicits_env ->
+    string * Topconstr.constr_expr * Topconstr.scope_name option -> unit
+
+
+val compute_interning_datas :  Environ.env ->
+    'a list ->
+    'b list ->
+    Term.types list ->
+    Impargs.manual_explicitation list list ->
+  'a list *
+    ('b *
+	(Names.identifier list * Impargs.implicits_list *
+	    Topconstr.scope_name option list))
+    list
 
 val build_mutual : (inductive_expr * decl_notation) list -> bool -> unit
 
 val declare_mutual_with_eliminations :
-  bool -> Entries.mutual_inductive_entry -> mutual_inductive
+  bool -> Entries.mutual_inductive_entry -> 
+  (Impargs.manual_explicitation list *
+      Impargs.manual_explicitation list list) list ->
+  mutual_inductive
 
-val build_recursive : (fixpoint_expr * decl_notation) list -> bool -> unit
+type fixpoint_kind =
+  | IsFixpoint of (identifier located option * recursion_order_expr) list
+  | IsCoFixpoint
 
-val build_corecursive : (cofixpoint_expr * decl_notation) list -> bool -> unit
+type fixpoint_expr = {
+  fix_name : identifier;
+  fix_binders : local_binder list;
+  fix_body : constr_expr;
+  fix_type : constr_expr
+}
 
-val build_scheme : (identifier located * bool * reference * rawsort) list -> unit
+val recursive_message : Decl_kinds.definition_object_kind ->
+  int array option -> Names.identifier list -> Pp.std_ppcmds
+  
+val declare_fix : bool -> Decl_kinds.definition_object_kind -> identifier ->
+  constr -> types -> Impargs.manual_explicitation list -> global_reference
+
+val build_recursive : (Topconstr.fixpoint_expr * decl_notation) list -> bool -> unit
+
+val build_corecursive : (Topconstr.cofixpoint_expr * decl_notation) list -> bool -> unit
+
+val build_scheme : (identifier located option * scheme ) list -> unit
 
 val build_combined_scheme : identifier located -> identifier located list -> unit
 
@@ -59,11 +105,18 @@ val generalize_constr_expr : constr_expr -> local_binder list -> constr_expr
 
 val abstract_constr_expr : constr_expr -> local_binder list -> constr_expr
 
-val start_proof : identifier -> goal_kind -> constr ->
+(* A hook start_proof calls on the type of the definition being started *)
+val set_start_hook : (types -> unit) -> unit
+
+val start_proof : identifier -> goal_kind -> types ->
+  ?init_tac:Proof_type.tactic -> declaration_hook -> unit
+
+val start_proof_com : goal_kind -> 
+  (lident option * (local_binder list * constr_expr)) list ->
   declaration_hook -> unit
 
-val start_proof_com : identifier option -> goal_kind -> 
-  (local_binder list * constr_expr) -> declaration_hook -> unit
+(* A hook the next three functions pass to cook_proof *)
+val set_save_hook : (Refiner.pftreestate -> unit) -> unit
 
 (*s [save_named b] saves the current completed proof under the name it
 was started; boolean [b] tells if the theorem is declared opaque; it

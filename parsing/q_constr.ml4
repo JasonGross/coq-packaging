@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_constr.ml4,v 1.58 2005/12/30 10:55:32 herbelin Exp $ *)
+(*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
+
+(* $Id: q_constr.ml4 10739 2008-04-01 14:45:20Z herbelin $ *)
 
 open Rawterm
 open Term
@@ -47,9 +49,9 @@ EXTEND
   constr:
     [ "200" RIGHTA
       [ LIDENT "forall"; id = ident; ":"; c1 = constr; ","; c2 = constr ->
-        <:expr< Rawterm.RProd ($dloc$,Name $id$,$c1$,$c2$) >>
+        <:expr< Rawterm.RProd ($dloc$,Name $id$,Rawterm.Explicit,$c1$,$c2$) >>
       | "fun"; id = ident; ":"; c1 = constr; "=>"; c2 = constr ->
-        <:expr< Rawterm.RLambda ($dloc$,Name $id$,$c1$,$c2$) >>
+        <:expr< Rawterm.RLambda ($dloc$,Name $id$,Rawterm.Explicit,$c1$,$c2$) >>
       | "let"; id = ident; ":="; c1 = constr; "in"; c2 = constr ->
         <:expr< Rawterm.RLetin ($dloc$,Name $id$,$c1$,$c2$) >>
       (* fix todo *)
@@ -59,7 +61,7 @@ EXTEND
         <:expr< Rawterm.RCast($dloc$,$c1$,DEFAULTcast,$c2$) >> ]
     | "90" RIGHTA
       [ c1 = constr; "->"; c2 = SELF -> 
-        <:expr< Rawterm.RProd ($dloc$,Anonymous,$c1$,$c2$) >> ]
+        <:expr< Rawterm.RProd ($dloc$,Anonymous,Rawterm.Explicit,$c1$,$c2$) >> ]
     | "75" RIGHTA
       [ "~"; c = constr -> 
         apply_ref <:expr< coq_not_ref >> [c] ]

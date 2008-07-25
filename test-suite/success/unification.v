@@ -15,6 +15,12 @@ Proof.
 intros; apply (H _ H0).
 Qed.
 
+Lemma l3 : (forall P, ~(exists x:nat, P x))
+         -> forall P:nat->Prop, ~(exists x:nat, P x -> P x).
+Proof.
+intros; apply H.
+Qed.
+
 
 (* Example submitted for Zenon *)
 
@@ -56,10 +62,67 @@ Require Import Arith.
 Parameter x y : nat.
 Parameter G:x=y->x=y->Prop.
 Parameter K:x<>y->x<>y->Prop.
-Lemma l3 : (forall f:x=y->Prop, forall g:x<>y->Prop,
+Lemma l4 : (forall f:x=y->Prop, forall g:x<>y->Prop,
             match eq_nat_dec x y with left a => f a | right a => g a end)
    -> match eq_nat_dec x y with left a => G a a | right a => K a a end.
 Proof.
 intros.
 apply H.
+Qed.
+
+
+(* Test unification modulo eta-expansion (if possible) *)
+
+(* In this example, two instances for ?P (argument of hypothesis H) can be 
+   inferred (one is by unifying the type [Q true] and [?P true] of the
+   goal and type of [H]; the other is by unifying the argument of [f]);
+   we need to unify both instances up to allowed eta-expansions of the 
+   instances (eta is allowed if the meta was applied to arguments)
+
+   This used to fail before revision 9389 in trunk
+*)
+
+Lemma l5 :
+   forall f : (forall P, P true), (forall P, f P = f P) ->
+   forall Q, f (fun x => Q x) = f (fun x => Q x).
+Proof.
+intros.
+apply H.
+Qed.
+
+(* Test instanciation of evars by unification *)
+
+Goal (forall x, 0 * x = 0 -> True) -> True.    
+intros; eapply H.
+rewrite <- plus_n_Sm. (* should refine ?x with S ?x' *)
+Abort.
+
+(* Check handling of identity equation between evars *)
+(* The example failed to pass until revision 10623 *)
+
+Lemma l6 :
+  (forall y, (forall x, (forall z, y = 0 -> y + z = 0) -> y + x = 0) -> True)
+  -> True.
+intros.
+eapply H.
+intros.
+apply H0. (* Check that equation ?n[H] = ?n[H] is correctly considered true *)
+reflexivity.
+Qed.
+
+(* Check treatment of metas erased by K-redexes at the time of turning
+   them to evas *)
+
+Inductive nonemptyT (t : Type) : Prop := nonemptyT_intro : t -> nonemptyT t.
+Goal True.
+try case nonemptyT_intro. (* check that it fails w/o anomaly *)
+Abort.
+
+(* Test handling of return type and when it is decided to make the
+   predicate dependent or not - see "bug" #1851 *)
+
+Goal forall X (a:X) (f':nat -> X), (exists f : nat -> X, True).
+intros.
+exists (fun n => match n with O => a | S n' => f' n' end).
+constructor.
 Qed.

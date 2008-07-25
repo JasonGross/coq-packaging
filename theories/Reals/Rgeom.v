@@ -6,13 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rgeom.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Rgeom.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
 Require Import SeqSeries.
 Require Import Rtrigo.
-Require Import R_sqrt. Open Local Scope R_scope.
+Require Import R_sqrt.
+Open Local Scope R_scope.
 
 (** * Distance *)
 

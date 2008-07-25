@@ -1,3 +1,13 @@
+(************************************************************************)
+(*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
+(* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
+(*   \VV/  **************************************************************)
+(*    //   *      This file is distributed under the terms of the       *)
+(*         *       GNU Lesser General Public License Version 2.1        *)
+(************************************************************************)
+
+(*i $Id: vnorm.ml 11017 2008-05-29 13:00:24Z barras $ i*)
+
 open Names
 open Declarations
 open Term
@@ -52,14 +62,28 @@ let type_constructor mind mib typ params =
     let _,ctyp = decompose_prod_n nparams ctyp in   
     substl (List.rev (Array.to_list params)) ctyp
 
+
+
 let construct_of_constr const env tag typ =
   let (mind,_ as ind), allargs = find_rectype_a env typ in
-  let mib,mip = lookup_mind_specif env ind in
-  let nparams = mib.mind_nparams in
-  let i = invert_tag const tag mip.mind_reloc_tbl in
-  let params = Array.sub allargs 0 nparams in
-  let ctyp = type_constructor mind mib (mip.mind_nf_lc.(i-1)) params in
-  (mkApp(mkConstruct(ind,i), params), ctyp)
+  (* spiwack : here be a branch for specific decompilation handled by retroknowledge *)
+  try
+    if const then
+      ((retroknowledge Retroknowledge.get_vm_decompile_constant_info env (Ind ind) tag),
+       typ) (*spiwack: this may need to be changed in case there are parameters in the
+	               type which may cause a constant value to have an arity.
+	               (type_constructor seems to be all about parameters actually)
+	               but it shouldn't really matter since constant values don't use
+	               their ctyp in the rest of the code.*)
+    else
+      raise Not_found (* No retroknowledge function (yet) for block decompilation *)
+  with Not_found ->
+    let mib,mip = lookup_mind_specif env ind in
+    let nparams = mib.mind_nparams in
+    let i = invert_tag const tag mip.mind_reloc_tbl in
+    let params = Array.sub allargs 0 nparams in
+    let ctyp = type_constructor mind mib (mip.mind_nf_lc.(i-1)) params in
+      (mkApp(mkConstruct(ind,i), params), ctyp)
 
 let construct_of_constr_const env tag typ = 
   fst (construct_of_constr true env tag typ)
@@ -196,7 +220,8 @@ and nf_predicate env ind mip params v pT =
       let name = Name (id_of_string "c") in
       let n = mip.mind_nrealargs in
       let rargs = Array.init n (fun i -> mkRel (n-i)) in
-      let dom = mkApp(mkApp(mkInd ind,params),rargs) in
+      let params = if n=0 then params else Array.map (lift n) params in
+      let dom = mkApp(mkInd ind,Array.append params rargs) in
       let body = nf_vtype (push_rel (name,None,dom) env) vb in
       true, mkLambda(name,dom,body)
   | _, _ -> false, nf_val env v crazy_type

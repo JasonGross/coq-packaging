@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: bstack.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: bstack.mli 10441 2008-01-15 16:37:46Z lmamane $ i*)
 
 (* Bounded stacks. If the depth is [None], then there is no depth limit. *)
 
@@ -19,3 +19,4 @@ val app_repl : 'a t -> ('a -> 'a) -> unit
 val pop : 'a t -> unit
 val top : 'a t -> 'a
 val depth : 'a t -> int
+val size : 'a t -> int

@@ -6,11 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Zcomplements.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Zcomplements.v 10617 2008-03-04 18:07:16Z letouzey $ i*)
 
 Require Import ZArithRing.
 Require Import ZArith_base.
-Require Import Omega.
+Require Export Omega.
 Require Import Wf_nat.
 Open Local Scope Z_scope.
 
@@ -160,7 +160,7 @@ Qed.
 
 Require Import List.
 
-Fixpoint Zlength_aux (acc:Z) (A:Set) (l:list A) {struct l} : Z :=
+Fixpoint Zlength_aux (acc:Z) (A:Type) (l:list A) {struct l} : Z :=
   match l with
     | nil => acc
     | _ :: l => Zlength_aux (Zsucc acc) A l
@@ -171,7 +171,7 @@ Implicit Arguments Zlength [A].
 
 Section Zlength_properties.
 
-  Variable A : Set.
+  Variable A : Type.
 
   Implicit Type l : list A.
 

@@ -26,14 +26,18 @@ let out_to = ref MultFiles
 let out_channel = ref stdout
 
 let open_out_file f =
-  let f = if !output_dir <> "" then Filename.concat !output_dir f else f in
+  let f = if !output_dir <> "" && Filename.is_relative f then Filename.concat !output_dir f else f in
     out_channel := open_out f
 
 let close_out_file () = close_out !out_channel
 
 
 let header_trailer = ref true
-let quiet = ref false
+let header_file = ref ""
+let header_file_spec = ref false
+let footer_file = ref ""
+let footer_file_spec = ref false
+let quiet = ref true
 let light = ref false
 let gallina = ref false
 let short = ref false

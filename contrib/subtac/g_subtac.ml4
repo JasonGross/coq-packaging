@@ -6,15 +6,18 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
+(*i camlp4deps: "parsing/grammar.cma" i*)
+(*i camlp4use: "pa_extend.cmo" i*) 
+
+
 (*
   Syntax for the subtac terms and types.
   Elaborated from correctness/psyntax.ml4 by Jean-Christophe Filliâtre *)
 
-(* $Id: g_subtac.ml4 9976 2007-07-12 11:58:30Z msozeau $ *)
+(* $Id: g_subtac.ml4 10919 2008-05-11 22:04:26Z msozeau $ *)
 
-(*i camlp4deps: "parsing/grammar.cma" i*)
 
-open Options
+open Flags
 open Util
 open Names
 open Nameops
@@ -41,17 +44,20 @@ struct
   let subtac_nameopt : identifier option Gram.Entry.e = gec "subtac_nameopt"
 end
 
+open Rawterm
 open SubtacGram 
 open Util
 open Pcoq
-
+open Prim
+open Constr
 let sigref = mkRefC (Qualid (dummy_loc, Libnames.qualid_of_string "Coq.Init.Specif.sig"))
 
 GEXTEND Gram
-  GLOBAL: subtac_gallina_loc Constr.binder_let Constr.binder subtac_nameopt;
+  GLOBAL: subtac_gallina_loc typeclass_constraint Constr.binder subtac_nameopt;
  
   subtac_gallina_loc:
-    [ [ g = Vernac.gallina -> loc, g ] ]
+    [ [ g = Vernac.gallina -> loc, g
+    | g = Vernac.gallina_ext -> loc, g ] ]
     ;
 
   subtac_nameopt:
@@ -60,31 +66,31 @@ GEXTEND Gram
     ;
 
   Constr.binder_let:
-    [ [ "("; id=Prim.name; ":"; t=Constr.lconstr; "|"; c=Constr.lconstr; ")" -> 
-	  let typ = mkAppC (sigref, [mkLambdaC ([id], t, c)]) in
-	    LocalRawAssum ([id], typ)
+    [[ "("; id=Prim.name; ":"; t=Constr.lconstr; "|"; c=Constr.lconstr; ")" ->
+	  let typ = mkAppC (sigref, [mkLambdaC ([id], default_binder_kind, t, c)]) in
+          [LocalRawAssum ([id], default_binder_kind, typ)]
     ] ];
 
   Constr.binder:
     [ [ "("; id=Prim.name; ":"; c=Constr.lconstr; "|"; p=Constr.lconstr; ")" ->
-          ([id],mkAppC (sigref, [mkLambdaC ([id], c, p)]))
+          ([id],default_binder_kind, mkAppC (sigref, [mkLambdaC ([id], default_binder_kind, c, p)]))
       | "("; id=Prim.name; ":"; c=Constr.lconstr; ")" ->
-          ([id],c)
+          ([id],default_binder_kind, c)
       | "("; id=Prim.name; lid=LIST1 Prim.name; ":"; c=Constr.lconstr; ")" ->
-          (id::lid,c)
+          (id::lid,default_binder_kind, c)
     ] ];
 
   END
 
 
-type ('a,'b) gallina_loc_argtype = (Vernacexpr.vernac_expr located, 'a, 'b) Genarg.abstract_argument_type
+type 'a gallina_loc_argtype = (Vernacexpr.vernac_expr located, 'a) Genarg.abstract_argument_type
 
-let (wit_subtac_gallina_loc : (Genarg.tlevel, Proof_type.tactic) gallina_loc_argtype),
-  (globwit_subtac_gallina_loc : (Genarg.glevel, Tacexpr.glob_tactic_expr ) gallina_loc_argtype),
-  (rawwit_subtac_gallina_loc : (Genarg.rlevel, Tacexpr.raw_tactic_expr) gallina_loc_argtype) =
+let (wit_subtac_gallina_loc : Genarg.tlevel gallina_loc_argtype),
+  (globwit_subtac_gallina_loc : Genarg.glevel gallina_loc_argtype),
+  (rawwit_subtac_gallina_loc : Genarg.rlevel gallina_loc_argtype) =
   Genarg.create_arg "subtac_gallina_loc"
 
-type 'a nameopt_argtype = (identifier option, 'a, 'a) Genarg.abstract_argument_type
+type 'a nameopt_argtype = (identifier option, 'a) Genarg.abstract_argument_type
 
 let (wit_subtac_nameopt : Genarg.tlevel nameopt_argtype),
   (globwit_subtac_nameopt : Genarg.glevel nameopt_argtype),
@@ -133,10 +139,18 @@ VERNAC COMMAND EXTEND Subtac_Admit_Obligations
     END
 
 VERNAC COMMAND EXTEND Subtac_Set_Solver
-| [ "Obligations" "Tactic" ":=" tactic(t) ] -> [ Subtac_obligations.set_default_tactic (Tacinterp.glob_tactic t) ]
+| [ "Obligations" "Tactic" ":=" tactic(t) ] -> [ 
+    Coqlib.check_required_library ["Coq";"Program";"Tactics"];
+    Tacinterp.add_tacdef false 
+      [(Qualid (dummy_loc, qualid_of_string "Coq.Program.Tactics.obligations_tactic"), true, t)] ]
 END
 
 VERNAC COMMAND EXTEND Subtac_Show_Obligations
 | [ "Obligations" "of" ident(name) ] -> [ Subtac_obligations.show_obligations (Some name) ]
 | [ "Obligations" ] -> [ Subtac_obligations.show_obligations None ]
+END
+
+VERNAC COMMAND EXTEND Subtac_Show_Preterm
+| [ "Preterm" "of" ident(name) ] -> [ Subtac_obligations.show_term (Some name) ]
+| [ "Preterm" ] -> [ Subtac_obligations.show_term None ]
 END

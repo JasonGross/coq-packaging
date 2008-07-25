@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: dischargedhypsmap.ml 9903 2007-06-21 17:02:07Z herbelin $ *)
+(* $Id: dischargedhypsmap.ml 9902 2007-06-21 17:01:21Z herbelin $ *)
 
 open Util
 open Libnames

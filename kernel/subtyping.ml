@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: subtyping.ml 10031 2007-07-19 18:05:46Z soubiran $ i*)
+(*i $Id: subtyping.ml 11142 2008-06-18 15:37:31Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -22,16 +22,18 @@ open Mod_subst
 open Entries
 (*i*)
 
+
+
 (* This local type is used to subtype a constant with a constructor or
    an inductive type. It can also be useful to allow reorderings in
    inductive types *)
-
 type namedobject = 
   | Constant of constant_body
   | IndType of inductive * mutual_inductive_body
   | IndConstr of constructor * mutual_inductive_body
-  | Module of module_specification_body
+  | Module of module_body
   | Modtype of module_type_body
+  | Alias of module_path
 
 (* adds above information about one mutual inductive: all types and
    constructors *)
@@ -57,11 +59,12 @@ let make_label_map mp list =
   let add_one (l,e) map = 
    let add_map obj = Labmap.add l obj map in
    match e with
-    | SPBconst cb -> add_map (Constant cb)
-    | SPBmind mib ->
+    | SFBconst cb -> add_map (Constant cb)
+    | SFBmind mib ->
        add_nameobjects_of_mib (make_kn mp empty_dirpath l) mib map
-    | SPBmodule mb -> add_map (Module mb)
-    | SPBmodtype mtb -> add_map (Modtype mtb)
+    | SFBmodule mb -> add_map (Module mb)
+    | SFBmodtype mtb -> add_map (Modtype mtb)
+    | SFBalias (mp,cst) -> add_map (Alias mp)
   in
     List.fold_right add_one list Labmap.empty
 
@@ -72,11 +75,9 @@ let check_conv_error error cst f env a1 a2 =
       NotConvertible -> error ()
 
 (* for now we do not allow reorderings *)
-let check_inductive cst env msid1 l info1 mib2 spec2 path1 path2 = 
+let check_inductive cst env msid1 l info1 mib2 spec2 = 
   let kn = make_kn (MPself msid1) empty_dirpath l in
-  let error () = error_not_match l
-    (String.concat "." (List.map string_of_id (List.rev path1)))
-    (String.concat "." (List.map string_of_id (List.rev path2))) in
+  let error () = error_not_match l spec2 in
   let check_conv cst f = check_conv_error error cst f in
   let mib1 = 
     match info1 with
@@ -111,7 +112,7 @@ let check_inductive cst env msid1 l info1 mib2 spec2 path1 path2 =
     let (ctx2,s2) = dest_arity env t2 in
     let s1,s2 =
       match s1, s2 with
-      | Type _, Type _ -> (* shortcut here *) mk_Prop, mk_Prop
+      | Type _, Type _ -> (* shortcut here *) prop_sort, prop_sort
       | (Prop _, Type _) | (Type _,Prop _) -> error ()
       | _ -> (s1, s2) in
     check_conv cst conv_leq env 
@@ -194,10 +195,8 @@ let check_inductive cst env msid1 l info1 mib2 spec2 path1 path2 =
   in
     cst
     
-let check_constant cst env msid1 l info1 cb2 spec2 msid2 path1 path2 = 
-  let error () = error_not_match l
-    (String.concat "." (List.map string_of_id (List.rev path1)))
-    (String.concat "." (List.map string_of_id (List.rev path2))) in
+let check_constant cst env msid1 l info1 cb2 spec2 = 
+  let error () = error_not_match l spec2 in
   let check_conv cst f = check_conv_error error cst f in
   let check_type cst env t1 t2 = 
 
@@ -223,13 +222,13 @@ let check_constant cst env msid1 l info1 cb2 spec2 msid2 path1 path2 =
             | Type u when not (is_univ_variable u) ->
               (* Both types are inferred, no need to recheck them. We
                  cheat and collapse the types to Prop *)
-                Sign.mkArity (ctx1,mk_Prop), Sign.mkArity (ctx2,mk_Prop)
+                Sign.mkArity (ctx1,prop_sort), Sign.mkArity (ctx2,prop_sort)
             | Prop _ ->
               (* The type in the interface is inferred, it may be the case
                  that the type in the implementation is smaller because
                  the body is more reduced. We safely collapse the upper
                  type to Prop *)
-                Sign.mkArity (ctx1,mk_Prop), Sign.mkArity (ctx2,mk_Prop)
+                Sign.mkArity (ctx1,prop_sort), Sign.mkArity (ctx2,prop_sort)
             | Type _ ->
               (* The type in the interface is inferred and the type in the
                  implementation is not inferred or is inferred but from a
@@ -255,55 +254,42 @@ let check_constant cst env msid1 l info1 cb2 spec2 msid2 path1 path2 =
       let cst = check_type cst env typ1 typ2 in
       let con = make_con (MPself msid1) empty_dirpath l in
       let cst =
-	match cb2.const_body with
-	  | None -> cst
-	  | Some lc2 ->
-	      let c2 = Declarations.force lc2 in
-	      let c1 = match cb1.const_body with
-		| Some lc1 -> Declarations.force lc1
-		| None -> mkConst con
-	      in
-		begin
-		  match cb1.const_opaque,cb2.const_opaque with
-		      false,false |true,true ->
-			check_conv cst conv env c1 c2
-		    | false,true -> 
+	if cb2.const_opaque then
+	  match cb2.const_body with
+            | None -> cst
+            | Some lc2 ->
+		let c2 = Declarations.force lc2 in
+		let c1 = match cb1.const_body with
+		  | Some lc1 -> 
+		      let c = Declarations.force lc1 in
 			begin
-			  match kind_of_term c1 with
-			    | Const con' ->
-				let c1 = 
-				  match (Pre_env.lookup_constant con' 
-					   (pre_env env)).const_body with
-				      Some c -> Declarations.force c
-				    | None -> mkConst con'
-				in
-				  check_conv cst conv env c1 c2
-			    | _ ->
-				check_conv cst conv env c1 c2
+			  match (kind_of_term c) with
+			      Const n -> 
+				let cb = lookup_constant n env in
+				  (match cb.const_opaque,
+				     cb.const_body with
+				       | true, Some lc1 -> 
+					   Declarations.force lc1
+				       | _,_ -> c)
+			    | _ -> c
 			end
-		    | true,false->
-			begin
-			  match (kind_of_term c2) with
-			    | Const con'-> 
-				if con' = con 
-				then cst
-				else
-				let c2 = 
-				  match (Pre_env.lookup_constant con' 
-					   (pre_env env)).const_body with
-				      Some c -> Declarations.force c
-				    | None -> mkConst con'
-				in
-				  check_conv cst conv env c1 c2
-			    | _ ->
-				check_conv cst conv env c1 c2
-			end
-		end
-		  
+		  | None -> mkConst con
+		in
+		  check_conv cst conv env c1 c2
+	else
+	  match cb2.const_body with
+            | None -> cst
+            | Some lc2 ->
+		let c2 = Declarations.force lc2 in
+		let c1 = match cb1.const_body with
+		  | Some lc1 -> Declarations.force lc1
+		  | None -> mkConst con
+		in
+		  check_conv cst conv env c1 c2
       in
 	cst
    | IndType ((kn,i),mind1) ->
-      ignore (Util.error (
+       ignore (Util.error (
        "The kernel does not recognize yet that a parameter can be " ^
        "instantiated by an inductive type. Hint: you can rename the " ^
        "inductive type and give a definition to map the old name to the new " ^
@@ -326,38 +312,28 @@ let check_constant cst env msid1 l info1 cb2 spec2 msid2 path1 path2 =
        check_conv cst conv env ty1 ty2
    | _ -> error ()
 	      
-let rec check_modules cst env msid1 l msb1 msb2 path1 path2 =
+let rec check_modules cst env msid1 l msb1 msb2 alias =
   let mp = (MPdot(MPself msid1,l)) in
-  let mty1 = strengthen env msb1.msb_modtype mp in
-  let cst = check_modtypes cst env mty1 msb2.msb_modtype false 
-    path1 path2 in
-    begin
-      match msb1.msb_equiv, msb2.msb_equiv with
-	| _, None -> ()
-	| None, Some mp2 -> 
-	    begin  
-	      try
-		check_modpath_equiv env mp mp2
-	      with Not_equiv_path -> error_not_equal mp mp2
-	    end
-	| Some mp1, Some mp2 -> try
-	    check_modpath_equiv env mp1 mp2
-	  with Not_equiv_path -> error_not_equal mp1 mp2
-    end;
+  let mty1 = module_type_of_module (Some mp) msb1 in
+  let alias1,struct_expr = match eval_struct env mty1.typ_expr with
+    	| SEBstruct (msid,sign) as str ->
+	    update_subst alias (map_msid msid mp),str
+	| _ as str -> empty_subst,str in
+  let mty1 = {mty1 with 
+		typ_expr = struct_expr;
+		typ_alias = join alias1 mty1.typ_alias } in
+  let mty2 =  module_type_of_module None msb2 in
+  let cst = check_modtypes cst env mty1 mty2 false in
     cst
 	
 
-and check_signatures cst env (msid1,sig1) (msid2,sig2') path1 path2= 
+and check_signatures cst env (msid1,sig1) alias (msid2,sig2') = 
   let mp1 = MPself msid1 in
   let env = add_signature mp1 sig1 env in 
-  let sig2 = try
-    subst_signature_msid msid2 mp1 sig2' 
-    with
-    | Circularity l -> 
-	error_circularity_in_subtyping l
-	  (String.concat "." (List.map string_of_id (List.rev path1)))
-	  (String.concat "." (List.map string_of_id (List.rev path2)))
-  in
+  let sig1 = subst_structure alias sig1 in
+  let alias1 = update_subst alias (map_msid msid2 mp1) in
+  let sig2 = subst_structure alias1 sig2' in
+  let sig2 = subst_signature_msid msid2 mp1 sig2 in
   let map1 = make_label_map mp1 sig1 in
   let check_one_body cst (l,spec2) = 
     let info1 = 
@@ -365,72 +341,90 @@ and check_signatures cst env (msid1,sig1) (msid2,sig2') path1 path2=
 	Labmap.find l map1 
       with 
 	  Not_found -> error_no_such_label_sub l 
-	    (String.concat "." (List.map string_of_id (List.rev path1)))
-	    (String.concat "." (List.map string_of_id (List.rev path2)))
+	    (string_of_msid msid1) (string_of_msid msid2)
     in
       match spec2 with
-	| SPBconst cb2 ->
-	    check_constant cst env msid1 l info1 cb2 spec2 msid2 path1 path2
-	| SPBmind mib2 -> 
-	    check_inductive cst env msid1 l info1 mib2 spec2 path1 path2
-	| SPBmodule msb2 -> 
-	    let msb1 = 
+	| SFBconst cb2 ->
+	    check_constant cst env msid1 l info1 cb2 spec2
+	| SFBmind mib2 -> 
+	    check_inductive cst env msid1 l info1 mib2 spec2
+	| SFBmodule msb2 ->  
+	    begin
 	      match info1 with
-		| Module msb -> msb
-		| _ -> error_not_match l 
-		    (String.concat "." (List.map string_of_id (List.rev path1)))
-		      (String.concat "." (List.map string_of_id (List.rev path2)))
-
-	    in
-	      check_modules cst env msid1 l msb1 msb2 path1 path2
-	| SPBmodtype mtb2 ->
+		| Module msb -> check_modules cst env msid1 l msb msb2 alias
+		| Alias mp ->let msb = 
+		    {mod_expr = Some (SEBident mp);
+		     mod_type = Some (eval_struct env (SEBident mp));
+		     mod_constraints = Constraint.empty;
+		     mod_alias = (lookup_modtype mp env).typ_alias;
+		     mod_retroknowledge = []} in
+		    check_modules cst env msid1 l msb msb2 alias
+		| _ -> error_not_match l spec2
+	    end
+	| SFBalias (mp,_) ->
+	    begin	
+	      match info1 with
+		| Alias mp1 -> check_modpath_equiv env mp mp1; cst
+		| Module msb -> 
+		    let msb1 = 
+		      {mod_expr = Some (SEBident mp);
+		       mod_type = Some (eval_struct env (SEBident mp));
+		       mod_constraints = Constraint.empty;
+		       mod_alias = (lookup_modtype mp env).typ_alias;
+		       mod_retroknowledge = []} in
+			check_modules cst env msid1 l msb msb1 alias
+		| _ -> error_not_match l spec2
+	    end
+	| SFBmodtype mtb2 ->
 	    let mtb1 = 
 	      match info1 with
 		| Modtype mtb -> mtb
-		| _ -> error_not_match l 
-		    (String.concat "." (List.map string_of_id (List.rev path1)))
-		      (String.concat "." (List.map string_of_id (List.rev path2)))
-
+		| _ -> error_not_match l spec2
 	    in
-	      check_modtypes cst env mtb1 mtb2 true path1 path2
+	      check_modtypes cst env mtb1 mtb2 true
   in
     List.fold_left check_one_body cst sig2
     
-and check_modtypes cst env mtb1 mtb2 equiv path1 path2 = 
+
+and check_modtypes cst env mtb1 mtb2 equiv = 
   if mtb1==mtb2 then cst else (* just in case  :) *)
-  let mtb1' = scrape_modtype env mtb1 in
-  let mtb2' = scrape_modtype env mtb2 in
-    if mtb1'==mtb2' then cst else
-    match mtb1', mtb2' with
-      | MTBsig (msid1,list1), 
-	MTBsig (msid2,list2) -> 
-	  let cst = check_signatures cst env (msid1,list1) (msid2,list2)
-	    ((id_of_msid msid1)::path1) ((id_of_msid msid2)::path2) in
-	  if equiv then
-	    check_signatures cst env (msid2,list2) (msid1,list1) 
-	      ((id_of_msid msid2)::path2) ((id_of_msid msid1)::path1)
-	  else
-	    cst
-      | MTBfunsig (arg_id1,arg_t1,body_t1), 
-	MTBfunsig (arg_id2,arg_t2,body_t2) ->
-	  let cst = check_modtypes cst env arg_t2 arg_t1 equiv 
-	  [] [] in 
-	    (* contravariant *)
-	  let env = 
-	    add_module (MPbound arg_id2) (module_body_of_type arg_t2) env 
-	  in
-	  let body_t1' = 
-            (* since we are just checking well-typedness we do not need
-               to expand any constant. Hence the identity resolver. *)
-	    subst_modtype 
-              (map_mbid arg_id1 (MPbound arg_id2) None)
-	      body_t1
-	  in
-	  check_modtypes cst env body_t1' body_t2 equiv
-	    path1 path2
-      | MTBident _ , _ -> anomaly "Subtyping: scrape failed"
-      | _ , MTBident _ -> anomaly "Subtyping: scrape failed"
-      | _ , _ -> error_incompatible_modtypes mtb1 mtb2
+  let mtb1',mtb2'=
+    (match mtb1.typ_strength with
+	 None -> eval_struct env mtb1.typ_expr,
+	   eval_struct env mtb2.typ_expr
+       | Some mp -> strengthen  env mtb1.typ_expr mp,
+	   eval_struct env mtb2.typ_expr) in
+      let rec check_structure cst env str1 str2 equiv = 
+	match str1, str2 with
+	  | SEBstruct (msid1,list1), 
+	    SEBstruct (msid2,list2) -> 
+	      let cst = check_signatures cst env
+		(msid1,list1) mtb1.typ_alias (msid2,list2) in
+		if equiv then
+		  check_signatures cst env 
+		    (msid2,list2) mtb2.typ_alias  (msid1,list1) 
+		else
+		  cst
+	  | SEBfunctor (arg_id1,arg_t1,body_t1), 
+	      SEBfunctor (arg_id2,arg_t2,body_t2) ->
+	      let cst = check_modtypes cst env arg_t2 arg_t1 equiv in 
+		(* contravariant *)
+	      let env = 
+		add_module (MPbound arg_id2) (module_body_of_type arg_t2) env 
+	      in
+	      let body_t1' = 
+		(* since we are just checking well-typedness we do not need
+		   to expand any constant. Hence the identity resolver. *)
+		subst_struct_expr
+		  (map_mbid arg_id1 (MPbound arg_id2) None)
+		  body_t1
+	      in
+		check_structure cst env (eval_struct env body_t1')
+		  (eval_struct env body_t2) equiv
+	  | _ , _ -> error_incompatible_modtypes mtb1 mtb2
+      in 
+     if mtb1'== mtb2' then cst 
+     else check_structure cst env mtb1' mtb2' equiv
 	  
 let check_subtypes env sup super = 
-  check_modtypes Constraint.empty env sup super false [] []
+  check_modtypes Constraint.empty env sup super false

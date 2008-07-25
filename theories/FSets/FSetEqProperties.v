@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetEqProperties.v 8853 2006-05-23 18:17:38Z herbelin $ *)
+(* $Id: FSetEqProperties.v 11064 2008-06-06 17:00:52Z letouzey $ *)
 
 (** * Finite sets library *)
 
@@ -17,21 +17,12 @@
     [mem x s=true] instead of [In x s], 
     [equal s s'=true] instead of [Equal s s'], etc. *)
 
+Require Import FSetProperties Zerob Sumbool Omega DecidableTypeEx.
 
-Require Import FSetProperties.
-Require Import Zerob.
-Require Import Sumbool.
-Require Import Omega.
-
-Module EqProperties (M:S).
+Module WEqProperties (Import E:DecidableType)(M:WSfun E). 
+Module Import MP := WProperties E M.
+Import FM Dec.F.
 Import M.
-Import Logic. (* to unmask [eq] *)  
-Import Peano. (* to unmask [lt] *)
-  
-Module ME := OrderedTypeFacts E.  
-Module MP := Properties M.
-Import MP.
-Import MP.FM.
 
 Definition Add := MP.Add.
 
@@ -76,7 +67,7 @@ Qed.
   
 Lemma empty_mem: mem x empty=false.
 Proof. 
-rewrite <- not_mem_iff; auto.
+rewrite <- not_mem_iff; auto with set.
 Qed.
 
 Lemma is_empty_equal_empty: is_empty s = equal s empty.
@@ -88,17 +79,17 @@ Qed.
   
 Lemma choose_mem_1: choose s=Some x -> mem x s=true.
 Proof.  
-auto.
+auto with set.
 Qed.
 
 Lemma choose_mem_2: choose s=None -> is_empty s=true.
 Proof.
-auto.
+auto with set.
 Qed.
 
 Lemma add_mem_1: mem x (add x s)=true.
 Proof.
-auto.
+auto with set.
 Qed.  
  
 Lemma add_mem_2: ~E.eq x y -> mem y (add x s)=mem y s.
@@ -108,7 +99,7 @@ Qed.
 
 Lemma remove_mem_1: mem x (remove x s)=false.
 Proof. 
-rewrite <- not_mem_iff; auto.
+rewrite <- not_mem_iff; auto with set.
 Qed. 
  
 Lemma remove_mem_2: ~E.eq x y -> mem y (remove x s)=mem y s.
@@ -216,7 +207,7 @@ Proof.
 intros.
 generalize (@choose_1 s) (@choose_2 s).
 destruct (choose s);intros.
-exists e;auto.
+exists e;auto with set.
 generalize (H1 (refl_equal None)); clear H1.
 intros; rewrite (is_empty_1 H1) in H; discriminate.
 Qed.
@@ -233,7 +224,7 @@ Qed.
 Lemma add_mem_3: 
  mem y s=true -> mem y (add x s)=true.
 Proof.
-auto.
+auto with set.
 Qed.
 
 Lemma add_equal: 
@@ -260,7 +251,7 @@ Qed.
 Lemma add_remove: 
  mem x s=true -> equal (add x (remove x s)) s=true.
 Proof.
-intros; apply equal_1; apply add_remove; auto.
+intros; apply equal_1; apply add_remove; auto with set.
 Qed.
 
 Lemma remove_add: 
@@ -275,9 +266,9 @@ Qed.
 Lemma is_empty_cardinal: is_empty s = zerob (cardinal s).
 Proof.
 intros; apply bool_1; split; intros.
-rewrite cardinal_1; simpl; auto.
+rewrite MP.cardinal_1; simpl; auto with set.
 assert (cardinal s = 0) by (apply zerob_true_elim; auto).
-auto.
+auto with set.
 Qed.
 
 (** Properties of [singleton] *)
@@ -290,12 +281,12 @@ Qed.
 Lemma singleton_mem_2: ~E.eq x y -> mem y (singleton x)=false.
 Proof.
 intros; rewrite singleton_b.
-unfold ME.eqb; destruct (ME.eq_dec x y); intuition.
+unfold eqb; destruct (eq_dec x y); intuition.
 Qed.
 
 Lemma singleton_mem_3: mem y (singleton x)=true -> E.eq x y.
 Proof.
-auto.
+intros; apply singleton_1; auto with set.
 Qed.
 
 (** Properties of [union] *)
@@ -358,7 +349,7 @@ Lemma union_subset_3:
  subset s s''=true -> subset s' s''=true -> 
   subset (union s s') s''=true.
 Proof.
-intros; apply subset_1; apply union_subset_3; auto.
+intros; apply subset_1; apply union_subset_3; auto with set.
 Qed.
 
 (** Properties of [inter] *) 
@@ -433,7 +424,7 @@ Lemma inter_subset_3:
  subset s'' s=true -> subset s'' s'=true -> 
   subset s'' (inter s s')=true.
 Proof.
-intros; apply subset_1; apply inter_subset_3; auto.
+intros; apply subset_1; apply inter_subset_3; auto with set.
 Qed.
 
 (** Properties of [diff] *)
@@ -478,45 +469,37 @@ Hint Resolve equal_mem_1 subset_mem_1 choose_mem_1
    add_mem_3 add_equal remove_mem_3 remove_equal : set.
 
 
-(** General recursion principes based on [cardinal] *)
-
-Lemma cardinal_set_rec:  forall (P:t->Type),
- (forall s s', equal s s'=true -> P s -> P s') -> 
- (forall s x, mem x s=false -> P s -> P (add x s)) -> 
- P empty -> forall n s, cardinal s=n -> P s.
-Proof.
-intros.
-apply cardinal_induction with n; auto; intros.
-apply X with empty; auto with set.
-apply X with (add x s0); auto with set.
-apply equal_1; intro a; rewrite add_iff; rewrite (H1 a); tauto.
-apply X0; auto with set; apply mem_3; auto.
-Qed.
+(** General recursion principle *)
 
 Lemma set_rec:  forall (P:t->Type),
- (forall s s', equal s s'=true -> P s -> P s') ->
+ (forall s s', equal s s'=true -> P s -> P s') -> 
  (forall s x, mem x s=false -> P s -> P (add x s)) -> 
  P empty -> forall s, P s.
 Proof.
-intros;apply cardinal_set_rec with (cardinal s);auto.
+intros.
+apply set_induction; auto; intros.
+apply X with empty; auto with set.
+apply X with (add x s0); auto with set.
+apply equal_1; intro a; rewrite add_iff; rewrite (H0 a); tauto.
+apply X0; auto with set; apply mem_3; auto.
 Qed.
 
 (** Properties of [fold] *)
 
 Lemma exclusive_set : forall s s' x,
- ~In x s\/~In x s' <-> mem x s && mem x s'=false.
+ ~(In x s/\In x s') <-> mem x s && mem x s'=false.
 Proof.
-intros; do 2 rewrite not_mem_iff.
+intros; do 2 rewrite mem_iff.
 destruct (mem x s); destruct (mem x s'); intuition.
 Qed.
 
 Section Fold. 
-Variables (A:Set)(eqA:A->A->Prop)(st:Setoid_Theory _ eqA).
+Variables (A:Type)(eqA:A->A->Prop)(st:Setoid_Theory _ eqA).
 Variables (f:elt->A->A)(Comp:compat_op E.eq eqA f)(Ass:transpose eqA f).
 Variables (i:A).
 Variables (s s':t)(x:elt).
  
-Lemma fold_empty: eqA (fold f empty i) i.
+Lemma fold_empty: (fold f empty i) = i.
 Proof. 
 apply fold_empty; auto.
 Qed.
@@ -524,7 +507,7 @@ Qed.
 Lemma fold_equal: 
  equal s s'=true -> eqA (fold f s i) (fold f s' i).
 Proof. 
-intros; apply fold_equal with (eqA:=eqA); auto.
+intros; apply fold_equal with (eqA:=eqA); auto with set.
 Qed.
    
 Lemma fold_add: 
@@ -537,13 +520,13 @@ Qed.
 Lemma add_fold: 
   mem x s=true -> eqA (fold f (add x s) i) (fold f s i).
 Proof.
-intros; apply add_fold with (eqA:=eqA); auto.
+intros; apply add_fold with (eqA:=eqA); auto with set.
 Qed.
 
 Lemma remove_fold_1: 
  mem x s=true -> eqA (f x (fold f (remove x s) i)) (fold f s i).
 Proof.
-intros; apply remove_fold_1 with (eqA:=eqA); auto.
+intros; apply remove_fold_1 with (eqA:=eqA); auto with set.
 Qed.
 
 Lemma remove_fold_2: 
@@ -581,13 +564,13 @@ Qed.
 Lemma remove_cardinal_1: 
  forall s x, mem x s=true -> S (cardinal (remove x s))=cardinal s.
 Proof.
-intros; apply remove_cardinal_1; auto.
+intros; apply remove_cardinal_1; auto with set.
 Qed.
 
 Lemma remove_cardinal_2: 
  forall s x, mem x s=false -> cardinal (remove x s)=cardinal s.
 Proof.
-auto with set.
+intros; apply Equal_cardinal; apply equal_2; auto with set.
 Qed.
 
 Lemma union_cardinal: 
@@ -601,7 +584,7 @@ Qed.
 Lemma subset_cardinal: 
  forall s s', subset s s'=true -> cardinal s<=cardinal s'.
 Proof.
-intros; apply subset_cardinal; auto.
+intros; apply subset_cardinal; auto with set.
 Qed.
 
 Section Bool.
@@ -644,7 +627,7 @@ Proof.
 intros; apply bool_1; split; intros. 
 destruct (exists_2 Comp H) as (a,(Ha1,Ha2)).
 apply bool_6.
-red; intros; apply (@is_empty_2 _ H0 a); auto.
+red; intros; apply (@is_empty_2 _ H0 a); auto with set.
 generalize (@choose_1 (filter f s)) (@choose_2 (filter f s)).
 destruct (choose (filter f s)).
 intros H0 _; apply exists_1; auto.
@@ -656,13 +639,30 @@ Qed.
 Lemma partition_filter_1: 
  forall s, equal (fst (partition f s)) (filter f s)=true.
 Proof. 
-auto.
+auto with set.
 Qed.
 
 Lemma partition_filter_2: 
  forall s, equal (snd (partition f s)) (filter (fun x => negb (f x)) s)=true.
 Proof. 
-auto.
+auto with set.
+Qed.
+
+Lemma filter_add_1 : forall s x, f x = true -> 
+ filter f (add x s) [=] add x (filter f s). 
+Proof.
+red; intros; set_iff; do 2 (rewrite filter_iff; auto); set_iff.
+intuition.
+rewrite <- H; apply Comp; auto.
+Qed.
+
+Lemma filter_add_2 : forall s x, f x = false -> 
+ filter f (add x s) [=] filter f s. 
+Proof.
+red; intros; do 2 (rewrite filter_iff; auto); set_iff.
+intuition.
+assert (f x = f a) by (apply Comp; auto).
+rewrite H in H1; rewrite H2 in H1; discriminate.
 Qed.
 
 Lemma add_filter_1 : forall s s' x, 
@@ -837,6 +837,8 @@ Section Sum.
 (** Adding a valuation function on all elements of a set. *)
 
 Definition sum (f:elt -> nat)(s:t) := fold (fun x => plus (f x)) s 0. 
+Notation compat_opL := (compat_op E.eq (@Logic.eq _)).
+Notation transposeL := (transpose (@Logic.eq _)).
 
 Lemma sum_plus : 
   forall f g, compat_nat E.eq f -> compat_nat E.eq g -> 
@@ -844,12 +846,12 @@ Lemma sum_plus :
 Proof.
 unfold sum.
 intros f g Hf Hg.
-assert (fc : compat_op E.eq (@eq _) (fun x:elt =>plus (f x))).  auto.
-assert (ft : transpose (@eq _) (fun x:elt =>plus (f x))). red; intros; omega.
-assert (gc : compat_op E.eq (@eq _) (fun x:elt => plus (g x))). auto.
-assert (gt : transpose (@eq _) (fun x:elt =>plus (g x))). red; intros; omega.
-assert (fgc : compat_op E.eq (@eq _) (fun x:elt =>plus ((f x)+(g x)))). auto.
-assert (fgt : transpose (@eq _) (fun x:elt=>plus ((f x)+(g x)))). red; intros; omega.
+assert (fc : compat_opL (fun x:elt =>plus (f x))).  auto.
+assert (ft : transposeL (fun x:elt =>plus (f x))). red; intros; omega.
+assert (gc : compat_opL (fun x:elt => plus (g x))). auto.
+assert (gt : transposeL (fun x:elt =>plus (g x))). red; intros; omega.
+assert (fgc : compat_opL (fun x:elt =>plus ((f x)+(g x)))). auto.
+assert (fgt : transposeL (fun x:elt=>plus ((f x)+(g x)))). red; intros; omega.
 assert (st := gen_st nat).
 intros s;pattern s; apply set_rec.
 intros.
@@ -858,7 +860,7 @@ rewrite <- (fold_equal _ _ st _ gc gt 0 _ _ H).
 rewrite <- (fold_equal _ _ st _ fgc fgt 0 _ _ H); auto.
 intros; do 3 (rewrite (fold_add _ _ st);auto).
 rewrite H0;simpl;omega.
-intros; do 3 rewrite (fold_empty _ _ st);auto.
+do 3 rewrite fold_empty;auto.
 Qed.
 
 Lemma sum_filter : forall f, (compat_bool E.eq f) -> 
@@ -866,11 +868,11 @@ Lemma sum_filter : forall f, (compat_bool E.eq f) ->
 Proof.
 unfold sum; intros f Hf.
 assert (st := gen_st nat).
-assert (cc : compat_op E.eq (@eq _) (fun x => plus (if f x then 1 else 0))). 
- unfold compat_op; intros.
+assert (cc : compat_opL (fun x => plus (if f x then 1 else 0))). 
+ red; intros.
  rewrite (Hf x x' H); auto.
-assert (ct : transpose (@eq _) (fun x => plus (if f x then 1 else 0))).
- unfold transpose; intros; omega.
+assert (ct : transposeL (fun x => plus (if f x then 1 else 0))).
+ red; intros; omega.
 intros s;pattern s; apply set_rec.
 intros.
 change elt with E.t.
@@ -883,14 +885,14 @@ assert (~ In x (filter f s0)).
 case (f x); simpl; intros.
 rewrite (MP.cardinal_2 H1 (H2 (refl_equal true) (MP.Add_add s0 x))); auto.
 rewrite <- (MP.Equal_cardinal (H3 (refl_equal false) (MP.Add_add s0 x))); auto.
-intros; rewrite (fold_empty _ _ st);auto.
+intros; rewrite fold_empty;auto.
 rewrite MP.cardinal_1; auto.
 unfold Empty; intros.
 rewrite filter_iff; auto; set_iff; tauto.
 Qed.
 
 Lemma fold_compat : 
-  forall (A:Set)(eqA:A->A->Prop)(st:(Setoid_Theory _ eqA))
+  forall (A:Type)(eqA:A->A->Prop)(st:Setoid_Theory _ eqA)
   (f g:elt->A->A),
   (compat_op E.eq eqA f) -> (transpose eqA f) -> 
   (compat_op E.eq eqA g) -> (transpose eqA g) -> 
@@ -903,26 +905,35 @@ trans_st (fold f s0 i).
 apply fold_equal with (eqA:=eqA); auto.
 rewrite equal_sym; auto.
 trans_st (fold g s0 i).
-apply H0; intros; apply H1; auto.
-elim  (equal_2 H x); auto; intros.
-apply fold_equal with (eqA:=eqA); auto.
+apply H0; intros; apply H1; auto with set.
+elim  (equal_2 H x); auto with set; intros.
+apply fold_equal with (eqA:=eqA); auto with set.
 trans_st (f x (fold f s0 i)).
-apply fold_add with (eqA:=eqA); auto.
-trans_st (g x (fold f s0 i)).
-trans_st (g x (fold g s0 i)).
+apply fold_add with (eqA:=eqA); auto with set.
+trans_st (g x (fold f s0 i)); auto with set.
+trans_st (g x (fold g s0 i)); auto with set.
 sym_st; apply fold_add with (eqA:=eqA); auto.
-trans_st i; [idtac | sym_st ]; apply fold_empty; auto.
+do 2 rewrite fold_empty; refl_st.
 Qed.
 
 Lemma sum_compat : 
   forall f g, compat_nat E.eq f -> compat_nat E.eq g -> 
   forall s, (forall x, In x s -> f x=g x) -> sum f s=sum g s.
 intros.
-unfold sum; apply (fold_compat _ (@eq nat)); auto.
-unfold transpose; intros; omega.
-unfold transpose; intros; omega.
+unfold sum; apply (fold_compat _ (@Logic.eq nat)); auto.
+red; intros; omega.
+red; intros; omega.
 Qed.
 
 End Sum.
 
-End EqProperties. 
+End WEqProperties.
+
+
+(** Now comes a special version dedicated to full sets. For this
+    one, only one argument [(M:S)] is necessary. *)
+
+Module EqProperties (M:S).
+  Module D := OT_as_DT M.E.
+  Include WEqProperties D M.
+End EqProperties.

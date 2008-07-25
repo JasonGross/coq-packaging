@@ -6,12 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: setoid_replace.mli 9073 2006-08-22 08:54:29Z jforest $ i*)
+(*i $Id: setoid_replace.mli 11094 2008-06-10 19:35:23Z herbelin $ i*)
 
 open Term
 open Proof_type
 open Topconstr
 open Names
+open Termops
 
 type relation =
    { rel_a: constr ;
@@ -40,7 +41,7 @@ type morphism_signature = (bool option * constr_expr) list * constr_expr
 val pr_morphism_signature : morphism_signature -> Pp.std_ppcmds
 
 val register_replace : (tactic option -> constr -> constr -> tactic) -> unit
-val register_general_rewrite : (bool -> constr -> tactic) -> unit
+val register_general_rewrite : (bool -> occurrences -> constr -> tactic) -> unit
 
 val print_setoids : unit -> unit
 
@@ -58,9 +59,10 @@ val setoid_replace_in :
  identifier -> constr option -> constr -> constr -> new_goals:constr list ->
   tactic
 
-val general_s_rewrite : bool -> constr -> new_goals:constr list -> tactic
+val general_s_rewrite :
+  bool -> occurrences -> constr -> new_goals:constr list -> tactic
 val general_s_rewrite_in :
- identifier -> bool -> constr -> new_goals:constr list -> tactic
+  identifier -> bool -> occurrences -> constr -> new_goals:constr list -> tactic
 
 val setoid_reflexivity : tactic
 val setoid_symmetry : tactic
@@ -79,3 +81,5 @@ val new_named_morphism :
 
 val relation_table_find : constr -> relation
 val relation_table_mem : constr -> bool
+
+val prrelation : relation -> Pp.std_ppcmds

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rfunctions.v 9551 2007-01-29 15:13:35Z bgregoir $ i*)
+(*i $Id: Rfunctions.v 10762 2008-04-06 16:57:31Z herbelin $ i*)
 
 (*i Some properties about pow and sum have been made with John Harrison i*)
 (*i Some Lemmas (about pow and powerRZ) have been done by Laurent Thery i*)
@@ -349,8 +349,7 @@ Proof.
   rewrite Rabs_Rinv; auto.
   rewrite <- Rinv_pow; auto.
   rewrite RPow_abs; auto.
-  rewrite H'0; rewrite Rabs_right; auto with real.
-  apply Rle_ge; auto with real.
+  rewrite H'0; rewrite Rabs_right; auto with real rorders.
   apply Rlt_pow; auto with arith.
   rewrite Rabs_Rinv; auto.
   apply Rmult_lt_reg_l with (r := Rabs r).
@@ -786,11 +785,14 @@ Proof.
 Qed.
 
 (*******************************)
-(** *     Infinit Sum          *)
+(** *     Infinite Sum          *)
 (*******************************)
 (*********)
-Definition infinit_sum (s:nat -> R) (l:R) : Prop :=
+Definition infinite_sum (s:nat -> R) (l:R) : Prop :=
   forall eps:R,
     eps > 0 ->
     exists N : nat,
       (forall n:nat, (n >= N)%nat -> R_dist (sum_f_R0 s n) l < eps).
+
+(** Compatibility with previous versions *)
+Notation infinit_sum := infinite_sum (only parsing).

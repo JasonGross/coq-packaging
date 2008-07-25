@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pp_control.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id: pp_control.ml 10917 2008-05-10 16:35:46Z herbelin $ *)
 
 (* Parameters of pretty-printing *)
 
@@ -89,10 +89,11 @@ let with_output_to ch =
 let std_ft = ref Format.std_formatter
 let _ = set_dflt_gp !std_ft
 
-let err_ft = with_output_to stderr
+let err_ft = ref Format.err_formatter
+let _ = set_gp !err_ft deep_gp
 
-let deep_ft = with_output_to stdout
-let _ = set_gp deep_ft deep_gp
+let deep_ft = ref (with_output_to stdout)
+let _ = set_gp !deep_ft deep_gp
 
 (* For parametrization through vernacular *)
 let default = Format.pp_get_max_boxes !std_ft ()

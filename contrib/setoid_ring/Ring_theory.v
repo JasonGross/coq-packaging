@@ -19,7 +19,7 @@ Reserved Notation "x -! y" (at level 50, left associativity).
 Reserved Notation "x *! y" (at level 40, left associativity).
 Reserved Notation "-! x" (at level 35, right associativity).
 
-Reserved Notation "[ x ]" (at level 1, no associativity).
+Reserved Notation "[ x ]" (at level 0).
 
 Reserved Notation "x ?== y" (at level 70, no associativity).
 Reserved Notation "x -- y" (at level 50, left associativity).
@@ -59,8 +59,7 @@ Section Power.
   induction j;simpl.
   rewrite IHj.
   rewrite (mul_comm x (pow_pos x j *pow_pos x j)).
-  set (w:= x*pow_pos x j);unfold w at 2.
-  rewrite (mul_comm x (pow_pos x j));unfold w.
+  setoid_rewrite (mul_comm x (pow_pos x j)) at 2.
   repeat rewrite mul_assoc. apply (Seq_refl _ _ Rsth).
   repeat rewrite mul_assoc. apply (Seq_refl _ _ Rsth).
   apply (Seq_refl _ _ Rsth).
@@ -198,7 +197,7 @@ Section DEFINITIONS.
  Section SIGN.
   Variable get_sign : C -> option C.
   Record sign_theory : Prop := mksign_th {
-    sign_spec : forall c c', get_sign c = Some c' -> [c] == - [c']
+    sign_spec : forall c c', get_sign c = Some c' -> c ?=! -! c' = true
   }.
  End SIGN.
 
@@ -206,6 +205,13 @@ Section DEFINITIONS.
 
  Lemma get_sign_None_th : sign_theory get_sign_None.
  Proof. constructor;intros;discriminate. Qed.
+
+ Section DIV.
+  Variable cdiv: C -> C -> C*C.
+  Record div_theory : Prop := mkdiv_th {
+    div_eucl_th : forall a b, let (q,r) := cdiv a b in [a] == [b *! q +! r]
+  }.
+ End DIV.
 
  End MORPHISM. 
 
@@ -235,6 +241,7 @@ Section DEFINITIONS.
 
  Definition pow_N_th := mkpow_th id_phi_N (pow_N rI rmul) (pow_N_pow_N rI rmul Rsth).
 
+ 
 End DEFINITIONS.
 
 
@@ -250,7 +257,7 @@ Section ALMOST_RING.
 
  (** Leibniz equality leads to a setoid theory and is extensional*)
  Lemma Eqsth : Setoid_Theory R (@eq R).
- Proof.  constructor;intros;subst;trivial. Qed.
+ Proof.  constructor;red;intros;subst;trivial. Qed.
 
  Lemma Eq_s_ext : sring_eq_ext radd rmul (@eq R).
  Proof. constructor;intros;subst;trivial. Qed.
@@ -442,7 +449,7 @@ Section ALMOST_RING.
 
  End RING.
 
- (** Usefull lemmas on almost ring *)
+ (** Useful lemmas on almost ring *)
  Variable ARth : almost_ring_theory 0 1 radd rmul rsub ropp req.
 
  Lemma ARth_SRth : semi_ring_theory 0 1 radd rmul req.
@@ -564,7 +571,7 @@ End AddRing.
 (** Some simplification tactics*)
 Ltac gen_reflexivity Rsth := apply (Seq_refl _ _ Rsth).
 
-Ltac gen_srewrite O I add mul sub opp eq Rsth Reqe ARth :=
+Ltac gen_srewrite Rsth Reqe ARth :=
   repeat first
      [ gen_reflexivity Rsth
      | progress rewrite (ARopp_zero Rsth Reqe ARth)

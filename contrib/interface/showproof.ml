@@ -166,7 +166,7 @@ let rule_to_ntactic r =
    let rt =
      (match r with
        Nested(Tactic (t,_),_) -> t
-     | Prim (Refine h) -> TacAtom (dummy_loc,TacExact h)
+     | Prim (Refine h) -> TacAtom (dummy_loc,TacExact (Tactics.inj_open h))
      | _ -> TacAtom (dummy_loc, TacIntroPattern [])) in
    if rule_is_complex r
    then (match rt with
@@ -1183,8 +1183,8 @@ let rec natural_ntree ig ntree =
 	    TacIntroPattern _ -> natural_intros ig lh g gs ltree
 	  | TacIntroMove _ -> natural_intros ig lh g gs ltree
 	  | TacFix (_,n) -> natural_fix ig lh g gs n ltree
-	  | TacSplit (_,NoBindings) -> natural_split ig lh g gs ge [] ltree
-	  | TacSplit(_,ImplicitBindings l) -> natural_split ig lh g gs ge l ltree
+	  | TacSplit (_,_,NoBindings) -> natural_split ig lh g gs ge [] ltree
+	  | TacSplit(_,_,ImplicitBindings l) -> natural_split ig lh g gs ge (List.map snd l) ltree
 	  | TacGeneralize l -> natural_generalize ig lh g gs ge l ltree
 	  | TacRight _ -> natural_right ig lh g gs ltree
 	  | TacLeft _ -> natural_left ig lh g gs ltree
@@ -1202,17 +1202,18 @@ let rec natural_ntree ig ntree =
 	  | TacExtend (_,"InductionIntro",[a]) -> 
               let id=(out_gen wit_ident a) in
               natural_induction ig lh g gs ge id ltree true
-	  | TacApply (c,_) -> natural_apply ig lh g gs c ltree
-	  | TacExact c -> natural_exact ig lh g gs c ltree
-	  | TacCut c -> natural_cut ig lh g gs c ltree
+	  | TacApply (_,false,(c,_)) -> natural_apply ig lh g gs (snd c) ltree
+	  | TacExact c -> natural_exact ig lh g gs (snd c) ltree
+	  | TacCut c -> natural_cut ig lh g gs (snd c) ltree
 	  | TacExtend (_,"CutIntro",[a]) ->
 	      let _c = out_gen wit_constr a in
 	      natural_cutintro ig lh g gs a ltree
-	  | TacCase (c,_) -> natural_case ig lh g gs ge c ltree false
+	  | TacCase (_,(c,_)) -> natural_case ig lh g gs ge (snd c) ltree false
 	  | TacExtend (_,"CaseIntro",[a]) ->
 	      let c = out_gen wit_constr a in
 	      natural_case ig lh g gs ge c ltree true
-	  | TacElim ((c,_),_) -> natural_elim ig lh g gs ge c ltree false
+	  | TacElim (_,(c,_),_) ->
+	      natural_elim ig lh g gs ge (snd c) ltree false
 	  | TacExtend (_,"ElimIntro",[a]) ->
 	      let c = out_gen wit_constr a in
 	      natural_elim ig lh g gs ge c ltree true
@@ -1611,7 +1612,7 @@ and natural_fix ig lh g gs narg ltree =
    | _ -> assert false
 and natural_reduce ig lh g gs ge mode la ltree =
   match la with
-    {onhyps=Some[];onconcl=true} -> 
+    {onhyps=Some[]} when la.concl_occs <> no_occurrences_expr -> 
       spv
         [  (natural_lhyp lh ig.ihsg);
           (show_goal2 lh ig g gs ""); 
@@ -1619,7 +1620,7 @@ and natural_reduce ig lh g gs ge mode la ltree =
 		  {ihsg=All_subgoals_hyp;isgintro="simpl"})
              ltree)
         ]
-  | {onhyps=Some[hyp]; onconcl=false} ->
+  | {onhyps=Some[hyp]} when la.concl_occs = no_occurrences_expr ->
       spv
         [  (natural_lhyp lh ig.ihsg);
           (show_goal2 lh ig g gs ""); 
@@ -1651,7 +1652,7 @@ and natural_split ig lh g gs ge la ltree =
   | _ -> assert false
 and natural_generalize ig lh g gs ge la ltree =
   match la with
-    [arg] ->
+    [(_,(_,arg)),_] ->
       let _env= (gLOB ge) in
       let arg1= (*dbize env*) arg in
       let _type_arg=type_of (Global.env()) Evd.empty arg in

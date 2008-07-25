@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: LegacyRfield.v 10739 2008-04-01 14:45:20Z herbelin $ i*)
 
 Require Export Raxioms.
 Require Export LegacyField.

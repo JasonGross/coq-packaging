@@ -6,14 +6,16 @@
   (*         *       GNU Lesser General Public License Version 2.1        *)
   (************************************************************************)
 
-  (*i $Id: Cos_plus.v 9551 2007-01-29 15:13:35Z bgregoir $ i*)
+  (*i $Id: Cos_plus.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
 Require Import SeqSeries.
 Require Import Rtrigo_def.
 Require Import Cos_rel.
-Require Import Max. Open Local Scope nat_scope. Open Local Scope R_scope.
+Require Import Max.
+Open Local Scope nat_scope.
+Open Local Scope R_scope.
 
 Definition Majxy (x y:R) (n:nat) : R :=
   Rmax 1 (Rmax (Rabs x) (Rabs y)) ^ (4 * S n) / INR (fact n).

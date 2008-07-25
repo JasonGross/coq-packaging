@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: safe_typing.mli 8723 2006-04-16 15:51:02Z herbelin $ i*)
+(*i $Id: safe_typing.mli 10664 2008-03-14 11:27:37Z soubiran $ i*)
 
 (*i*)
 open Names
@@ -57,10 +57,14 @@ val add_module :
   label -> module_entry -> safe_environment 
     -> module_path * safe_environment
 
+(* Adding a module alias*)
+val add_alias :
+  label -> module_path -> safe_environment 
+    -> module_path * safe_environment
 (* Adding a module type *)
 val add_modtype :
-  label -> module_type_entry -> safe_environment 
-    -> kernel_name * safe_environment
+  label -> module_struct_entry -> safe_environment 
+    -> module_path * safe_environment
 
 (* Adding universe constraints *)
 val add_constraints : 
@@ -73,20 +77,21 @@ val set_engagement : engagement -> safe_environment -> safe_environment
 (*s Interactive module functions *)
 val start_module : 
   label -> safe_environment -> module_path * safe_environment
-
 val end_module :
-  label -> module_type_entry option 
+  label -> module_struct_entry option 
       -> safe_environment -> module_path * safe_environment 
 
 val add_module_parameter :
-  mod_bound_id -> module_type_entry -> safe_environment -> safe_environment
+  mod_bound_id -> module_struct_entry -> safe_environment -> safe_environment
 
 val start_modtype :
   label -> safe_environment -> module_path * safe_environment
 
 val end_modtype :
-  label -> safe_environment -> kernel_name * safe_environment
+  label -> safe_environment -> module_path * safe_environment
 
+val add_include :
+  module_struct_entry -> safe_environment -> safe_environment
 
 val current_modpath : safe_environment -> module_path
 val current_msid : safe_environment -> mod_self_id
@@ -126,3 +131,12 @@ val safe_infer : safe_environment -> constr -> judgment * Univ.constraints
 val typing : safe_environment -> constr -> judgment
 
 
+
+(*spiwack: safe retroknowledge functionalities *)
+
+open Retroknowledge
+
+val retroknowledge : (retroknowledge-> 'a) -> safe_environment -> 'a
+
+val register : safe_environment -> field -> Retroknowledge.entry -> constr
+                                         -> safe_environment

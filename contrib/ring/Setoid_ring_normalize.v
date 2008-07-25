@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Setoid_ring_normalize.v 6662 2005-02-02 21:33:14Z sacerdot $ *)
+(* $Id: Setoid_ring_normalize.v 9370 2006-11-13 09:21:31Z herbelin $ *)
 
 Require Import Setoid_ring_theory.
 Require Import Quote.
@@ -1032,7 +1032,7 @@ Variable T : Setoid_Ring_Theory Aequiv Aplus Amult Aone Azero Aopp Aeq.
 Hint Resolve (STh_plus_comm T).
 Hint Resolve (STh_plus_assoc T).
 Hint Resolve (STh_plus_assoc2 S T).
-Hint Resolve (STh_mult_sym T).
+Hint Resolve (STh_mult_comm T).
 Hint Resolve (STh_mult_assoc T).
 Hint Resolve (STh_mult_assoc2 S T).
 Hint Resolve (STh_plus_zero_left T).

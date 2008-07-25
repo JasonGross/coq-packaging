@@ -106,6 +106,7 @@ test_interactive() {
 # La fonction suivante teste en interactif 
 # It expects a line "(* Expected time < XXX.YYs *)" in the .v file 
 # with exactly two digits after the dot
+# The reference for time is a 6120 bogomips cpu
 test_complexity() {
     if [ -f /proc/cpuinfo ]; then
 	if grep -q bogomips /proc/cpuinfo; then # i386, ppc
@@ -145,28 +146,119 @@ test_complexity() {
     fi
 }
 
+test_bugs () {
+    # Process verifications concerning submitted bugs. A message is
+    # printed for all opened bugs (still active or seems to be closed).
+    # For closed bugs that behave as expected, no message is printed
+
+    # All files are assumed to have <# of the bug>.v as a name
+
+    echo "Testing opened bugs..."
+    # We first test opened bugs that should not succeed
+    files=`/bin/ls -1 $1/opened/shoulnotsucceed/*.v 2> /dev/null`
+    for f in $files; do 
+	nbtests=`expr $nbtests + 1`
+	printf "    "$f"..."
+	$command $f $2 > /dev/null 2>&1 
+	if [ $? = 0 ]; then
+	    echo "still active"
+	    nbtestsok=`expr $nbtestsok + 1`
+        else 
+	    echo "Error! (bug seems to be closed, please check)"
+        fi 
+    done
+
+    # And opened bugs that should not fail
+    files=`/bin/ls -1 $1/opened/shouldnotfail/*.v 2> /dev/null`
+    for f in $files; do 
+	nbtests=`expr $nbtests + 1`
+	printf "    "$f"..."
+	$command $f > /dev/null 2>&1
+	if [ $? != 0 ]; then 
+	    echo "still active"
+	    nbtestsok=`expr $nbtestsok + 1`
+        else 
+	    echo "Error! (bug seems to be closed, please check)"
+        fi 
+    done
+
+    echo "Testing closed bugs..."
+    # Then closed bugs that should succeed
+    files=`/bin/ls -1 $1/closed/shouldsucceed/*.v 2> /dev/null`
+    for f in $files; do 
+	nbtests=`expr $nbtests + 1`
+	printf "    "$f"..."
+	$command $f $2 > /dev/null 2>&1 
+	if [ $? = 0 ]; then
+	    echo "Ok"
+	    nbtestsok=`expr $nbtestsok + 1`
+        else 
+	    echo "Error! (bug seems to be opened, please check)"
+        fi 
+    done
+
+
+    # At last, we test closed bugs that should fail
+    files=`/bin/ls -1 $1/closed/shouldfail/*.v 2> /dev/null`
+    for f in $files; do 
+	nbtests=`expr $nbtests + 1`
+	printf "    "$f"..."
+	$command $f > /dev/null 2>&1
+	if [ $? != 0 ]; then 
+	    echo "Ok"
+	    nbtestsok=`expr $nbtestsok + 1`
+        else 
+	    echo "Error! (bug seems to be opened, please check)"
+        fi 
+    done
+    
+}
+
+test_features () {
+    # Process verifications concerning submitted bugs. A message is
+    # printed for all opened bugs (still active or seem to be closed.
+    # For closed bugs that behave as expected, no message is printed
+
+    echo "Testing wishes..."
+    files=`/bin/ls -1 $1/*.v 2> /dev/null`
+    for f in $files; do 
+	nbtests=`expr $nbtests + 1`
+	printf "    "$f"..."
+	$command $f $2 > /dev/null 2>&1 
+	if [ $? != 0 ]; then
+	    echo "still wished"
+	    nbtestsok=`expr $nbtestsok + 1`
+        else 
+	    echo "Good news! (wish seems to be granted, please check)"
+        fi
+    done
+}
+
 # Programme principal
 
 echo "Success tests"
 test_success success
 echo "Failure tests"
 test_failure failure
+echo "Bugs tests"
+test_bugs bugs
 echo "Output tests"
 test_output output
 echo "Parser tests"
 test_parser parser
 echo "Interactive tests"
 test_interactive interactive
+echo "Micromega tests"
+test_success micromega
 echo "Complexity tests"
 test_complexity complexity
 echo "Module tests"
 $coqtop -compile modules/Nat
 $coqtop -compile modules/plik
 test_success modules "-I modules -impredicative-set"
+#echo "Ideal-features tests"
+#test_features ideal-features
 
 pourcentage=`expr 100 \* $nbtestsok / $nbtests`
 echo
 echo "$nbtestsok tests passed over $nbtests, i.e. $pourcentage %"
-
-#echo "Ideal-features tests"
-#test_success ideal-features

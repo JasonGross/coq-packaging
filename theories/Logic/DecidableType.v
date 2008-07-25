@@ -6,19 +6,36 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: DecidableType.v 8933 2006-06-09 14:08:38Z herbelin $ *)
+(* $Id: DecidableType.v 10616 2008-03-04 17:33:35Z letouzey $ *)
 
 Require Export SetoidList.
 Set Implicit Arguments.
 Unset Strict Implicit.
 
+(** * Types with Equalities, and nothing more (for subtyping purpose) *)
+
+Module Type EqualityType. 
+
+  Parameter Inline t : Type.
+
+  Parameter Inline eq : t -> t -> Prop.
+
+  Axiom eq_refl : forall x : t, eq x x.
+  Axiom eq_sym : forall x y : t, eq x y -> eq y x.
+  Axiom eq_trans : forall x y z : t, eq x y -> eq y z -> eq x z.
+
+  Hint Immediate eq_sym.
+  Hint Resolve eq_refl eq_trans.
+
+End EqualityType. 
+
 (** * Types with decidable Equalities (but no ordering) *)
 
 Module Type DecidableType. 
 
-  Parameter t : Set.
+  Parameter Inline t : Type.
 
-  Parameter eq : t -> t -> Prop.
+  Parameter Inline eq : t -> t -> Prop.
 
   Axiom eq_refl : forall x : t, eq x x.
   Axiom eq_sym : forall x y : t, eq x y -> eq y x.
@@ -37,7 +54,7 @@ Module KeyDecidableType(D:DecidableType).
  Import D.
 
  Section Elt.
- Variable elt : Set.
+ Variable elt : Type.
  Notation key:=t.
 
   Definition eqk (p p':key*elt) := eq (fst p) (fst p').

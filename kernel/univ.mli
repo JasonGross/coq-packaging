@@ -6,18 +6,23 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: univ.mli 9507 2007-01-20 08:09:54Z herbelin $ i*)
+(*i $Id: univ.mli 11063 2008-06-06 16:03:45Z soubiran $ i*)
 
 (* Universes. *)
 
 type universe
 
-val base_univ : universe
-val prop_univ : universe
-val neutral_univ : universe
+(* The universes hierarchy: Type 0- = Prop <= Type 0 = Set <= Type 1 <= ... *)
+(* Typing of universes: Type 0-, Type 0 : Type 1; Type i : Type (i+1) if i>0 *)
+
+val type0m_univ : universe  (* image of Prop in the universes hierarchy *)
+val type0_univ : universe  (* image of Set in the universes hierarchy *)
+val type1_univ : universe  (* the universe of the type of Prop/Set *)
+
 val make_univ : Names.dir_path * int -> universe
 
-val is_base_univ : universe -> bool
+val is_type0_univ : universe -> bool
+val is_type0m_univ : universe -> bool
 val is_univ_variable : universe -> bool
 
 (* The type of a universe *)
@@ -29,6 +34,10 @@ val sup   : universe -> universe -> universe
 (*s Graphs of universes. *)
 
 type universes
+
+type check_function = universes -> universe -> universe -> bool
+val check_geq : check_function
+val check_eq : check_function
 
 (* The empty graph of universes *)
 val initial_universes : universes
@@ -49,7 +58,9 @@ val enforce_eq : constraint_function
   universes graph. It raises the exception [UniverseInconsistency] if the
   constraints are not satisfiable. *)
 
-exception UniverseInconsistency
+type order_request = Lt | Le | Eq
+
+exception UniverseInconsistency of order_request * universe * universe
 
 val merge_constraints : constraints -> universes -> universes
 
@@ -60,8 +71,6 @@ val fresh_local_univ : unit -> universe
 val solve_constraints_system : universe option array -> universe array -> 
   universe array
 
-val is_empty_univ : universe -> bool
-
 val subst_large_constraint : universe -> universe -> universe -> universe
 
 val subst_large_constraints : 
@@ -71,6 +80,7 @@ val subst_large_constraints :
 
 val pr_uni : universe -> Pp.std_ppcmds
 val pr_universes : universes -> Pp.std_ppcmds
+val pr_constraints : constraints -> Pp.std_ppcmds
 
 (*s Dumping to a file *)
 

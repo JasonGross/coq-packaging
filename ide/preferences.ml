@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: preferences.ml 9350 2006-11-07 15:04:42Z notin $ *)
+(* $Id: preferences.ml 11058 2008-06-06 08:21:03Z herbelin $ *)
 
 open Configwin
 open Printf
@@ -73,10 +73,11 @@ type pref =
       mutable modifier_for_navigation : Gdk.Tags.modifier list;
       mutable modifier_for_templates : Gdk.Tags.modifier list;
       mutable modifier_for_tactics : Gdk.Tags.modifier list;
+      mutable modifier_for_display : Gdk.Tags.modifier list;
       mutable modifiers_valid : Gdk.Tags.modifier list;
 
-      mutable cmd_browse : string * string;
-      mutable cmd_editor : string * string;
+      mutable cmd_browse : string;
+      mutable cmd_editor : string;
 
       mutable text_font : Pango.font_description;
 
@@ -95,6 +96,8 @@ type pref =
       mutable auto_complete : bool;
       mutable stop_before : bool;
       mutable lax_syntax : bool;
+      mutable vertical_tabs : bool;
+      mutable opposite_tabs : bool;
 }
 
 let (current:pref ref) = 
@@ -108,7 +111,7 @@ let (current:pref ref) =
     global_auto_revert = false;
     global_auto_revert_delay = 10000;
     
-    auto_save = false;
+    auto_save = true;
     auto_save_delay = 10000;
     auto_save_name = "#","#";
     
@@ -122,16 +125,15 @@ let (current:pref ref) =
     modifier_for_navigation = [`CONTROL; `MOD1];
     modifier_for_templates = [`CONTROL; `SHIFT];
     modifier_for_tactics = [`CONTROL; `MOD1];
+    modifier_for_display = [`MOD1;`SHIFT];
     modifiers_valid = [`SHIFT; `CONTROL; `MOD1];
 
     
-    cmd_browse = Options.browser_cmd_fmt;
-    cmd_editor = 
-	 if Sys.os_type = "Win32"
-	 then "NOTEPAD ", ""
-	 else "emacs ", "";
+    cmd_browse = Flags.browser_cmd_fmt;
+    cmd_editor = if Sys.os_type = "Win32" then "NOTEPAD %s" else "emacs %s";
     
-    text_font = Pango.Font.from_string "sans 12";
+(*    text_font = Pango.Font.from_string "sans 12";*)
+    text_font = Pango.Font.from_string "Monospace 10";
 
     doc_url = "http://coq.inria.fr/doc/";
     library_url = "http://coq.inria.fr/library/";
@@ -147,7 +149,9 @@ let (current:pref ref) =
 *)
     auto_complete = false;
     stop_before = true;
-    lax_syntax = true
+    lax_syntax = true;
+    vertical_tabs = false;
+    opposite_tabs = false;
   }
 
 
@@ -192,10 +196,12 @@ let save_pref () =
       (List.map mod_to_str p.modifier_for_templates) ++
     add "modifier_for_tactics" 
       (List.map mod_to_str p.modifier_for_tactics) ++
+    add "modifier_for_display" 
+      (List.map mod_to_str p.modifier_for_display) ++
     add "modifiers_valid" 
       (List.map mod_to_str p.modifiers_valid) ++
-    add "cmd_browse" [fst p.cmd_browse; snd p.cmd_browse] ++
-    add "cmd_editor" [fst p.cmd_editor; snd p.cmd_editor] ++
+    add "cmd_browse" [p.cmd_browse] ++
+    add "cmd_editor" [p.cmd_editor] ++
 
     add "text_font" [Pango.Font.to_string p.text_font] ++
 
@@ -211,6 +217,8 @@ let save_pref () =
     add "auto_complete" [string_of_bool p.auto_complete] ++
     add "stop_before" [string_of_bool p.stop_before] ++
     add "lax_syntax" [string_of_bool p.lax_syntax] ++
+    add "vertical_tabs" [string_of_bool p.vertical_tabs] ++
+    add "opposite_tabs" [string_of_bool p.opposite_tabs] ++
     Config_lexer.print_file pref_file
   with _ -> prerr_endline "Could not save preferences."
  
@@ -226,6 +234,9 @@ let load_pref () =
     let set_bool k f = set_hd k (fun v -> f (bool_of_string v)) in
     let set_int k f = set_hd k (fun v -> f (int_of_string v)) in
     let set_pair k f = set k (function [v1;v2] -> f v1 v2 | _ -> raise Exit) in
+    let set_command_with_pair_compat k f = 
+      set k (function [v1;v2] -> f (v1^"%s"^v2) | [v] -> f v | _ -> raise Exit)
+    in
     set_hd "cmd_coqc" (fun v -> np.cmd_coqc <- v);
     set_hd "cmd_make" (fun v -> np.cmd_make <- v);
     set_hd "cmd_coqmakefile" (fun v -> np.cmd_coqmakefile <- v);
@@ -248,10 +259,12 @@ let load_pref () =
       (fun v -> np.modifier_for_templates <- List.map str_to_mod v);
     set "modifier_for_tactics" 
       (fun v -> np.modifier_for_tactics <- List.map str_to_mod v);
+    set "modifier_for_display" 
+      (fun v -> np.modifier_for_display <- List.map str_to_mod v);
     set "modifiers_valid" 
       (fun v -> np.modifiers_valid <- List.map str_to_mod v);
-    set_pair "cmd_browse" (fun v1 v2 -> np.cmd_browse <- (v1,v2));
-    set_pair "cmd_editor" (fun v1 v2 -> np.cmd_editor <- (v1,v2));
+    set_command_with_pair_compat "cmd_browse" (fun v -> np.cmd_browse <- v);
+    set_command_with_pair_compat "cmd_editor" (fun v -> np.cmd_editor <- v);
     set_hd "text_font" (fun v -> np.text_font <- Pango.Font.from_string v);
     set_hd "doc_url" (fun v -> np.doc_url <- v);
     set_hd "library_url" (fun v -> np.library_url <- v);
@@ -265,9 +278,11 @@ let load_pref () =
     set_bool "auto_complete" (fun v -> np.auto_complete <- v);
     set_bool "stop_before" (fun v -> np.stop_before <- v);
     set_bool "lax_syntax" (fun v -> np.lax_syntax <- v);
+    set_bool "vertical_tabs" (fun v -> np.vertical_tabs <- v);
+    set_bool "opposite_tabs" (fun v -> np.opposite_tabs <- v);
     current := np;
 (*
-    Format.printf "in laod_pref: current.text_font = %s@." (Pango.Font.to_string !current.text_font);
+    Format.printf "in load_pref: current.text_font = %s@." (Pango.Font.to_string !current.text_font);
 *)
   with e -> 
     prerr_endline ("Could not load preferences ("^
@@ -281,7 +296,7 @@ let split_string_format s =
     pre,post
   with Not_found -> s,""
 
-let configure () = 
+let configure ?(apply=(fun () -> ())) () = 
   let cmd_coqc = 
     string
       ~f:(fun s -> !current.cmd_coqc <- s) 
@@ -405,6 +420,18 @@ let configure () =
       "Relax read-only constraint at end of command" !current.lax_syntax
   in
 
+  let vertical_tabs =
+    bool
+      ~f:(fun s -> !current.vertical_tabs <- s)
+      "Vertical tabs" !current.vertical_tabs
+  in
+
+  let opposite_tabs =
+    bool
+      ~f:(fun s -> !current.opposite_tabs <- s)
+      "Tabs on opposite side" !current.opposite_tabs
+  in
+
   let encodings = 
     combo 
       "File charset encoding "
@@ -426,10 +453,14 @@ let configure () =
       (if !current.encoding_use_utf8 then "UTF-8" 
        else if !current.encoding_use_locale then "LOCALE" else !current.encoding_manual)
   in
+  let help_string = 
+    "Press a set of modifiers and an extra key together (needs then a restart to apply!)"
+  in
   let modifier_for_tactics = 
     modifiers
       ~allow:!current.modifiers_valid
       ~f:(fun l -> !current.modifier_for_tactics <- l)
+      ~help:help_string
       "Modifiers for Tactics Menu"
       !current.modifier_for_tactics
   in
@@ -437,6 +468,7 @@ let configure () =
     modifiers
       ~allow:!current.modifiers_valid
       ~f:(fun l -> !current.modifier_for_templates <- l)
+      ~help:help_string
       "Modifiers for Templates Menu"
       !current.modifier_for_templates
   in
@@ -444,8 +476,17 @@ let configure () =
     modifiers
       ~allow:!current.modifiers_valid
       ~f:(fun l -> !current.modifier_for_navigation <- l)
+      ~help:help_string
       "Modifiers for Navigation Menu"
       !current.modifier_for_navigation
+  in
+  let modifier_for_display = 
+    modifiers
+      ~allow:!current.modifiers_valid
+      ~f:(fun l -> !current.modifier_for_display <- l)
+      ~help:help_string
+      "Modifiers for Display Menu"
+      !current.modifier_for_display
   in
   let modifiers_valid = 
     modifiers
@@ -453,26 +494,35 @@ let configure () =
       "Allowed modifiers"
       !current.modifiers_valid
   in
-  let mod_msg = 
-    string
-      "Needs restart to apply!"
-      ~editable:false
-      ""
-  in
-
   let cmd_editor = 
-    string
-      ~f:(fun s -> !current.cmd_editor <- split_string_format s)
+    let predefined = [ "emacs %s"; "vi %s"; "NOTEPAD %s" ] in
+    combo
       ~help:"(%s for file name)" 
       "External editor"
-      ((fst !current.cmd_editor)^"%s"^(snd !current.cmd_editor))
+      ~f:(fun s -> !current.cmd_editor <- s)
+      ~new_allowed: true
+      (predefined@[if List.mem !current.cmd_editor predefined then ""
+                   else !current.cmd_editor])
+      !current.cmd_editor
   in    
-  let cmd_browse = 
-    string
-      ~f:(fun s -> !current.cmd_browse <- split_string_format s)
+  let cmd_browse =
+    let predefined = [
+      "netscape -remote \"openURL(%s)\"";
+      "mozilla -remote \"openURL(%s)\"";
+      "firefox -remote \"openURL(%s,new-tab)\" || firefox %s &";
+      "firefox -remote \"openURL(%s,new-windows)\" || firefox %s &";
+      "seamonkey -remote \"openURL(%s)\" || seamonkey %s &";
+      "C:\\PROGRA~1\\INTERN~1\\IEXPLORE %s";
+      "open -a Safari %s &"
+    ] in
+    combo 
       ~help:"(%s for url)" 
-      "    Browser"
-      ((fst !current.cmd_browse)^"%s"^(snd !current.cmd_browse))
+      "Browser"
+      ~f:(fun s -> !current.cmd_browse <- s)
+      ~new_allowed: true
+      (predefined@[if List.mem !current.cmd_browse predefined then ""
+                   else !current.cmd_browse])
+      !current.cmd_browse
   in    
   let doc_url = 
     string ~f:(fun s -> !current.doc_url <- s) " Manual URL"  !current.doc_url in
@@ -496,7 +546,8 @@ let configure () =
       "Contextual menus on goal" !current.contextual_menus_on_goal
   in 
 
-  let misc = [contextual_menus_on_goal;auto_complete;stop_before;lax_syntax] in
+  let misc = [contextual_menus_on_goal;auto_complete;stop_before;lax_syntax;
+              vertical_tabs;opposite_tabs] in
    
 (* ATTENTION !!!!! L'onglet Fonts doit etre en premier pour eviter un bug !!!!
    (shame on Benjamin) *)
@@ -520,14 +571,14 @@ let configure () =
 	     [automatic_tactics]);
      Section("Shortcuts",
 	     [modifiers_valid; modifier_for_tactics;
-	      modifier_for_templates; modifier_for_navigation;mod_msg]);
+	      modifier_for_templates; modifier_for_display; modifier_for_navigation]);
      Section("Misc",
 	     misc)]
   in
 (*
   Format.printf "before edit: current.text_font = %s@." (Pango.Font.to_string !current.text_font);
 *)
-  let x = edit ~width:500 "Customizations" cmds in
+  let x = edit ~apply ~width:500 "Customizations" cmds in
 (*
   Format.printf "after edit: current.text_font = %s@." (Pango.Font.to_string !current.text_font);
 *)

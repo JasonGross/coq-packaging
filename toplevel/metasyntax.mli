@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: metasyntax.mli 7732 2005-12-26 13:51:24Z herbelin $ i*)
+(*i $Id: metasyntax.mli 9677 2007-02-24 14:17:54Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -51,7 +51,7 @@ val add_syntax_extension :
 
 (* Print the Camlp4 state of a grammar *)
 
-val print_grammar : string -> string -> unit
+val print_grammar : string -> unit
 
 (* Removes quotes in a notation *)
 

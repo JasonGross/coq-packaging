@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Disjoint_Union.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Disjoint_Union.v 10681 2008-03-16 13:40:45Z msozeau $ i*)
 
 (** Author: Cristina Cornes
     From : Constructing Recursion Operators in Type Theory                 
@@ -15,7 +15,7 @@
 Require Import Relation_Operators.
 
 Section Wf_Disjoint_Union.
-  Variables A B : Set.
+  Variables A B : Type.
   Variable leA : A -> A -> Prop.
   Variable leB : B -> B -> Prop.
 

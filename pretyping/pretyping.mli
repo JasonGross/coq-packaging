@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pretyping.mli 9141 2006-09-15 10:07:01Z herbelin $ i*)
+(*i $Id: pretyping.mli 11047 2008-06-03 23:08:00Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -17,6 +17,11 @@ open Evd
 open Rawterm
 open Evarutil
 (*i*)
+
+(* An auxiliary function for searching for fixpoint guard indexes *)
+
+val search_guard : 
+    Util.loc -> env -> int list list -> rec_declaration -> int array
 
 type typing_constraint = OfType of types option | IsType
 
@@ -35,7 +40,7 @@ sig
      unresolved holes as evars and returning the typing contexts of
      these evars. Work as [understand_gen] for the rest. *)
   
-  val understand_tcc :
+  val understand_tcc : ?resolve_classes:bool ->
     evar_map -> env -> ?expected_type:types -> rawconstr -> open_constr
     
   val understand_tcc_evars :

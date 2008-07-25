@@ -84,7 +84,7 @@ Extraction test12.
 (* type test12 = (__ -> __ -> __) -> __ *)
 
 
-Definition test13 := match left True I with
+Definition test13 := match @left True True I with
                      | left x => 1
                      | right x => 0
                      end.

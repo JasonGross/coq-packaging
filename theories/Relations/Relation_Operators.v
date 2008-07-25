@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Relation_Operators.v 9610 2007-02-07 14:45:18Z herbelin $ i*)
+(*i $Id: Relation_Operators.v 10681 2008-03-16 13:40:45Z msozeau $ i*)
 
 (****************************************************************************)
 (*                      Bruno Barras, Cristina Cornes                       *)
@@ -83,9 +83,9 @@ Variable leA : A -> A -> Prop.
 Variable leB : B -> B -> Prop.
 
 Inductive le_AsB : A + B -> A + B -> Prop :=
-  | le_aa : forall x y:A, leA x y -> le_AsB (inl B x) (inl B y)
-  | le_ab : forall (x:A) (y:B), le_AsB (inl B x) (inr A y)
-  | le_bb : forall x y:B, leB x y -> le_AsB (inr A x) (inr A y).
+  | le_aa : forall x y:A, leA x y -> le_AsB (inl _ x) (inl _ y)
+  | le_ab : forall (x:A) (y:B), le_AsB (inl _ x) (inr _ y)
+  | le_bb : forall x y:B, leB x y -> le_AsB (inr _ x) (inr _ y).
 
 End Disjoint_Union. 
 

@@ -6,13 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* Compatibility file depending on ocaml version *)
+(*i camlp4use: "pa_macro.cmo" i*)
 
-(* type loc is different in 3.08 *)
+(* Compatibility file depending on ocaml version *)
 
 IFDEF OCAML309 THEN DEFINE OCAML308 END
 
-IFDEF CAMLP5 THEN
+IFDEF CAMLP5 THEN 
 module M = struct 
 type loc = Stdpp.location
 let dummy_loc = Stdpp.dummy_loc
@@ -45,7 +45,7 @@ type token = Token.t
 type lexer = Token.lexer
 let using l x = l.Token.using x
 end
-ELSE
+ELSE 
 module M = struct
 type loc = int * int
 let dummy_loc = (0,0)
@@ -63,8 +63,8 @@ END
 
 type loc = M.loc
 let dummy_loc = M.dummy_loc
-let unloc = M.unloc
 let make_loc = M.make_loc
+let unloc = M.unloc
 let join_loc = M.join_loc
 type token = M.token
 type lexer = M.lexer

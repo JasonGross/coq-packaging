@@ -6,13 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: decl_kinds.ml 7944 2006-01-29 16:01:32Z herbelin $ *)
+(* $Id: decl_kinds.ml 11024 2008-05-30 12:41:39Z msozeau $ *)
 
 open Util
+open Libnames
 
 (* Informal mathematical status of declarations *)
 
-type locality_flag = (*bool (* local = true; global = false *)*)
+type locality =
   | Local
   | Global
 
@@ -38,8 +39,8 @@ type definition_object_kind =
   | Scheme
   | StructureComponent
   | IdentityCoercion
-
-type strength = locality_flag (* For compatibility *)
+  | Instance
+  | Method
 
 type assumption_object_kind = Definitional | Logical | Conjectural
 
@@ -51,9 +52,9 @@ type assumption_object_kind = Definitional | Logical | Conjectural
    Logical      |  Hypothesis | Axiom
 
 *)
-type assumption_kind = locality_flag * assumption_object_kind
+type assumption_kind = locality * assumption_object_kind
 
-type definition_kind = locality_flag * boxed_flag * definition_object_kind
+type definition_kind = locality * boxed_flag * definition_object_kind
 
 (* Kinds used in proofs *)
 
@@ -61,7 +62,7 @@ type goal_object_kind =
   | DefinitionBody of definition_object_kind
   | Proof of theorem_kind
 
-type goal_kind = locality_flag * goal_object_kind
+type goal_kind = locality * goal_object_kind
 
 (* Kinds used in library *)
 
@@ -97,5 +98,17 @@ let string_of_definition_kind (l,boxed,d) =
   | Global, Example -> "Example"
   | Local, (CanonicalStructure|Example) ->
       anomaly "Unsupported local definition kind"
-  | _, (StructureComponent|Scheme|CoFixpoint|Fixpoint|IdentityCoercion)
+  | Local, Instance -> "Instance"
+  | Global, Instance -> "Global Instance"
+  | _, (StructureComponent|Scheme|CoFixpoint|Fixpoint|IdentityCoercion|Method)
       -> anomaly "Internal definition kind"
+
+(* Strength *)
+
+let strength_of_global = function
+  | VarRef _ -> Local
+  | IndRef _ | ConstructRef _ | ConstRef _ -> Global
+
+let string_of_strength = function
+  | Local -> "Local"
+  | Global -> "Global"

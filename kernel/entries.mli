@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: entries.mli 8647 2006-03-18 15:33:09Z herbelin $ i*)
+(*i $Id: entries.mli 10664 2008-03-14 11:27:37Z soubiran $ i*)
 
 (*i*)
 open Names
@@ -61,7 +61,7 @@ type definition_entry = {
   const_entry_opaque : bool;
   const_entry_boxed  : bool }
 
-type parameter_entry = types
+type parameter_entry = types*bool  (*inline flag*)
 
 type constant_entry = 
   | DefinitionEntry of definition_entry
@@ -73,30 +73,23 @@ type specification_entry =
     SPEconst of constant_entry
   | SPEmind of mutual_inductive_entry
   | SPEmodule of module_entry
-  | SPEmodtype of module_type_entry
+  | SPEalias of module_path
+  | SPEmodtype of module_struct_entry
 
-and module_type_entry = 
-    MTEident of kernel_name
-  | MTEfunsig of mod_bound_id * module_type_entry * module_type_entry
-  | MTEsig of mod_self_id * module_signature_entry
-  | MTEwith of module_type_entry * with_declaration
-
-and module_signature_entry = (label * specification_entry) list
+and module_struct_entry = 
+    MSEident of module_path
+  | MSEfunctor of mod_bound_id * module_struct_entry * module_struct_entry
+  | MSEwith of module_struct_entry * with_declaration
+  | MSEapply of module_struct_entry * module_struct_entry
 
 and with_declaration = 
     With_Module of identifier list * module_path
   | With_Definition of identifier list * constr
 
-and module_expr = 
-    MEident of module_path
-  | MEfunctor of mod_bound_id * module_type_entry * module_expr
-  | MEstruct of mod_self_id * module_structure
-  | MEapply of module_expr * module_expr
-
 and module_structure = (label * specification_entry) list
 
-
 and module_entry = 
-    { mod_entry_type : module_type_entry option;
-      mod_entry_expr : module_expr option}
+    { mod_entry_type : module_struct_entry option;
+      mod_entry_expr : module_struct_entry option}
+
 

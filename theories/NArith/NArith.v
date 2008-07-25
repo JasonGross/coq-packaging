@@ -6,11 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: NArith.v 9210 2006-10-05 10:12:15Z barras $ *)
+(* $Id: NArith.v 10751 2008-04-04 10:23:35Z herbelin $ *)
 
 (** Library for binary natural numbers *)
 
 Require Export BinPos.
 Require Export BinNat.
+Require Export Nnat.
+Require Export Ndigits.
 
 Require Export NArithRing.

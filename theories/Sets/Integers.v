@@ -24,7 +24,7 @@
 (* in Summer 1995. Several developments by E. Ledinot were an inspiration.  *)
 (****************************************************************************)
 
-(*i $Id: Integers.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Integers.v 10637 2008-03-07 23:52:56Z letouzey $ i*)
 
 Require Export Finite_sets.
 Require Export Constructive_sets.
@@ -87,7 +87,7 @@ Section Integers_sect.
     apply Totally_ordered_definition.
     simpl in |- *.
     intros H' x y H'0.
-    specialize  2le_or_lt with (n := x) (m := y); intro H'2; elim H'2.
+    elim le_or_lt with (n := x) (m := y).
     intro H'1; left; auto with sets arith.
     intro H'1; right.
     cut (y <= x); auto with sets arith.
@@ -142,8 +142,8 @@ Section Integers_sect.
     elim H'0; intros H'1 H'2.
     cut (In nat Integers (S x)).
     intro H'3.
-    specialize  1H'2 with (y := S x); intro H'4; lapply H'4;
-      [ intro H'5; clear H'4 | try assumption; clear H'4 ].
+    specialize H'2 with (y := S x); lapply H'2;
+      [ intro H'5; clear H'2 | try assumption; clear H'2 ].
     simpl in H'5.
     absurd (S x <= x); auto with arith.
     apply triv_nat.

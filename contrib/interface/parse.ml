@@ -21,18 +21,19 @@ type parsed_tree =
   | P_i of ct_INT;;
 
 let print_parse_results n msg =
-  print_string "message\nparsed\n";
-  print_int n;
-  print_string "\n";
-  (match msg with
-  | P_cl x -> fCOMMAND_LIST x
-  | P_c x -> fCOMMAND x
-  | P_t x -> fTACTIC_COM x
-  | P_f x -> fFORMULA x
-  | P_id x -> fID x
-  | P_s x -> fSTRING x
-  | P_i x -> fINT x);
-  print_string "e\nblabla\n";
+  Pp.msg
+  ( str "message\nparsed\n" ++
+    int n ++
+    str "\n" ++
+    (match msg with
+     | P_cl x -> fCOMMAND_LIST x
+     | P_c x -> fCOMMAND x
+     | P_t x -> fTACTIC_COM x
+     | P_f x -> fFORMULA x
+     | P_id x -> fID x
+     | P_s x -> fSTRING x
+     | P_i x -> fINT x) ++
+    str "e\nblabla\n");
   flush stdout;;
 
 let ctf_SyntaxErrorMessage reqid pps =
@@ -329,7 +330,7 @@ let add_path_action reqid string_arg =
 
 let print_version_action () =
   msgnl (mt ());
-  msgnl (str "$Id: parse.ml 9397 2006-11-21 21:50:54Z herbelin $");;
+  msgnl (str "$Id: parse.ml 9476 2007-01-10 15:44:44Z lmamane $");;
 
 let load_syntax_action reqid module_name =
  msg (str "loading " ++ str module_name ++ str "... ");

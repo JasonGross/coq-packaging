@@ -6,15 +6,18 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extract_env.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: extract_env.mli 10895 2008-05-07 16:06:26Z letouzey $ i*)
 
 (*s This module declares the extraction commands. *)
 
 open Names
 open Libnames
 
-val extraction : reference -> unit
-val extraction_rec : reference list -> unit
-val extraction_file : string -> reference list -> unit
-val extraction_module : reference -> unit
+val simple_extraction : reference -> unit
+val full_extraction : string option -> reference list -> unit
 val extraction_library : bool -> identifier -> unit
+
+(* For debug / external output via coqtop.byte + Drop : *)
+
+val mono_environment : 
+ global_reference list -> module_path list -> Miniml.ml_structure

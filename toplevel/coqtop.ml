@@ -6,12 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqtop.ml 9191 2006-09-29 15:45:42Z courtieu $ *)
+(* $Id: coqtop.ml 11062 2008-06-06 14:19:50Z notin $ *)
 
 open Pp
 open Util
 open System
-open Options
+open Flags
 open Names
 open Libnames
 open Nameops
@@ -31,6 +31,8 @@ let print_header () =
   let (ver,rev) = (get_version_date ()) in
     Printf.printf "Welcome to Coq %s (%s)\n" ver rev;
     flush stdout
+
+let output_context = ref false
 
 let memory_stat = ref false
 
@@ -81,7 +83,7 @@ let add_load_vernacular verb s =
 let load_vernacular () =
   List.iter
     (fun (s,b) -> 
-      if Options.do_translate () then
+      if Flags.do_translate () then
 	with_option translate_file (Vernac.load_vernac b) s
       else
 	Vernac.load_vernac b s)
@@ -102,7 +104,7 @@ let require () =
 let compile_list = ref ([] : (bool * string) list)
 let add_compile verbose s =
   set_batch_mode ();
-  Options.make_silent true; 
+  Flags.make_silent true; 
   compile_list := (verbose,s) :: !compile_list
 let compile_files () =
   let init_state = States.freeze() in
@@ -111,7 +113,7 @@ let compile_files () =
       (fun (v,f) ->
 	 States.unfreeze init_state;
 	 Constrintern.coqdoc_unfreeze coqdoc_init_state;
-	 if Options.do_translate () then
+	 if Flags.do_translate () then
 	   with_option translate_file (Vernac.compile v) f
 	 else
 	   Vernac.compile v f)
@@ -129,6 +131,11 @@ let set_opt () = re_exec_version := "opt"
 let re_exec is_ide =
   let s = !re_exec_version in
   let is_native = (Mltop.get()) = Mltop.Native in
+  (* Unix.readlink is not implemented on Windows architectures :-(
+     let prog =
+       try Unix.readlink "/proc/self/exe"
+       with Unix.Unix_error _ -> Sys.argv.(0) in
+  *)
   let prog = Sys.argv.(0) in
   if (is_native && s = "byte") || ((not is_native) && s = "opt")
   then begin
@@ -151,7 +158,7 @@ let use_vm = ref false
 
 let set_vm_opt () =
   Vm.set_transp_values (not !boxed_val);
-  Options.set_boxed_definitions !boxed_def;
+  Flags.set_boxed_definitions !boxed_def;
   Vconv.set_use_vm !use_vm
 
 (*s Parsing of the command line.
@@ -236,7 +243,7 @@ let parse_args is_ide =
     | "-compile-verbose" :: f :: rem -> add_compile true f; parse rem
     | "-compile-verbose" :: []       -> usage ()
 
-    | "-dont-load-proofs" :: rem -> Options.dont_load_proofs := true; parse rem
+    | "-dont-load-proofs" :: rem -> Flags.dont_load_proofs := true; parse rem
 
     | "-translate" :: rem -> make_translate true; parse rem
 
@@ -246,13 +253,15 @@ let parse_args is_ide =
     | "-debug" :: rem -> set_debug (); parse rem
 
     | "-vm" :: rem -> use_vm := true; parse rem
-    | "-emacs" :: rem -> Options.print_emacs := true; Pp.make_pp_emacs(); parse rem
-    | "-emacs-U" :: rem -> Options.print_emacs := true; 
-	Options.print_emacs_safechar := true; Pp.make_pp_emacs(); parse rem
-	  
+    | "-emacs" :: rem -> Flags.print_emacs := true; Pp.make_pp_emacs(); parse rem
+    | "-emacs-U" :: rem -> Flags.print_emacs := true; 
+	Flags.print_emacs_safechar := true; Pp.make_pp_emacs(); parse rem
+	
+    | "-unicode" :: rem -> Flags.unicode_syntax := true; parse rem
+
     | "-where" :: _ -> print_endline (getenv_else "COQLIB" Coq_config.coqlib); exit 0
 
-    | ("-quiet"|"-silent") :: rem -> Options.make_silent true; parse rem
+    | ("-quiet"|"-silent") :: rem -> Flags.make_silent true; parse rem
 
     | ("-?"|"-h"|"-H"|"-help"|"--help") :: _ -> usage ()
 
@@ -270,13 +279,15 @@ let parse_args is_ide =
 
     | ("-m" | "--memory") :: rem -> memory_stat := true; parse rem
 
-    | "-xml" :: rem -> Options.xml_export := true; parse rem
+    | "-xml" :: rem -> Flags.xml_export := true; parse rem
 
-    (* Scanned in Options! *)
+    | "-output-context" :: rem -> output_context := true; parse rem
+
+    (* Scanned in Flags. *)
     | "-v7" :: rem -> error "This version of Coq does not support v7 syntax"
     | "-v8" :: rem -> parse rem
 
-    | "-no-hash-consing" :: rem -> Options.hash_cons_proofs := false; parse rem
+    | "-no-hash-consing" :: rem -> Flags.hash_cons_proofs := false; parse rem
 
     | s :: rem -> 
 	if is_ide then begin
@@ -297,15 +308,10 @@ let parse_args is_ide =
       end
     | e -> begin msgnl (Cerrors.explain_exn e); exit 1 end
 
-
-(* To prevent from doing the initialization twice *)
-let initialized = ref false
-
 let init is_ide =
-  if not !initialized then begin
-    initialized := true;
-    Sys.catch_break false; (* Ctrl-C is fatal during the initialisation *)
-    Lib.init();
+  Sys.catch_break false; (* Ctrl-C is fatal during the initialisation *)
+  Lib.init();
+  begin
     try
       parse_args is_ide;
       re_exec is_ide;
@@ -315,21 +321,26 @@ let init is_ide =
       set_vm_opt ();
       engage ();
       if (not !batch_mode|| !compile_list=[]) && Global.env_is_empty() then
-        option_iter Declaremods.start_library !toplevel_name;
+        Option.iter Declaremods.start_library !toplevel_name;
       init_library_roots ();
       load_vernac_obj ();
       require ();
       load_rcfile();
       load_vernacular ();
       compile_files ();
-      outputstate ();
+      outputstate ()
     with e ->
       flush_all();
-      if not !batch_mode then message "Error during initialization :";
+      if not !batch_mode then message "Error during initialization:";
       msgnl (Toplevel.print_toplevel_error e);
       exit 1
   end;
-  if !batch_mode then (flush_all(); Profile.print_profile (); exit 0);
+  if !batch_mode then
+    (flush_all(); 
+     if !output_context then
+       Pp.ppnl (with_option raw_print Prettyp.print_full_pure_context ());
+     Profile.print_profile (); 
+     exit 0);
   Lib.declare_initial_state ()
 
 let init_ide () = init true; List.rev !ide_args

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: edit.ml 6947 2005-04-20 16:18:41Z coq $ *)
+(* $Id: edit.ml 10441 2008-01-15 16:37:46Z lmamane $ *)
 
 open Pp
 open Util
@@ -80,7 +80,7 @@ let undo e n =
     | None -> invalid_arg "Edit.undo"
     | Some d ->
 	let (bs,_) = Hashtbl.find e.buf d in
-	if Bstack.depth bs = 1 & n > 0 then
+	if n >= Bstack.size bs then
 	  errorlabstrm "Edit.undo" (str"Undo stack exhausted");
         repeat n Bstack.pop bs
 
@@ -102,15 +102,16 @@ let undo_todepth e n =
 	else () (* if there is no proof in progress, then n must be zero *)
     | Some d ->
 	let (bs,_) = Hashtbl.find e.buf d in
-	if Bstack.depth bs < n then
+	let ucnt = Bstack.depth bs - n in
+	if  ucnt >= Bstack.size bs then
 	  errorlabstrm "Edit.undo_todepth" (str"Undo stack would be exhausted");
-        repeat (Bstack.depth bs - n) Bstack.pop bs
+        repeat ucnt Bstack.pop bs
 
-let create e (d,b,c,udepth) =
+let create e (d,b,c,usize) =
   if Hashtbl.mem e.buf d then
     errorlabstrm "Edit.create" 
       (str"Already editing something of that name");
-  let bs = Bstack.create udepth b in
+  let bs = Bstack.create usize b in
   Hashtbl.add e.buf d (bs,c)
 
 let delete e d =

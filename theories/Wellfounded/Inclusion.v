@@ -6,14 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Inclusion.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id: Inclusion.v 9642 2007-02-12 10:31:53Z herbelin $ i*)
 
 (** Author: Bruno Barras *)
 
 Require Import Relation_Definitions.
 
 Section WfInclusion.
-  Variable A : Set.
+  Variable A : Type.
   Variables R1 R2 : A -> A -> Prop.
 
   Lemma Acc_incl : inclusion A R1 R2 -> forall z:A, Acc R2 z -> Acc R1 z.

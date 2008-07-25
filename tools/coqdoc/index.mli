@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: index.mli 8617 2006-03-08 10:47:12Z notin $ i*)
+(*i $Id: index.mli 11065 2008-06-06 22:39:43Z msozeau $ i*)
 
 open Cdglobals
 
@@ -19,13 +19,23 @@ type entry_type =
   | Inductive
   | Constructor
   | Lemma
+  | Record
+  | Projection
+  | Instance
+  | Class
+  | Method
   | Variable
   | Axiom
   | TacticDefinition
+  | Abbreviation
+  | Notation
+  | Section
+
+val type_name : entry_type -> string
 
 type index_entry = 
   | Def of string * entry_type
-  | Ref of coq_module * string
+  | Ref of coq_module * string * entry_type
   | Mod of coq_module * string
 
 val find : coq_module -> loc -> index_entry
@@ -42,7 +52,7 @@ val scan_file : string -> coq_module -> unit
 
 (*s Read globalizations from a file (produced by coqc -dump-glob) *)
 
-val read_glob : string -> unit
+val read_glob : string -> coq_module
 
 (*s Indexes *)
 
@@ -50,6 +60,8 @@ type 'a index = {
   idx_name : string;
   idx_entries : (char * (string * 'a) list) list;
   idx_size : int }
+
+val current_library : string ref
 
 val all_entries : unit -> 
       (coq_module * entry_type) index *

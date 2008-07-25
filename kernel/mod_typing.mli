@@ -6,22 +6,27 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mod_typing.mli 6621 2005-01-21 17:24:37Z herbelin $ i*)
+(*i $Id: mod_typing.mli 11170 2008-06-25 08:31:04Z soubiran $ i*)
 
 (*i*)
 open Declarations
 open Environ
 open Entries
+open Mod_subst
 (*i*)
 
 
-val translate_modtype : env -> module_type_entry -> module_type_body
-
 val translate_module : env -> module_entry -> module_body
 
-val translate_mexpr : env -> module_expr -> module_expr_body * module_type_body
+val translate_struct_entry : env -> module_struct_entry -> 
+  struct_expr_body * substitution
 
 val add_modtype_constraints : env -> module_type_body -> env
 
 val add_module_constraints : env -> module_body -> env
 
+val add_struct_expr_constraints : env -> struct_expr_body -> env
+
+val struct_expr_constraints : struct_expr_body -> Univ.constraints
+
+val module_constraints : module_body -> Univ.constraints

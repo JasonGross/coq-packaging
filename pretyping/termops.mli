@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: termops.mli 9314 2006-10-29 20:11:08Z herbelin $ i*)
+(*i $Id: termops.mli 11166 2008-06-22 13:23:35Z herbelin $ i*)
 
 open Util
 open Pp
@@ -21,6 +21,7 @@ val new_sort_in_family : sorts_family -> sorts
 val new_Type : unit -> types
 val new_Type_sort : unit -> sorts
 val refresh_universes : types -> types
+val refresh_universes_strict : types -> types
 
 (* printers *)
 val print_sort : sorts -> std_ppcmds
@@ -30,6 +31,7 @@ val set_print_constr : (env -> constr -> std_ppcmds) -> unit
 val print_constr     : constr -> std_ppcmds
 val print_constr_env : env -> constr -> std_ppcmds
 val print_named_context : env -> std_ppcmds
+val pr_rel_decl : env -> rel_declaration -> std_ppcmds
 val print_rel_context : env -> std_ppcmds
 val print_env : env -> std_ppcmds
 
@@ -100,7 +102,8 @@ val occur_var_in_decl :
   identifier -> 'a * types option * types -> bool
 val occur_term : constr -> constr -> bool
 val free_rels : constr -> Intset.t
-
+val dependent : constr -> constr -> bool
+val collect_metas : constr -> int list
 (* Substitution of metavariables *)
 type metamap = (metavariable * constr) list 
 val subst_meta : metamap -> constr -> constr
@@ -108,37 +111,62 @@ val subst_meta : metamap -> constr -> constr
 (* [pop c] lifts by -1 the positive indexes in [c] *)
 val pop : constr -> constr
 
-(* bindings of an arbitrary large term. Uses equality modulo
+(*s Substitution of an arbitrary large term. Uses equality modulo
    reduction of let *)
-val dependent : constr -> constr -> bool
+
+(* [subst_term_gen eq d c] replaces [Rel 1] by [d] in [c] using [eq]
+   as equality *)
 val subst_term_gen :
   (constr -> constr -> bool) -> constr -> constr -> constr
+
+(* [replace_term_gen eq d e c] replaces [d] by [e] in [c] using [eq]
+   as equality *)
 val replace_term_gen :
   (constr -> constr -> bool) ->
     constr -> constr -> constr -> constr
+
+(* [subst_term d c] replaces [Rel 1] by [d] in [c] *)
 val subst_term : constr -> constr -> constr
+
+(* [replace_term d e c] replaces [d] by [e] in [c] *)
 val replace_term : constr -> constr -> constr -> constr
-val subst_term_occ_gen :
-  int list -> int -> constr -> types -> int * types
-val subst_term_occ : int list -> constr -> types -> types
+
+(* In occurrences sets, false = everywhere except and true = nowhere except *)
+type occurrences = bool * int list
+val all_occurrences : occurrences
+val no_occurrences_in_set : occurrences
+
+(* [subst_term_occ_gen occl n c d] replaces occurrences of [c] at
+   positions [occl], counting from [n], by [Rel 1] in [d] *)
+val subst_term_occ_gen : 
+  occurrences -> int -> constr -> types -> int * types
+
+(* [subst_term_occ occl c d] replaces occurrences of [c] at
+   positions [occl] by [Rel 1] in [d] (see also Note OCC) *)
+val subst_term_occ : occurrences -> constr -> constr -> constr
+
+(* [subst_term_occ_decl occl c decl] replaces occurrences of [c] at
+   positions [occl] by [Rel 1] in [decl] *)
 val subst_term_occ_decl :
-  int list -> constr -> named_declaration -> named_declaration
+  occurrences -> constr -> named_declaration -> named_declaration
 
 val error_invalid_occurrence : int list -> 'a
 
 (* Alternative term equalities *)
+val base_sort_cmp : Reduction.conv_pb -> sorts -> sorts -> bool
+val constr_cmp : Reduction.conv_pb -> constr -> constr -> bool
+val eq_constr : constr -> constr -> bool
+
 val eta_reduce_head : constr -> constr
 val eta_eq_constr : constr -> constr -> bool
 
 (* finding "intuitive" names to hypotheses *)
-val first_char : identifier -> string
 val lowercase_first_char : identifier -> string
 val sort_hdchar : sorts -> string
 val hdchar : env -> types -> string
 val id_of_name_using_hdchar :
   env -> types -> name -> identifier
 val named_hd : env -> types -> name -> name
-val named_hd_type : env -> types -> name -> name
 
 val mkProd_name : env -> name * types * types -> types
 val mkLambda_name : env -> name * types * constr -> constr
@@ -157,6 +185,9 @@ val mkLambda_or_LetIn_name : env -> constr -> rel_declaration -> constr
 val it_mkProd_or_LetIn_name   : env -> types -> rel_context -> types
 val it_mkLambda_or_LetIn_name : env -> constr -> rel_context -> constr
 
+(* Get the last arg of a constr intended to be nn application *)
+val last_arg : constr -> constr
+
 (* name contexts *)
 type names_context = name list
 val add_name : name -> names_context -> names_context
@@ -168,6 +199,8 @@ val ids_of_named_context : named_context -> identifier list
 val ids_of_context : env -> identifier list
 val names_of_rel_context : env -> names_context
 
+val context_chop : int -> rel_context -> (rel_context*rel_context)
+
 (* Set of local names *)
 val vars_of_env: env -> Idset.t
 val add_vname : Idset.t -> name -> Idset.t
@@ -177,21 +210,31 @@ type used_idents = identifier list
 val occur_rel : int -> name list -> identifier -> bool
 val occur_id : name list -> identifier -> constr -> bool
 
+type avoid_flags = bool option
+ (* Some true = avoid all globals (as in intro); 
+    Some false = avoid only global constructors; None = don't avoid globals *)
+
+val next_name_away_in_cases_pattern : 
+  name -> identifier list -> identifier
 val next_global_ident_away : 
   (*allow section vars:*) bool -> identifier -> identifier list -> identifier
 val next_name_not_occuring :
-  bool -> name -> identifier list -> name list -> constr -> identifier
+  avoid_flags -> name -> identifier list -> name list -> constr -> identifier
 val concrete_name :
-  bool -> identifier list -> name list -> name -> constr -> 
+  avoid_flags -> identifier list -> name list -> name -> constr -> 
     name * identifier list
 val concrete_let_name :
-  bool -> identifier list -> name list -> name -> constr -> name * identifier list
+  avoid_flags -> identifier list -> name list -> name -> constr -> 
+    name * identifier list
 val rename_bound_var : env -> identifier list -> types -> types
 
 (* other signature iterators *)
 val process_rel_context : (rel_declaration -> env -> env) -> env -> env
 val assums_of_rel_context : rel_context -> (name * constr) list
 val lift_rel_context : int -> rel_context -> rel_context
+val substl_rel_context : constr list -> rel_context -> rel_context
+val map_rel_context_with_binders : 
+  (int -> constr -> constr) -> rel_context -> rel_context
 val fold_named_context_both_sides :
   ('a -> named_declaration -> named_declaration list -> 'a) ->
     named_context -> init:'a -> 'a
@@ -205,6 +248,8 @@ val global_vars_set_of_decl : env -> named_declaration -> Idset.t
 val is_section_variable : identifier -> bool
 
 val isGlobalRef : constr -> bool
+
+val has_polymorphic_type : constant -> bool
 
 (* Combinators on judgments *)
 
