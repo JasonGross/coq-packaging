@@ -5,9 +5,9 @@
 ## DP: Suppress warnings from tests outputs.
 
 @DPATCH@
-diff -urNad coq-8.1.pl2+dfsg~/test-suite/check coq-8.1.pl2+dfsg/test-suite/check
---- coq-8.1.pl2+dfsg~/test-suite/check	2007-11-29 14:02:40.000000000 +0000
-+++ coq-8.1.pl2+dfsg/test-suite/check	2007-11-29 14:03:39.000000000 +0000
+diff -urNad coq~/test-suite/check coq/test-suite/check
+--- coq~/test-suite/check	2008-07-25 15:36:31.000000000 +0200
++++ coq/test-suite/check	2008-07-25 15:36:31.000000000 +0200
 @@ -52,7 +52,7 @@
  	nbtests=`expr $nbtests + 1`
  	printf "    "$f"..."

@@ -5,15 +5,15 @@
 ## DP: Use the default Debian browser for help.
 
 @DPATCH@
-diff -urNad coq-8.1.pl2+dfsg~/lib/options.ml coq-8.1.pl2+dfsg/lib/options.ml
---- coq-8.1.pl2+dfsg~/lib/options.ml	2007-10-15 11:00:52.000000000 +0000
-+++ coq-8.1.pl2+dfsg/lib/options.ml	2007-10-15 11:01:51.000000000 +0000
-@@ -118,7 +118,4 @@
-            "\" must contain exactly one placeholder \"%s\".")
-    else pre,post
+diff -urNad coq~/lib/flags.ml coq/lib/flags.ml
+--- coq~/lib/flags.ml	2008-07-25 15:13:00.000000000 +0200
++++ coq/lib/flags.ml	2008-07-25 15:30:47.000000000 +0200
+@@ -126,7 +126,4 @@
+   let coq_netscape_remote_var = "COQREMOTEBROWSER" in
+   Sys.getenv coq_netscape_remote_var
   with
 -  Not_found ->
 -   if Sys.os_type = "Win32"
--   then "C:\\PROGRA~1\\INTERN~1\\IEXPLORE ", ""
--   else "firefox -remote \"OpenURL(", ")\""
-+  Not_found -> "/usr/bin/x-www-browser ", ""
+-   then "C:\\PROGRA~1\\INTERN~1\\IEXPLORE %s"
+-   else "firefox -remote \"OpenURL(%s,new-tab)\" || firefox %s &"
++  Not_found -> "/usr/bin/x-www-browser %s &"

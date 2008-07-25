@@ -5,13 +5,13 @@
 ## DP: Don't run complexity tests, they are far too fragile.
 
 @DPATCH@
-diff -urNad coq-8.1gamma~/test-suite/check coq-8.1gamma/test-suite/check
---- coq-8.1gamma~/test-suite/check	2006-11-03 14:07:27.000000000 +0100
-+++ coq-8.1gamma/test-suite/check	2006-11-23 15:19:49.000000000 +0100
-@@ -145,8 +145,8 @@
- test_parser parser
- echo "Interactive tests"
+diff -urNad coq~/test-suite/check coq/test-suite/check
+--- coq~/test-suite/check	2008-07-25 15:13:00.000000000 +0200
++++ coq/test-suite/check	2008-07-25 15:33:55.000000000 +0200
+@@ -250,8 +250,8 @@
  test_interactive interactive
+ echo "Micromega tests"
+ test_success micromega
 -echo "Complexity tests"
 -test_complexity complexity
 +echo "Skipping complexity tests"

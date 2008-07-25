@@ -1,8 +1,10 @@
 coq (8.2~beta3+dfsg-1) UNRELEASED; urgency=low
 
   * New upstream release.
+  * Updated patches and removed coqdoc_stdlib, makefile, configure and
+    cmxa-install obsolete patches.
 
- -- Samuel Mimram <smimram@debian.org>  Fri, 25 Jul 2008 15:13:01 +0200
+ -- Samuel Mimram <smimram@debian.org>  Fri, 25 Jul 2008 15:37:19 +0200
 
 coq (8.1.pl3+dfsg-1) unstable; urgency=low
 
