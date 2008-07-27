@@ -67,6 +67,8 @@ clean: unpatch
 	rm -f dev/ocamldebug-v7
 	rm -f ide/undo.mli glob.dump
 	rm -f test-suite/modules/*.vo
+	# git doesn't handle empty directories, so we create them here
+	-mkdir bin
 
 	dh_clean
 
