@@ -2,7 +2,12 @@ Source: coq
 Section: math
 Priority: optional
 Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
-Uploaders: Ralf Treinen <treinen@debian.org>, Remi Vanicat <vanicat@debian.org>, Stefano Zacchiroli <zack@debian.org>, Samuel Mimram <smimram@debian.org>
+Uploaders: Ralf Treinen <treinen@debian.org>,
+ Remi Vanicat <vanicat@debian.org>,
+ Stefano Zacchiroli <zack@debian.org>,
+ Samuel Mimram <smimram@debian.org>,
+ Stephane Glondu <steph@glondu.net>
+DM-Upload-Allowed: yes
 Standards-Version: 3.7.3
 Build-Depends: debhelper (>= 4.0.0), dpkg-dev (>= 1.13.19), dpatch, ocaml-nox (>= 3.10), ocaml-best-compilers, camlp5, liblablgtk2-ocaml-dev (>= 2.4.0), texlive-latex-extra, hevea
 Vcs-Browser: http://git.debian.org/?p=pkg-ocaml-maint/packages/coq.git
