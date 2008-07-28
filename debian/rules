@@ -51,7 +51,7 @@ build-stamp: patch-stamp configure-stamp
 		$(MAKE) BEST=byte HASCOQIDE=byte glob.dump; \
 	fi
 	cp tools/coqdoc/coqdoc.sty doc/stdlib/
-	$(MAKE) -C doc stdlib/html/index.html
+	$(MAKE) -f Makefile.stage3 doc/stdlib/html/index.html COQDOC="bin/coqdoc --coqlib_path `pwd`"
 	touch build-stamp
 
 clean: unpatch
