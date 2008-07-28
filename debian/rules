@@ -57,7 +57,7 @@ build-stamp: patch-stamp configure-stamp
 clean: unpatch
 	dh_testdir
 	dh_testroot
-	rm -f build-stamp configure-stamp opt-stamp
+	rm -f build-stamp configure-stamp opt-stamp install-stamp
 
 	[ ! -f config/Makefile ] || $(MAKE) clean
 	[ ! -f config/Makefile ] || $(MAKE) archclean
@@ -72,7 +72,8 @@ clean: unpatch
 
 	dh_clean
 
-install: build
+install: install-stamp
+install-stamp: build-stamp
 	dh_testdir
 	dh_testroot
 	dh_clean -k
@@ -115,6 +116,7 @@ install: build
 	rm -f $(COQPREF)/usr/lib/coq/ide/utf8.v $(COQPREF)/usr/lib/coq/ide/FAQ
 
 	dh_install --sourcedir=$(COQPREF) --list-missing
+	touch install-stamp
 
 binary-common:
 	dh_testdir
