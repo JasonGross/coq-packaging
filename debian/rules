@@ -96,7 +96,6 @@ install: build
 	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
 	cp debian/coqide.desktop debian/coqide/usr/share/applications
 
-	cp ide/index_urls.txt debian/coqide/usr/lib/coq/ide/index_urls.txt
 	if [ -e opt-stamp ]; then \
 		cp debian/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.opt.1; \
 		cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.opt.1; \
