@@ -20,6 +20,8 @@ CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man --emacslib /
 configure: configure-stamp
 configure-stamp:
 	dh_testdir
+	# git doesn't handle empty directories, so we create them here
+	-mkdir bin
 	if [ -e /usr/bin/ocamlc.opt ]; \
 	then \
 		./configure -opt $(CONFIGUREOPTS); \
@@ -67,8 +69,6 @@ clean: unpatch
 	rm -f dev/ocamldebug-v7
 	rm -f ide/undo.mli glob.dump
 	rm -f test-suite/modules/*.vo
-	# git doesn't handle empty directories, so we create them here
-	-mkdir bin
 
 	dh_clean
 
