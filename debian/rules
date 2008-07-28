@@ -28,8 +28,8 @@ configure-stamp:
 	fi
 	touch configure-stamp
 
-build: patch-stamp configure-stamp build-stamp
-build-stamp:
+build: build-stamp
+build-stamp: patch-stamp configure-stamp
 	dh_testdir
 	if grep -q BEST=opt config/Makefile; \
 	then \
