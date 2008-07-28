@@ -1,4 +1,3 @@
 usr/bin/coqide*
 usr/lib/coq/ide/coq.png
-usr/lib/coq/ide/utf8.vo
 usr/lib/coq/ide/.coqide-gtk2rc
