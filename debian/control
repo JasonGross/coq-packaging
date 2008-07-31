@@ -8,7 +8,7 @@ Uploaders: Ralf Treinen <treinen@debian.org>,
  Samuel Mimram <smimram@debian.org>,
  Stephane Glondu <steph@glondu.net>
 DM-Upload-Allowed: yes
-Standards-Version: 3.7.3
+Standards-Version: 3.8.0
 Build-Depends: debhelper (>= 4.0.0), dpkg-dev (>= 1.13.19), dpatch, ocaml-nox (>= 3.10), ocaml-best-compilers, camlp5, liblablgtk2-ocaml-dev (>= 2.4.0), texlive-latex-extra, hevea
 Homepage: http://coq.inria.fr/
 Vcs-Browser: http://git.debian.org/?p=pkg-ocaml-maint/packages/coq.git
