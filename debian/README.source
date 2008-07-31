@@ -1,0 +1,40 @@
+--------------------------
++ Coq package for Debian +
+--------------------------
+
+
+Packaging a new upstream version
+--------------------------------
+
+Coq documentation may be distributed only subject to the terms and
+conditions set forth in the Open Publication License, v1.0 or later,
+which is not DFSG-compliant. See:
+
+  http://lists.debian.org/debian-legal/2004/03/msg00226.html
+
+Only coqdoc-generated documentation of the standard library is shipped
+in main. The full documentation is shipped in non-free (as coq-doc
+package).
+
+The script debian/purify_tarball removes non-DFSG content from an
+upstream tarball. It should be run first when packaging a new upstream
+version. The suffix "+dfsg" is used to being appended to upstream
+version (the script will do it for you).
+
+
+Patch system
+------------
+
+This package uses dpatch for patching the source. Please consider
+reading dpatch manpage to patch the source.
+
+
+Version Control System
+----------------------
+
+Packaging is versioned with git, using git-import-orig (with
+--pristine-tar option) and git-buildpackage (with --git-pristine-tar
+option). Debian changelog can be updated based on git changelog using
+git-dch. Please consider reading the documentation of these tools.
+
+It was versioned with subversion until Wed, 23 Jul 2008.
