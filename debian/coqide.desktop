@@ -1,5 +1,4 @@
 [Desktop Entry]
-Encoding=UTF-8
 Name=CoqIDE Proof Assistant
 Comment=Graphical interface for the Coq proof assistant
 Exec=coqide
