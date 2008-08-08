@@ -59,6 +59,10 @@ clean: unpatch
 	dh_testroot
 	rm -f build-stamp configure-stamp opt-stamp install-stamp
 
+	# Contains a directory ending in .d which breaks the clean rule
+	# of upstream Makefile
+	-rm -Rf debian/coq/etc
+
 	[ ! -f config/Makefile ] || $(MAKE) clean
 	[ ! -f config/Makefile ] || $(MAKE) archclean
 	rm -f bin/*
@@ -67,6 +71,7 @@ clean: unpatch
 	rm -f dev/ocamldebug-v7
 	rm -f ide/undo.mli glob.dump
 	rm -f test-suite/modules/*.vo
+	rm -f doc/stdlib/coqdoc.sty
 
 	dh_clean
 
