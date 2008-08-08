@@ -14,8 +14,10 @@ coq (8.2~beta4+dfsg-1) UNRELEASED; urgency=low
   * [c89cb94] Add Homepage field
   * [7dd7c53] Add debian/README.source
   * [1c6c7c8] Bump Standards-Version to 3.8.0
+  * [38db629] Remove browser.dpatch and use --browser configure option
+  * [9fd4621] Add use-env-in-coq-config.dpatch
 
- -- Stephane Glondu <steph@glondu.net>  Fri, 08 Aug 2008 13:19:03 +0200
+ -- Stephane Glondu <steph@glondu.net>  Fri, 08 Aug 2008 23:18:56 +0200
 
 coq (8.1.pl3+dfsg-1) unstable; urgency=low
 
