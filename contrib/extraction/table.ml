@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: table.ml 10348 2007-12-06 17:36:14Z aspiwack $ i*)
+(*i $Id: table.ml 11262 2008-07-24 20:59:29Z letouzey $ i*)
 
 open Names
 open Term
@@ -175,6 +175,7 @@ let info_axioms = ref Refset.empty
 let log_axioms = ref Refset.empty
 let init_axioms () = info_axioms := Refset.empty; log_axioms := Refset.empty
 let add_info_axiom r = info_axioms := Refset.add r !info_axioms
+let remove_info_axiom r = info_axioms := Refset.remove r !info_axioms
 let add_log_axiom r = log_axioms := Refset.add r !log_axioms
 
 (*s Extraction mode: modular or monolithic *)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evarutil.mli 11136 2008-06-18 10:41:34Z herbelin $ i*)
+(*i $Id: evarutil.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -172,7 +172,15 @@ val pr_tycon_type : env -> type_constraint_type -> Pp.std_ppcmds
 val pr_tycon : env -> type_constraint -> Pp.std_ppcmds
 
 
-(**********************************)
-(* Removing hyps in evars'context *)
+(*********************************************************************)
+(* Removing hyps in evars'context;                                   *)
+(* raise OccurHypInSimpleClause if the removal breaks dependencies   *)
+
+type clear_dependency_error =
+| OccurHypInSimpleClause of identifier option
+| EvarTypingBreak of existential
+
+exception ClearDependencyError of identifier * clear_dependency_error
+
 val clear_hyps_in_evi : evar_defs ref -> named_context_val -> types ->
   identifier list -> named_context_val * types

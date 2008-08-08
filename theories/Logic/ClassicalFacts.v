@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalFacts.v 10156 2007-09-30 19:02:14Z herbelin $ i*)
+(*i $Id: ClassicalFacts.v 11238 2008-07-19 09:34:03Z herbelin $ i*)
 
 (** Some facts and definitions about classical logic
 
@@ -119,7 +119,7 @@ Qed.
 
 *)
 
-Definition inhabited (A:Prop) := A.
+Notation Local inhabited A := A.
 
 Lemma prop_ext_A_eq_A_imp_A :
   prop_extensionality -> forall A:Prop, inhabited A -> (A -> A) = A.
@@ -513,8 +513,6 @@ Qed.
     Investigation of Intuitionistic Arithmetic and Analysis, volume
     344 of Lecture Notes in Mathematics, Springer-Verlag, 1973.
 *)
-
-Notation Local "'inhabited' A" := A (at level 10, only parsing).
 
 Definition IndependenceOfGeneralPremises :=
   forall (A:Type) (P:A -> Prop) (Q:Prop),

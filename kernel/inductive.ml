@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inductive.ml 10920 2008-05-12 10:19:32Z herbelin $ *)
+(* $Id: inductive.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Util
 open Names
@@ -218,7 +218,7 @@ let type_of_constructor cstr (mib,mip) =
   let specif = mip.mind_user_lc in
   let i = index_of_constructor cstr in
   let nconstr = Array.length mip.mind_consnames in
-  if i > nconstr then error "Not enough constructors in the type";
+  if i > nconstr then error "Not enough constructors in the type.";
   constructor_instantiate (fst ind) mib specif.(i-1)
 
 let arities_of_specif kn (mib,mip) = 
@@ -228,7 +228,9 @@ let arities_of_specif kn (mib,mip) =
 let arities_of_constructors ind specif = 
   arities_of_specif (fst ind) specif
 
-
+let type_of_constructors ind (mib,mip) =
+  let specif = mip.mind_user_lc in
+  Array.map (constructor_instantiate (fst ind) mib) specif
 
 (************************************************************************)
 

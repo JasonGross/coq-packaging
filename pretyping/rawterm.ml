@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: rawterm.ml 11094 2008-06-10 19:35:23Z herbelin $ *)
+(* $Id: rawterm.ml 11282 2008-07-28 11:51:53Z msozeau $ *)
 
 (*i*)
 open Util
@@ -36,7 +36,7 @@ type rawsort = RProp of Term.contents | RType of Univ.universe option
 
 type binder_kind = BProd | BLambda | BLetIn
 
-type binding_kind = Explicit | Implicit
+type binding_kind = Lib.binding_kind = Explicit | Implicit
 
 type quantified_hypothesis = AnonHyp of int | NamedHyp of identifier
 

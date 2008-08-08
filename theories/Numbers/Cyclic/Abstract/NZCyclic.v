@@ -8,7 +8,7 @@
 (*                      Evgeny Makarov, INRIA, 2007                     *)
 (************************************************************************)
 
-(*i $Id: NZCyclic.v 11040 2008-06-03 00:04:16Z letouzey $ i*)
+(*i $Id: NZCyclic.v 11238 2008-07-19 09:34:03Z herbelin $ i*)
 
 Require Export NZAxioms.
 Require Import BigNumPrelude.
@@ -89,8 +89,8 @@ Open Local Scope IntScope.
 Notation "x == y"  := (NZeq x y) (at level 70) : IntScope.
 Notation "x ~= y" := (~ NZeq x y) (at level 70) : IntScope.
 Notation "0" := NZ0 : IntScope.
-Notation "'S'" := NZsucc : IntScope.
-Notation "'P'" := NZpred : IntScope.
+Notation S x := (NZsucc x).
+Notation P x := (NZpred x).
 (*Notation "1" := (S 0) : IntScope.*)
 Notation "x + y" := (NZadd x y) : IntScope.
 Notation "x - y" := (NZsub x y) : IntScope.

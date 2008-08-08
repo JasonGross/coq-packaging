@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: typeclasses_errors.mli 11105 2008-06-11 13:47:21Z msozeau $ i*)
+(*i $Id: typeclasses_errors.mli 11282 2008-07-28 11:51:53Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -29,7 +29,7 @@ type typeclass_error =
     | UnboundMethod of global_reference * identifier located (* Class name, method *)
     | NoInstance of identifier located * constr list
     | UnsatisfiableConstraints of evar_defs * (evar_info * hole_kind) option
-    | MismatchedContextInstance of contexts * constr_expr list * named_context (* found, expected *)
+    | MismatchedContextInstance of contexts * constr_expr list * rel_context (* found, expected *)
 
 exception TypeClassError of env * typeclass_error
 
@@ -41,4 +41,4 @@ val no_instance : env -> identifier located -> constr list -> 'a
 
 val unsatisfiable_constraints : env -> evar_defs -> evar option -> 'a
 
-val mismatched_ctx_inst : env -> contexts -> constr_expr list -> named_context -> 'a
+val mismatched_ctx_inst : env -> contexts -> constr_expr list -> rel_context -> 'a

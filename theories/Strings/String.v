@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: String.v 10855 2008-04-27 11:16:15Z msozeau $ *)
+(* $Id: String.v 11206 2008-07-04 16:21:28Z letouzey $ *)
 
 (** Contributed by Laurent Théry (INRIA);
     Adapted to Coq V8 by the Coq Development Team *)
@@ -225,7 +225,7 @@ Fixpoint index (n : nat) (s1 s2 : string) {struct s2} : option nat :=
       end
   end.
 
-(* Dirty trick to evaluate locally that prefix reduces itself *)
+(* Dirty trick to avoid locally that prefix reduces itself *)
 Opaque prefix.
 
 (** If the result of [index] is [Some m], [s1] in [s2] at position [m] *)

@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile.build 11174 2008-06-25 17:13:26Z notin $ 
+# $Id: Makefile.build 11309 2008-08-06 10:30:35Z herbelin $ 
 
 
 # Makefile for Coq
@@ -36,7 +36,12 @@ NOARG: world
 # build and install the three subsystems: coq, coqide, pcoq
 world: revision coq coqide pcoq
 
+ifeq ($(WITHDOC),all)
 install: install-coq install-coqide install-pcoq install-doc
+else
+install: install-coq install-coqide install-pcoq
+endif
+
 #install-manpages: install-coq-manpages install-pcoq-manpages
 
 ###########################################################################
@@ -491,7 +496,7 @@ install-pcoq-manpages:
 # tests
 ###########################################################################
 
-check:: world pcoq
+check:: world
 	cd test-suite; \
 	env COQBIN=../bin COQLIB=.. ./check -$(BEST) | tee check.log
 	if grep -F 'Error!' test-suite/check.log ; then false; fi
@@ -601,14 +606,6 @@ $(COQDOC): $(COQDOCCMO)
 	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ str.cma unix.cma $(COQDOCCMO)
 
 ###########################################################################
-# minicoq
-###########################################################################
-
-$(MINICOQ): $(MINICOQCMO)
-	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ $(CMA) $(MINICOQCMO) $(OSDEPLIBS)
-
-###########################################################################
 # Installation
 ###########################################################################
 
@@ -624,6 +621,7 @@ FULLCOQLIB=$(COQLIB:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
 FULLMANDIR=$(MANDIR:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
 FULLEMACSLIB=$(EMACSLIB:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
 FULLCOQDOCDIR=$(COQDOCDIR:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
+FULLDOCDIR=$(DOCDIR:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
 
 install-coq: install-binaries install-library install-coq-info
 install-coqlight: install-binaries install-library-light
@@ -632,12 +630,12 @@ install-binaries:: install-$(BEST) install-tools
 
 install-byte::
 	$(MKDIR) $(FULLBINDIR)
-	$(INSTALLBIN) $(COQMKTOP) $(COQC) $(COQTOPBYTE) $(FULLBINDIR)
+	$(INSTALLBIN) $(COQMKTOP) $(COQC) $(COQTOPBYTE) $(CSDPCERT) $(FULLBINDIR)
 	cd $(FULLBINDIR); ln -sf coqtop.byte$(EXE) coqtop$(EXE)
 
 install-opt::
 	$(MKDIR) $(FULLBINDIR)
-	$(INSTALLBIN) $(COQMKTOP) $(COQC) $(COQTOPBYTE) $(COQTOPOPT) $(FULLBINDIR)
+	$(INSTALLBIN) $(COQMKTOP) $(COQC) $(COQTOPBYTE) $(COQTOPOPT) $(CSDPCERT) $(FULLBINDIR)
 	cd $(FULLBINDIR); ln -sf coqtop.opt$(EXE) coqtop$(EXE)
 
 install-tools::
@@ -861,7 +859,7 @@ endif
 
 %.ml: %.mll
 	$(SHOW)'OCAMLLEX  $<'
-	$(HIDE)$(OCAMLLEX) "$*.mll" -o $@
+	$(HIDE)$(OCAMLLEX) -o $@ "$*.mll"
 
 %.ml %.mli: %.mly
 	$(SHOW)'OCAMLYACC $<'

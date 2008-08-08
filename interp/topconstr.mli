@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: topconstr.mli 11024 2008-05-30 12:41:39Z msozeau $ i*)
+(*i $Id: topconstr.mli 11282 2008-07-28 11:51:53Z msozeau $ i*)
 
 (*i*)
 open Pp
@@ -95,7 +95,7 @@ type notation = string
 
 type explicitation = ExplByPos of int * identifier option | ExplByName of identifier
   
-type binder_kind = Default of binding_kind | TypeClass of binding_kind
+type binder_kind = Default of binding_kind | TypeClass of binding_kind * binding_kind
 
 type proj_flag = int option (* [Some n] = proj of the n-th visible argument *)
 

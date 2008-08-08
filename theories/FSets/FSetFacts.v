@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetFacts.v 10765 2008-04-08 16:15:23Z msozeau $ *)
+(* $Id: FSetFacts.v 11282 2008-07-28 11:51:53Z msozeau $ *)
 
 (** * Finite sets library *)
 
@@ -308,6 +308,8 @@ Add Relation elt E.eq
  symmetry proved by E.eq_sym
  transitivity proved by E.eq_trans 
  as EltSetoid.
+
+Typeclasses unfold elt.
 
 Add Relation t Equal 
  reflexivity proved by eq_refl 

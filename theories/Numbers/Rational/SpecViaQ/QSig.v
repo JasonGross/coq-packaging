@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: QSig.v 11028 2008-06-01 17:34:19Z letouzey $ i*)
+(*i $Id: QSig.v 11207 2008-07-04 16:50:32Z letouzey $ i*)
 
 Require Import QArith Qpower.
 
@@ -40,14 +40,24 @@ Module Type QType.
 
  Parameter compare : t -> t -> comparison.
 
- Parameter spec_compare: forall x y, compare x y = ([x] ?= [y]).
+ Parameter spec_compare : forall x y, compare x y = ([x] ?= [y]).
 
  Definition lt n m := compare n m = Lt.
  Definition le n m := compare n m <> Gt.
  Definition min n m := match compare n m with Gt => m | _ => n end.
  Definition max n m := match compare n m with Lt => m | _ => n end.
 
- Parameter add  : t -> t -> t.
+ Parameter eq_bool : t -> t -> bool.
+ 
+ Parameter spec_eq_bool : forall x y, 
+  if eq_bool x y then [x]==[y] else ~([x]==[y]).
+
+ Parameter red : t -> t.
+ 
+ Parameter spec_red : forall x, [red x] == [x].
+ Parameter strong_spec_red : forall x, [red x] = Qred [x].
+
+ Parameter add : t -> t -> t.
 
  Parameter spec_add: forall x y, [add x y] == [x] + [y].
 
@@ -75,10 +85,13 @@ Module Type QType.
 
  Parameter spec_div: forall x y, [div x y] == [x] / [y].
 
- Parameter power_pos : t -> positive -> t.
+ Parameter power : t -> Z -> t.
 
- Parameter spec_power_pos: forall x n, [power_pos x n] == [x] ^ Zpos n.
+ Parameter spec_power: forall x z, [power x z] == [x] ^ z.
 
 End QType.
 
-(* TODO: add norm function and variants, add eq_bool, what about Qc ? *)
+(** NB: several of the above functions come with [..._norm] variants
+     that expect reduced arguments and return reduced results. *)
+
+(** TODO : also speak of specifications via Qcanon ... *)

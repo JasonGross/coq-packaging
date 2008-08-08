@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: util.ml 11083 2008-06-09 22:08:14Z herbelin $ *)
+(* $Id: util.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 
@@ -575,6 +575,12 @@ let list_fold_left_i f =
     | b::l -> it_list_f (i+1) (f i a b) l
   in 
   it_list_f 
+
+let rec list_fold_left3 f accu l1 l2 l3 =
+  match (l1, l2, l3) with
+    ([], [], []) -> accu
+  | (a1::l1, a2::l2, a3::l3) -> list_fold_left3 f (f accu a1 a2 a3) l1 l2 l3
+  | (_, _, _) -> invalid_arg "list_fold_left3"
 
 (* [list_fold_right_and_left f [a1;...;an] hd =
    f (f (... (f (f hd
@@ -1196,6 +1202,8 @@ let pr_opt_no_spc pr = function None -> mt () | Some x -> pr x
 
 let nth n = str (ordinal n)
 
+(* [prlist pr [a ; ... ; c]] outputs [pr a ++ ... ++ pr c] *)
+
 let rec prlist elem l = match l with 
   | []   -> mt ()
   | h::t -> Stream.lapp (fun () -> elem h) (prlist elem t)
@@ -1207,12 +1215,32 @@ let rec prlist_strict elem l = match l with
   | []   -> mt ()
   | h::t -> (elem h)++(prlist_strict elem t)
 
+(* [prlist_with_sep sep pr [a ; ... ; c]] outputs
+   [pr a ++ sep() ++ ... ++ sep() ++ pr c] *)
+
 let rec prlist_with_sep sep elem l = match l with
   | []   -> mt ()
   | [h]  -> elem h
   | h::t ->
       let e = elem h and s = sep() and r = prlist_with_sep sep elem t in
       e ++ s ++ r
+
+(* Print sequence of objects separated by space (unless an element is empty) *)
+
+let rec pr_sequence elem = function
+  | []   -> mt ()
+  | [h]  -> elem h
+  | h::t ->
+      let e = elem h and r = pr_sequence elem t in
+      if e = mt () then r else e ++ spc () ++ r
+
+(* [pr_enum pr [a ; b ; ... ; c]] outputs 
+   [pr a ++ str "," ++ pr b ++ str "," ++ ... ++ str "and" ++ pr c] *)
+
+let pr_enum pr l =
+  let c,l' = list_sep_last l in
+  prlist_with_sep pr_coma pr l' ++
+  (if l'<>[] then str " and" ++ spc () else mt()) ++ pr c
 
 let pr_vertical_list pr = function
   | [] -> str "none" ++ fnl ()
@@ -1228,6 +1256,9 @@ let prvecti elem v =
   in
   if n = 0 then mt () else pr (n - 1)
 
+(* [prvect_with_sep sep pr [|a ; ... ; c|]] outputs
+   [pr a ++ sep() ++ ... ++ sep() ++ pr c] *)
+
 let prvect_with_sep sep elem v =
   let rec pr n =
     if n = 0 then 
@@ -1239,7 +1270,15 @@ let prvect_with_sep sep elem v =
   let n = Array.length v in
   if n = 0 then mt () else pr (n - 1)
 
+(* [prvect pr [|a ; ... ; c|]] outputs [pr a ++ ... ++ pr c] *)
+
 let prvect elem v = prvect_with_sep mt elem v
+
+let pr_located pr (loc,x) =
+  if Flags.do_translate() && loc<>dummy_loc then
+    let (b,e) = unloc loc in
+    comment b ++ pr x ++ comment e
+  else pr x
 
 let surround p = hov 1 (str"(" ++ p ++ str")")
 

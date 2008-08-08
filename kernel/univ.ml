@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: univ.ml 11063 2008-06-06 16:03:45Z soubiran $ *)
+(* $Id: univ.ml 11301 2008-08-04 19:41:18Z herbelin $ *)
 
 (* Initial Caml version originates from CoC 4.8 [Dec 1988] *)
 (* Extension with algebraic universes by HH [Sep 2001] *)
@@ -549,6 +549,11 @@ let subst_large_constraint u u' v =
 
 let subst_large_constraints =
   List.fold_right (fun (u,u') -> subst_large_constraint u u')
+
+let no_upper_constraints u cst =
+  match u with
+  | Atom u -> Constraint.for_all (fun (u1,_,_) -> u1 <> u) cst
+  | Max _ -> anomaly "no_upper_constraints"
 
 (* Pretty-printing *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: refiner.ml 11021 2008-05-29 16:48:18Z barras $ *)
+(* $Id: refiner.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -189,7 +189,6 @@ let leaf g =
 let check_subproof_connection gl spfl =
   list_for_all2eq (fun g pf -> Evd.eq_evar_info g pf.goal) gl spfl
 
-
 let abstract_operation syntax semantics gls =
   let (sgl_sigma,validation) = semantics gls in
   let hidden_proof = validation (List.map leaf sgl_sigma.it) in
@@ -204,6 +203,7 @@ let abstract_tactic_expr ?(dflt=false) te tacfun gls =
   abstract_operation (Tactic(te,dflt)) tacfun gls	
 
 let abstract_tactic ?(dflt=false) te =
+  !abstract_tactic_box := Some te;
   abstract_tactic_expr ~dflt (Tacexpr.TacAtom (dummy_loc,te))
 
 let abstract_extended_tactic ?(dflt=false) s args = 
@@ -491,13 +491,18 @@ let tclNOTSAMEGOAL (tac : tactic) goal =
       (str"Tactic generated a subgoal identical to the original goal.")
   else rslt
 
-let catch_failerror = function
-  | e when catchable_exception e -> check_for_interrupt ()
-  | FailError (0,_) | Stdpp.Exc_located(_, FailError (0,_)) ->
+let catch_failerror e =
+  if catchable_exception e then check_for_interrupt ()
+  else match e with
+  | FailError (0,_) | Stdpp.Exc_located(_, FailError (0,_)) 
+  | Stdpp.Exc_located(_, LtacLocated (_,FailError (0,_)))  ->
       check_for_interrupt ()
   | FailError (lvl,s) -> raise (FailError (lvl - 1, s))
-  | Stdpp.Exc_located (s,FailError (lvl,s')) ->
-      raise (Stdpp.Exc_located (s,FailError (lvl - 1, s')))
+  | Stdpp.Exc_located(s,FailError (lvl,s')) ->
+      raise (Stdpp.Exc_located(s,FailError (lvl - 1, s')))
+  | Stdpp.Exc_located(s,LtacLocated (s'',FailError (lvl,s')))  ->
+      raise
+       (Stdpp.Exc_located(s,LtacLocated (s'',FailError (lvl - 1,s'))))
   | e -> raise e
 
 (* ORELSE0 t1 t2 tries to apply t1 and if it fails, applies t2 *)
@@ -548,14 +553,8 @@ let ite_gen tcal tac_if continue tac_else gl=
     try 
       tcal tac_if0 continue gl
     with (* Breakpoint *)
-      | e when catchable_exception e ->
-	  check_for_interrupt (); tac_else0 e gl
-      | (FailError (0,_) | Stdpp.Exc_located(_, FailError (0,_))) as e ->
-	  check_for_interrupt (); tac_else0 e gl
-      | FailError (lvl,s) -> raise (FailError (lvl - 1, s))
-      | Stdpp.Exc_located (s,FailError (lvl,s')) ->
-	  raise (Stdpp.Exc_located (s,FailError (lvl - 1, s')))
-	
+      | e -> catch_failerror e; tac_else0 e gl
+
 (* Try the first tactic and, if it succeeds, continue with 
    the second one, and if it fails, use the third one *)
 
@@ -754,9 +753,7 @@ let extract_open_pftreestate pts =
 
 let extract_pftreestate pts =
   if pts.tstack <> [] then
-    errorlabstrm "extract_pftreestate"
-      (str"Cannot extract from a proof-tree in which we have descended;" ++
-         spc () ++ str"Please ascend to the root");
+    errorlabstrm "extract_pftreestate" (str"Proof blocks need to be closed");
   let pfterm,subgoals = extract_open_pftreestate pts in
   let exl = Evarutil.non_instantiated pts.tpfsigma in
   if subgoals <> [] or exl <> [] then

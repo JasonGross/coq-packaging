@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
 
-(* $Id: vernacextend.ml4 10091 2007-08-24 10:57:37Z herbelin $ *)
+(* $Id: vernacextend.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Util
 open Genarg
@@ -110,7 +110,7 @@ EXTEND
   rule:
     [ [ "["; s = STRING; l = LIST0 args; "]"; "->"; "["; e = Pcaml.expr; "]"
         -> 
-      if s = "" then Util.user_err_loc (loc,"",Pp.str "Command name is empty");
+      if s = "" then Util.user_err_loc (loc,"",Pp.str"Command name is empty.");
       (s,l,<:expr< fun () -> $e$ >>)
     ] ]
   ;

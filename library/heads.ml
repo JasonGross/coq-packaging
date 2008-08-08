@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: heads.ml 10841 2008-04-24 07:19:57Z herbelin $ *)
+(* $Id: heads.ml 11282 2008-07-28 11:51:53Z msozeau $ *)
 
 open Pp
 open Util
@@ -158,7 +158,7 @@ let discharge_head (_,(ref,k)) =
   | EvalConstRef cst -> Some (EvalConstRef (pop_con cst), k)
   | EvalVarRef id -> None
 
-let rebuild_head (info,(ref,k)) =
+let rebuild_head (ref,k) =
   (ref, compute_head ref)
 
 let export_head o = Some o

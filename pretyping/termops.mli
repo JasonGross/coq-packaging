@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: termops.mli 11166 2008-06-22 13:23:35Z herbelin $ i*)
+(*i $Id: termops.mli 11282 2008-07-28 11:51:53Z msozeau $ i*)
 
 open Util
 open Pp
@@ -185,7 +185,7 @@ val mkLambda_or_LetIn_name : env -> constr -> rel_declaration -> constr
 val it_mkProd_or_LetIn_name   : env -> types -> rel_context -> types
 val it_mkLambda_or_LetIn_name : env -> constr -> rel_context -> constr
 
-(* Get the last arg of a constr intended to be nn application *)
+(* Get the last arg of a constr intended to be an application *)
 val last_arg : constr -> constr
 
 (* name contexts *)

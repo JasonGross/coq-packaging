@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: eauto.ml4 11094 2008-06-10 19:35:23Z herbelin $ *)
+(* $Id: eauto.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -74,11 +74,11 @@ let prolog_tac l n gl =
   let n =
     match n with
       |  ArgArg n -> n
-      | _ -> error "Prolog called with a non closed argument"
+      | _ -> error "Prolog called with a non closed argument."
   in
   try (prolog l n gl)
   with UserError ("Refiner.tclFIRST",_) ->
-    errorlabstrm "Prolog.prolog" (str "Prolog failed")
+    errorlabstrm "Prolog.prolog" (str "Prolog failed.")
 
 TACTIC EXTEND prolog
 | [ "prolog" "[" constr_list(l) "]" int_or_var(n) ] -> [ prolog_tac l n ]
@@ -111,7 +111,7 @@ let rec e_trivial_fail_db mod_delta db_list local_db goal =
 	  let d = pf_last_hyp g' in
 	  let hintl = make_resolve_hyp (pf_env g') (project g') d in
           (e_trivial_fail_db mod_delta db_list
-	     (add_hint_list hintl local_db) g'))) ::
+	      (Hint_db.add_list hintl local_db) g'))) ::
     (List.map fst (e_trivial_resolve mod_delta db_list local_db (pf_concl goal)) )
   in 
   tclFIRST (List.map tclCOMPLETE tacl) goal 
@@ -124,10 +124,9 @@ and e_my_find_search_nodelta db_list local_db hdc concl =
   let hdc = head_of_constr_reference hdc in
   let hintl =
     if occur_existential concl then 
-      list_map_append (fun (st, db) -> Hint_db.map_all hdc db) (local_db::db_list)
+      list_map_append (Hint_db.map_all hdc) (local_db::db_list)
     else 
-      list_map_append (fun (st, db) -> 
-	Hint_db.map_auto (hdc,concl) db) (local_db::db_list)
+      list_map_append (Hint_db.map_auto (hdc,concl)) (local_db::db_list)
   in 
   let tac_of_hint = 
     fun {pri=b; pat = p; code=t} -> 
@@ -160,12 +159,12 @@ and e_my_find_search_delta db_list local_db hdc concl =
   let hdc = head_of_constr_reference hdc in
   let hintl =
     if occur_existential concl then 
-      list_map_append (fun (st, db) -> 
-	let flags = {auto_unif_flags with modulo_delta = st} in
+      list_map_append (fun db -> 
+	let flags = {auto_unif_flags with modulo_delta = Hint_db.transparent_state db} in
 	  List.map (fun x -> flags, x) (Hint_db.map_all hdc db)) (local_db::db_list)
     else 
-      list_map_append (fun (st, db) -> 
-	let flags = {auto_unif_flags with modulo_delta = st} in
+      list_map_append (fun db -> 
+	let flags = {auto_unif_flags with modulo_delta = Hint_db.transparent_state db} in
 	  List.map (fun x -> flags, x) (Hint_db.map_auto (hdc,concl) db)) (local_db::db_list)
   in 
   let tac_of_hint = 
@@ -285,8 +284,7 @@ module SearchProblem = struct
 	     let hintl = 
 	       make_resolve_hyp (pf_env g') (project g') (pf_last_hyp g')
 	     in
-	       
-             let ldb = add_hint_list hintl (List.hd s.localdb) in
+             let ldb = Hint_db.add_list hintl (List.hd s.localdb) in
 	     { depth = s.depth; tacres = res; 
 	       last_tactic = pp; dblist = s.dblist;
 	       localdb = ldb :: List.tl s.localdb })
@@ -333,7 +331,7 @@ let e_depth_search debug p db_list local_db gl =
     let tac = if debug then Search.debug_depth_first else Search.depth_first in
     let s = tac (make_initial_state p gl db_list local_db) in
     s.tacres
-  with Not_found -> error "EAuto: depth first search failed"
+  with Not_found -> error "eauto: depth first search failed."
 
 let e_breadth_search debug n db_list local_db gl =
   try
@@ -342,7 +340,7 @@ let e_breadth_search debug n db_list local_db gl =
     in
     let s = tac (make_initial_state n gl db_list local_db) in
     s.tacres
-  with Not_found -> error "EAuto: breadth first search failed"
+  with Not_found -> error "eauto: breadth first search failed."
 
 let e_search_auto debug (in_depth,p) lems db_list gl = 
   let local_db = make_local_hint_db true lems gl in 
@@ -361,7 +359,7 @@ let eauto debug np lems dbnames =
     List.map
       (fun x -> 
 	 try searchtable_map x
-	 with Not_found -> error ("EAuto: "^x^": No such Hint database"))
+	 with Not_found -> error ("No such Hint database: "^x^"."))
       ("core"::dbnames) 
   in
   tclTRY (e_search_auto debug np lems db_list)
@@ -379,12 +377,12 @@ let gen_eauto d np lems = function
 let make_depth = function
   | None -> !default_search_depth 
   | Some (ArgArg d) -> d
-  | _ -> error "EAuto called with a non closed argument"
+  | _ -> error "eauto called with a non closed argument."
 
 let make_dimension n = function
   | None -> (true,make_depth n)
   | Some (ArgArg d) -> (false,d)
-  | _ -> error "EAuto called with a non closed argument"
+  | _ -> error "eauto called with a non closed argument."
 
 open Genarg
 
@@ -452,7 +450,8 @@ let autosimpl db cl =
     else []
   in
   let unfolds = List.concat (List.map (fun dbname -> 
-    let ((ids, csts), _) = searchtable_map dbname in
+    let db = searchtable_map dbname in
+    let (ids, csts) = Hint_db.transparent_state db in
       unfold_of_elts (fun x -> EvalConstRef x) (Cpred.elements csts) @
       unfold_of_elts (fun x -> EvalVarRef x) (Idpred.elements ids)) db)
   in unfold_option unfolds cl

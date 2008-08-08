@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile 11029 2008-06-01 19:39:44Z herbelin $ 
+# $Id: Makefile 11309 2008-08-06 10:30:35Z herbelin $ 
 
 
 # Makefile for Coq
@@ -180,7 +180,6 @@ archclean: clean-ide cleantheories
 	rm -f bin/parser.opt$(EXE) bin/coq-interface.opt$(EXE)
 	find . -name '*.cmx' -or -name '*.cmxa' -or -name '*.[soa]' | xargs rm -f
 	rm -f $(TOOLS)
-	rm -f $(MINICOQ)
 
 clean-ide:
 	rm -f $(COQIDECMO) $(COQIDECMX) $(COQIDECMO:.cmo=.cmi) $(COQIDEBYTE) $(COQIDEOPT) $(COQIDE)

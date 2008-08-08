@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pptactic.mli 9842 2007-05-20 17:44:23Z herbelin $ i*)
+(*i $Id: pptactic.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 open Pp
 open Genarg
@@ -77,6 +77,8 @@ val pr_extend :
   (open_constr -> std_ppcmds) -> (open_constr -> std_ppcmds) ->
   (tolerability -> glob_tactic_expr -> std_ppcmds) -> int ->
     string -> typed_generic_argument list -> std_ppcmds
+
+val pr_ltac_constant : Nametab.ltac_constant -> std_ppcmds
 
 val pr_raw_tactic : env -> raw_tactic_expr -> std_ppcmds
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacexpr.ml 11024 2008-05-30 12:41:39Z msozeau $ i*)
+(*i $Id: vernacexpr.ml 11282 2008-07-28 11:51:53Z msozeau $ i*)
 
 open Util
 open Names
@@ -239,7 +239,7 @@ type vernac_expr =
 	(lident * lident list * constr_expr) list * (* props *)
 	int option (* Priority *)
 
-  | VernacContext of typeclass_context
+  | VernacContext of local_binder list
 	
   | VernacDeclareInstance of
       lident (* instance name *)

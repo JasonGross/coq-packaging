@@ -14,7 +14,7 @@
   Syntax for the subtac terms and types.
   Elaborated from correctness/psyntax.ml4 by Jean-Christophe Filliâtre *)
 
-(* $Id: g_subtac.ml4 10919 2008-05-11 22:04:26Z msozeau $ *)
+(* $Id: g_subtac.ml4 11282 2008-07-28 11:51:53Z msozeau $ *)
 
 
 open Flags
@@ -139,10 +139,10 @@ VERNAC COMMAND EXTEND Subtac_Admit_Obligations
     END
 
 VERNAC COMMAND EXTEND Subtac_Set_Solver
-| [ "Obligations" "Tactic" ":=" tactic(t) ] -> [ 
+| [ "Obligation" "Tactic" ":=" tactic(t) ] -> [ 
     Coqlib.check_required_library ["Coq";"Program";"Tactics"];
     Tacinterp.add_tacdef false 
-      [(Qualid (dummy_loc, qualid_of_string "Coq.Program.Tactics.obligations_tactic"), true, t)] ]
+      [(Qualid (dummy_loc, qualid_of_string "Coq.Program.Tactics.obligation_tactic"), true, t)] ]
 END
 
 VERNAC COMMAND EXTEND Subtac_Show_Obligations

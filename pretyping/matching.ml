@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: matching.ml 10451 2008-01-18 17:20:28Z barras $ *)
+(* $Id: matching.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 (*i*)
 open Util
@@ -85,7 +85,7 @@ let matches_core convert allow_partial_app pat c =
 	    List.map
 	      (function
 		 | PRel n -> n
-		 | _ -> error "Only bound indices allowed in second order pattern matching")
+		 | _ -> error "Only bound indices allowed in second order pattern matching.")
 	      args in
 	  let frels = Intset.elements (free_rels cT) in
 	  if list_subset frels relargs then
@@ -185,7 +185,7 @@ let matches_core convert allow_partial_app pat c =
   in 
   Sort.list (fun (a,_) (b,_) -> a<b) (sorec [] [] pat c)
 
-let matches = matches_core None false
+let matches = matches_core None true
 
 let pmatches = matches_core None true
 

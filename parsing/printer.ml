@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: printer.ml 11001 2008-05-27 16:56:07Z aspiwack $ *)
+(* $Id: printer.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -28,6 +28,7 @@ open Refiner
 open Pfedit
 open Ppconstr
 open Constrextern
+open Tacexpr
 
 let emacs_str s alts = 
   match !Flags.print_emacs, !Flags.print_emacs_safechar with
@@ -318,7 +319,7 @@ let rec pr_evars_int i = function
 
 let default_pr_subgoal n =
   let rec prrec p = function
-    | [] -> error "No such goal"
+    | [] -> error "No such goal."
     | g::rest ->
        	if p = 1 then
           let pg = default_pr_goal g in
@@ -421,14 +422,14 @@ let pr_prim_rule = function
   | Intro id -> 
       str"intro " ++ pr_id id
 	
-  | Intro_replacing id -> 
-      (str"intro replacing "  ++ pr_id id)
-	
-  | Cut (b,id,t) ->
-      if b then
-        (str"assert " ++ pr_constr t)
-      else
-        (str"cut " ++ pr_constr t ++ str ";[intro " ++ pr_id id ++ str "|idtac]")
+  | Cut (b,replace,id,t) ->
+     if b then
+       (* TODO: express "replace" *)
+       (str"assert " ++ str"(" ++ pr_id id ++ str":" ++ pr_lconstr t ++ str")")
+     else
+       let cl = if replace then str"clear " ++ pr_id id ++ str"; " else mt() in
+       (str"cut " ++ pr_constr t ++ 
+        str ";[" ++ cl ++ str"intro " ++ pr_id id ++ str"|idtac]")
 	
   | FixRule (f,n,[]) ->
       (str"fix " ++ pr_id f ++ str"/" ++ int n)
@@ -472,7 +473,7 @@ let pr_prim_rule = function
       
   | Move (withdep,id1,id2) ->
       (str (if withdep then "dependent " else "") ++
-	 str"move "  ++ pr_id id1 ++ str " after " ++ pr_id id2)
+	 str"move "  ++ pr_id id1 ++ pr_move_location pr_id id2)
 
   | Rename (id1,id2) ->
       (str "rename " ++ pr_id id1 ++ str " into " ++ pr_id id2)
@@ -527,3 +528,14 @@ let pr_assumptionset env s =
     in
     (Option.default (mt ()) vars) ++ (Option.default (mt ()) axioms)
 
+let cmap_to_list m = Cmap.fold (fun k v acc -> v :: acc) m []
+
+open Typeclasses
+
+let pr_instance i = 
+  pr_global (ConstRef (instance_impl i))
+    
+let pr_instance_gmap insts =
+  prlist_with_sep fnl (fun (gr, insts) ->
+    prlist_with_sep fnl pr_instance (cmap_to_list insts))
+    (Gmap.to_list insts)

@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(*i $Id: g_prim.ml4 10155 2007-09-28 22:36:35Z glondu $ i*)
+(*i $Id: g_prim.ml4 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 open Pcoq
 open Names
@@ -22,6 +22,16 @@ open Prim
 open Nametab
 
 let local_make_qualid l id = make_qualid (make_dirpath l) id
+
+let my_int_of_string loc s =
+  try
+    let n = int_of_string s in
+    (* To avoid Array.make errors (that e.g. Undo uses), we set a *)
+    (* more restricted limit than int_of_string does *)
+    if n > 1024 * 2048 then raise Exit;
+    n
+  with Failure _ | Exit ->
+    Util.user_err_loc (loc,"",Pp.str "Cannot support a so large number.")
 
 GEXTEND Gram
   GLOBAL: 
@@ -79,7 +89,7 @@ GEXTEND Gram
   ;
   ne_string:
     [ [ s = STRING -> 
-        if s="" then Util.user_err_loc(loc,"",Pp.str"Empty string"); s
+        if s="" then Util.user_err_loc(loc,"",Pp.str"Empty string."); s
     ] ]
   ;
   dirpath:
@@ -90,11 +100,11 @@ GEXTEND Gram
     [ [ s = STRING -> s ] ]
   ;
   integer:
-    [ [ i = INT      -> int_of_string i
-      | "-"; i = INT -> - int_of_string i ] ]
+    [ [ i = INT      -> my_int_of_string loc i
+      | "-"; i = INT -> - my_int_of_string loc i ] ]
   ;
   natural:
-    [ [ i = INT -> int_of_string i ] ]
+    [ [ i = INT -> my_int_of_string loc i ] ]
   ;
   bigint: (* Negative numbers are dealt with specially *)
     [ [ i = INT -> (Bigint.of_string i) ] ]

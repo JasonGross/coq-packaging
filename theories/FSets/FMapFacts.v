@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FMapFacts.v 10782 2008-04-12 16:08:04Z msozeau $ *)
+(* $Id: FMapFacts.v 11282 2008-07-28 11:51:53Z msozeau $ *)
 
 (** * Finite maps library *)
 
@@ -659,6 +659,8 @@ Add Relation key E.eq
  symmetry proved by E.eq_sym
  transitivity proved by E.eq_trans 
  as KeySetoid.
+
+Typeclasses unfold key.
 
 Implicit Arguments Equal [[elt]].
 

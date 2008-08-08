@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: term_typing.ml 10877 2008-04-30 21:58:41Z herbelin $ *)
+(* $Id: term_typing.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Util
 open Names
@@ -60,7 +60,7 @@ let safe_push_named (id,_,_ as d) env =
   let _ =
     try
       let _ = lookup_named id env in 
-      error ("identifier "^string_of_id id^" already defined")
+      error ("Identifier "^string_of_id id^" already defined.")
     with Not_found -> () in
   push_named d env
 

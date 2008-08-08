@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: indtypes.ml 10920 2008-05-12 10:19:32Z herbelin $ *)
+(* $Id: indtypes.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Util
 open Names
@@ -254,16 +254,19 @@ let typecheck_inductive env mie =
     array_fold_map2' (fun ((id,full_arity,ar_level),cn,info,lc,_) lev cst ->
       let sign, s = dest_arity env full_arity in
       let status,cst = match s with
-      | Type _ when ar_level <> None (* Explicitly polymorphic *) ->
+      | Type u when ar_level <> None (* Explicitly polymorphic *) 
+            && no_upper_constraints u cst ->
 	  (* The polymorphic level is a function of the level of the *)
 	  (* conclusions of the parameters *)
-	  Inr (param_ccls, lev), cst
+          (* We enforce [u >= lev] in case [lev] has a strict upper *)
+          (* constraints over [u] *)
+	  Inr (param_ccls, lev), enforce_geq u lev cst
       | Type u (* Not an explicit occurrence of Type *) ->
 	  Inl (info,full_arity,s), enforce_geq u lev cst
       | Prop Pos when engagement env <> Some ImpredicativeSet ->
 	  (* Predicative set: check that the content is indeed predicative *)
 	  if not (is_type0m_univ lev) & not (is_type0_univ lev) then
-	    error "Large non-propositional inductive types must be in Type";
+	    error "Large non-propositional inductive types must be in Type.";
 	  Inl (info,full_arity,s), cst
       | Prop _ ->
 	  Inl (info,full_arity,s), cst in
@@ -598,7 +601,6 @@ let build_inductive env env_ar params isrecord isfinite inds nmr recargs cst =
 	      poly_level = lev; 
 	    }, all_sorts
       | Inl ((issmall,isunit),ar,s) ->
-	  let isunit = isunit && ntypes = 1 && not (is_recursive recargs.(0)) in
 	  let kelim = allowed_sorts issmall isunit s in
 	    Monomorphic {
 		mind_user_arity = ar;

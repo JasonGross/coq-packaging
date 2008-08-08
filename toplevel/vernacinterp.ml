@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernacinterp.ml 10348 2007-12-06 17:36:14Z aspiwack $ *)
+(* $Id: vernacinterp.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -31,7 +31,7 @@ let vinterp_add s f =
     Hashtbl.add vernac_tab s f
   with Failure _ ->
     errorlabstrm "vinterp_add"
-      (str"Cannot add the vernac command " ++ str s ++ str" twice")
+      (str"Cannot add the vernac command " ++ str s ++ str" twice.")
 
 let overwriting_vinterp_add s f =
   begin 
@@ -46,7 +46,7 @@ let vinterp_map s =
     Hashtbl.find vernac_tab s
   with Not_found -> 
     errorlabstrm "Vernac Interpreter"
-      (str"Cannot find vernac command " ++ str s)
+      (str"Cannot find vernac command " ++ str s ++ str".")
 
 let vinterp_init () = Hashtbl.clear vernac_tab
 

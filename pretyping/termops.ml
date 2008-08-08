@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: termops.ml 11166 2008-06-22 13:23:35Z herbelin $ *)
+(* $Id: termops.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -639,7 +639,7 @@ let error_invalid_occurrence l =
   let l = list_uniquize (List.sort Pervasives.compare l) in
   errorlabstrm ""
     (str ("Invalid occurrence " ^ plural (List.length l) "number" ^": ") ++ 
-     prlist_with_sep spc int l)
+     prlist_with_sep spc int l ++ str ".")
 
 let subst_term_occ_gen (nowhere_except_in,locs) occ c t =
   let maxocc = List.fold_right max locs 0 in
@@ -817,21 +817,15 @@ let names_of_rel_context env =
 
 (**** Globality of identifiers *)
 
-(* TODO temporary hack!!! *)
 let rec is_imported_modpath = function
-  | MPfile dp -> dp <> (Lib.library_dp ())
-(*  | MPdot (mp,_) -> is_imported_modpath mp *)
-  | _ -> false
+  | MPfile dp -> true
+  | p -> false
 
 let is_imported_ref = function
   | VarRef _ -> false
   | IndRef (kn,_)
-  | ConstructRef ((kn,_),_) 
-(*  | ModTypeRef ln  *) -> 
+  | ConstructRef ((kn,_),_) ->
       let (mp,_,_) = repr_kn kn in is_imported_modpath mp
-(*  | ModRef mp ->
-      is_imported_modpath mp
-*)
   | ConstRef kn ->
       let (mp,_,_) = repr_con kn in is_imported_modpath mp
 

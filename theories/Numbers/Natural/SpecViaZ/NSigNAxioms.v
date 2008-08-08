@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: NSigNAxioms.v 11040 2008-06-03 00:04:16Z letouzey $ i*)
+(*i $Id: NSigNAxioms.v 11282 2008-07-28 11:51:53Z msozeau $ i*)
 
 Require Import ZArith.
 Require Import Nnat.
@@ -223,7 +223,7 @@ Qed.
 Add Morphism N.compare with signature N.eq ==> N.eq ==> (@eq comparison) as compare_wd.
 Proof. 
 intros x x' Hx y y' Hy.
-rewrite 2 spec_compare_alt; rewrite Hx, Hy; intuition.
+rewrite 2 spec_compare_alt. unfold N.eq in *. rewrite Hx, Hy; intuition.
 Qed.
 
 Add Morphism N.lt with signature N.eq ==> N.eq ==> iff as NZlt_wd.

@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(* $Id: g_constr.ml4 11024 2008-05-30 12:41:39Z msozeau $ *)
+(* $Id: g_constr.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pcoq
 open Constr
@@ -47,7 +47,7 @@ let rec index_and_rec_order_of_annot loc bl ann =
     | lids, (Some (loc, n), ro) ->
         if List.exists (fun (_, x) -> x = Name n) lids then
 	  Some (loc, n), ro
-        else user_err_loc(loc,"index_of_annot", Pp.str"no such fix variable")
+        else user_err_loc(loc,"index_of_annot", Pp.str"No such fix variable.")
     | _, (None, r) -> None, r
 
 let mk_fixb (id,bl,ann,body,(loc,tyc)) =
@@ -61,7 +61,7 @@ let mk_cofixb (id,bl,ann,body,(loc,tyc)) =
   let _ = Option.map (fun (aloc,_) ->
     Util.user_err_loc
       (aloc,"Constr:mk_cofixb",
-       Pp.str"Annotation forbidden in cofix expression")) (fst ann) in
+       Pp.str"Annotation forbidden in cofix expression.")) (fst ann) in
   let ty = match tyc with
       Some ty -> ty
     | None -> CHole (loc, None) in
@@ -326,7 +326,7 @@ GEXTEND Gram
           | CPatAtom (_, Some r) -> CPatCstr (loc, r, lp)
           | _ -> Util.user_err_loc 
               (cases_pattern_expr_loc p, "compound_pattern",
-               Pp.str "Constructor expected"))
+               Pp.str "Constructor expected."))
       | p = pattern; "as"; id = ident ->
 	  CPatAlias (loc, p, id) ]
     | "1" LEFTA
@@ -398,7 +398,12 @@ GEXTEND Gram
         [LocalRawAssum ([id],Default Implicit,c)]
     | "{"; id=name; idl=LIST1 name; "}" -> 
         List.map (fun id -> LocalRawAssum ([id],Default Implicit,CHole (loc, None))) (id::idl)
-    | "["; tc = LIST1 typeclass_constraint_binder SEP ","; "]" -> tc
+    | "("; "("; tc = LIST1 typeclass_constraint SEP "," ; ")"; ")" ->
+	List.map (fun (n, b, t) -> LocalRawAssum ([n], TypeClass (Explicit, b), t)) tc
+    | "{"; "{"; tc = LIST1 typeclass_constraint SEP "," ; "}"; "}" ->
+	List.map (fun (n, b, t) -> LocalRawAssum ([n], TypeClass (Implicit, b), t)) tc
+    | "["; tc = LIST1 typeclass_constraint SEP ","; "]" -> 
+	List.map (fun (n, b, t) -> LocalRawAssum ([n], TypeClass (Implicit, b), t)) tc
     ] ]
   ;
   binder:
@@ -407,19 +412,14 @@ GEXTEND Gram
       | "{"; idl=LIST1 name; ":"; c=lconstr; "}" -> (idl,Default Implicit,c) 
     ] ]
   ;
-  typeclass_constraint_binder:
-    [ [ tc = typeclass_constraint ->
-      let (n,bk,t) = tc in
-	LocalRawAssum ([n], TypeClass bk, t)
-    ] ]
-  ;
-
   typeclass_constraint:
     [ [ "!" ; c = operconstr LEVEL "200" -> (loc, Anonymous), Explicit, c
-    | iid=ident_colon ; expl = [ "!" -> Explicit | -> Implicit ] ; c = operconstr LEVEL "200" ->
-	(loc, Name iid), expl, c
-    | c = operconstr LEVEL "200" ->
-	(loc, Anonymous), Implicit, c
+      | "{"; id = name; "}"; ":" ; expl = [ "!" -> Explicit | -> Implicit ] ; c = operconstr LEVEL "200" ->
+	  id, expl, c
+      | iid=ident_colon ; expl = [ "!" -> Explicit | -> Implicit ] ; c = operconstr LEVEL "200" ->
+	  (loc, Name iid), expl, c
+      | c = operconstr LEVEL "200" ->
+	  (loc, Anonymous), Implicit, c
     ] ]
   ;
   

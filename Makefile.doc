@@ -27,13 +27,19 @@ doc-ps:\
   doc/tutorial/Tutorial.v.ps doc/refman/Reference-Manual.ps \
   doc/faq/FAQ.v.ps doc/stdlib/Library.ps doc/RecTutorial/RecTutorial.v.ps
 
-refman:\
+refman: coq
+	$(MAKE) -f Makefile.stage3 refman-nodep
+
+refman-nodep:\
   doc/refman/html/index.html doc/refman/Reference-Manual.ps doc/refman/Reference-Manual.pdf
 
 tutorial:\
   doc/tutorial/Tutorial.v.html doc/tutorial/Tutorial.v.ps doc/tutorial/Tutorial.v.pdf
 
-stdlib:\
+stdlib: $(THEORIESVO) $(COQDOC)
+	$(MAKE) -f Makefile.stage3 stdlib-nodep
+
+stdlib-nodep:\
   doc/stdlib/html/index.html doc/stdlib/Library.ps doc/stdlib/Library.pdf
 
 faq:\
@@ -47,7 +53,7 @@ rectutorial:\
 ### Implicit rules
 ######################################################################
 
-%.v.tex: %.tex coq
+%.v.tex: %.tex
 	(cd `dirname $<`; $(COQSRC)/$(COQTEX) $(COQTEXOPTS) `basename $<`)
 
 %.ps: %.dvi
@@ -103,7 +109,7 @@ doc/refman/html/index.html: doc/refman/Reference-Manual.html $(REFMANPNGFILES) \
 	$(INSTALLLIB) doc/refman/cover.html doc/refman/menu.html doc/refman/html
 	$(INSTALLLIB) doc/refman/index.html doc/refman/html
 
-doc/refman-quick:
+refman-quick:
 	(cd doc/refman; \
 	 $(PDFLATEX) Reference-Manual.tex; \
 	 $(HEVEA) $(HEVEAOPTS) ./Reference-Manual.tex)
@@ -152,7 +158,7 @@ doc/faq/html/index.html: doc/faq/FAQ.v.html
 
 ### Standard library (browsable html format)
 
-doc/stdlib/index-body.html: $(THEORIESVO:.vo=.glob) $(COQDOC)
+doc/stdlib/index-body.html: 
 	- rm -rf doc/stdlib/html
 	$(MKDIR) doc/stdlib/html
 	$(COQDOC) -q -d doc/stdlib/html --multi-index --html \
@@ -169,7 +175,7 @@ doc/stdlib/html/index.html: doc/stdlib/index-list.html doc/stdlib/index-body.htm
 
 ### Standard library (light version, full version is definitely too big)
 
-doc/stdlib/Library.coqdoc.tex: $(THEORIESLIGHTVO:.vo=.glob) $(COQDOC)
+doc/stdlib/Library.coqdoc.tex: 
 	$(COQSRC)/$(COQDOC) -q --gallina --body-only --latex --stdout \
             -R theories Coq $(THEORIESLIGHTVO:.vo=.v) >> $@
 
@@ -215,26 +221,26 @@ ide/index_urls.txt: doc/refman/html/index.html
 install-doc: install-doc-meta install-doc-html install-doc-printable
 
 install-doc-meta:
-	$(MKDIR) $(DOCDIR)
-	$(INSTALLLIB) doc/LICENCE $(DOCDIR)/LICENCE.doc
+	$(MKDIR) $(FULLDOCDIR)
+	$(INSTALLLIB) doc/LICENSE $(FULLDOCDIR)/LICENSE.doc
 
 install-doc-html: doc-html
-	$(MKDIR) $(addprefix $(DOCDIR)/html/, refman stdlib faq)
-	$(INSTALLLIB) doc/refman/html/* $(DOCDIR)/html/refman 
-	$(INSTALLLIB) doc/stdlib/html/* $(DOCDIR)/html/stdlib 
-	$(INSTALLLIB) doc/RecTutorial/RecTutorial.v.html $(DOCDIR)/html/RecTutorial.html
-	$(INSTALLLIB) doc/faq/html/* $(DOCDIR)/html/faq
-	$(INSTALLLIB) doc/tutorial/Tutorial.v.html $(DOCDIR)/html/Tutorial.html
+	$(MKDIR) $(addprefix $(FULLDOCDIR)/html/, refman stdlib faq)
+	$(INSTALLLIB) doc/refman/html/* $(FULLDOCDIR)/html/refman 
+	$(INSTALLLIB) doc/stdlib/html/* $(FULLDOCDIR)/html/stdlib 
+	$(INSTALLLIB) doc/RecTutorial/RecTutorial.v.html $(FULLDOCDIR)/html/RecTutorial.html
+	$(INSTALLLIB) doc/faq/html/* $(FULLDOCDIR)/html/faq
+	$(INSTALLLIB) doc/tutorial/Tutorial.v.html $(FULLDOCDIR)/html/Tutorial.html
 
 install-doc-printable: doc-pdf doc-ps
-	$(MKDIR) $(DOCDIR)/ps $(DOCDIR)/pdf
+	$(MKDIR) $(FULLDOCDIR)/ps $(FULLDOCDIR)/pdf
 	$(INSTALLLIB) doc/refman/Reference-Manual.pdf \
-		doc/stdlib/Library.pdf $(DOCDIR)/pdf
+		doc/stdlib/Library.pdf $(FULLDOCDIR)/pdf
 	$(INSTALLLIB) doc/refman/Reference-Manual.ps \
-		doc/stdlib/Library.ps $(DOCDIR)/ps
-	$(INSTALLLIB) doc/tutorial/Tutorial.v.pdf $(DOCDIR)/pdf/Tutorial.pdf
-	$(INSTALLLIB) doc/RecTutorial/RecTutorial.v.pdf $(DOCDIR)/pdf/RecTutorial.pdf
-	$(INSTALLLIB) doc/faq/FAQ.v.pdf $(DOCDIR)/pdf/FAQ.pdf
-	$(INSTALLLIB) doc/tutorial/Tutorial.v.ps $(DOCDIR)/ps/Tutorial.ps
-	$(INSTALLLIB) doc/RecTutorial/RecTutorial.v.ps $(DOCDIR)/ps/RecTutorial.ps
-	$(INSTALLLIB) doc/faq/FAQ.v.ps $(DOCDIR)/ps/FAQ.ps
+		doc/stdlib/Library.ps $(FULLDOCDIR)/ps
+	$(INSTALLLIB) doc/tutorial/Tutorial.v.pdf $(FULLDOCDIR)/pdf/Tutorial.pdf
+	$(INSTALLLIB) doc/RecTutorial/RecTutorial.v.pdf $(FULLDOCDIR)/pdf/RecTutorial.pdf
+	$(INSTALLLIB) doc/faq/FAQ.v.pdf $(FULLDOCDIR)/pdf/FAQ.pdf
+	$(INSTALLLIB) doc/tutorial/Tutorial.v.ps $(FULLDOCDIR)/ps/Tutorial.ps
+	$(INSTALLLIB) doc/RecTutorial/RecTutorial.v.ps $(FULLDOCDIR)/ps/RecTutorial.ps
+	$(INSTALLLIB) doc/faq/FAQ.v.ps $(FULLDOCDIR)/ps/FAQ.ps

@@ -21,10 +21,16 @@ Language
 - Several evolutions of the module system (handling of module aliases, 
   functorial module types, an Include feature, etc). (TODO: Say more!)
 - Prop now a subtype of Set (predicative and impredicative forms).
+- Recursive inductive types in Prop with a single constructor of which
+  all arguments are in Prop is now considered to be a singleton
+  type. It consequently supports all eliminations to Prop, Set and Type.
+  As a consequence, Acc_rect has now a more direct proof [possible source
+  of easily fixed incompatibility in case of manual definition of a recursor
+  in a recursive singleton inductive type].
 
 Vernacular commands
 
-- Added option Global to "Arguments Scope" for section surviving. (DOC TODO)
+- Added option Global to "Arguments Scope" for section surviving.
 - Added option "Unset Elimination Schemes" to deactivate the automatic
   generation of elimination schemes.
 - Modification of the Scheme command so you can ask for the name to be
@@ -51,6 +57,8 @@ Vernacular commands
   that should be expanded first.
 - New command "Print Assumptions" to display all variables, parameters
   or axioms a theorem or definition relies on.
+- "Add Rec LoadPath" now provides references to libraries using partially
+  qualified names (this holds also for coqtop/coqc option -R).
 
 Libraries (DOC TO CHECK)
 
@@ -146,6 +154,8 @@ Libraries (DOC TO CHECK)
   descriptions: Epsilon.v, Description.v and IndefiniteDescription.v.
 - Definition of pred and minus made compatible with the structural
   decreasing criterion for use in fixpoints.
+- Files Relations/Rstar.v and Relations/Newman.v moved out to the user
+  contribution repository (contribution CoC_History).
 
 Notations, coercions, implicit arguments and type inference
 
@@ -174,6 +184,8 @@ Tactic Language
 
 - Second-order pattern-matching now working in Ltac "match" clauses
   (syntax for second-order unification variable is "@?X").
+- (?X ?Y) patterns now match any application instead of only unary 
+  applications (possible source of incompatibility).
 - Ltac accepts integer arguments (syntax is "ltac:nnn" for nnn an integer).
 - The general sequence tactical "expr_0 ; [ expr_1 | ... | expr_n ]"
   is extended so that at most one expr_i may have the form "expr .."
@@ -194,6 +206,7 @@ Tactic Language
   "let ... in ..." into a lazy one.
 - Patterns for hypotheses types in "match goal" are now interpreted in
   type_scope.
+- New printing of Ltac call trace for better debugging.
 
 Tactics
 
@@ -239,6 +252,9 @@ Tactics
   * "rewrite 3?A" means rewriting A at most three times.
   * "rewrite ?A" means rewriting A as long as possible (possibly never).
   * many of the above extensions can be combined with each other.  
+- Introduction patterns better respect the structure of context in presence of
+  missing or extra names in nested disjunction-conjunction patterns [possible 
+  source of rare incompatibilities].
 - New syntax "rename a into b, c into d" for "rename a into b; rename c into d"
 - New tactics "dependent induction/destruction H [ generalizing id_1 .. id_n ]"
   to do induction-inversion on instantiated inductive families à la BasicElim.
@@ -250,6 +266,7 @@ Tactics
 - Tactic "apply" now able to traverse conjunctions and to select the first 
   matching lemma among the components of the conjunction; tactic apply also
   able to apply lemmas of conclusion an empty type.
+- Tactic "apply" now supports application of several lemmas in a row.
 - Tactics "set" and "pose" can set functions using notation "(f x1..xn := c)".
 - New tactic "instantiate" (without argument).
 - Tactic firstorder "with" and "using" options have their meaning swapped for
@@ -268,6 +285,7 @@ Tactics
   now obsolete.
 - Tactics f_equal is now done in ML instead of Ltac: it now works on any 
   equality of functions, regardless of the arity of the function.
+- New options "before id", "at top", "at bottom" for tactics "move"/"intro".
 - Some more debug of reflexive omega (romega), and internal clarifications. 
   Moreover, romega now has a variant "romega with *" that can be also used
   on non-Z goals (nat, N, positive) via a call to a translation tactic named
@@ -275,6 +293,8 @@ Tactics
   independantly of romega. 
 - Tactic "remember" now supports an "in" clause to remember only selected 
   occurrences of a term.
+- Tactic "pose proof" supports name overwriting in case of specialization of an
+  hypothesis.
 
 Program
 
@@ -283,13 +303,11 @@ Program
   programming (id, apply, flip...)
 - More robust obligation handling, dependent pattern-matching and
   well-founded definitions.
-- New syntax " dest term as pat in term " for destructing objects using
-  an irrefutable pattern while keeping equalities (use this instead of 
-  "let" in Programs).
 - Program CoFixpoint is accepted, Program Fixpoint uses the new way to infer 
   which argument decreases structurally.
 - Program Lemma, Axiom etc... now permit to have obligations in the statement 
   iff they can be automatically solved by the default tactic.
+- Renamed "Obligations Tactic" command to "Obligation Tactic".
 - New command "Preterm [ of id ]" to see the actual term fed to Coq for
   debugging purposes.
 - New option "Transparent Obligations" to control the declaration of 
@@ -403,6 +421,8 @@ CoqIDE
 Tools
 
 - New stand-alone .vo files verifier "coqchk".
+- Extended -I coqtop/coqc option to specify a logical dir: "-I dir -as coqdir".
+- New coqtop/coqc option -exclude-dir to exclude subdirs for option -R.
 
 Miscellaneous
 
@@ -413,6 +433,7 @@ Miscellaneous
 - Syntax of "Test Printing Let ref" and "Test Printing If ref" changed into
   "Test Printing Let for ref" and "Test Printing If for ref".
 - An overhauled build system (new Makefiles); see dev/doc/build-system.txt
+- Add -browser option to configure script
 
 Changes from V8.1gamma to V8.1
 ==============================

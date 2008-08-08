@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: g_zsyntax.ml 10806 2008-04-16 23:51:06Z letouzey $ *)
+(* $Id: g_zsyntax.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pcoq
 open Pp
@@ -57,7 +57,7 @@ let pos_of_bignat dloc x =
 
 let error_non_positive dloc = 
   user_err_loc (dloc, "interp_positive",
-    str "Only strictly positive numbers in type \"positive\"")
+    str "Only strictly positive numbers in type \"positive\".")
 
 let interp_positive dloc n =
   if is_strictly_pos n then pos_of_bignat dloc n
@@ -113,7 +113,7 @@ let n_of_binnat dloc pos_or_neg n =
     RRef (dloc, glob_N0)
 
 let error_negative dloc =
-  user_err_loc (dloc, "interp_N", str "No negative numbers in type \"N\"")
+  user_err_loc (dloc, "interp_N", str "No negative numbers in type \"N\".")
 
 let n_of_int dloc n =
   if is_pos_or_zero n then n_of_binnat dloc true n

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: elim.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: elim.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -23,7 +23,7 @@ val introElimAssumsThen :
   (branch_assumptions -> tactic) -> branch_args -> tactic
 
 val introCaseAssumsThen :
-  (intro_pattern_expr list -> branch_assumptions -> tactic) -> 
+  (intro_pattern_expr Util.located list -> branch_assumptions -> tactic) -> 
     branch_args -> tactic
 
 val general_decompose : (identifier * constr -> bool) -> constr -> tactic

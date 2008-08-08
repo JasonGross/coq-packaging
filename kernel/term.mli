@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: term.mli 10859 2008-04-27 16:46:15Z herbelin $ i*)
+(*i $Id: term.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -230,9 +230,13 @@ val isSort : constr -> bool
 val isCast : constr -> bool
 val isApp : constr -> bool
 val isLambda : constr -> bool
+val isLetIn : constr -> bool
 val isProd : constr -> bool
 val isConst : constr -> bool
 val isConstruct : constr -> bool
+val isFix : constr -> bool
+val isCoFix : constr -> bool
+val isCase : constr -> bool
 
 val is_Prop : constr -> bool
 val is_Set  : constr -> bool

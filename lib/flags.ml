@@ -6,9 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: flags.ml 11077 2008-06-09 11:26:32Z herbelin $ i*)
-
-open Util
+(*i $Id: flags.ml 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 let with_option o f x =
   let old = !o in o:=true;
@@ -78,6 +76,8 @@ let print_hyps_limit () = !print_hyps_limit
 (* A list of the areas of the system where "unsafe" operation
  * has been requested *)
 
+module Stringset = Set.Make(struct type t = string let compare = compare end)
+
 let unsafe_set = ref Stringset.empty
 let add_unsafe s = unsafe_set := Stringset.add s !unsafe_set
 let is_unsafe s = Stringset.mem s !unsafe_set
@@ -126,7 +126,4 @@ let browser_cmd_fmt =
   let coq_netscape_remote_var = "COQREMOTEBROWSER" in
   Sys.getenv coq_netscape_remote_var
  with
-  Not_found ->
-   if Sys.os_type = "Win32"
-   then "C:\\PROGRA~1\\INTERN~1\\IEXPLORE %s"
-   else "firefox -remote \"OpenURL(%s,new-tab)\" || firefox %s &"
+  Not_found -> Coq_config.browser

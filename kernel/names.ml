@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: names.ml 10919 2008-05-11 22:04:26Z msozeau $ *)
+(* $Id: names.ml 11238 2008-07-19 09:34:03Z herbelin $ *)
 
 open Pp
 open Util
@@ -101,7 +101,7 @@ let label_of_mbid (_,s,_) = s
 
 
 let mk_label l = l
-let string_of_label l = l
+let string_of_label = string_of_id
 
 let id_of_label l = l
 let label_of_id id = id

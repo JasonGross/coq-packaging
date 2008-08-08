@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pcoq.mli 10987 2008-05-26 12:28:36Z herbelin $ i*)
+(*i $Id: pcoq.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 open Util
 open Names
@@ -188,7 +188,7 @@ module Tactic :
     val int_or_var : int or_var Gram.Entry.e
     val red_expr : raw_red_expr Gram.Entry.e
     val simple_tactic : raw_atomic_tactic_expr Gram.Entry.e
-    val simple_intropattern : Genarg.intro_pattern_expr Gram.Entry.e
+    val simple_intropattern : Genarg.intro_pattern_expr located Gram.Entry.e
     val tactic_arg : raw_tactic_arg Gram.Entry.e
     val tactic_expr : raw_tactic_expr Gram.Entry.e
     val binder_tactic : raw_tactic_expr Gram.Entry.e
@@ -229,7 +229,7 @@ val find_position :
 
 val synchronize_level_positions : unit -> unit
 
-val register_empty_levels : bool -> Compat.token Gramext.g_symbol list ->
+val register_empty_levels : bool -> int list ->
     (Gramext.position option * Gramext.g_assoc option *
      string option * Gramext.g_assoc option) list
 

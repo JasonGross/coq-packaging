@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: term.ml 10859 2008-04-27 16:46:15Z herbelin $ *)
+(* $Id: term.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 (* This module instantiates the structure of generic deBruijn terms to Coq *)
 
@@ -370,15 +370,21 @@ let destProd c = match kind_of_term c with
   | Prod (x,t1,t2) -> (x,t1,t2) 
   | _ -> invalid_arg "destProd"
 
+let isProd c = match kind_of_term c with | Prod _ -> true | _ -> false
+
 (* Destructs the abstraction [x:t1]t2 *)
 let destLambda c = match kind_of_term c with 
   | Lambda (x,t1,t2) -> (x,t1,t2) 
   | _ -> invalid_arg "destLambda"
 
+let isLambda c = match kind_of_term c with | Lambda _ -> true | _ -> false
+
 (* Destructs the let [x:=b:t1]t2 *)
 let destLetIn c = match kind_of_term c with 
   | LetIn (x,b,t1,t2) -> (x,b,t1,t2) 
   | _ -> invalid_arg "destProd"
+
+let isLetIn c =  match kind_of_term c with LetIn _ -> true | _ -> false
 
 (* Destructs an application *)
 let destApp c = match kind_of_term c with
@@ -388,10 +394,6 @@ let destApp c = match kind_of_term c with
 let destApplication = destApp
 
 let isApp c = match kind_of_term c with App _ -> true | _ -> false
-
-let isProd c = match kind_of_term c with | Prod _ -> true | _ -> false
-
-let isLambda c = match kind_of_term c with | Lambda _ -> true | _ -> false
 
 (* Destructs a constant *)
 let destConst c = match kind_of_term c with
@@ -419,21 +421,26 @@ let destConstruct c = match kind_of_term c with
   | Construct (kn, a as r) -> r
   | _ -> invalid_arg "dest"
 
-let isConstruct c = match kind_of_term c with
-    Construct _ -> true | _ -> false
+let isConstruct c = match kind_of_term c with Construct _ -> true | _ -> false
 
 (* Destructs a term <p>Case c of lc1 | lc2 .. | lcn end *)
 let destCase c = match kind_of_term c with
   | Case (ci,p,c,v) -> (ci,p,c,v)
   | _ -> anomaly "destCase"
 
+let isCase c =  match kind_of_term c with Case _ -> true | _ -> false
+
 let destFix c = match kind_of_term c with 
   | Fix fix -> fix
   | _ -> invalid_arg "destFix"
-	
+
+let isFix c =  match kind_of_term c with Fix _ -> true | _ -> false
+
 let destCoFix c = match kind_of_term c with 
   | CoFix cofix -> cofix
   | _ -> invalid_arg "destCoFix"
+
+let isCoFix c =  match kind_of_term c with CoFix _ -> true | _ -> false
 
 (******************************************************************)
 (* Cast management                                                *)

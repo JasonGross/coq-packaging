@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extratactics.ml4 11166 2008-06-22 13:23:35Z herbelin $ *)
+(* $Id: extratactics.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Pcoq
@@ -486,21 +486,29 @@ END
 
 
 TACTIC EXTEND apply_in
-| ["apply" constr_with_bindings(c) "in" hyp(id) ] -> [ apply_in false id [c] ]
-| ["apply" constr_with_bindings(c) "," constr_with_bindings_list_sep(cl,",") 
-   "in" hyp(id) ] -> [ apply_in false id (c::cl) ]
+| ["apply" ne_constr_with_bindings_list_sep(cl,",") "in" hyp(id) ] -> 
+    [ apply_in false id cl ]
 END
 
 
 TACTIC EXTEND eapply_in
-| ["eapply" constr_with_bindings(c) "in" hyp(id) ] -> [ apply_in true id [c] ]
-| ["epply" constr_with_bindings(c) "," constr_with_bindings_list_sep(cl,",") 
-   "in" hyp(id) ] -> [ apply_in true id (c::cl) ]
+| ["eapply" ne_constr_with_bindings_list_sep(cl,",") "in" hyp(id) ] ->
+    [ apply_in true id cl ]
 END
 
 (* sozeau: abs/gen for induction on instantiated dependent inductives, using "Ford" induction as 
   defined by Conor McBride *)
 TACTIC EXTEND generalize_eqs
-| ["generalize_eqs" hyp(id) ] -> [ abstract_generalize id ]
+| ["generalize_eqs" hyp(id) ] -> [ abstract_generalize id ~generalize_vars:false ]
+END
+TACTIC EXTEND generalize_eqs_vars
+| ["generalize_eqs_vars" hyp(id) ] -> [ abstract_generalize id ~generalize_vars:true ]
 END
 
+TACTIC EXTEND conv
+| ["conv" constr(x) constr(y) ] -> [ conv x y ]
+END
+
+TACTIC EXTEND resolve_classes
+| ["resolve_classes" ] -> [ resolve_classes ]
+END

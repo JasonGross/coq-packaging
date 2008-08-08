@@ -13,7 +13,7 @@
  * Institution: LRI, CNRS UMR 8623 - UniversitÃcopyright Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: EquivDec.v 10919 2008-05-11 22:04:26Z msozeau $ *)
+(* $Id: EquivDec.v 11282 2008-07-28 11:51:53Z msozeau $ *)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -40,7 +40,7 @@ Class [ equiv : Equivalence A ] => EqDec :=
 (** We define the [==] overloaded notation for deciding equality. It does not take precedence
    of [==] defined in the type scope, hence we can have both at the same time. *)
 
-Notation " x == y " := (equiv_dec (x :>) (y :>)) (no associativity, at level 70).
+Notation " x == y " := (equiv_dec (x :>) (y :>)) (no associativity, at level 70) : equiv_scope.
 
 Definition swap_sumbool {A B} (x : { A } + { B }) : { B } + { A } :=
   match x with
@@ -58,7 +58,7 @@ Program Definition nequiv_dec [ EqDec A ] (x y : A) : { x =/= y } + { x === y } 
 
 (** Overloaded notation for inequality. *)
 
-Infix "=/=" := nequiv_dec (no associativity, at level 70).
+Infix "<>" := nequiv_dec (no associativity, at level 70) : equiv_scope.
 
 (** Define boolean versions, losing the logical information. *)
 

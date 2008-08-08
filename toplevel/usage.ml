@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: usage.ml 8932 2006-06-09 09:29:03Z notin $ *)
+(* $Id: usage.ml 11209 2008-07-05 10:17:49Z herbelin $ *)
 
 let version () =
   Printf.printf "The Coq Proof Assistant, version %s (%s)\n"
@@ -20,10 +20,14 @@ let print_usage_channel co command =
   output_string co command;
   output_string co "Coq options are:\n";
   output_string co
-"  -I dir                 add directory dir in the include path
+"  -I dir -as coqdir      map physical dir to logical coqdir
+  -I dir                 map directory dir to the empty logical path
   -include dir           (idem)
-  -R dir coqdir          recursively map physical dir to logical coqdir 
+  -R dir -as coqdir      recursively map physical dir to logical coqdir 
+  -R dir coqdir          (idem)
   -top coqdir            set the toplevel name to be coqdir instead of Top
+  -notop    r            set the toplevel name to be the empty logical path
+  -exclude-dir f         exclude subdirectories named f for option -R
 
   -inputstate f          read state from file f.coq
   -is f                  (idem)

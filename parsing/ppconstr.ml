@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppconstr.ml 11094 2008-06-10 19:35:23Z herbelin $ *)      
+(* $Id: ppconstr.ml 11309 2008-08-06 10:30:35Z herbelin $ *)      
 
 (*i*)
 open Util
@@ -95,12 +95,6 @@ let pr_patnotation = pr_notation_gen decode_patlist_value
 
 let pr_delimiters key strm =
   strm ++ str ("%"^key)
-
-let pr_located pr (loc,x) =
-  if Flags.do_translate() && loc<>dummy_loc then
-    let (b,e) = unloc loc in
-    comment b ++ pr x ++ comment e
-  else pr x
 
 let pr_com_at n =
   if Flags.do_translate() && n <> 0 then comment n 
@@ -219,13 +213,13 @@ let surround_binder k p =
   match k with
       Default Explicit -> hov 1 (str"(" ++ p ++ str")")
     | Default Implicit -> hov 1 (str"{" ++ p ++ str"}")
-    | TypeClass b -> hov 1 (str"[" ++ p ++ str"]")
+    | TypeClass _ -> hov 1 (str"[" ++ p ++ str"]")
 
 let surround_implicit k p =
   match k with
       Default Explicit -> p
     | Default Implicit -> (str"{" ++ p ++ str"}")
-    | TypeClass b -> (str"[" ++ p ++ str"]")
+    | TypeClass _ -> (str"[" ++ p ++ str"]")
 
 let pr_binder many pr (nal,k,t) =
   match t with
@@ -719,7 +713,7 @@ let pr_red_expr (pr_constr,pr_lconstr,pr_ref) = function
       hov 1 (str "pattern" ++
         pr_arg (prlist_with_sep pr_coma (pr_with_occurrences pr_constr)) l)
         
-  | Red true -> error "Shouldn't be accessible from user"
+  | Red true -> error "Shouldn't be accessible from user."
   | ExtraRedExpr s -> str s
   | CbvVm -> str "vm_compute"
 

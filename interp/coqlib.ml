@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqlib.ml 11072 2008-06-08 16:13:37Z herbelin $ *)
+(* $Id: coqlib.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Util
 open Pp
@@ -70,7 +70,7 @@ let check_required_library d =
      (dummy_loc,make_qualid (make_dirpath (List.rev prefix)) m)
 *)
 (* or failing ...*)
-    error ("Library "^(string_of_dirpath dir)^" has to be required first")
+    error ("Library "^(string_of_dirpath dir)^" has to be required first.")
 
 (************************************************************************)
 (* Specific Coq objects *)

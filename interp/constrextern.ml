@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: constrextern.ml 11024 2008-05-30 12:41:39Z msozeau $ *)
+(* $Id: constrextern.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 (*i*)
 open Pp
@@ -98,7 +98,7 @@ let ids_of_ctxt ctxt =
        (function c -> match kind_of_term c with
 	  | Var id -> id
 	  | _ ->
-       error "arbitrary substitution of references not implemented")
+       error "Arbitrary substitution of references not implemented.")
      ctxt)
 
 let idopt_of_name = function 
@@ -973,7 +973,7 @@ and raw_of_eqn env constr construct_nargs branch =
             buildrec new_ids (pat::patlist) new_env (n-1) b
 
 	| _ ->
-	    error "Unsupported branch in case-analysis while printing pattern"
+	    error "Unsupported branch in case-analysis while printing pattern."
   in 
   buildrec [] [] env construct_nargs branch
 
