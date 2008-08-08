@@ -17,7 +17,8 @@ OCAMLABI := $(shell ocamlc -version)
 
 CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
   --emacslib /usr/share/emacs/site-lisp/coq --reals all --fsets all \
-  --browser "/usr/bin/x-www-browser %s &"
+  --browser "/usr/bin/x-www-browser %s &" \
+  --with-doc no
 
 configure: configure-stamp
 configure-stamp:
