@@ -6,9 +6,10 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: equality.mli 11166 2008-06-22 13:23:35Z herbelin $ i*)
+(*i $Id: equality.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 (*i*)
+open Util
 open Names
 open Term
 open Sign
@@ -45,6 +46,7 @@ val rewriteRL   : constr  -> tactic
 val register_general_setoid_rewrite_clause :
   (identifier option -> bool ->
     occurrences -> constr -> new_goals:constr list -> tactic) -> unit
+val register_is_applied_setoid_relation : (constr -> bool) -> unit
 
 val general_rewrite_bindings_in :
   bool -> occurrences -> identifier -> constr with_bindings -> evars_flag -> tactic
@@ -74,9 +76,9 @@ val discrHyp     : identifier -> tactic
 val discrEverywhere : evars_flag -> tactic
 val discr_tac    : evars_flag -> 
   constr with_ebindings induction_arg option -> tactic
-val inj          : intro_pattern_expr list -> evars_flag ->
+val inj          : intro_pattern_expr located list -> evars_flag ->
   constr with_ebindings -> tactic
-val injClause    : intro_pattern_expr list -> evars_flag -> 
+val injClause    : intro_pattern_expr located list -> evars_flag -> 
   constr with_ebindings induction_arg option -> tactic
 val injHyp       : identifier -> tactic
 val injConcl     : tactic

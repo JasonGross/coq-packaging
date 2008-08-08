@@ -8,7 +8,7 @@
 (*                      Evgeny Makarov, INRIA, 2007                     *)
 (************************************************************************)
 
-(*i $Id: NOrder.v 11040 2008-06-03 00:04:16Z letouzey $ i*)
+(*i $Id: NOrder.v 11282 2008-07-28 11:51:53Z msozeau $ i*)
 
 Require Export NMul.
 
@@ -309,13 +309,12 @@ Proof NZgt_wf.
 
 Theorem lt_wf_0 : well_founded lt.
 Proof.
-assert (H : relations_eq lt (fun n m : N => 0 <= n /\ n < m)).
+setoid_replace lt with (fun n m : N => 0 <= n /\ n < m) 
+  using relation (@relations_eq N N).
+apply lt_wf.
 intros x y; split.
 intro H; split; [apply le_0_l | assumption]. now intros [_ H].
-rewrite H; apply lt_wf.
-(* does not work:
-setoid_replace lt with (fun n m : N => 0 <= n /\ n < m) using relation relations_eq.*)
-Qed.
+Defined.
 
 (* Theorems that are true for natural numbers but not for integers *)
 

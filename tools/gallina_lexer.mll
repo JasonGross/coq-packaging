@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: gallina_lexer.mll 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id: gallina_lexer.mll 11301 2008-08-04 19:41:18Z herbelin $ *)
 
 {
  open Lexing
@@ -51,7 +51,7 @@ rule action = parse
 		cRcpt := 0; action lexbuf }
   | [' ' '\t']* '\n'      { if !cRcpt < 2 then print "\n";
       	       	       	    cRcpt := !cRcpt+1; action lexbuf}
-  | eof       { raise Fin_fichier}
+  | eof       { (raise Fin_fichier : unit)}
   | _         { print (Lexing.lexeme lexbuf); cRcpt := 0; action lexbuf }
 
 and comment = parse

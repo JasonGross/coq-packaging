@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id: util.mli 11083 2008-06-09 22:08:14Z herbelin $ i*)
+(*i $Id: util.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -132,6 +132,7 @@ val list_fold_right_i :  (int -> 'a -> 'b -> 'b) -> int -> 'a list -> 'b -> 'b
 val list_fold_left_i :  (int -> 'a -> 'b -> 'a) -> int -> 'a -> 'b list -> 'a
 val list_fold_right_and_left :
     ('a -> 'b -> 'b list -> 'a) -> 'b list -> 'a -> 'a
+val list_fold_left3 : ('a -> 'b -> 'c -> 'd -> 'a) -> 'a -> 'b list -> 'c list -> 'd list -> 'a
 val list_for_all_i : (int -> 'a -> bool) -> int -> 'a list -> bool
 val list_except : 'a -> 'a list -> 'a list
 val list_remove : 'a -> 'a list -> 'a list
@@ -279,6 +280,9 @@ val prvecti : (int -> 'a -> std_ppcmds) -> 'a array -> std_ppcmds
 val prvect_with_sep :
    (unit -> std_ppcmds) -> ('b -> std_ppcmds) -> 'b array -> std_ppcmds
 val pr_vertical_list : ('b -> std_ppcmds) -> 'b list -> std_ppcmds
+val pr_enum : ('a -> std_ppcmds) -> 'a list -> std_ppcmds
+val pr_located : ('a -> std_ppcmds) -> 'a located -> std_ppcmds
+val pr_sequence : ('a -> std_ppcmds) -> 'a list -> std_ppcmds
 val surround : std_ppcmds -> std_ppcmds
 
 

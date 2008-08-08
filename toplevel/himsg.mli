@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: himsg.mli 10410 2007-12-31 13:11:55Z msozeau $ i*)
+(*i $Id: himsg.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -40,3 +40,6 @@ val explain_pattern_matching_error :
 
 val explain_reduction_tactic_error :
   Tacred.reduction_tactic_error -> std_ppcmds
+
+val explain_ltac_call_trace : 
+  Proof_type.ltac_call_kind * Proof_type.ltac_trace * Util.loc -> std_ppcmds

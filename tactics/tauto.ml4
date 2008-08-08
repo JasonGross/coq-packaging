@@ -8,8 +8,9 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(*i $Id: tauto.ml4 10731 2008-03-30 22:30:44Z herbelin $ i*)
+(*i $Id: tauto.ml4 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
+open Term
 open Hipattern
 open Names
 open Libnames
@@ -36,16 +37,35 @@ let is_unit ist =
     <:tactic<idtac>>
   else
     <:tactic<fail>>
-    
+
+let is_record t =
+  let (hdapp,args) = decompose_app t in
+    match (kind_of_term hdapp) with
+      | Ind ind  -> 
+          let (mib,mip) = Global.lookup_inductive ind in
+	    mib.Declarations.mind_record
+      | _ -> false
+
+let is_binary t =
+  let (hdapp,args) = decompose_app t in
+    match (kind_of_term hdapp) with
+    | Ind ind  -> 
+        let (mib,mip) = Global.lookup_inductive ind in
+	  mib.Declarations.mind_nparams = 2
+    | _ -> false
+	
 let is_conj ist =
   let ind = assoc_last ist in
-    if (is_conjunction ind) && (is_nodep_ind ind) then
+    if (is_conjunction ind) && (is_nodep_ind ind) (* && not (is_record ind)  *)
+      && is_binary ind (* for compatibility, as (?X _ _) matches 
+			  applications with 2 or more arguments. *)
+    then
       <:tactic<idtac>>
     else
       <:tactic<fail>>
 
 let is_disj ist =
-  if is_disjunction (assoc_last ist) then
+  if is_disjunction (assoc_last ist) && is_binary (assoc_last ist) then
     <:tactic<idtac>>
   else
     <:tactic<fail>>
@@ -122,7 +142,7 @@ let rec tauto_intuit t_reduce solver ist =
   and t_simplif = tacticIn simplif
   and t_is_disj = tacticIn is_disj
   and t_tauto_intuit = tacticIn (tauto_intuit t_reduce solver) in
-  let t_solver = Tacexpr.TacArg (valueIn (VTactic (dummy_loc,solver))) in
+  let t_solver = globTacticIn (fun _ist -> solver) in
   <:tactic<
    ($t_simplif;$t_axioms
    || match reverse goal with
@@ -145,16 +165,14 @@ let rec tauto_intuit t_reduce solver ist =
     $t_solver
    ) >>
     
-let reduction_not_iff=interp
+let reduction_not_iff _ist =
  <:tactic<repeat 
   match goal with 
   | |- _     => progress unfold Coq.Init.Logic.not, Coq.Init.Logic.iff 
   | H:_ |- _ => progress unfold Coq.Init.Logic.not, Coq.Init.Logic.iff in H
   end >>
 
-
-let t_reduction_not_iff =
-  Tacexpr.TacArg (valueIn (VTactic (dummy_loc,reduction_not_iff)))
+let t_reduction_not_iff = tacticIn reduction_not_iff
 
 let intuition_gen tac =
   interp (tacticIn (tauto_intuit t_reduction_not_iff tac))
@@ -162,12 +180,12 @@ let intuition_gen tac =
 let simplif_gen = interp (tacticIn simplif)
 
 let tauto g =
-  try intuition_gen (interp <:tactic<fail>>) g
+  try intuition_gen <:tactic<fail>> g
   with
     Refiner.FailError _ | UserError _ ->
-      errorlabstrm "tauto" [< str "tauto failed" >]
+      errorlabstrm "tauto" (str "tauto failed.")
 
-let default_intuition_tac = interp <:tactic< auto with * >>
+let default_intuition_tac = <:tactic< auto with * >>
 
 TACTIC EXTEND tauto
 | [ "tauto" ] -> [ tauto ]
@@ -175,5 +193,5 @@ END
 
 TACTIC EXTEND intuition
 | [ "intuition" ] -> [ intuition_gen default_intuition_tac ]
-| [ "intuition" tactic(t) ] -> [ intuition_gen (snd t) ]
+| [ "intuition" tactic(t) ] -> [ intuition_gen (fst t) ]
 END

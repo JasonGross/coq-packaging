@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: search.ml 10840 2008-04-23 21:29:34Z herbelin $ *)
+(* $Id: search.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -150,7 +150,7 @@ let rec id_from_pattern = function
   | PVar id -> Nametab.locate (make_qualid [] (string_of_id id))
  *)
   | PApp (p,_) -> id_from_pattern p
-  | _ -> error "the pattern is not simple enough"
+  | _ -> error "The pattern is not simple enough."
 	
 let raw_pattern_search extra_filter display_function pat =
   let name = id_from_pattern pat in

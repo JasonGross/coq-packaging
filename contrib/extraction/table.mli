@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: table.mli 10245 2007-10-21 13:41:53Z letouzey $ i*)
+(*i $Id: table.mli 11262 2008-07-24 20:59:29Z letouzey $ i*)
 
 open Names
 open Libnames
@@ -77,6 +77,7 @@ val is_projection : global_reference -> bool
 val projection_arity : global_reference -> int
 
 val add_info_axiom : global_reference -> unit
+val remove_info_axiom : global_reference -> unit
 val add_log_axiom : global_reference -> unit
 
 val reset_tables : unit -> unit

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: subtac.ml 11150 2008-06-19 11:38:27Z msozeau $ *)
+(* $Id: subtac.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Global
 open Pp
@@ -229,7 +229,8 @@ let subtac (loc, command) =
       debug 2 (Himsg.explain_pretype_error env exn);
       raise e
 	
-  | (Stdpp.Exc_located (loc, e')) as e ->
+  | (Stdpp.Exc_located (loc, Proof_type.LtacLocated (_,e')) |
+     Stdpp.Exc_located (loc, e') as e) ->
       debug 2 (str "Parsing exception: ");
       (match e' with
       | Type_errors.TypeError (env, exn) ->

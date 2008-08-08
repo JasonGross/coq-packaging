@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: unification.ml 11157 2008-06-21 10:45:51Z herbelin $ *)
+(* $Id: unification.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -239,9 +239,9 @@ let unify_0_with_initial_metas subst conv_at_top env sigma cv_pb flags m n =
       | Some c ->
 	  unirec_rec curenv pb b substn cM (whd_betaiotazeta (mkApp(c,l2)))
       | None ->
-      error_cannot_unify env sigma (cM,cN)
+      error_cannot_unify curenv sigma (cM,cN)
     else
-      error_cannot_unify env sigma (cM,cN)
+      error_cannot_unify curenv sigma (cM,cN)
 
   in
     if (not(occur_meta m)) &&

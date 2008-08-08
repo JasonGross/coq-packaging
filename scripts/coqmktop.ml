@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqmktop.ml 10947 2008-05-19 19:10:40Z herbelin $ *)
+(* $Id: coqmktop.ml 11260 2008-07-24 20:53:12Z letouzey $ *)
 
 (* coqmktop is a script to link Coq, analogous to ocamlmktop.
    The command line contains options specific to coqmktop, options for the
@@ -318,7 +318,6 @@ let main () =
 	   (string_of_int (String.length command)) ^ " characters)");
 	flush Pervasives.stdout 
       end;
-    print_string command;
     let retcode = Sys.command command in
     clean main_file;
     (* command gives the exit code in HSB, and signal in LSB !!! *)

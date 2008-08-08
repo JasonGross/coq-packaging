@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
  
-(*i $Id: ppconstr.mli 11094 2008-06-10 19:35:23Z herbelin $ i*)
+(*i $Id: ppconstr.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 open Pp
 open Environ
@@ -35,7 +35,6 @@ val prec_less : int -> int * Ppextend.parenRelation -> bool
  
 val pr_tight_coma : unit -> std_ppcmds
 
-val pr_located : ('a -> std_ppcmds) -> 'a located -> std_ppcmds
 val pr_or_var : ('a -> std_ppcmds) -> 'a or_var -> std_ppcmds
 val pr_metaid : identifier -> std_ppcmds
 

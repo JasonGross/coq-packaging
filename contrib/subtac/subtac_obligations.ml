@@ -119,7 +119,7 @@ let from_prg : program_info ProgMap.t ref = ref ProgMap.empty
 let freeze () = !from_prg, !default_tactic_expr
 let unfreeze (v, t) = from_prg := v; set_default_tactic t
 let init () =
-  from_prg := ProgMap.empty; set_default_tactic (Subtac_utils.tactics_call "obligations_tactic" [])
+  from_prg := ProgMap.empty; set_default_tactic (Subtac_utils.tactics_call "obligation_tactic" [])
 
 let _ = 
   Summary.declare_summary "program-tcc-table"
@@ -442,6 +442,7 @@ and solve_obligation_by_tac prg obls i tac =
 	       true		 
 	    else false
 	  with
+	    | Stdpp.Exc_located(_, Proof_type.LtacLocated (_, Refiner.FailError (_, s)))
 	    | Stdpp.Exc_located(_, Refiner.FailError (_, s))
 	    | Refiner.FailError (_, s) ->
 		user_err_loc (obl.obl_location, "solve_obligation", s)

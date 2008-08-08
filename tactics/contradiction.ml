@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: contradiction.ml 10169 2007-10-03 12:31:45Z herbelin $ *)
+(* $Id: contradiction.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Util
 open Term
@@ -85,7 +85,7 @@ let contradiction_term (c,lbind as cl) gl =
 	  (fun id -> simplest_elim (mkApp (mkVar id,[|c|]))) gl
       else
 	raise Not_found
-    with Not_found -> error "Not a contradiction"
+    with Not_found -> error "Not a contradiction."
 
 let contradiction = function
   | None -> tclTHEN intros contradiction_context

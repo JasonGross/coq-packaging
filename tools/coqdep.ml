@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqdep.ml 10746 2008-04-03 15:45:25Z notin $ *)
+(* $Id: coqdep.ml 11282 2008-07-28 11:51:53Z msozeau $ *)
 
 open Printf
 open Coqdep_lexer
@@ -442,8 +442,8 @@ let rec add_directory recur add_file phys_dir log_dir =
   try
     while true do
       let f = readdir dirh in
-      (* we avoid . .. and all hidden files and subdirs (e.g. .svn) *)
-      if f.[0] <> '.' then
+      (* we avoid . .. and all hidden files and subdirs (e.g. .svn, _darcs) *)
+      if f.[0] <> '.' && f.[0] <> '_' then
         let phys_f = phys_dir//f in
 	match try (stat phys_f).st_kind with _ -> S_BLK with
 	  | S_DIR when recur -> add_directory recur add_file phys_f (log_dir@[f])

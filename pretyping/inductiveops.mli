@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: inductiveops.mli 9707 2007-03-15 16:36:15Z herbelin $ i*)
+(*i $Id: inductiveops.mli 11301 2008-08-04 19:41:18Z herbelin $ i*)
 
 open Names
 open Term
@@ -22,6 +22,7 @@ val type_of_inductive    : env -> inductive -> types
 
 (* Return type as quoted by the user *)
 val type_of_constructor  : env -> constructor -> types
+val type_of_constructors : env -> inductive -> types array
 
 (* Return constructor types in normal form *)
 val arities_of_constructors : env -> inductive -> types array

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: genarg.ml 10753 2008-04-04 14:55:47Z herbelin $ *)
+(* $Id: genarg.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -75,24 +75,24 @@ let create_arg s =
 let exists_argtype s = List.mem s !dyntab
 
 type intro_pattern_expr =
-  | IntroOrAndPattern of case_intro_pattern_expr
+  | IntroOrAndPattern of or_and_intro_pattern_expr
   | IntroWildcard
-  | IntroIdentifier of identifier
-  | IntroAnonymous
   | IntroRewrite of bool
+  | IntroIdentifier of identifier
   | IntroFresh of identifier
-and case_intro_pattern_expr = intro_pattern_expr list list
+  | IntroAnonymous
+and or_and_intro_pattern_expr = (loc * intro_pattern_expr) list list
 
-let rec pr_intro_pattern = function
-  | IntroOrAndPattern pll -> pr_case_intro_pattern pll
+let rec pr_intro_pattern (_,pat) = match pat with
+  | IntroOrAndPattern pll -> pr_or_and_intro_pattern pll
   | IntroWildcard -> str "_"
-  | IntroIdentifier id -> pr_id id
-  | IntroAnonymous -> str "?"
   | IntroRewrite true -> str "->"
   | IntroRewrite false -> str "<-"
+  | IntroIdentifier id -> pr_id id
   | IntroFresh id -> str "?" ++ pr_id id
+  | IntroAnonymous -> str "?"
 
-and pr_case_intro_pattern = function
+and pr_or_and_intro_pattern = function
   | [pl] ->
       str "(" ++ hv 0 (prlist_with_sep pr_coma pr_intro_pattern pl) ++ str ")"
   | pll ->

@@ -13,9 +13,22 @@
    Institution: LRI, CNRS UMR 8623 - UniversitÃcopyright Paris Sud
    91405 Orsay, France *)
 
-(* $Id: Init.v 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id: Init.v 11282 2008-07-28 11:51:53Z msozeau $ *)
 
 (* Ltac typeclass_instantiation := typeclasses eauto || eauto. *)
 
 Tactic Notation "clapply" ident(c) :=
   eapply @c ; eauto with typeclass_instances.
+
+(** The unconvertible typeclass, to test that two objects of the same type are 
+   actually different. *)
+
+Class Unconvertible (A : Type) (a b : A).
+
+Ltac unconvertible :=
+  match goal with
+    | |- @Unconvertible _ ?x ?y => conv x y ; fail 1 "Convertible"
+    | |- _ => apply Build_Unconvertible 
+  end.
+
+Hint Extern 0 (@Unconvertible _ _ _) => unconvertible : typeclass_instances.

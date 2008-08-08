@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: BigN.v 11040 2008-06-03 00:04:16Z letouzey $ i*)
+(*i $Id: BigN.v 11282 2008-07-28 11:51:53Z msozeau $ i*)
 
 (** * Natural numbers in base 2^31 *)
 
@@ -47,6 +47,8 @@ Infix "?=" := BigN.compare : bigN_scope.
 Infix "==" := BigN.eq (at level 70, no associativity) : bigN_scope.
 Infix "<" := BigN.lt : bigN_scope.
 Infix "<=" := BigN.le : bigN_scope.
+Notation "x > y" := (BigN.lt y x)(only parsing) : bigN_scope.
+Notation "x >= y" := (BigN.le y x)(only parsing) : bigN_scope.
 Notation "[ i ]" := (BigN.to_Z i) : bigN_scope.
 
 Open Scope bigN_scope.
@@ -62,7 +64,7 @@ Qed.
 
 (** [BigN] is a semi-ring *)
 
-Lemma BigNring : 
+Lemma BigNring :
  semi_ring_theory BigN.zero BigN.one BigN.add BigN.mul BigN.eq.
 Proof.
 constructor.
@@ -75,6 +77,8 @@ exact mul_comm.
 exact mul_assoc.
 exact mul_add_distr_r.
 Qed.
+
+Typeclasses unfold NZadd NZsub NZmul.
 
 Add Ring BigNr : BigNring.
 

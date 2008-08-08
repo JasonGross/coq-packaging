@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: states.ml 9100 2006-08-31 18:04:26Z herbelin $ *)
+(* $Id: states.ml 11313 2008-08-07 11:15:03Z barras $ *)
 
 open System
 
@@ -19,12 +19,13 @@ let unfreeze (fl,fs) =
   Lib.unfreeze fl;
   Summary.unfreeze_summaries fs
 
-let state_magic_number = 19764
-
 let (extern_state,intern_state) =
-  let (raw_extern, raw_intern) = extern_intern state_magic_number ".coq" in
+  let (raw_extern, raw_intern) =
+    extern_intern Coq_config.state_magic_number ".coq" in
   (fun s -> raw_extern s (freeze())),
-  (fun s -> unfreeze (raw_intern (Library.get_load_paths ()) s))
+  (fun s ->
+    unfreeze (raw_intern (Library.get_load_paths ()) s);
+    Library.overwrite_library_filenames s)
 
 (* Rollback. *)
 

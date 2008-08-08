@@ -9,7 +9,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(* $Id: g_vernac.ml4 11083 2008-06-09 22:08:14Z herbelin $ *)
+(* $Id: g_vernac.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 
 open Pp
@@ -113,7 +113,7 @@ let test_plurial_form = function
 
 let no_coercion loc (c,x) =
   if c then Util.user_err_loc
-    (loc,"no_coercion",Pp.str"no coercion allowed here");
+    (loc,"no_coercion",str"No coercion allowed here.");
   x
 
 (* Gallina declarations *)
@@ -271,7 +271,7 @@ GEXTEND Gram
 		    Some (loc, id)
 		    else Util.user_err_loc
                       (loc,"Fixpoint",
-                      Pp.str "No argument named " ++ Nameops.pr_id id))
+                       str "No argument named " ++ Nameops.pr_id id ++ str"."))
               | None -> 
 		  (* If there is only one argument, it is the recursive one, 
 		     otherwise, we search the recursive index later *)
@@ -311,7 +311,7 @@ GEXTEND Gram
           LocalRawAssum(l,ty) -> (l,ty)
         | LocalRawDef _ ->
             Util.user_err_loc
-              (loc,"fix_param",Pp.str"defined binder not allowed here")) ] ]
+              (loc,"fix_param",Pp.str"defined binder not allowed here.")) ] ]
   ;
 *)
   (* ... with coercions *)
@@ -491,7 +491,7 @@ GEXTEND Gram
 	 props = typeclass_field_types ->
 	   VernacClass (qid, pars, s, (match sup with None -> [] | Some l -> l), props)
 	     
-      | IDENT "Context"; c = typeclass_context -> 
+      | IDENT "Context"; c = binders_let -> 
 	  VernacContext c
 	    
       | global = [ IDENT "Global" -> true | -> false ];

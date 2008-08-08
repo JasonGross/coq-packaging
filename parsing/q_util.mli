@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: q_util.mli 9265 2006-10-24 08:35:38Z herbelin $ i*)
+(*i $Id: q_util.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 val patt_of_expr : MLast.expr -> MLast.patt
 
@@ -19,6 +19,10 @@ val mlexpr_of_pair :
 val mlexpr_of_triple :
   ('a -> MLast.expr) -> ('b -> MLast.expr) -> ('c -> MLast.expr)
     -> 'a * 'b * 'c -> MLast.expr
+
+val mlexpr_of_quadruple :
+  ('a -> MLast.expr) -> ('b -> MLast.expr) ->
+    ('c -> MLast.expr) -> ('d -> MLast.expr) -> 'a * 'b * 'c * 'd -> MLast.expr
 
 val mlexpr_of_bool : bool -> MLast.expr
 

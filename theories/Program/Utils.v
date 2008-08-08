@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Utils.v 10919 2008-05-11 22:04:26Z msozeau $ i*)
+(*i $Id: Utils.v 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 Require Export Coq.Program.Tactics.
 
@@ -42,8 +42,8 @@ Notation dec := sumbool_of_bool.
 
 (** Hide proofs and generates obligations when put in a term. *)
 
-Notation "'in_left'" := (@left _ _ _) : program_scope.
-Notation "'in_right'" := (@right _ _ _) : program_scope.
+Notation in_left := (@left _ _ _).
+Notation in_right := (@right _ _ _).
 
 (** Extraction directives *)
 (*

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inductiveops.ml 10114 2007-09-06 07:36:14Z herbelin $ *)
+(* $Id: inductiveops.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Util
 open Names
@@ -30,6 +30,11 @@ let type_of_constructor env cstr =
  let specif =
   Inductive.lookup_mind_specif env (inductive_of_constructor cstr) in
  Inductive.type_of_constructor cstr specif
+
+(* Return constructor types in user form *)
+let type_of_constructors env ind =
+ let specif = Inductive.lookup_mind_specif env ind in
+  Inductive.type_of_constructors ind specif
 
 (* Return constructor types in normal form *)
 let arities_of_constructors env ind =
@@ -87,7 +92,7 @@ let mis_nf_constructor_type (ind,mib,mip) j =
   and ntypes = mib.mind_ntypes
   and nconstr = Array.length mip.mind_consnames in
   let make_Ik k = mkInd ((fst ind),ntypes-k-1) in 
-  if j > nconstr then error "Not enough constructors in the type";
+  if j > nconstr then error "Not enough constructors in the type.";
   substl (list_tabulate make_Ik ntypes) specif.(j-1)
 
 (* Arity of constructors excluding parameters and local defs *)

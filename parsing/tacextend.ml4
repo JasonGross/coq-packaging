@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
 
-(* $Id: tacextend.ml4 10091 2007-08-24 10:57:37Z herbelin $ *)
+(* $Id: tacextend.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Util
 open Genarg
@@ -206,7 +206,7 @@ EXTEND
         let t, g = Q_util.interp_entry_name loc e sep in
         TacNonTerm (loc, t, g, Some s)
       | s = STRING ->
-	if s = "" then Util.user_err_loc (loc,"",Pp.str "Empty terminal");
+	if s = "" then Util.user_err_loc (loc,"",Pp.str "Empty terminal.");
         TacTerm s
     ] ]
   ;

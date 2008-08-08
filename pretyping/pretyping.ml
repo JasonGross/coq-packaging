@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pretyping.ml 11047 2008-06-03 23:08:00Z msozeau $ *)
+(* $Id: pretyping.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -66,7 +66,7 @@ let search_guard loc env possible_indexes fixdefs =
 	    try check_fix env fix; raise (Found indexes) 
 	    with TypeError _ -> ())
 	 (list_combinations possible_indexes); 
-       let errmsg = "cannot guess decreasing argument of fix" in 
+       let errmsg = "Cannot guess decreasing argument of fix." in 
        if loc = dummy_loc then error errmsg else 
 	 user_err_loc (loc,"search_guard", Pp.str errmsg)
      with Found indexes -> indexes)
@@ -244,7 +244,7 @@ module Pretyping_F (Coercion : Coercion.S) = struct
     try (* To build a nicer ltac error message *)
       match List.assoc id unbndltacvars with
       | None -> user_err_loc (loc,"",
-	  str "variable " ++ pr_id id ++ str " should be bound to a term")
+	  str "Variable " ++ pr_id id ++ str " should be bound to a term.")
       | Some id0 -> Pretype_errors.error_var_not_found_loc loc id0
     with Not_found ->
       error_var_not_found_loc loc id
@@ -356,7 +356,9 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 		   uj_type = it_mkProd_or_LetIn j.uj_type ctxt })
             ctxtv vdef in
 	evar_type_fixpoint loc env evdref names ftys vdefj;
-	let fixj = match fixkind with
+	let ftys = Array.map (nf_evar (evars_of !evdref)) ftys in
+	let fdefs = Array.map (fun x -> nf_evar (evars_of !evdref) (j_val x)) vdefj in
+ 	let fixj = match fixkind with
 	  | RFix (vn,i) ->
 	      (* First, let's find the guard indexes. *)
 	      (* If recursive argument was not given by user, we try all args.
@@ -370,11 +372,11 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 		   | None -> list_map_i (fun i _ -> i) 0 ctxtv.(i))
 		vn)
 	      in 
-	      let fixdecls = (names,ftys,Array.map j_val vdefj) in 
+	      let fixdecls = (names,ftys,fdefs) in 
 	      let indexes = search_guard loc env possible_indexes fixdecls in 
 	      make_judge (mkFix ((indexes,i),fixdecls)) ftys.(i)
 	  | RCoFix i ->
-	      let cofix = (i,(names,ftys,Array.map j_val vdefj)) in
+	      let cofix = (i,(names,ftys,fdefs)) in
 	      (try check_cofix env cofix with e -> Stdpp.raise_with_loc loc e);
 	      make_judge (mkCoFix cofix) ftys.(i) in
 	inh_conv_coerce_to_tycon loc env evdref fixj tycon
@@ -459,10 +461,10 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 	in
 	let cstrs = get_constructors env indf in
 	  if Array.length cstrs <> 1 then
-            user_err_loc (loc,"",str "Destructing let is only for inductive types with one constructor");
+            user_err_loc (loc,"",str "Destructing let is only for inductive types with one constructor.");
 	  let cs = cstrs.(0) in
 	    if List.length nal <> cs.cs_nargs then
-              user_err_loc (loc,"", str "Destructing let on this type expects " ++ int cs.cs_nargs ++ str " variables");
+              user_err_loc (loc,"", str "Destructing let on this type expects " ++ int cs.cs_nargs ++ str " variables.");
 	    let fsign = List.map2 (fun na (_,c,t) -> (na,c,t))
               (List.rev nal) cs.cs_args in
 	    let env_f = push_rels fsign env in
@@ -525,7 +527,7 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 	let cstrs = get_constructors env indf in 
 	  if Array.length cstrs <> 2 then
             user_err_loc (loc,"",
-			  str "If is only for inductive types with two constructors");
+			  str "If is only for inductive types with two constructors.");
 
 	  let arsgn = 
 	    let arsgn,_ = get_arity env indf in
@@ -613,7 +615,7 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 	    j
 	      (*inh_conv_coerce_to_tycon loc env evdref j tycon*)
 	else
-	  user_err_loc (loc,"pretype",(str "Not a constr tagged Dynamic"))
+	  user_err_loc (loc,"pretype",(str "Not a constr tagged Dynamic."))
 
   (* [pretype_type valcon env evdref lvar c] coerces [c] into a type *)
   and pretype_type valcon env evdref lvar = function

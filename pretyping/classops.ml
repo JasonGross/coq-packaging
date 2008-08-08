@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: classops.ml 10840 2008-04-23 21:29:34Z herbelin $ *)
+(* $Id: classops.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Util
 open Pp
@@ -376,7 +376,7 @@ let coercion_of_reference r =
   let ref = Nametab.global r in
   if not (coercion_exists ref) then
     errorlabstrm "try_add_coercion" 
-      (Nametab.pr_global_env Idset.empty ref ++ str" is not a coercion");
+      (Nametab.pr_global_env Idset.empty ref ++ str" is not a coercion.");
   ref
 
 module CoercionPrinting =

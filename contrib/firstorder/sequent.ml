@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: sequent.ml 10824 2008-04-21 13:57:03Z msozeau $ *)
+(* $Id: sequent.ml 11282 2008-07-28 11:51:53Z msozeau $ *)
 
 open Term
 open Util
@@ -281,7 +281,7 @@ let create_with_auto_hints l depth gl=
 	searchtable_map dbname
       with Not_found-> 
 	error ("Firstorder: "^dbname^" : No such Hint database") in
-      Hint_db.iter g (snd hdb) in
+      Hint_db.iter g hdb in
     List.iter h l;
     !seqref
 

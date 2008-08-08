@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evd.mli 10883 2008-05-05 13:55:24Z herbelin $ i*)
+(*i $Id: evd.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -99,6 +99,8 @@ val sig_sig : 'a sigma -> evar_map
 
 (*********************************************************************)
 (* Meta map *)
+
+module Metamap : Map.S with type key = metavariable
 
 module Metaset : Set.S with type elt = metavariable
 
@@ -197,6 +199,7 @@ val extract_all_conv_pbs : evar_defs -> evar_defs * evar_constraint list
 
 
 (* Metas *)
+val find_meta : evar_defs -> metavariable -> clbinding
 val meta_list : evar_defs -> (metavariable * clbinding) list
 val meta_defined : evar_defs -> metavariable -> bool
 (* [meta_fvalue] raises [Not_found] if meta not in map or [Anomaly] if

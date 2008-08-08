@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: printer.mli 11001 2008-05-27 16:56:07Z aspiwack $ i*)
+(*i $Id: printer.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -22,6 +22,7 @@ open Termops
 open Evd
 open Proof_type
 open Rawterm
+open Tacexpr
 (*i*)
 
 (* These are the entry points for printing terms, context, tac, ... *)
@@ -137,3 +138,5 @@ val set_printer_pr : printer_pr -> unit
 
 val default_printer_pr : printer_pr
 
+val pr_instance_gmap : (global_reference, Typeclasses.instance Names.Cmap.t) Gmap.t ->
+  Pp.std_ppcmds

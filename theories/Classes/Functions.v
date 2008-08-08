@@ -13,7 +13,7 @@
    Institution: LRI, CNRS UMR 8623 - UniversitÃcopyright Paris Sud
    91405 Orsay, France *)
 
-(* $Id: Functions.v 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id: Functions.v 11282 2008-07-28 11:51:53Z msozeau $ *)
 
 Require Import Coq.Classes.RelationClasses.
 Require Import Coq.Classes.Morphisms.
@@ -21,22 +21,22 @@ Require Import Coq.Classes.Morphisms.
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-Class [ m : Morphism (A -> B) (RA ++> RB) f ] => Injective : Prop :=
+Class Injective ((m : Morphism (A -> B) (RA ++> RB) f)) : Prop :=
   injective : forall x y : A, RB (f x) (f y) -> RA x y.
 
-Class [ m : Morphism (A -> B) (RA ++> RB) f ] => Surjective : Prop :=
+Class ((m : Morphism (A -> B) (RA ++> RB) f)) => Surjective : Prop :=
   surjective : forall y, exists x : A, RB y (f x).
 
-Definition Bijective [ m : Morphism (A -> B) (RA ++> RB) (f : A -> B) ] :=
+Definition Bijective ((m : Morphism (A -> B) (RA ++> RB) (f : A -> B))) :=
   Injective m /\ Surjective m.
 
-Class [ m : Morphism (A -> B) (eqA ++> eqB) ] => MonoMorphism :=
+Class MonoMorphism (( m : Morphism (A -> B) (eqA ++> eqB) )) :=
   monic :> Injective m.
 
-Class [ m : Morphism (A -> B) (eqA ++> eqB) ] => EpiMorphism :=
+Class EpiMorphism ((m : Morphism (A -> B) (eqA ++> eqB))) :=
   epic :> Surjective m.
 
-Class [ m : Morphism (A -> B) (eqA ++> eqB) ] => IsoMorphism :=
+Class IsoMorphism ((m : Morphism (A -> B) (eqA ++> eqB))) :=
   monomorphism :> MonoMorphism m ; epimorphism :> EpiMorphism m.
 
-Class [ m : Morphism (A -> A) (eqA ++> eqA), ! IsoMorphism m ] => AutoMorphism.
+Class ((m : Morphism (A -> A) (eqA ++> eqA))) [ ! IsoMorphism m ] => AutoMorphism.

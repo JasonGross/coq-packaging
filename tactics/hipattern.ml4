@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma parsing/q_constr.cmo" i*)
 
-(* $Id: hipattern.ml4 8866 2006-05-28 16:21:04Z herbelin $ *)
+(* $Id: hipattern.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -273,7 +273,7 @@ let dest_nf_eq gls eqn =
   try
     snd (first_match (match_eq_nf gls eqn) equalities)
   with PatternMatchingFailure ->
-    error "Not an equality"
+    error "Not an equality."
 
 (*** Sigma-types *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libnames.mli 10308 2007-11-09 09:40:21Z herbelin $ i*)
+(*i $Id: libnames.mli 11209 2008-07-05 10:17:49Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -59,6 +59,7 @@ val chop_dirpath : int -> dir_path -> dir_path * dir_path
 val drop_dirpath_prefix : dir_path -> dir_path -> dir_path
 val extract_dirpath_prefix : int -> dir_path -> dir_path
 val is_dirpath_prefix_of : dir_path -> dir_path -> bool
+val append_dirpath : dir_path -> dir_path -> dir_path
 
 module Dirset : Set.S with type elt = dir_path
 module Dirmap : Map.S with type key = dir_path

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id: g_ascii_syntax.ml 10744 2008-04-03 14:09:56Z herbelin $ i*)
+(*i $Id: g_ascii_syntax.ml 11309 2008-08-06 10:30:35Z herbelin $ i*)
 
 open Pp
 open Util
@@ -53,7 +53,7 @@ let interp_ascii_string dloc s =
       then int_of_string s
       else
 	user_err_loc (dloc,"interp_ascii_string",
-	  str "Expects a single character or a three-digits ascii code") in
+	  str "Expects a single character or a three-digits ascii code.") in
   interp_ascii dloc p
 
 let uninterp_ascii r =

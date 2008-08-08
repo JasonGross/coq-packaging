@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: inductive.mli 9420 2006-12-08 15:34:09Z barras $ i*)
+(*i $Id: inductive.mli 11301 2008-08-04 19:41:18Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -46,6 +46,9 @@ val type_of_constructor : constructor -> mind_specif -> types
 
 (* Return constructor types in normal form *)
 val arities_of_constructors : inductive -> mind_specif -> types array
+
+(* Return constructor types in user form *)
+val type_of_constructors : inductive -> mind_specif -> types array
 
 (* Transforms inductive specification into types (in nf) *)
 val arities_of_specif : mutual_inductive -> mind_specif -> types array 

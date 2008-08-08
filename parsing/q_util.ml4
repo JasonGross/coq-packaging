@@ -8,7 +8,7 @@
 
 (*i camlp4use: "q_MLast.cmo" i*)
 
-(* $Id: q_util.ml4 10091 2007-08-24 10:57:37Z herbelin $ *)
+(* $Id: q_util.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 (* This file defines standard combinators to build ml expressions *)
 
@@ -52,6 +52,11 @@ let mlexpr_of_triple m1 m2 m3 (a1,a2,a3)=
   let e1 = m1 a1 and e2 = m2 a2 and e3 = m3 a3 in
   let loc = join_loc (MLast.loc_of_expr e1) (MLast.loc_of_expr e3) in
   <:expr< ($e1$, $e2$, $e3$) >>
+
+let mlexpr_of_quadruple m1 m2 m3 m4 (a1,a2,a3,a4)=
+  let e1 = m1 a1 and e2 = m2 a2 and e3 = m3 a3 and e4 = m4 a4 in
+  let loc = join_loc (MLast.loc_of_expr e1) (MLast.loc_of_expr e4) in
+  <:expr< ($e1$, $e2$, $e3$, $e4$) >>
 
 (* We don't give location for tactic quotation! *)
 let loc = dummy_loc

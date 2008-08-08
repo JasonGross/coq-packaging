@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: recordops.ml 10577 2008-02-19 10:18:19Z corbinea $ *)
+(* $Id: recordops.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Util
 open Pp
@@ -109,6 +109,7 @@ that maps the pair (Li,ci) to the following data
     o_DEF = c
     o_TABS = B1...Bk
     o_PARAMS = a1...am
+    o_NARAMS = m
     o_TCOMP = ui1...uir
 
 *)
@@ -118,6 +119,7 @@ type obj_typ = {
   o_INJ : int;      (* position of trivial argument (negative= none) *)
   o_TABS : constr list;    (* ordered *)
   o_TPARAMS : constr list; (* ordered *)
+  o_NPARAMS : int;
   o_TCOMPS : constr list } (* ordered *)
 
 type cs_pattern =
@@ -126,10 +128,11 @@ type cs_pattern =
   | Sort_cs of sorts_family
   | Default_cs
 
-let object_table =
-  (ref [] : ((global_reference * cs_pattern) * obj_typ) list ref)
+let object_table = ref (Refmap.empty : (cs_pattern * obj_typ) list Refmap.t)
 
-let canonical_projections () = !object_table
+let canonical_projections () = 
+  Refmap.fold (fun x -> List.fold_right (fun (y,c) acc -> ((x,y),c)::acc))
+    !object_table []
 
 let keep_true_projections projs kinds =
   map_succeed (function (p,true) -> p | _ -> failwith "")
@@ -177,15 +180,18 @@ let compute_canonical_projections (con,ind) =
 	   | _ -> l)
       [] lps in
   List.map (fun (refi,c,inj,argj) ->
-    (refi,c),{o_DEF=v; o_INJ=inj; o_TABS=lt; o_TPARAMS=params; o_TCOMPS=argj})
+    (refi,c),
+    {o_DEF=v; o_INJ=inj; o_TABS=lt; 
+     o_TPARAMS=params; o_NPARAMS=List.length params; o_TCOMPS=argj})
     comp
 
 let open_canonical_structure i (_,o) =
   if i=1 then
     let lo = compute_canonical_projections o in
-    List.iter (fun (o,_ as x) ->
-      if not (List.mem_assoc o !object_table) then
-	object_table := x :: (!object_table)) lo
+    List.iter (fun ((proj,cs_pat),s) ->
+      let l = try Refmap.find proj !object_table with Not_found -> [] in
+      if not (List.mem_assoc cs_pat l) then
+        object_table := Refmap.add proj ((cs_pat,s)::l) !object_table) lo
 
 let cache_canonical_structure o =
   open_canonical_structure 1 o
@@ -215,7 +221,7 @@ let add_canonical_structure x = Lib.add_anonymous_leaf (inCanonStruc x)
 
 let error_not_structure ref =
   errorlabstrm "object_declare"
-    (Nameops.pr_id (id_of_global ref) ++ str" is not a structure object")
+    (Nameops.pr_id (id_of_global ref) ++ str" is not a structure object.")
 
 let check_and_decompose_canonical_structure ref =
   let sp = match ref with ConstRef sp -> sp | _ -> error_not_structure ref in
@@ -241,7 +247,15 @@ let declare_canonical_structure ref =
 
 let outCanonicalStructure x = fst (outCanonStruct x)
 
-let lookup_canonical_conversion o = List.assoc o !object_table
+let lookup_canonical_conversion (proj,pat) =
+  List.assoc pat (Refmap.find proj !object_table)
+
+let is_open_canonical_projection sigma (c,args) =
+  try 
+    let l = Refmap.find (global_of_constr c) !object_table in
+    let n = (snd (List.hd l)).o_NPARAMS in
+    try isEvar (whd_evar sigma (List.nth args n)) with Failure _ -> false
+  with Not_found -> false
 
 let freeze () =
   !structure_table, !projection_table, !object_table
@@ -251,7 +265,7 @@ let unfreeze (s,p,o) =
 
 let init () =
   structure_table := Indmap.empty; projection_table := Cmap.empty;
-  object_table:=[]
+  object_table := Refmap.empty
 
 let _ = init()
 

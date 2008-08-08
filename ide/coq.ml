@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq.ml 11126 2008-06-13 18:45:04Z herbelin $ *)
+(* $Id: coq.ml 11238 2008-07-19 09:34:03Z herbelin $ *)
 
 open Vernac
 open Vernacexpr
@@ -44,6 +44,8 @@ let init () =
      messages *)
 (**)
   Flags.make_silent true;
+  (* don't set a too large undo stack because Edit.create allocates an array *)
+  Pfedit.set_undo (Some 5000);
 (**)
   Coqtop.init_ide ()
 
@@ -98,7 +100,7 @@ let is_in_loadpath dir =
 let is_in_coq_path f = 
   try 
   let base = Filename.chop_extension (Filename.basename f) in
-  let _ = Library.locate_qualified_library 
+  let _ = Library.locate_qualified_library false
 	    (Libnames.make_qualid Names.empty_dirpath 
 	       (Names.id_of_string base)) in
   prerr_endline (f ^ " is in coq path");
@@ -246,9 +248,9 @@ let rec attribute_of_vernac_command = function
   | VernacSolveExistential _ -> [SolveCommand]
 
   (* MMode *)
-  | VernacDeclProof -> []
-  | VernacReturn -> []
-  | VernacProofInstr _ -> []
+  | VernacDeclProof -> [SolveCommand]
+  | VernacReturn -> [SolveCommand]
+  | VernacProofInstr _ -> [SolveCommand]
 
   (* Auxiliary file and library management *)
   | VernacRequireFrom _ -> []

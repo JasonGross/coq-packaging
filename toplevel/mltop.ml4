@@ -11,7 +11,7 @@
  * camlp4deps will not work for this file unless Makefile system enhanced.
  *)
 
-(* $Id: mltop.ml4 10348 2007-12-06 17:36:14Z aspiwack $ *)
+(* $Id: mltop.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Util
 open Pp
@@ -99,8 +99,8 @@ let dir_ml_load s =
       (try t.load_obj s
        with
        | (UserError _ | Failure _ | Anomaly _ | Not_found as u) -> raise u
-       | _ -> errorlabstrm "Mltop.load_object" [< str"Cannot link ml-object ";
-                str s; str" to Coq code." >])
+       | _ -> errorlabstrm "Mltop.load_object" (str"Cannot link ml-object " ++
+                str s ++ str" to Coq code."))
 (* TO DO: .cma loading without toplevel *)
     | WithoutTop ->
       IFDEF Byte THEN
@@ -108,7 +108,7 @@ let dir_ml_load s =
 	 * if this code section starts to use a module not used elsewhere
 	 * in this file, the Makefile dependency logic needs to be updated.
 	 *)
-        let _,gname = where_in_path !coq_mlpath_copy s in
+        let _,gname = where_in_path true !coq_mlpath_copy s in
         try
           Dynlink.loadfile gname;
 	  Dynlink.add_interfaces 
@@ -116,11 +116,11 @@ let dir_ml_load s =
 				(Filename.basename gname) ".cmo"))] 
 	    [Filename.dirname gname]
 	with | Dynlink.Error a ->
-          errorlabstrm "Mltop.load_object" [< str (Dynlink.error_message a) >]
+          errorlabstrm "Mltop.load_object" (str (Dynlink.error_message a))
       ELSE () END
     | Native ->
 	errorlabstrm "Mltop.no_load_object"
-          [< str"Loading of ML object file forbidden in a native Coq" >]
+          (str"Loading of ML object file forbidden in a native Coq.")
 
 (* Dynamic interpretation of .ml *)
 let dir_ml_use s =
@@ -145,10 +145,10 @@ let add_path ~unix_path:dir ~coq_root:coq_dirpath =
   if exists_dir dir then
     begin
       add_ml_dir dir;
-      Library.add_load_path (dir,coq_dirpath)
+      Library.add_load_path true (dir,coq_dirpath)
     end
   else
-    msg_warning [< str ("Cannot open " ^ dir) >]
+    msg_warning (str ("Cannot open " ^ dir))
 
 let convert_string d =
   try Names.id_of_string d
@@ -159,19 +159,18 @@ let convert_string d =
     failwith "caught"
 
 let add_rec_path ~unix_path:dir ~coq_root:coq_dirpath =
-  let dirs = all_subdirs dir in
-  let prefix = Names.repr_dirpath coq_dirpath in
-  if dirs <> [] then
+  if exists_dir dir then
+    let dirs = all_subdirs dir in
+    let prefix = Names.repr_dirpath coq_dirpath in
     let convert_dirs (lp,cp) =
-      (lp,Names.make_dirpath
-            ((List.map convert_string (List.rev cp))@prefix)) in
+      (lp,Names.make_dirpath (List.map convert_string (List.rev cp)@prefix)) in
     let dirs = map_succeed convert_dirs dirs in
-    begin
-      List.iter (fun lpe -> add_ml_dir (fst lpe)) dirs;
-      List.iter Library.add_load_path dirs
-    end
+    List.iter (fun lpe -> add_ml_dir (fst lpe)) dirs;
+    add_ml_dir dir;
+    List.iter (Library.add_load_path false) dirs;
+    Library.add_load_path true (dir,Names.make_dirpath prefix)
   else
-    msg_warning [< str ("Cannot open " ^ dir) >]
+    msg_warning (str ("Cannot open " ^ dir))
 
 (* convertit un nom quelconque en nom de fichier ou de module *) 
 let mod_of_name name =
@@ -191,7 +190,7 @@ let file_of_name name =
   if (is_in_path !coq_mlpath_copy fname) then fname
   else
     errorlabstrm "Mltop.load_object"
-      [< str"File not found on loadpath : "; str (bname^".cm[oa]") >]
+      (str"File not found on loadpath : " ++ str (bname^".cm[oa]"))
 
 (* TODO: supprimer ce hack, si possible *)
 (* Initialisation of ML modules that need the state (ex: tactics like
@@ -248,7 +247,7 @@ let unfreeze_ml_modules x =
            load_object mname fname
          else 
 	   errorlabstrm "Mltop.unfreeze_ml_modules"
-             [< str"Loading of ML object file forbidden in a native Coq" >];
+             (str"Loading of ML object file forbidden in a native Coq.");
        add_loaded_module mname)
     x
 
@@ -271,11 +270,11 @@ let cache_ml_module_object (_,{mnames=mnames}) =
          begin 
 	   try 
 	     if_verbose 
-	       msg [< str"[Loading ML file "; str fname; str" ..." >];
+	       msg (str"[Loading ML file " ++ str fname ++ str" ...");
              load_object mname fname;
-             if_verbose msgnl [< str"done]" >]
+             if_verbose msgnl (str"done]")
            with e -> 
-	     if_verbose msgnl [< str"failed]" >]; 
+	     if_verbose msgnl (str"failed]"); 
 	     raise e
 	 end;
          add_loaded_module mname)
@@ -294,11 +293,11 @@ let declare_ml_modules l =
     
 let print_ml_path () =
   let l = !coq_mlpath_copy in
-  ppnl [< str"ML Load Path:"; fnl (); str"  ";
-          hv 0 (prlist_with_sep pr_fnl pr_str l) >]
+  ppnl (str"ML Load Path:" ++ fnl () ++ str"  " ++
+          hv 0 (prlist_with_sep pr_fnl pr_str l))
 
 	  (* Printing of loaded ML modules *)
 	  
 let print_ml_modules () =
   let l = get_loaded_modules () in
-  pp [< str"Loaded ML Modules: " ; pr_vertical_list pr_str l >]
+  pp (str"Loaded ML Modules: " ++ pr_vertical_list pr_str l)

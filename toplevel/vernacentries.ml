@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacentries.ml 11065 2008-06-06 22:39:43Z msozeau $ i*)
+(*i $Id: vernacentries.ml 11313 2008-08-07 11:15:03Z barras $ i*)
 
 (* Concrete syntax of the mathematical vernacular MV V2.6 *)
 
@@ -95,7 +95,7 @@ let show_script () =
   let pts = get_pftreestate () in
   let pf = proof_of_pftreestate pts
   and evc = evc_of_pftreestate pts in
-  msgnl_with !Pp_control.deep_ft (print_treescript true evc pf)
+  msgnl_with !Pp_control.deep_ft (print_treescript evc pf)
 
 let show_thesis () =
      msgnl (anomaly "TODO" )
@@ -175,17 +175,17 @@ let show_match id =
 		^ " => \n" ^ acc)
 	"end" patterns in
     msg (str ("match # with\n" ^ cases))
-  with Not_found -> error "Unknown inductive type"
+  with Not_found -> error "Unknown inductive type."
 
 (* "Print" commands *)
 
 let print_path_entry (s,l) =
-  (str s ++ str " " ++ tbrk (0,2) ++ str (string_of_dirpath l))
+  (str (string_of_dirpath l) ++ str " " ++ tbrk (0,0) ++ str s)
 
 let print_loadpath () =
   let l = Library.get_full_load_paths () in
-  msgnl (Pp.t (str "Physical path:                                 " ++
-		 tab () ++ str "Logical Path:" ++ fnl () ++ 
+  msgnl (Pp.t (str "Logical Path:                 " ++
+		 tab () ++ str "Physical path:" ++ fnl () ++
 		 prlist_with_sep pr_fnl print_path_entry l))
 
 let print_modules () =
@@ -232,7 +232,7 @@ let dump_universes s =
 
 let locate_file f =
   try
-    let _,file = System.where_in_path (Library.get_load_paths ()) f in
+    let _,file = System.where_in_path false (Library.get_load_paths ()) f in
     msgnl (str file)
   with Not_found -> 
     msgnl (hov 0 (str"Can't find file" ++ spc () ++ str f ++ spc () ++
@@ -240,24 +240,26 @@ let locate_file f =
 
 let msg_found_library = function
   | Library.LibLoaded, fulldir, file ->
-      msgnl(pr_dirpath fulldir ++ str " has been loaded from file" ++ fnl () ++
-      str file)
+      msgnl (hov 0
+	(pr_dirpath fulldir ++ strbrk " has been loaded from file " ++
+	 str file))
   | Library.LibInPath, fulldir, file ->
-      msgnl(pr_dirpath fulldir ++ str " is bound to file " ++ str file)
+      msgnl (hov 0
+	(pr_dirpath fulldir ++ strbrk " is bound to file " ++ str file))
 let msg_notfound_library loc qid = function
   | Library.LibUnmappedDir ->
       let dir = fst (repr_qualid qid) in
       user_err_loc (loc,"locate_library",
-        str "Cannot find a physical path bound to logical path " ++
-           pr_dirpath dir ++ fnl ())
+        strbrk "Cannot find a physical path bound to logical path " ++
+           pr_dirpath dir ++ str".")
   | Library.LibNotFound ->
       msgnl (hov 0 
-	(str"Unable to locate library" ++ spc () ++ pr_qualid qid))
+	(strbrk "Unable to locate library " ++ pr_qualid qid ++ str"."))
   | e -> assert false
 
 let print_located_library r =
   let (loc,qid) = qualid_of_reference r in
-  try msg_found_library (Library.locate_qualified_library qid)
+  try msg_found_library (Library.locate_qualified_library false qid)
   with e -> msg_notfound_library loc qid e
 
 let print_located_module r = 
@@ -329,7 +331,7 @@ let vernac_definition (local,_,_ as k) (_,id as lid) def hook =
   | ProveBody (bl,t) ->   (* local binders, typ *)
       if Lib.is_modtype () then
 	errorlabstrm "Vernacentries.VernacDefinition"
-	  (str "Proof editing mode not supported in module types")
+	  (str "Proof editing mode not supported in module types.")
       else
 	let hook _ _ = () in
 	start_proof_and_print (local,DefinitionBody Definition)
@@ -351,10 +353,10 @@ let vernac_start_proof kind l lettop hook =
   if not(refining ()) then
     if lettop then
       errorlabstrm "Vernacentries.StartProof"
-	(str "Let declarations can only be used in proof editing mode");
+	(str "Let declarations can only be used in proof editing mode.");
   if Lib.is_modtype () then
     errorlabstrm "Vernacentries.StartProof"
-      (str "Proof editing mode not supported in module types");
+      (str "Proof editing mode not supported in module types.");
   start_proof_and_print (Global, Proof kind) l hook
 
 let vernac_end_proof = function
@@ -377,7 +379,7 @@ let vernac_exact_proof c =
       save_named true end
     else
       errorlabstrm "Vernacentries.ExactProof"
-	(str "Command 'Proof ...' can only be used at the beginning of the proof")
+	(strbrk "Command 'Proof ...' can only be used at the beginning of the proof.")
   	
 let vernac_assumption kind l nl=
   let global = fst kind = Global in
@@ -421,7 +423,7 @@ let vernac_declare_module export (loc, id) binders_ast mty_ast_o =
   (* We check the state of the system (in section, in module type)
      and what module information is supplied *)
   if Lib.sections_are_opened () then
-    error "Modules and Module Types are not allowed inside sections";
+    error "Modules and Module Types are not allowed inside sections.";
   let binders_ast = List.map
    (fun (export,idl,ty) ->
      if export <> None then
@@ -441,7 +443,7 @@ let vernac_define_module export (loc, id) binders_ast mty_ast_o mexpr_ast_o =
   (* We check the state of the system (in section, in module type)
      and what module information is supplied *)
   if Lib.sections_are_opened () then
-    error "Modules and Module Types are not allowed inside sections";
+    error "Modules and Module Types are not allowed inside sections.";
   match mexpr_ast_o with
     | None ->
        check_no_pending_proofs ();
@@ -488,7 +490,7 @@ let vernac_end_module export (loc,id) =
 
 let vernac_declare_module_type (loc,id) binders_ast mty_ast_o =
   if Lib.sections_are_opened () then
-    error "Modules and Module Types are not allowed inside sections";
+    error "Modules and Module Types are not allowed inside sections.";
   
   match mty_ast_o with
     | None ->
@@ -552,7 +554,7 @@ let vernac_record struc binders sort nameopt cfs =
   let s = match kind_of_term s with
     | Sort s -> s
     | _ -> user_err_loc
-        (constr_loc sort,"definition_structure", str "Sort expected") in
+        (constr_loc sort,"definition_structure", str "Sort expected.") in
     if !dump then (
       dump_definition (snd struc) false "rec";
       List.iter (fun (_, x) ->
@@ -615,7 +617,6 @@ let vernac_instance glob sup inst props pri =
   ignore(Classes.new_instance ~global:glob sup inst props pri)
 
 let vernac_context l =
-  if !dump then List.iter (fun x -> dump_constraint x true "var") l;
   Classes.context l
 
 let vernac_declare_instance id =
@@ -626,7 +627,7 @@ let vernac_declare_instance id =
 (* Solving *)
 let vernac_solve n tcom b =
   if not (refining ()) then
-    error "Unknown command of the non proof-editing mode";
+    error "Unknown command of the non proof-editing mode.";
   Decl_mode.check_not_proof_mode "Unknown proof instruction";
   begin
     if b then 
@@ -653,7 +654,7 @@ let vernac_solve_existential = instantiate_nth_evar_com
 
 let vernac_set_end_tac tac =
   if not (refining ()) then
-    error "Unknown command of the non proof-editing mode";
+    error "Unknown command of the non proof-editing mode.";
   if tac <> (Tacexpr.TacId []) then set_end_tac (Tacinterp.interp tac) else ()
     (* TO DO verifier s'il faut pas mettre exist s | TacId s ici*)
 
@@ -771,7 +772,7 @@ let vernac_reserve idl c =
 
 let make_silent_if_not_pcoq b =
   if !pcoq <> None then 
-    error "Turning on/off silent flag is not supported in Centaur mode"
+    error "Turning on/off silent flag is not supported in Pcoq mode."
   else make_silent b
 
 let _ =
@@ -789,6 +790,14 @@ let _ =
       optkey   = (SecondaryTable ("Implicit","Arguments"));
       optread  = Impargs.is_implicit_args;
       optwrite = Impargs.make_implicit_args }
+
+let _ =
+  declare_bool_option 
+    { optsync  = true;
+      optname  = "manual implicit arguments";
+      optkey   = (TertiaryTable ("Manual","Implicit","Arguments"));
+      optread  = Impargs.is_manual_implicit_args;
+      optwrite = Impargs.make_manual_implicit_args }
 
 let _ =
   declare_bool_option 
@@ -825,7 +834,7 @@ let _ =
 let _ =
   declare_bool_option 
     { optsync  = true;
-      optname  = "implicit arguments defensive printing";
+      optname  = "implicit status of reversible patterns";
       optkey   = (TertiaryTable ("Reversible","Pattern","Implicit"));
       optread  = Impargs.is_reversible_pattern_implicit_args;
       optwrite = Impargs.make_reversible_pattern_implicit_args }
@@ -1096,7 +1105,7 @@ let global_module r =
   try Nametab.full_name_module qid
   with Not_found -> 
     user_err_loc (loc, "global_module",
-      str "Module/section " ++ pr_qualid qid ++ str " not found")
+      str "Module/section " ++ pr_qualid qid ++ str " not found.")
 
 let interp_search_restriction = function
   | SearchOutside l -> (List.map global_module l, true)
@@ -1143,7 +1152,7 @@ let vernac_goal = function
         start_proof_com (Global, Proof unnamed_kind) [None,c] (fun _ _ ->());
 	print_subgoals ()
       end else 
-	error "repeated Goal not permitted in refining mode"
+	error "repeated Goal not permitted in refining mode."
 
 let vernac_abort = function
   | None ->
@@ -1161,7 +1170,7 @@ let vernac_abort_all () =
     delete_all_proofs ();
     message "Current goals aborted"
   end else
-    error "No proof-editing in progress"
+    error "No proof-editing in progress."
 
 let vernac_restart () = restart_proof(); print_subgoals ()
 
@@ -1217,7 +1226,7 @@ let apply_subproof f occ =
   f evc (Global.named_context()) pf
 
 let explain_proof occ =
-  msg (apply_subproof (fun evd _ -> print_treescript true evd) occ)
+  msg (apply_subproof (fun evd _ -> print_treescript evd) occ)
 
 let explain_tree occ =
   msg (apply_subproof print_proof occ)
@@ -1256,7 +1265,7 @@ let vernac_check_guard () =
 	pfterm; 
       (str "The condition holds up to here")
     with UserError(_,s) -> 
-      (str ("Condition violated : ") ++s)
+      (str ("Condition violated: ") ++s)
   in 
   msgnl message
 

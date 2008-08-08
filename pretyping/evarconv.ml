@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evarconv.ml 11157 2008-06-21 10:45:51Z herbelin $ *)
+(* $Id: evarconv.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -99,21 +99,21 @@ let check_conv_record (t1,l1) (t2,l2) =
 	      lookup_canonical_conversion 
 		(proji, Sort_cs (family_of_sort s)),[]
 	  | _ -> 
-	      let c2 = try global_of_constr t2 with _ -> raise Not_found in
+	      let c2 = global_of_constr t2 in
 		lookup_canonical_conversion (proji, Const_cs c2),l2
       with Not_found -> 
 	lookup_canonical_conversion (proji,Default_cs),[]
     in
-    let { o_DEF = c; o_INJ=n; o_TABS = bs; o_TPARAMS = params; o_TCOMPS = us } 
-	= canon_s in
+    let { o_DEF = c; o_INJ=n; o_TABS = bs; 
+          o_TPARAMS = params; o_NPARAMS = nparams; o_TCOMPS = us } = canon_s in
     let params1, c1, extra_args1 =
-      match list_chop (List.length params) l1 with 
+      match list_chop nparams l1 with 
 	| params1, c1::extra_args1 -> params1, c1, extra_args1
-	| _ -> assert false in
+	| _ -> raise Not_found in
     let us2,extra_args2 = list_chop (List.length us) l2_effective in
     c,bs,(params,params1),(us,us2),(extra_args1,extra_args2),c1,
     (n,applist(t2,l2))
-  with _ -> 
+  with Failure _ | Not_found -> 
     raise Not_found
 
 (* Precondition: one of the terms of the pb is an uninstantiated evar,
@@ -272,33 +272,42 @@ and evar_eqappr_x env evd pbty (term1,l1 as appr1) (term2,l2 as appr2) =
 	ise_try evd [f1; f4]
 
     | MaybeFlexible flex1, MaybeFlexible flex2 ->
-	let f2 i =
-          if flex1 = flex2 then
-            ise_list2 i (fun i -> evar_conv_x env i CONV) l1 l2
-          else (i,false)
-	and f3 i =
+	let f1 i =
+	  if flex1 = flex2 then
+	    ise_list2 i (fun i -> evar_conv_x env i CONV) l1 l2
+	  else
+	     (i,false)
+	and f2 i =
 	  (try conv_record env i
              (try check_conv_record appr1 appr2
 	      with Not_found -> check_conv_record appr2 appr1)
            with Not_found -> (i,false))
-	and f4 i =
+	and f3 i =
           (* heuristic: unfold second argument first, exception made
              if the first argument is a beta-redex (expand a constant
-             only if necessary) *)
-          let val2 =
-            match kind_of_term flex1 with
-                Lambda _ -> None
-              | _ -> eval_flexible_term env flex2 in
-	  match val2 with
+             only if necessary) or the second argument is potentially
+             usable as a canonical projection *)
+	  if isLambda flex1 or is_open_canonical_projection (evars_of i) appr2
+	  then
+	    match eval_flexible_term env flex1 with
+	    | Some v1 ->
+		evar_eqappr_x env i pbty (evar_apprec env i l1 v1) appr2
+	    | None ->
+		match eval_flexible_term env flex2 with
+		| Some v2 ->
+		    evar_eqappr_x env i pbty appr1 (evar_apprec env i l2 v2)
+		| None -> (i,false)
+	  else
+	    match eval_flexible_term env flex2 with
 	    | Some v2 ->
 		evar_eqappr_x env i pbty appr1 (evar_apprec env i l2 v2)
 	    | None ->
 		match eval_flexible_term env flex1 with
-		  | Some v1 ->
-		      evar_eqappr_x env i pbty (evar_apprec env i l1 v1) appr2
-		  | None -> (i,false)
+		| Some v1 ->
+		    evar_eqappr_x env i pbty (evar_apprec env i l1 v1) appr2
+		| None -> (i,false)
 	in 
-	ise_try evd [f2; f3; f4]
+	ise_try evd [f1; f2; f3]
 
     | Flexible ev1, Rigid _ ->
 	if 
@@ -496,7 +505,7 @@ let choose_less_dependent_instance evk evd term args =
   let evi = Evd.find (evars_of evd) evk in
   let subst = make_pure_subst evi args in
   let subst' = List.filter (fun (id,c) -> c = term) subst in
-  if subst' = [] then error "Too complex unification problem" else
+  if subst' = [] then error "Too complex unification problem." else
   Evd.evar_define evk (mkVar (fst (List.hd subst'))) evd
 
 let apply_conversion_problem_heuristic env evd pbty t1 t2 =
@@ -506,12 +515,12 @@ let apply_conversion_problem_heuristic env evd pbty t1 t2 =
   let (term2,l2 as appr2) = decompose_app t2 in
   match kind_of_term term1, kind_of_term term2 with
   | Evar (evk1,args1), (Rel _|Var _) when l1 = [] & l2 = [] ->
-      (* The typical kind of constraint coming from patter-matching return
+      (* The typical kind of constraint coming from pattern-matching return
          type inference *)
       assert (array_for_all (fun a -> a = term2 or isEvar a) args1);
       choose_less_dependent_instance evk1 evd term2 args1, true
   | (Rel _|Var _), Evar (evk2,args2) when l1 = [] & l2 = [] ->
-      (* The typical kind of constraint coming from patter-matching return
+      (* The typical kind of constraint coming from pattern-matching return
          type inference *)
       assert (array_for_all ((=) term1) args2);
       choose_less_dependent_instance evk2 evd term1 args2, true

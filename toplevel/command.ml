@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: command.ml 11169 2008-06-24 14:37:18Z notin $ *)
+(* $Id: command.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
 
 open Pp
 open Util
@@ -88,8 +88,8 @@ let rec complete_conclusion a cs = function
       let (has_no_args,name,params) = a in
       if not has_no_args then
 	user_err_loc (loc,"",
-	  str "Cannot infer the non constant arguments of the conclusion of "
-	  ++ pr_id cs);
+	  strbrk"Cannot infer the non constant arguments of the conclusion of "
+	  ++ pr_id cs ++ str ".");
       let args = List.map (fun id -> CRef(Ident(loc,id))) params in
       CAppExpl (loc,(None,Ident(loc,name)),List.rev args)
   | c -> c
@@ -310,7 +310,7 @@ let declare_eq_scheme sp =
           definition_message nam
     done
   with Not_found -> 
-    error "Your type contains Parameters without a boolean equality"
+    error "Your type contains Parameters without a boolean equality."
 
 (* decidability of eq *)
 
@@ -473,7 +473,7 @@ type inductive_expr = {
 }
 
 let minductive_message = function
-  | []  -> error "no inductive definition"
+  | []  -> error "No inductive definition."
   | [x] -> (pr_id x ++ str " is defined")
   | l   -> hov 0  (prlist_with_sep pr_coma pr_id l ++
 		     spc () ++ str "are defined")
@@ -556,12 +556,18 @@ let interp_mutual paramsl indl notations finite =
     mind_entry_consnames = cnames;
     mind_entry_lc = ctypes
   }) indl arities constructors in
-
+  let impls = 
+    let len = List.length ctx_params in
+      List.map (fun (_,_,impls) ->
+	userimpls, List.map (fun impls -> 
+	  userimpls @ (lift_implicits len impls)) impls) constructors
+  in
   (* Build the mutual inductive entry *)
   { mind_entry_params = List.map prepare_param ctx_params;
     mind_entry_record = false; 
     mind_entry_finite = finite; 
-    mind_entry_inds = entries }, (List.map (fun (_,_,impls) -> userimpls, impls) constructors)
+    mind_entry_inds = entries }, 
+    impls
 
 let eq_constr_expr c1 c2 =
   try let _ = Constrextern.check_same_type c1 c2 in true with _ -> false
@@ -591,7 +597,7 @@ let extract_params indl =
   | [] -> anomaly "empty list of inductive types"
   | params::paramsl ->
       if not (List.for_all (eq_local_binders params) paramsl) then error 
-	"Parameters should be syntactically the same for each inductive type";
+	"Parameters should be syntactically the same for each inductive type.";
       params
 
 let prepare_inductive ntnl indl =
@@ -613,23 +619,17 @@ let _ =
       optread  = (fun () -> !elim_flag) ;
       optwrite = (fun b -> elim_flag := b) }
 
-
-let lift_implicits n = 
-  List.map (fun x -> 
-    match fst x with 
-	ExplByPos (k, id) -> ExplByPos (k + n, id), snd x
-      | _ -> x)
-
 let declare_mutual_with_eliminations isrecord mie impls =
   let names = List.map (fun e -> e.mind_entry_typename) mie.mind_entry_inds in
-  let params = List.length mie.mind_entry_params in
   let (_,kn) = declare_mind isrecord mie in    
     list_iter_i (fun i (indimpls, constrimpls) -> 
       let ind = (kn,i) in
+	maybe_declare_manual_implicits false (IndRef ind)
+	  (is_implicit_args()) indimpls;
 	list_iter_i
 	  (fun j impls -> 
 	    maybe_declare_manual_implicits false (ConstructRef (ind, succ j))
-	      (is_implicit_args()) (indimpls @ (lift_implicits params impls)))
+	      (is_implicit_args()) impls)
 	  constrimpls)
       impls;
     if_verbose ppnl (minductive_message names);
@@ -672,7 +672,7 @@ let recursive_message indexes = function
 		    | None -> mt ())
 
 let corecursive_message _ = function
-  | [] -> error "no corecursive definition"
+  | [] -> error "No corecursive definition."
   | [id] -> pr_id id ++ str " is corecursively defined"
   | l -> hov 0 (prlist_with_sep pr_coma pr_id l ++
                     spc () ++ str "are corecursively defined")
@@ -827,6 +827,7 @@ let interp_recursive fixkind l boxed =
     List.split (List.map (interp_fix_context evdref env) fixl) in
   let fixccls = List.map2 (interp_fix_ccl evdref) fixctxs fixl in
   let fixtypes = List.map2 build_fix_type fixctxs fixccls in
+  let fixtypes = List.map (nf_evar (evars_of !evdref)) fixtypes in
   let env_rec = push_named_types env fixnames fixtypes in
 
   (* Get interpretation metadatas *)
@@ -1005,7 +1006,7 @@ let build_combined_scheme name schemes =
 		let qualid = qualid_of_reference refe in
 		let cst = try 
                     Nametab.locate_constant (snd qualid) 
-                with Not_found -> error ((string_of_qualid (snd qualid))^" is not declared")
+                with Not_found -> error ((string_of_qualid (snd qualid))^" is not declared.")
                 in
 		let ty = Typeops.type_of_constant env cst in
 		  qualid, cst, ty)
@@ -1051,15 +1052,21 @@ let retrieve_first_recthm = function
               (Option.map Declarations.force body,opaq)
           | _ -> assert false
 
+let default_thm_id = id_of_string "Unnamed_thm"
+
 let compute_proof_name = function
   | Some (loc,id) ->
       (* We check existence here: it's a bit late at Qed time *)
       if Nametab.exists_cci (Lib.make_path id) or is_section_variable id then
-        user_err_loc (loc,"",pr_id id ++ str " already exists");
+        user_err_loc (loc,"",pr_id id ++ str " already exists.");
       id
   | None ->
-      next_global_ident_away false (id_of_string "Unnamed_thm")
- 	(Pfedit.get_all_proof_names ())
+      let rec next avoid id =
+        let id = next_global_ident_away false id avoid in
+        if Nametab.exists_cci (Lib.make_path id) then next (id::avoid) id 
+        else id
+      in
+      next (Pfedit.get_all_proof_names ()) default_thm_id
 
 let save_remaining_recthms (local,kind) body opaq i (id,(t_i,imps)) =
   match body with
@@ -1207,7 +1214,7 @@ let start_proof_com kind thms hook =
 
 let check_anonymity id save_ident =
   if atompart_of_id id <> "Unnamed_thm" then
-    error "This command can only be used for unnamed theorem"
+    error "This command can only be used for unnamed theorem."
 (*
     message("Overriding name "^(string_of_id id)^" and using "^save_ident)
 *)
