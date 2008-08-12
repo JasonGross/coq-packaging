@@ -101,16 +101,12 @@ install-stamp: build-stamp
 	cp debian/coqide.desktop debian/coqide/usr/share/applications
 
 	if [ -e opt-stamp ]; then \
-		cp debian/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.opt.1; \
+		cp man/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.opt.1; \
 		cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.opt.1; \
 	fi
+	cp man/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.1
 	cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.1
 	cp debian/coqide.1 debian/coqide/usr/share/man/man1/coqide.byte.1
-	cp debian/coqc.1 debian/coq/usr/share/man/man1/coqc.1
-	cp debian/coq-interface.1 debian/coq/usr/share/man/man1/coq-interface.1
-	cp debian/coq_makefile.1 debian/coq/usr/share/man/man1/coq_makefile.1
-	cp debian/coqmktop.1 debian/coq/usr/share/man/man1/coqmktop.1
-	cp debian/coqtop.1 debian/coq/usr/share/man/man1/coqtop.1
 
 	cp -r doc/stdlib/html debian/coq-libs/usr/share/doc/coq-libs/
 	cd debian/coq-libs/usr/share/doc/coq; ln -s ../coq-libs/html stdlib
