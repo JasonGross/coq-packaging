@@ -1,4 +1,4 @@
-coq (8.2~beta4+dfsg-1) UNRELEASED; urgency=low
+coq (8.2~beta4+dfsg-1) experimental; urgency=low
 
   [ Samuel Mimram ]
   * New upstream release.
