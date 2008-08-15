@@ -1,3 +1,10 @@
+coq (8.2~beta4+dfsg-2) experimental; urgency=low
+
+  * [45cca7f] Add non-native-archs.dpatch; fixes FTBFS on non-native
+    architectures (Closes: #495165)
+
+ -- Stephane Glondu <steph@glondu.net>  Fri, 15 Aug 2008 13:20:16 +0200
+
 coq (8.2~beta4+dfsg-1) experimental; urgency=low
 
   [ Samuel Mimram ]
