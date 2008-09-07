@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile.build 11309 2008-08-06 10:30:35Z herbelin $ 
+# $Id: Makefile.build 11383 2008-09-07 16:35:13Z glondu $ 
 
 
 # Makefile for Coq
@@ -137,10 +137,11 @@ endif
 
 CINCLUDES= -I $(CAMLHLIB)
 
-# libcoqrun.a 
+# libcoqrun.a, dllcoqrun.so
 
 $(LIBCOQRUN): kernel/byterun/coq_jumptbl.h $(BYTERUN) 
-	$(AR) rc $(LIBCOQRUN) $(BYTERUN) 
+	cd $(dir $(LIBCOQRUN)) && \
+	$(OCAMLMKLIB) -oc $(COQRUN) $(foreach u,$(BYTERUN),$(notdir $(u)))
 	$(RANLIB) $(LIBCOQRUN)
 
 #coq_jumptbl.h is required only if you have GCC 2.0 or later
@@ -180,7 +181,7 @@ $(COQTOPBYTE): $(COQMKTOP) $(LINKCMO) $(LIBCOQRUN)
 	$(SHOW)'COQMKTOP -o $@'	
 	$(HIDE)$(COQMKTOP) -top $(BYTEFLAGS) -o $@
 
-$(COQTOP): $(ORDER_ONLY_SEP) $(BESTCOQTOP)
+$(COQTOPEXE): $(ORDER_ONLY_SEP) $(BESTCOQTOP)
 	cd bin; ln -sf coqtop.$(BEST)$(EXE) coqtop$(EXE)
 
 LOCALCHKLIBS:=-I checker -I lib -I config -I kernel
@@ -195,7 +196,7 @@ $(CHICKENOPT): checker/check.cmxa checker/main.ml
 
 $(CHICKENBYTE): checker/check.cma checker/main.ml
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(CHKBYTEFLAGS) -custom -o $@ unix.cma gramlib.cma checker/check.cma checker/main.ml
+	$(HIDE)$(OCAMLC) $(CHKBYTEFLAGS) -o $@ unix.cma gramlib.cma checker/check.cma checker/main.ml
 
 $(CHICKEN): $(ORDER_ONLY_SEP) $(BESTCHICKEN)
 	cd bin && ln -sf coqchk.$(BEST)$(EXE) coqchk$(EXE)
@@ -204,13 +205,14 @@ $(CHICKEN): $(ORDER_ONLY_SEP) $(BESTCHICKEN)
 
 $(COQMKTOPBYTE): $(COQMKTOPCMO)
 	$(SHOW)'OCAMLC -o $@'	
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ str.cma unix.cma \
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ str.cma unix.cma \
           $(COQMKTOPCMO) $(OSDEPLIBS)
 
 $(COQMKTOPOPT): $(COQMKTOPCMX)
 	$(SHOW)'OCAMLOPT -o $@'	
 	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -o $@ str.cmxa unix.cmxa \
           $(COQMKTOPCMX) $(OSDEPLIBS)
+	$(STRIP) $@
 
 $(COQMKTOP): $(ORDER_ONLY_SEP) $(BESTCOQMKTOP)
 	cd bin; ln -sf coqmktop.$(BEST)$(EXE) coqmktop$(EXE)
@@ -226,11 +228,12 @@ scripts/tolink.ml: Makefile.build Makefile.common
 
 $(COQCBYTE): $(COQCCMO) $(COQTOPBYTE) $(BESTCOQTOP)
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ unix.cma $(COQCCMO) $(OSDEPLIBS)
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ unix.cma $(COQCCMO) $(OSDEPLIBS)
 
 $(COQCOPT): $(COQCCMX) $(COQTOPOPT) $(BESTCOQTOP)
 	$(SHOW)'OCAMLOPT -o $@'
 	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -o $@ unix.cmxa $(COQCCMX) $(OSDEPLIBS)
+	$(STRIP) $@
 
 $(COQC): $(ORDER_ONLY_SEP) $(BESTCOQC)
 	cd bin; ln -sf coqc.$(BEST)$(EXE) coqc$(EXE)
@@ -361,13 +364,14 @@ contrib/contrib.cmxa: $(CONTRIB:.cmo=.cmx)
 ###########################################################################
 
 ifeq ($(BEST),opt)
-bin/csdpcert$(EXE): $(CSDPCERTCMX)
+contrib/micromega/csdpcert$(EXE): $(CSDPCERTCMX)
 	$(SHOW)'OCAMLOPT -o $@'
 	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) nums.cmxa -o $@ $(CSDPCERTCMX)
+	$(STRIP) $@
 else
-bin/csdpcert$(EXE): $(CSDPCERTCMO)
+contrib/micromega/csdpcert$(EXE): $(CSDPCERTCMO)
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) -custom $(BYTEFLAGS) nums.cma -o $@ $(CSDPCERTCMO)
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) nums.cma -o $@ $(CSDPCERTCMO)
 endif
 
 ###########################################################################
@@ -448,7 +452,7 @@ install-ide-info:
 	$(INSTALLLIB) ide/FAQ $(FULLIDELIB)
 
 ###########################################################################
-# Pcoq: special binaries for debugging (coq-interface, parser)
+# Pcoq: special binaries for debugging (coq-interface, coq-parser)
 ###########################################################################
 
 # target to build Pcoq
@@ -464,12 +468,12 @@ bin/coq-interface.opt$(EXE): $(COQMKTOP) $(LINKCMX) $(LIBCOQRUN) $(INTERFACECMX)
 	$(SHOW)'COQMKTOP -o $@'
 	$(HIDE)$(COQMKTOP) -opt $(OPTFLAGS) -o $@ $(INTERFACECMX)
 
-bin/parser$(EXE):$(LIBCOQRUN) $(PARSERCMO)
+bin/coq-parser$(EXE):$(LIBCOQRUN) $(PARSERCMO)
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) -custom -linkall $(BYTEFLAGS) -o $@ \
+	$(HIDE)$(OCAMLC) $(COQRUNBYTEFLAGS) -linkall $(BYTEFLAGS) -o $@ \
 	  dynlink.cma nums.cma $(LIBCOQRUN) $(CMA) $(PARSERCMO)
 
-bin/parser.opt$(EXE): $(LIBCOQRUN) $(PARSERCMX)
+bin/coq-parser.opt$(EXE): $(LIBCOQRUN) $(PARSERCMX)
 	$(SHOW)'OCAMLOPT -o $@'
 	$(HIDE)$(OCAMLOPT) -linkall $(OPTFLAGS) -o $@ \
 	  $(LIBCOQRUN) nums.cmxa $(CMXA) $(PARSERCMX)
@@ -495,6 +499,10 @@ install-pcoq-manpages:
 ###########################################################################
 # tests
 ###########################################################################
+
+validate:: $(BESTCHICKEN) $(ALLVO)
+	$(SHOW)'COQCHK <theories & contrib>'
+	$(BESTCHICKEN) -boot -o -m $(ALLMODS)
 
 check:: world
 	cd test-suite; \
@@ -583,27 +591,27 @@ tools:: $(TOOLS) $(DEBUGPRINTERS)
 
 $(COQDEP): $(COQDEPCMO)
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ unix.cma $(COQDEPCMO) $(OSDEPLIBS)
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ unix.cma $(COQDEPCMO) $(OSDEPLIBS)
 
 $(GALLINA): $(GALLINACMO)
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ $(GALLINACMO)
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ $(GALLINACMO)
 
 $(COQMAKEFILE): tools/coq_makefile.cmo config/coq_config.cmo
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ str.cma config/coq_config.cmo tools/coq_makefile.cmo
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ str.cma config/coq_config.cmo tools/coq_makefile.cmo
 
 $(COQTEX): tools/coq-tex.cmo
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ str.cma tools/coq-tex.cmo
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ str.cma tools/coq-tex.cmo
 
 $(COQWC): tools/coqwc.cmo
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ tools/coqwc.cmo
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ tools/coqwc.cmo
 
 $(COQDOC): $(COQDOCCMO)
 	$(SHOW)'OCAMLC -o $@'
-	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -custom -o $@ str.cma unix.cma $(COQDOCCMO)
+	$(HIDE)$(OCAMLC) $(BYTEFLAGS) -o $@ str.cma unix.cma $(COQDOCCMO)
 
 ###########################################################################
 # Installation
@@ -617,7 +625,7 @@ $(COQDOC): $(COQDOCCMO)
   # You must NOT put a "/" at the end (Cygnus for win32 does not like "//").
 
 FULLBINDIR=$(BINDIR:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
-FULLCOQLIB=$(COQLIB:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
+FULLCOQLIB=$(COQLIBINSTALL:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
 FULLMANDIR=$(MANDIR:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
 FULLEMACSLIB=$(EMACSLIB:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
 FULLCOQDOCDIR=$(COQDOCDIR:"$(OLDROOT)%="$(COQINSTALLPREFIX)%)
@@ -630,12 +638,12 @@ install-binaries:: install-$(BEST) install-tools
 
 install-byte::
 	$(MKDIR) $(FULLBINDIR)
-	$(INSTALLBIN) $(COQMKTOP) $(COQC) $(COQTOPBYTE) $(CSDPCERT) $(FULLBINDIR)
+	$(INSTALLBIN) $(COQMKTOP) $(COQC) $(COQTOPBYTE) $(FULLBINDIR)
 	cd $(FULLBINDIR); ln -sf coqtop.byte$(EXE) coqtop$(EXE)
 
 install-opt::
 	$(MKDIR) $(FULLBINDIR)
-	$(INSTALLBIN) $(COQMKTOP) $(COQC) $(COQTOPBYTE) $(COQTOPOPT) $(CSDPCERT) $(FULLBINDIR)
+	$(INSTALLBIN) $(COQMKTOP) $(COQC) $(COQTOPBYTE) $(COQTOPOPT) $(FULLBINDIR)
 	cd $(FULLBINDIR); ln -sf coqtop.opt$(EXE) coqtop$(EXE)
 
 install-tools::
@@ -655,8 +663,16 @@ install-library:
 	$(MKDIR) $(FULLCOQLIB)/states
 	$(INSTALLLIB) states/*.coq $(FULLCOQLIB)/states
 	$(MKDIR) $(FULLCOQLIB)/user-contrib
-	$(INSTALLLIB) $(LINKCMO) $(LINKCMX) $(GRAMMARCMA) $(FULLCOQLIB)
-	find . -name \*.cmi -exec $(INSTALLLIB) {} $(FULLCOQLIB) \;
+	$(INSTALLLIB) $(LINKCMO) $(GRAMMARCMA) $(FULLCOQLIB)
+ifeq ($(BEST),opt)
+	$(INSTALLLIB) $(LINKCMX) $(FULLCOQLIB)
+endif
+	find . $(FIND_VCS_CLAUSE) -name \*.cmi -exec $(INSTALLLIB) {} $(FULLCOQLIB) \;
+# csdpcert is not meant to be directly called by the user; we install
+# it with libraries
+	-$(MKDIR) -p $(FULLCOQLIB)/contrib/micromega
+	$(INSTALLBIN) $(CSDPCERT) $(FULLCOQLIB)/contrib/micromega
+	$(INSTALLLIB) $(DLLCOQRUN) $(FULLCOQLIB)
 
 install-library-light:
 	$(MKDIR) $(FULLCOQLIB)
@@ -699,7 +715,8 @@ install-latex:
 
 source-doc:
 	if !(test -d $(SOURCEDOCDIR)); then mkdir $(SOURCEDOCDIR); fi
-	$(OCAMLDOC) -html -rectypes $(LOCALINCLUDES) -d $(SOURCEDOCDIR) `find . -name "*.ml"`
+	$(OCAMLDOC) -html -rectypes $(LOCALINCLUDES) -d $(SOURCEDOCDIR) \
+	  `find . $(FIND_VCS_CLAUSE) -name "*.ml"`
 
 
 ###########################################################################
@@ -716,7 +733,7 @@ dev/printers.cma: $(PRINTERSCMO)
 parsing/grammar.cma: $(GRAMMARCMO)
 	$(SHOW)'Testing $@'
 	@touch test.ml4
-	$(HIDE)$(OCAMLOPT) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) $(GRAMMARCMO) -impl" -impl test.ml4 -o test-grammar
+	$(HIDE)$(OCAMLC) $(OPTFLAGS) -pp "$(CAMLP4O) $(CAMLP4EXTENDFLAGS) $(GRAMMARCMO) -impl" -impl test.ml4 -o test-grammar
 	@rm -f test-grammar test.*
 	$(SHOW)'OCAMLC -a $@'   
 	$(HIDE)$(OCAMLC) $(BYTEFLAGS) $(GRAMMARCMO) -linkall -a -o $@
@@ -823,8 +840,8 @@ checker/%.cmi: checker/%.mli | checker/%.mli.d
 	$(HIDE)$(OCAMLC) -c $(CHKBYTEFLAGS) $<
 
 %.o: %.c
-	$(SHOW)'CC        $<'
-	$(HIDE)$(CC) -o $@ $(CFLAGS) $(CINCLUDES)  -c $<
+	$(SHOW)'OCAMLC    $<'
+	$(HIDE)cd $(dir $<) && $(OCAMLC) -ccopt "$(CFLAGS)" -c $(notdir $<)
 
 ifdef KEEP_ML4_PREPROCESSED
 .PRECIOUS: %.ml4-preprocessed
@@ -875,8 +892,8 @@ endif
 	$(HIDE)rm -f $*.glob 
 	$(HIDE)$(BOOTCOQTOP) -dump-glob $*.glob -compile $*
 ifdef VALIDATE
-	$(SHOW)'COQCHK    $(shell basename $*)'
-	$(HIDE)$(BESTCHICKEN) -silent -norec $(shell basename $*) \
+	$(SHOW)'COQCHK    $(call vo_to_mod,$@)'
+	$(HIDE)$(BESTCHICKEN) -boot -silent -norec $(call vo_to_mod,$@) \
 	  || ( RV=$$?; rm -f "$@"; exit $${RV} )
 endif
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: util.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: util.ml 11350 2008-09-02 15:37:49Z barras $ *)
 
 open Pp
 
@@ -1361,7 +1361,7 @@ let heap_size () =
   let stat = Gc.stat ()
   and control = Gc.get () in
   let max_words_total = stat.Gc.heap_words + control.Gc.minor_heap_size in
-  (max_words_total * Sys.word_size / 8)
+  (max_words_total * (Sys.word_size / 8))
 
 let heap_size_kb () = (heap_size () + 1023) / 1024
 

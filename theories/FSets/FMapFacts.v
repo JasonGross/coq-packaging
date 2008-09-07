@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FMapFacts.v 11282 2008-07-28 11:51:53Z msozeau $ *)
+(* $Id: FMapFacts.v 11359 2008-09-04 09:43:36Z notin $ *)
 
 (** * Finite maps library *)
 
@@ -975,7 +975,7 @@ Module WProperties (E:DecidableType)(M:WSfun E).
    fold (fun k e b => if f k e then true else b) m false.
 
   Definition partition (f : key -> elt -> bool)(m : t elt) := 
-   (filter f m, filter (fun k e => negb (f k e))).
+   (filter f m, filter (fun k e => negb (f k e)) m).
 
   Section Specs.
   Variable f : key -> elt -> bool.
