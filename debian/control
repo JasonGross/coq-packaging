@@ -2,7 +2,8 @@ Source: coq
 Section: math
 Priority: optional
 Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
-Uploaders: Ralf Treinen <treinen@debian.org>,
+Uploaders:
+ Ralf Treinen <treinen@debian.org>,
  Remi Vanicat <vanicat@debian.org>,
  Stefano Zacchiroli <zack@debian.org>,
  Samuel Mimram <smimram@debian.org>,
@@ -43,7 +44,11 @@ Description: proof assistant for higher-order logic (toplevel and compiler)
 
 Package: coqide
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, coq (>= 8.0)
+Depends:
+ ${shlibs:Depends},
+ coq (= ${binary:Version}),
+ ocaml-base-nox-${F:OCamlABI},
+ ${misc:Depends}
 Description: proof assistant for higher-order logic (gtk interface)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal

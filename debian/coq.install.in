@@ -1,0 +1,28 @@
+usr/bin/coqc*
+usr/bin/coqdep*
+usr/bin/coqdoc*
+usr/bin/coq_makefile*
+usr/bin/coqmktop*
+usr/bin/coq-interface*
+usr/bin/coq-parser*
+usr/bin/coq-tex*
+usr/bin/coqtop*
+usr/bin/coqwc*
+usr/bin/gallina*
+usr/lib/coq/contrib/micromega/csdpcert*
+usr/lib/coq/*.cm*
+usr/lib/coq/tools/coqdoc/
+usr/share/emacs/site-lisp/coq/
+usr/share/man/man1/coqc*
+usr/share/man/man1/coqdep*
+usr/share/man/man1/coqdoc*
+usr/share/man/man1/coq_makefile*
+usr/share/man/man1/coqmktop*
+usr/share/man/man1/coq-interface*
+usr/share/man/man1/coq-parser*
+usr/share/man/man1/coq-tex*
+usr/share/man/man1/coqtop*
+usr/share/man/man1/coqwc*
+usr/share/man/man1/gallina*
+usr/lib/coq/dllcoqrun.so usr/lib/ocaml/@OCamlABI@/stublibs
+usr/share/emacs/site-lisp/coqdoc.sty usr/share/texmf/tex/latex/misc/
