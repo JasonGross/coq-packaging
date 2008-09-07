@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coq_config.mli 11313 2008-08-07 11:15:03Z barras $ i*)
+(*i $Id: coq_config.mli 11380 2008-09-07 12:27:27Z glondu $ i*)
 
 val local : bool        (* local use (no installation) *)
 
@@ -24,6 +24,8 @@ val camlp4lib : string  (* where is the library of Camlp4 *)
 val best : string       (* byte/opt *)
 val arch : string       (* architecture *)
 val osdeplibs : string  (* OS dependant link options for ocamlc *)
+val coqrunbyteflags : string (* -custom/-dllib -lcoqrun *)
+
 
 (* val defined : string list  (* options for lib/ocamlpp *) *)
 

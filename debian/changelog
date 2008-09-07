@@ -1,3 +1,9 @@
+coq (8.2~beta4.svn20080907+dfsg-1) UNRELEASED; urgency=low
+
+  * [113b703] New upstream SVN snapshot
+
+ -- Stephane Glondu <steph@glondu.net>  Mon, 08 Sep 2008 00:15:39 +0200
+
 coq (8.2~beta4+dfsg-2) experimental; urgency=low
 
   * [45cca7f] Add non-native-archs.dpatch; fixes FTBFS on non-native

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: reductionops.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: reductionops.mli 11343 2008-09-01 20:55:13Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -98,6 +98,7 @@ val whd_evar :  evar_map -> constr -> constr
 val whd_beta : local_reduction_function
 val whd_betaiota : local_reduction_function
 val whd_betaiotazeta : local_reduction_function
+val whd_betaiotazetaevar : contextual_reduction_function
 val whd_betadeltaiota :  contextual_reduction_function
 val whd_betadeltaiota_nolet :  contextual_reduction_function
 val whd_betaetalet : local_reduction_function
@@ -105,17 +106,17 @@ val whd_betalet : local_reduction_function
 
 val whd_beta_stack : local_stack_reduction_function
 val whd_betaiota_stack : local_stack_reduction_function
-val whd_betaiotazeta_stack : local_stack_reduction_function
-val whd_betadeltaiota_stack :  contextual_stack_reduction_function
-val whd_betadeltaiota_nolet_stack :  contextual_stack_reduction_function
+val whd_betaiotazetaevar_stack : contextual_stack_reduction_function
+val whd_betadeltaiota_stack : contextual_stack_reduction_function
+val whd_betadeltaiota_nolet_stack : contextual_stack_reduction_function
 val whd_betaetalet_stack : local_stack_reduction_function
 val whd_betalet_stack : local_stack_reduction_function
 
 val whd_beta_state : local_state_reduction_function
 val whd_betaiota_state : local_state_reduction_function
-val whd_betaiotazeta_state : local_state_reduction_function
-val whd_betadeltaiota_state :  contextual_state_reduction_function
-val whd_betadeltaiota_nolet_state :  contextual_state_reduction_function
+val whd_betaiotazetaevar_state : contextual_state_reduction_function
+val whd_betadeltaiota_state : contextual_state_reduction_function
+val whd_betadeltaiota_nolet_state : contextual_state_reduction_function
 val whd_betaetalet_state : local_state_reduction_function
 val whd_betalet_state : local_state_reduction_function
 

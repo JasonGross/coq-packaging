@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqmktop.ml 11260 2008-07-24 20:53:12Z letouzey $ *)
+(* $Id: coqmktop.ml 11380 2008-09-07 12:27:27Z glondu $ *)
 
 (* coqmktop is a script to link Coq, analogous to ocamlmktop.
    The command line contains options specific to coqmktop, options for the
@@ -289,7 +289,8 @@ let main () =
       (* bytecode (we shunt ocamlmktop script which fails on win32) *)
       let ocamlmktoplib = " toplevellib.cma" in
       let ocamlcexec = Filename.concat Coq_config.camldir "ocamlc" in
-      let ocamlccustom = ocamlcexec^" -custom -linkall" in
+      let ocamlccustom = Printf.sprintf "%s %s -linkall "
+        ocamlcexec Coq_config.coqrunbyteflags in
       (if !top then ocamlccustom^ocamlmktoplib else ocamlccustom)
   in
   (* files to link *)

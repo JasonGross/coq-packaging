@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile 11309 2008-08-06 10:30:35Z herbelin $ 
+# $Id: Makefile 11387 2008-09-07 21:59:11Z glondu $ 
 
 
 # Makefile for Coq
@@ -24,7 +24,14 @@
 # by Emacs' next-error.
 ###########################################################################
 
-FIND_VCS_CLAUSE:='(' -name '{arch}' -or -name '.svn' -or -name '_darcs' -or -name '.git' -or -name "$${GIT_DIR}" ')' -prune -or
+export FIND_VCS_CLAUSE:='(' \
+  -name '{arch}' -or \
+  -name '.svn' -or \
+  -name '_darcs' -or \
+  -name '.git' -or \
+  -name 'debian' -or \
+  -name "$${GIT_DIR}" \
+')' -prune -type f -or
 FIND_PRINTF_P:=-print | sed 's|^\./||'
 
 export YACCFILES:=$(shell find . $(FIND_VCS_CLAUSE) '(' -name '*.mly' ')' $(FIND_PRINTF_P))
@@ -43,7 +50,7 @@ export MLIFILES := $(shell find . $(FIND_VCS_CLAUSE) '(' -name '*.mli' ')' $(FIN
 export ML4FILES := $(shell find . $(FIND_VCS_CLAUSE) '(' -name '*.ml4' ')' $(FIND_PRINTF_P))
 #export VFILES   := $(shell find . $(FIND_VCS_CLAUSE) '(' -name '*.v'   ')' $(FIND_PRINTF_P)) \
 #  $(GENVFILES)
-export CFILES   := $(shell find kernel/byterun -name '*.c')
+export CFILES   := $(shell find kernel/byterun $(FIND_VCS_CLAUSE) -name '*.c')
 
 export ML4FILESML:= $(ML4FILES:.ml4=.ml)
 
@@ -148,12 +155,14 @@ cruftclean: ml4clean
 
 indepclean:
 	rm -f $(GENFILES)
-	rm -f $(COQTOPBYTE) $(COQCBYTE) bin/coq-interface$(EXE) bin/parser$(EXE)
+	rm -f $(COQTOPBYTE) $(COQMKTOPBYTE) $(COQCBYTE) $(CHICKENBYTE)
+	rm -f bin/coq-interface$(EXE) bin/coq-parser$(EXE)
 	find . -name '*~' -or -name '*.cm[ioa]' | xargs rm -f
-	find contrib -name '*.vo' -or -name '*.glob' | xargs rm -f
+	find contrib test-suite -name '*.vo' -or -name '*.glob' | xargs rm -f
 	rm -f */*.pp[iox] contrib/*/*.pp[iox]
 	rm -rf $(SOURCEDOCDIR)
 	rm -f toplevel/mltop.byteml toplevel/mltop.optml
+	rm -f test-suite/check.log
 	rm -f glob.dump
 	rm -f revision
 
@@ -175,11 +184,11 @@ docclean:
 	rm -f doc/coq.tex
 
 archclean: clean-ide cleantheories
-	rm -f $(COQTOPOPT) $(BESTCOQTOP) $(COQC) $(COQMKTOP)
-	rm -f $(COQTOP)  $(COQCOPT) $(COQMKTOPOPT)
-	rm -f bin/parser.opt$(EXE) bin/coq-interface.opt$(EXE)
-	find . -name '*.cmx' -or -name '*.cmxa' -or -name '*.[soa]' | xargs rm -f
-	rm -f $(TOOLS)
+	rm -f $(COQTOPEXE) $(COQMKTOP) $(COQC) $(CHICKEN)
+	rm -f $(COQTOPOPT) $(COQMKTOPOPT) $(COQCOPT) $(CHICKENOPT)
+	rm -f bin/coq-parser.opt$(EXE) bin/coq-interface.opt$(EXE)
+	find . -name '*.cmx' -or -name '*.cmxa' -or -name '*.[soa]' -or -name '*.so' | xargs rm -f
+	rm -f $(TOOLS) $(CSDPCERT)
 
 clean-ide:
 	rm -f $(COQIDECMO) $(COQIDECMX) $(COQIDECMO:.cmo=.cmi) $(COQIDEBYTE) $(COQIDEOPT) $(COQIDE)
@@ -194,7 +203,7 @@ ml4depclean:
 	find . -name '*.ml4.d' | xargs rm -f
 
 depclean:
-	find . -name '*.d' | xargs rm -f
+	find . $(FIND_VCS_CLAUSE) -name '*.d' | xargs rm -f
 
 cleanconfig:
 	rm -f config/Makefile config/coq_config.ml dev/ocamldebug-v7 ide/undo.mli

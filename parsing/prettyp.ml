@@ -10,7 +10,7 @@
  * on May-June 2006 for implementation of abstraction of pretty-printing of objects.
  *)
 
-(* $Id: prettyp.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: prettyp.ml 11343 2008-09-01 20:55:13Z herbelin $ *)
 
 open Pp
 open Util
@@ -744,7 +744,7 @@ let print_path_between cls clt =
   let j = index_of_class clt in
   let p = 
     try 
-      lookup_path_between (i,j) 
+      lookup_path_between_class (i,j) 
     with _ -> 
       errorlabstrm "index_cl_of_id"
         (str"No path between " ++ pr_class cls ++ str" and " ++ pr_class clt
