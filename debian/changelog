@@ -1,8 +1,11 @@
 coq (8.2~beta4.svn20080907+dfsg-1) UNRELEASED; urgency=low
 
   * [113b703] New upstream SVN snapshot
+  * [cdce320] Bump debhelper compatibility level to 7
+  * [b6db9f4] Remove obsolete patches
+  * [d8e4082] Use debhelper 7, simplify debian/rules (Closes: #436684)
 
- -- Stephane Glondu <steph@glondu.net>  Mon, 08 Sep 2008 00:15:39 +0200
+ -- Stephane Glondu <steph@glondu.net>  Mon, 08 Sep 2008 00:16:49 +0200
 
 coq (8.2~beta4+dfsg-2) experimental; urgency=low
 
