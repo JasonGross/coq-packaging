@@ -42,7 +42,6 @@ configure: configure-stamp
 configure-stamp: patch-stamp ocamlinit-stamp
 	dh build --before dh_auto_configure
 	./configure $(CONFIGUREOPTS)
-	echo 'F:OCamlABI="$(OCAMLABI)"' > debian/substvars
 	touch $@
 
 build: build-stamp
@@ -76,6 +75,7 @@ binary-indep: install-stamp
 	dh $@
 
 binary-arch: install-stamp
+	for u in coq coqide; do echo 'F:OCamlABI=$(OCAMLABI)' >> debian/$$u.substvars; done
 	dh $@
 
 binary: binary-indep binary-arch
