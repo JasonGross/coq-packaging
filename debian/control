@@ -71,3 +71,20 @@ Description: proof assistant for higher-order logic (theories)
  .
  This package provides existing theories that new proofs can be
  based upon, including theories of arithmetic and Boolean values.
+
+Package: libcoq-ocaml-dev
+Section: libdevel
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ coq (= ${binary:Version}),
+ ocaml-nox-${F:OCamlABI},
+ ${misc:Depends}
+Description: development libraries and tools for Coq
+ Coq is a proof assistant for higher-order logic, which allows the
+ development of computer programs consistent with their formal
+ specification. It is developed using Objective Caml and Camlp5.
+ For more information, see <http://coq.inria.fr/>.
+ .
+ This package provides coqmktop, and libraries needed to develop
+ OCaml-side extensions to Coq.
