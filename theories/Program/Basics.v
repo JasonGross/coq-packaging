@@ -5,19 +5,19 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
+(* $Id: Basics.v 11709 2008-12-20 11:42:15Z msozeau $ *)
 
-(* Standard functions and combinators.
- * Proofs about them require functional extensionality and can be found in [Combinators].
- *
- * Author: Matthieu Sozeau
- * Institution: LRI, CNRS UMR 8623 - UniversitÃcopyright Paris Sud
- *              91405 Orsay, France *)
+(** Standard functions and combinators.
+   
+   Proofs about them require functional extensionality and can be found in [Combinators].
 
-(* $Id: Basics.v 11046 2008-06-03 22:48:06Z msozeau $ *)
+   Author: Matthieu Sozeau
+   Institution: LRI, CNRS UMR 8623 - Université Paris Sud
+   91405 Orsay, France *)
 
-(** The polymorphic identity function. *)
+(** The polymorphic identity function is defined in [Datatypes]. *)
 
-Definition id {A} := fun x : A => x.
+Implicit Arguments id [[A]].
 
 (** Function composition. *)
 

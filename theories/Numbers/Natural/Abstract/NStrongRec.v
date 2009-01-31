@@ -8,7 +8,7 @@
 (*                      Evgeny Makarov, INRIA, 2007                     *)
 (************************************************************************)
 
-(*i $Id: NStrongRec.v 11040 2008-06-03 00:04:16Z letouzey $ i*)
+(*i $Id: NStrongRec.v 11674 2008-12-12 19:48:40Z letouzey $ i*)
 
 (** This file defined the strong (course-of-value, well-founded) recursion
 and proves its properties *)
@@ -81,9 +81,9 @@ Proof.
 intros n1 n2 H. unfold g. now apply strong_rec_wd.
 Qed.
 
-Theorem NtoA_eq_symm : symmetric (N -> A) (fun_eq Neq Aeq).
+Theorem NtoA_eq_sym : symmetric (N -> A) (fun_eq Neq Aeq).
 Proof.
-apply fun_eq_symm.
+apply fun_eq_sym.
 exact (proj2 (proj2 NZeq_equiv)).
 exact (proj2 (proj2 Aeq_equiv)).
 Qed.
@@ -97,7 +97,7 @@ exact (proj1 (proj2 Aeq_equiv)).
 Qed.
 
 Add Relation (N -> A) (fun_eq Neq Aeq)
- symmetry proved by NtoA_eq_symm
+ symmetry proved by NtoA_eq_sym
  transitivity proved by NtoA_eq_trans
 as NtoA_eq_rel.
 

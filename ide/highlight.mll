@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: highlight.mll 11004 2008-05-28 09:09:12Z herbelin $ *)
+(* $Id: highlight.mll 11481 2008-10-20 19:23:51Z herbelin $ *)
 
 {
 
@@ -110,13 +110,16 @@ rule next_starting_order = parse
   | multiword_command
       { starting:=false; lexeme_start lexbuf, lexeme_end lexbuf, "kwd" }
   | ident as id 
-      { starting:=false; 
-        if is_one_word_command id then 
-	  lexeme_start lexbuf, lexeme_end lexbuf, "kwd" 
-	else if is_one_word_declaration id then
-	  lexeme_start lexbuf, lexeme_end lexbuf, "decl"
-	else
-	  next_interior_order lexbuf
+      { if id = "Time" then next_starting_order lexbuf else
+	begin
+	  starting:=false; 
+          if is_one_word_command id then 
+	    lexeme_start lexbuf, lexeme_end lexbuf, "kwd" 
+	  else if is_one_word_declaration id then
+	    lexeme_start lexbuf, lexeme_end lexbuf, "decl"
+	  else
+	    next_interior_order lexbuf
+	end
       }
   | _    { starting := false; next_interior_order lexbuf}
   | eof  { raise End_of_file }

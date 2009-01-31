@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extraargs.ml4 11094 2008-06-10 19:35:23Z herbelin $ *)
+(* $Id: extraargs.ml4 11800 2009-01-18 18:34:15Z msozeau $ *)
 
 open Pp
 open Pcoq
@@ -16,6 +16,7 @@ open Genarg
 open Names
 open Tacexpr
 open Tacinterp
+open Termops
 
 (* Rewriting orientation *)
 
@@ -95,22 +96,6 @@ ARGUMENT EXTEND occurrences
 
 | [ int_nelist(l) ] -> [ ArgArg l ]
 | [ var(id) ] -> [ ArgVar id ]
-END
-
-(* For Setoid rewrite *)
-let pr_morphism_signature _ _ _ s =
-  spc () ++ Setoid_replace.pr_morphism_signature s
-
-ARGUMENT EXTEND morphism_signature
- TYPED AS morphism_signature
- PRINTED BY pr_morphism_signature
-  | [ constr(out) ] -> [ [],out ]
-  | [ constr(c) "++>" morphism_signature(s) ] ->
-       [ let l,out = s in (Some true,c)::l,out ]
-  | [ constr(c) "-->" morphism_signature(s) ] ->
-       [ let l,out = s in (Some false,c)::l,out ]
-  | [ constr(c) "==>" morphism_signature(s) ] ->
-       [ let l,out = s in (None,c)::l,out ]
 END
 
 let pr_gen prc _prlc _prtac c = prc c
@@ -288,7 +273,7 @@ let gen_in_arg_hyp_to_clause trad_id (hyps ,concl) : Tacticals.clause =
    Option.map 
      (fun l -> 
 	List.map 
-	  (fun id -> ( (all_occurrences_expr,trad_id id) ,Tacexpr.InHyp))
+	  (fun id -> ( (all_occurrences_expr,trad_id id),InHyp))
 	  l
      )
      hyps;

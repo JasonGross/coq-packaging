@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: rawterm.ml 11282 2008-07-28 11:51:53Z msozeau $ *)
+(* $Id: rawterm.ml 11576 2008-11-10 19:13:15Z msozeau $ *)
 
 (*i*)
 open Util
@@ -219,7 +219,7 @@ let free_rawvars  =
     | RLambda (loc,na,_,ty,c) | RProd (loc,na,_,ty,c) | RLetIn (loc,na,ty,c) -> 
 	let vs' = vars bounded vs ty in 
 	let bounded' = add_name_to_ids bounded na in 
-	vars bounded' vs' c
+       vars bounded' vs' c
     | RCases (loc,sty,rtntypopt,tml,pl) ->
 	let vs1 = vars_option bounded vs rtntypopt in 
 	let vs2 = List.fold_left (fun vs (tm,_) -> vars bounded vs tm) vs1 tml in 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: elim.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: elim.ml 11739 2009-01-02 19:33:19Z herbelin $ *)
 
 open Pp
 open Util
@@ -128,7 +128,7 @@ let decompose_nonrec c gls =
 
 let decompose_and c gls = 
   general_decompose 
-    (fun (_,t) -> is_conjunction t)
+    (fun (_,t) -> is_record t)
     c gls
 
 let decompose_or c gls = 

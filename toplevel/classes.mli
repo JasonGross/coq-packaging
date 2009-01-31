@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: classes.mli 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: classes.mli 11709 2008-12-20 11:42:15Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -29,27 +29,6 @@ val mismatched_params : env -> constr_expr list -> rel_context -> 'a
 
 val mismatched_props : env -> constr_expr list -> rel_context -> 'a
 
-type binder_list = (identifier located * bool * constr_expr) list
-type binder_def_list = (identifier located * identifier located list * constr_expr) list
- 
-val binders_of_lidents : identifier located list -> local_binder list
-
-val name_typeclass_binders : Idset.t ->
-    Topconstr.local_binder list ->
-    Topconstr.local_binder list * Idset.t
-
-val new_class : identifier located ->
-  local_binder list ->
-  Vernacexpr.sort_expr located option ->
-  local_binder list ->
-  binder_list -> unit
-
-(* By default, print the free variables that are implicitely generalized. *)
-
-val default_on_free_vars : identifier list -> unit
-
-val fail_on_free_vars : identifier list -> unit
-
 (* Instance declaration *)
 
 val declare_instance : bool -> identifier located -> unit
@@ -69,8 +48,8 @@ val new_instance :
   ?global:bool -> (* Not global by default. *)
   local_binder list ->
   typeclass_constraint ->
-  binder_def_list ->
-  ?on_free_vars:(identifier list -> unit) ->
+  constr_expr ->
+  ?generalize:bool ->
   ?tac:Proof_type.tactic  ->
   ?hook:(constant -> unit) ->
   int option ->

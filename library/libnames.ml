@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libnames.ml 11209 2008-07-05 10:17:49Z herbelin $ i*)
+(*i $Id: libnames.ml 11750 2009-01-05 20:47:34Z herbelin $ i*)
 
 open Pp
 open Util
@@ -24,6 +24,11 @@ type global_reference =
 
 let isVarRef = function VarRef _ -> true | _ -> false
 
+let subst_constructor subst ((kn,i),j as ref) =
+  let kn' = subst_kn subst kn in 
+    if kn==kn' then ref, mkConstruct ref
+    else ((kn',i),j), mkConstruct ((kn',i),j)
+      
 let subst_global subst ref = match ref with
   | VarRef var -> ref, mkVar var
   | ConstRef kn ->
@@ -32,10 +37,9 @@ let subst_global subst ref = match ref with
   | IndRef (kn,i) ->
       let kn' = subst_kn subst kn in
       if kn==kn' then ref, mkInd (kn,i) else IndRef(kn',i), mkInd (kn',i)
-  | ConstructRef ((kn,i),j) ->
-      let kn' = subst_kn subst kn in 
-      if kn==kn' then ref, mkConstruct ((kn,i),j)
-      else ConstructRef ((kn',i),j), mkConstruct ((kn',i),j)
+  | ConstructRef ((kn,i),j as c) ->
+      let c',t = subst_constructor subst c in
+	if c'==c then ref,t else ConstructRef c', t
 
 let global_of_constr c = match kind_of_term c with
   | Const sp -> ConstRef sp
@@ -119,21 +123,21 @@ let path_of_inductive env (sp,tyi) =
 let parse_dir s =
   let len = String.length s in
   let rec decoupe_dirs dirs n =
-    if n>=len then dirs else
+    if n = len && n > 0 then error (s ^ " is an invalid path.");
+    if n >= len then dirs else
     let pos =
       try
 	String.index_from s n '.' 
       with Not_found -> len
     in
+    if pos = n then error (s ^ " is an invalid path.");
     let dir = String.sub s n (pos-n) in
-      decoupe_dirs ((id_of_string dir)::dirs) (pos+1)	  
+    decoupe_dirs ((id_of_string dir)::dirs) (pos+1)	  
   in
     decoupe_dirs [] 0
 
-let dirpath_of_string s = 
-  match parse_dir s with
-      [] -> invalid_arg "dirpath_of_string"
-    | dir -> make_dirpath dir
+let dirpath_of_string s =
+  make_dirpath (if s = "" then [] else parse_dir s)
 
 module Dirset = Set.Make(struct type t = dir_path let compare = compare end)
 module Dirmap = Map.Make(struct type t = dir_path let compare = compare end)

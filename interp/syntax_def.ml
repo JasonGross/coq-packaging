@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: syntax_def.ml 10730 2008-03-30 21:42:58Z herbelin $ *)
+(* $Id: syntax_def.ml 11512 2008-10-27 12:28:36Z herbelin $ *)
 
 open Util
 open Pp
@@ -70,11 +70,18 @@ let (in_syntax_constant, out_syntax_constant) =
     classify_function = classify_syntax_constant;
     export_function = export_syntax_constant } 
 
+type syndef_interpretation = (identifier * subscopes) list * aconstr
+
+(* Coercions to the general format of notation that also supports
+   variables bound to list of expressions *)
+let in_pat (ids,ac) = ((ids,[]),ac)
+let out_pat ((ids,idsl),ac) = assert (idsl=[]); (ids,ac)
+
 let declare_syntactic_definition local id onlyparse pat =
-  let _ = add_leaf id (in_syntax_constant (local,pat,onlyparse)) in ()
+  let _ = add_leaf id (in_syntax_constant (local,in_pat pat,onlyparse)) in ()
 
 let search_syntactic_definition loc kn =
-  KNmap.find kn !syntax_table
+  out_pat (KNmap.find kn !syntax_table)
 
 let locate_global_with_alias (loc,qid) =
   match Nametab.extended_locate qid with

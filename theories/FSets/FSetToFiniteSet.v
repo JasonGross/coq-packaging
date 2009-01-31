@@ -11,7 +11,7 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: FSetToFiniteSet.v 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id: FSetToFiniteSet.v 11735 2009-01-02 17:22:31Z herbelin $ *)
 
 Require Import Ensembles Finite_sets.
 Require Import FSetInterface FSetProperties OrderedTypeEx DecidableTypeEx.
@@ -20,7 +20,7 @@ Require Import FSetInterface FSetProperties OrderedTypeEx DecidableTypeEx.
     to the good old [Ensembles] and [Finite_sets] theory. *)
 
 Module WS_to_Finite_set (U:UsualDecidableType)(M: WSfun U).
- Module MP:= WProperties U M.
+ Module MP:= WProperties_fun U M.
  Import M MP FM Ensembles Finite_sets.
 
  Definition mkEns : M.t -> Ensemble M.elt := 
@@ -30,7 +30,7 @@ Module WS_to_Finite_set (U:UsualDecidableType)(M: WSfun U).
 
  Lemma In_In : forall s x, M.In x s <-> In _ (!!s) x.
  Proof.
- unfold In; compute; auto.
+ unfold In; compute; auto with extcore.
  Qed.
 
  Lemma Subset_Included : forall s s',  s[<=]s'  <-> Included _ (!!s) (!!s').
@@ -155,9 +155,7 @@ Module WS_to_Finite_set (U:UsualDecidableType)(M: WSfun U).
 End WS_to_Finite_set.
 
 
-Module S_to_Finite_set (U:UsualOrderedType)(M: Sfun U).
-  Module D := OT_as_DT U.
-  Include WS_to_Finite_set D M.
-End S_to_Finite_set.
+Module S_to_Finite_set (U:UsualOrderedType)(M: Sfun U) :=
+  WS_to_Finite_set U M.
 
 

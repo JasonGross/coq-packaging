@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evarconv.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: evarconv.ml 11745 2009-01-04 18:43:08Z herbelin $ *)
 
 open Pp
 open Util
@@ -164,10 +164,9 @@ let rec evar_conv_x env evd pbty term1 term2 =
   (* Maybe convertible but since reducing can erase evars which [evar_apprec]
      could have found, we do it only if the terms are free of evar.
      Note: incomplete heuristic... *)
-  if is_ground_term evd term1 && is_ground_term evd term2 &
-     is_fconv pbty env (evars_of evd) term1 term2
-  then
-    (evd,true)
+  if is_ground_term evd term1 && is_ground_term evd term2
+    && is_ground_env evd env
+  then (evd, is_fconv pbty env (evars_of evd) term1 term2)
   else
   let term1 = apprec_nohdbeta env evd term1 in
   let term2 = apprec_nohdbeta env evd term2 in
@@ -211,7 +210,7 @@ and evar_eqappr_x env evd pbty (term1,l1 as appr1) (term2,l2 as appr2) =
     | Flexible ev1, MaybeFlexible flex2 ->
 	let f1 i =
 	  if 
-	    is_unification_pattern_evar env ev1 l1 & 
+	    is_unification_pattern_evar env ev1 l1 (applist appr2) & 
 	    not (occur_evar (fst ev1) (applist appr2))
 	  then
 	    (* Miller-Pfenning's patterns unification *)
@@ -243,7 +242,7 @@ and evar_eqappr_x env evd pbty (term1,l1 as appr1) (term2,l2 as appr2) =
     | MaybeFlexible flex1, Flexible ev2 ->
 	let f1 i =
 	  if 
-	    is_unification_pattern_evar env ev2 l2 & 
+	    is_unification_pattern_evar env ev2 l2 (applist appr1) & 
 	    not (occur_evar (fst ev2) (applist appr1))
 	  then
 	    (* Miller-Pfenning's patterns unification *)
@@ -311,7 +310,7 @@ and evar_eqappr_x env evd pbty (term1,l1 as appr1) (term2,l2 as appr2) =
 
     | Flexible ev1, Rigid _ ->
 	if 
-	  is_unification_pattern_evar env ev1 l1 & 
+	  is_unification_pattern_evar env ev1 l1 (applist appr2) & 
 	  not (occur_evar (fst ev1) (applist appr2))
 	then
 	  (* Miller-Pfenning's patterns unification *)
@@ -326,7 +325,7 @@ and evar_eqappr_x env evd pbty (term1,l1 as appr1) (term2,l2 as appr2) =
 
     | Rigid _, Flexible ev2 ->
 	if 
-	  is_unification_pattern_evar env ev2 l2 & 
+	  is_unification_pattern_evar env ev2 l2 (applist appr1) & 
 	  not (occur_evar (fst ev2) (applist appr1))
 	then
 	  (* Miller-Pfenning's patterns unification *)
@@ -514,15 +513,15 @@ let apply_conversion_problem_heuristic env evd pbty t1 t2 =
   let (term1,l1 as appr1) = decompose_app t1 in
   let (term2,l2 as appr2) = decompose_app t2 in
   match kind_of_term term1, kind_of_term term2 with
-  | Evar (evk1,args1), (Rel _|Var _) when l1 = [] & l2 = [] ->
+  | Evar (evk1,args1), (Rel _|Var _) when l1 = [] & l2 = []
+      & array_for_all (fun a -> a = term2 or isEvar a) args1 ->
       (* The typical kind of constraint coming from pattern-matching return
          type inference *)
-      assert (array_for_all (fun a -> a = term2 or isEvar a) args1);
       choose_less_dependent_instance evk1 evd term2 args1, true
-  | (Rel _|Var _), Evar (evk2,args2) when l1 = [] & l2 = [] ->
+  | (Rel _|Var _), Evar (evk2,args2) when l1 = [] & l2 = [] 
+      & array_for_all (fun a -> a = term1 or isEvar a) args2 ->
       (* The typical kind of constraint coming from pattern-matching return
          type inference *)
-      assert (array_for_all ((=) term1) args2);
       choose_less_dependent_instance evk2 evd term1 args2, true
   | Evar ev1,_ when List.length l1 <= List.length l2 ->
       (* On "?n t1 .. tn = u u1 .. u(n+p)", try first-order unification *)

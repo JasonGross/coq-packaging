@@ -11,11 +11,12 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: OrderedTypeAlt.v 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id: OrderedTypeAlt.v 11699 2008-12-18 11:49:08Z letouzey $ *)
 
 Require Import OrderedType.
 
-(** * An alternative (but equivalent) presentation for an Ordered Type inferface. *)
+(** * An alternative (but equivalent) presentation for an Ordered Type
+   inferface. *)
 
 (** NB: [comparison], defined in [Datatypes.v] is [Eq|Lt|Gt]
 whereas [compare], defined in [OrderedType.v] is [EQ _ | LT _ | GT _ ] 
@@ -79,6 +80,12 @@ Module OrderedType_from_Alt (O:OrderedTypeAlt) <: OrderedType.
  apply LT; auto.
  apply GT; red.
  rewrite compare_sym; rewrite H; auto.
+ Defined.
+
+ Definition eq_dec : forall x y, { eq x y } + { ~ eq x y }.
+ Proof.
+ intros; unfold eq.
+ case (x ?= y); [ left | right | right ]; auto; discriminate.
  Defined.
 
 End OrderedType_from_Alt. 

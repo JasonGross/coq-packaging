@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: indtypes.mli 10425 2008-01-05 17:04:16Z herbelin $ i*)
+(*i $Id: indtypes.mli 11784 2009-01-14 11:36:32Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -33,6 +33,7 @@ type inductive_error =
   | SameNamesOverlap of identifier list
   | NotAnArity of identifier
   | BadEntry
+  | LargeNonPropInductiveNotInType
 
 exception InductiveError of inductive_error
 

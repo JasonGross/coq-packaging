@@ -11,7 +11,7 @@
  * camlp4deps will not work for this file unless Makefile system enhanced.
  *)
 
-(* $Id: mltop.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: mltop.ml4 11801 2009-01-18 20:11:41Z herbelin $ *)
 
 open Util
 open Pp
@@ -47,8 +47,10 @@ open Vernacinterp
 
 (* This path is where we look for .cmo *)
 let coq_mlpath_copy = ref ["."]
-let keep_copy_mlpath path = 
-  coq_mlpath_copy := path :: !coq_mlpath_copy
+let keep_copy_mlpath path =
+  let cpath = canonical_path_name path in
+  let filter path' = (cpath <> canonical_path_name path') in
+  coq_mlpath_copy := path :: List.filter filter !coq_mlpath_copy
 
 (* If there is a toplevel under Coq *)
 type toplevel = { 
@@ -62,17 +64,18 @@ type toplevel = {
 type kind_load =
   | WithTop of toplevel
   | WithoutTop
-  | Native
 
 (* Must be always initialized *)
-let load = ref Native
+let load = ref WithoutTop
 
-(* Sets and initializes the kind of loading *)
-let set kload = load := kload
-let get () = !load
+(* Are we in a native version of Coq? *)
+let is_native = IFDEF Byte THEN false ELSE true END
 
-(* Resets load *)
-let remove ()= load := Native
+(* Sets and initializes a toplevel (if any) *)
+let set_top toplevel = load := WithTop toplevel
+
+(* Removes the toplevel (if any) *)
+let remove ()= load := WithoutTop
 
 (* Tests if an Ocaml toplevel runs under Coq *)
 let is_ocaml_top () =
@@ -81,10 +84,7 @@ let is_ocaml_top () =
     |_ -> false
 
 (* Tests if we can load ML files *)
-let enable_load () =
-  match !load with
-    | WithTop _ | WithoutTop -> true
-    |_ -> false
+let has_dynlink = IFDEF HasDynlink THEN true ELSE false END
 
 (* Runs the toplevel loop of Ocaml *)
 let ocaml_toploop () =
@@ -103,24 +103,21 @@ let dir_ml_load s =
                 str s ++ str" to Coq code."))
 (* TO DO: .cma loading without toplevel *)
     | WithoutTop ->
-      IFDEF Byte THEN
+      IFDEF HasDynlink THEN
 	(* WARNING
 	 * if this code section starts to use a module not used elsewhere
 	 * in this file, the Makefile dependency logic needs to be updated.
 	 *)
-        let _,gname = where_in_path true !coq_mlpath_copy s in
+        let warn = Flags.is_verbose() in
+        let _,gname = where_in_path ~warn !coq_mlpath_copy s in
         try
           Dynlink.loadfile gname;
-	  Dynlink.add_interfaces 
-	    [(String.capitalize (Filename.chop_suffix
-				(Filename.basename gname) ".cmo"))] 
-	    [Filename.dirname gname]
 	with | Dynlink.Error a ->
           errorlabstrm "Mltop.load_object" (str (Dynlink.error_message a))
-      ELSE () END
-    | Native ->
-	errorlabstrm "Mltop.no_load_object"
-          (str"Loading of ML object file forbidden in a native Coq.")
+      ELSE
+        errorlabstrm "Mltop.no_load_object"
+            (str"Loading of ML object file forbidden in a native Coq.")
+      END
 
 (* Dynamic interpretation of .ml *)
 let dir_ml_use s =
@@ -132,7 +129,7 @@ let dir_ml_use s =
 let add_ml_dir s =
   match !load with
     | WithTop t -> t.add_dir s; keep_copy_mlpath s
-    | WithoutTop -> keep_copy_mlpath s
+    | WithoutTop when has_dynlink -> keep_copy_mlpath s
     | _ -> ()
 
 (* For Rec Add ML Path *)
@@ -182,15 +179,44 @@ let mod_of_name name =
   in 
   String.capitalize base
 
-let file_of_name name =
-  let bname = String.uncapitalize name in
-  let fname = make_suffix bname ".cmo" in
-  if (is_in_path !coq_mlpath_copy fname) then fname
-  else let fname=make_suffix bname ".cma" in
-  if (is_in_path !coq_mlpath_copy fname) then fname
+let get_ml_object_suffix name =
+  if Filename.check_suffix name ".cmo" then
+    Some ".cmo"
+  else if Filename.check_suffix name ".cma" then
+    Some ".cma"
+  else if Filename.check_suffix name ".cmxs" then
+    Some ".cmxs"
   else
+    None
+
+let file_of_name name =
+  let name = String.uncapitalize name in
+  let suffix = get_ml_object_suffix name in
+  let fail s =
     errorlabstrm "Mltop.load_object"
-      (str"File not found on loadpath : " ++ str (bname^".cm[oa]"))
+      (str"File not found on loadpath : " ++ str s) in
+  if is_native then
+    let name = match suffix with
+      | Some ((".cmo"|".cma") as suffix) ->
+          (Filename.chop_suffix name suffix) ^ ".cmxs"
+      | Some ".cmxs" -> name
+      | _ -> name ^ ".cmxs"
+    in
+    if is_in_path !coq_mlpath_copy name then name else fail name
+  else
+    let (full, base) = match suffix with
+      | Some ".cmo" | Some ".cma" -> true, name
+      | Some ".cmxs" -> false, Filename.chop_suffix name ".cmxs"
+      | _ -> false, name
+    in
+    if full then
+      if is_in_path !coq_mlpath_copy base then base else fail base
+    else
+      let name = base ^ ".cmo" in
+      if is_in_path !coq_mlpath_copy name then name else
+        let name = base ^ ".cma" in
+        if is_in_path !coq_mlpath_copy name then name else
+          fail (base ^ ".cm[oa]")
 
 (* TODO: supprimer ce hack, si possible *)
 (* Initialisation of ML modules that need the state (ex: tactics like
@@ -242,7 +268,7 @@ let unfreeze_ml_modules x =
     (fun name ->
        let mname = mod_of_name name in
        if not (module_is_known mname) then
-         if enable_load() then
+         if has_dynlink then
            let fname = file_of_name mname in
            load_object mname fname
          else 
@@ -272,9 +298,9 @@ let cache_ml_module_object (_,{mnames=mnames}) =
 	     if_verbose 
 	       msg (str"[Loading ML file " ++ str fname ++ str" ...");
              load_object mname fname;
-             if_verbose msgnl (str"done]")
+             if_verbose msgnl (str" done]")
            with e -> 
-	     if_verbose msgnl (str"failed]"); 
+	     if_verbose msgnl (str" failed]"); 
 	     raise e
 	 end;
          add_loaded_module mname)
@@ -286,7 +312,9 @@ let (inMLModule,outMLModule) =
   declare_object {(default_object "ML-MODULE") with
                     load_function = (fun _ -> cache_ml_module_object);
                     cache_function = cache_ml_module_object;
-                    export_function = export_ml_module_object }
+                    export_function = export_ml_module_object;
+                    subst_function = (fun (_,_,o) -> o);
+                    classify_function = (fun (_,o) -> Substitute o) }
 
 let declare_ml_modules l =
   Lib.add_anonymous_leaf (inMLModule {mnames=l})

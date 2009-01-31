@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evarutil.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: evarutil.ml 11819 2009-01-20 20:04:50Z herbelin $ *)
 
 open Util
 open Pp
@@ -258,13 +258,19 @@ let e_new_evar evdref env ?(src=(dummy_loc,InternalHole)) ?filter ty =
  * operations on the evar constraints *
  *------------------------------------*)
 
+let is_pattern inst =
+  array_for_all (fun a -> isRel a || isVar a) inst &&
+  array_distinct inst
+
 (* Pb: defined Rels and Vars should not be considered as a pattern... *)
+(*
 let is_pattern inst =
   let rec is_hopat l = function
       [] -> true
     | t :: tl ->
         (isRel t or isVar t) && not (List.mem t l) && is_hopat (t::l) tl in
   is_hopat [] (Array.to_list inst)
+*)
 
 let evar_well_typed_body evd ev evi body =
   try
@@ -431,7 +437,7 @@ let rec check_and_clear_in_constr evdref err ids c =
 		     has dependencies in another hyp of the context of ev
 		     and transitively remember the dependency *)
 		  match List.filter (fun (id,_) -> occur_var_in_decl (Global.env()) id h) ri with
-		  | rid' :: _ -> (hy,ar,(rid,List.assoc rid ri)::ri)
+		  | (_,id') :: _ -> (hy,ar,(rid,id')::ri)
 		  | _ ->
 		  (* No dependency at all, we can keep this ev's context hyp *)
 		      (h::hy,a::ar,ri))
@@ -484,23 +490,41 @@ let clear_hyps_in_evi evdref hyps concl ids =
    dependencies in variables are canonically associated to the most ancient
    variable in its family of aliased variables *)
 
-let rec expand_var env x = match kind_of_term x with
+let expand_var_once env x = match kind_of_term x with
   | Rel n ->
-      begin try match pi2 (lookup_rel n env) with
-      | Some t when isRel t -> expand_var env (lift n t)
-      | _ -> x
-      with Not_found -> x
+      begin match pi2 (lookup_rel n env) with
+      | Some t when isRel t or isVar t -> lift n t
+      | _ -> raise Not_found
       end
   | Var id ->
       begin match pi2 (lookup_named id env) with
-      | Some t when isVar t -> expand_var env t
-      | _ -> x
+      | Some t when isVar t -> t
+      | _ -> raise Not_found
       end
-  | _ -> x
+  | _ ->
+      raise Not_found
+
+let rec expand_var_at_least_once env x =
+  let t = expand_var_once env x in
+  try expand_var_at_least_once env t
+  with Not_found -> t
+
+let expand_var env x =
+  try expand_var_at_least_once env x with Not_found -> x
+  
+let expand_var_opt env x =
+  try Some (expand_var_at_least_once env x) with Not_found -> None
 
 let rec expand_vars_in_term env t = match kind_of_term t with
   | Rel _ | Var _ -> expand_var env t
   | _ -> map_constr_with_full_binders push_rel expand_vars_in_term env t
+
+let rec expansions_of_var env x =
+  try 
+    let t = expand_var_once env x in
+    t :: expansions_of_var env t
+  with Not_found ->
+    [x]
 
 (* [find_projectable_vars env sigma y subst] finds all vars of [subst]
  * that project on [y]. It is able to find solutions to the following
@@ -540,16 +564,16 @@ type evar_projection =
 | ProjectVar 
 | ProjectEvar of existential * evar_info * identifier * evar_projection
 
-let rec find_projectable_vars env sigma y subst =
+let rec find_projectable_vars with_evars env sigma y subst =
   let is_projectable (id,(idc,y')) =
     let y' = whd_evar sigma y' in
     if y = y' or expand_var env y = expand_var env y'
     then (idc,(y'=y,(id,ProjectVar)))
-    else if isEvar y' then
+    else if with_evars & isEvar y' then
       let (evk,argsv as t) = destEvar y' in
       let evi = Evd.find sigma evk in
       let subst = make_projectable_subst sigma evi argsv in
-      let l = find_projectable_vars env sigma y subst in
+      let l = find_projectable_vars with_evars env sigma y subst in
       match l with 
       | [id',p] -> (idc,(true,(id,ProjectEvar (t,evi,id',p))))
       | _ -> failwith ""
@@ -568,7 +592,7 @@ let filter_solution = function
   | [id,p] -> (mkVar id, p)
 
 let project_with_effects env sigma effects t subst =
-  let c, p = filter_solution (find_projectable_vars env sigma t subst) in
+  let c, p = filter_solution (find_projectable_vars false env sigma t subst) in
   effects := p :: !effects;
   c
 
@@ -690,8 +714,8 @@ let do_restrict_hyps_virtual evd evk filter =
          unsolvable.
        Computing whether y is erasable or not may be costly and the 
        interest for this early detection in practice is not obvious. We let
-       it for future work. Anyway, thanks to the use of filters, the whole
-       context remains consistent. *)
+       it for future work. In any case, thanks to the use of filters, the whole
+       (unrestricted) context remains consistent. *)
     let evi = Evd.find (evars_of evd) evk in
     let env = evar_unfiltered_env evi in
     let oldfilter = evar_filter evi in
@@ -822,7 +846,7 @@ let rec invert_definition env evd (evk,argsv as ev) rhs =
   let project_variable t =
     (* Evar/Var problem: unifiable iff variable projectable from ev subst *)
     try 
-      let sols = find_projectable_vars env (evars_of !evdref) t subst in
+      let sols = find_projectable_vars true env (evars_of !evdref) t subst in
       let c, p = filter_solution sols in
       let ty = lazy (Retyping.get_type_of env (evars_of !evdref) t) in
       let evd = do_projection_effects evar_define env ty !evdref p in
@@ -833,7 +857,9 @@ let rec invert_definition env evd (evk,argsv as ev) rhs =
       | NotUnique ->
 	  if not !progress then raise NotEnoughInformationToProgress;
 	  (* No unique projection but still restrict to where it is possible *)
-	  let filter = array_map_to_list (fun c -> isEvar c or c = t) argsv in
+	  let ts = expansions_of_var env t in
+	  let test c = isEvar c or List.mem c ts in
+	  let filter = array_map_to_list test argsv in
 	  let args' = filter_along (fun x -> x) filter argsv in
 	  let evd,evar = do_restrict_hyps_virtual !evdref evk filter in
 	  let evk',_ = destEvar evar in
@@ -891,6 +917,12 @@ let rec invert_definition env evd (evk,argsv as ev) rhs =
  * context "hyps" and not referring to itself.
  *)
 
+and occur_existential evm c =
+  let rec occrec c = match kind_of_term c with
+    | Evar (e, _) -> if not (is_defined evm e) then raise Occur
+    | _ -> iter_constr occrec c
+  in try occrec c; false with Occur -> true
+
 and evar_define env (evk,_ as ev) rhs evd =
   try
     let (evd',body) = invert_definition env evd ev rhs in
@@ -934,6 +966,13 @@ let has_undefined_evars evd t =
 let is_ground_term evd t =
   not (has_undefined_evars evd t)
 
+let is_ground_env evd env =
+  let is_ground_decl = function
+      (_,Some b,_) -> is_ground_term evd b
+    | _ -> true in
+  List.for_all is_ground_decl (rel_context env) &&
+  List.for_all is_ground_decl (named_context env)
+
 let head_evar = 
   let rec hrec c = match kind_of_term c with
     | Evar (evk,_)   -> evk
@@ -948,16 +987,50 @@ let head_evar =
    that we don't care whether args itself contains Rel's or even Rel's
    distinct from the ones in l *)
 
-let is_unification_pattern_evar env (_,args) l =
-  let l' = Array.to_list args @ l in
-  let l' = List.map (expand_var env) l' in
-  List.for_all (fun a -> isRel a or isVar a) l' & list_distinct l'
+let rec expand_and_check_vars env = function
+  | [] -> []
+  | a::l ->
+      if isRel a or isVar a then
+	let l = expand_and_check_vars env l in
+	match expand_var_opt env a with
+	| None -> a :: l
+	| Some a' when isRel a' or isVar a' -> list_add_set a' l
+	| _ -> raise Exit
+      else
+	raise Exit
 
-let is_unification_pattern env f l =
+let is_unification_pattern_evar env (_,args) l t =
+  List.for_all (fun x -> isRel x || isVar x) l (* common failure case *)
+  &&
+    let l' = Array.to_list args @ l in
+    let l'' = try Some (expand_and_check_vars env l') with Exit -> None in
+    match l'' with
+    | Some l ->
+	let deps =
+	  if occur_meta_or_existential t then
+	    (* Probably no restrictions on allowed vars in presence of evars *)
+	    l
+	  else
+	    (* Probably strong restrictions coming from t being evar-closed *)
+	    let fv_rels = free_rels t in
+	    let fv_ids = global_vars env t in
+	    List.filter (fun c ->
+	      match kind_of_term c with
+	      | Var id -> List.mem id fv_ids
+	      | Rel n -> Intset.mem n fv_rels
+	      | _ -> assert false) l in
+	list_distinct deps
+    | None -> false
+
+let is_unification_pattern (env,nb) f l t =
   match kind_of_term f with
-    | Meta _ -> array_for_all isRel l & array_distinct l
-    | Evar ev -> is_unification_pattern_evar env ev (Array.to_list l)
-    | _ -> false
+    | Meta _ ->
+	array_for_all (fun c -> isRel c && destRel c <= nb) l
+	&& array_distinct l
+    | Evar ev ->
+	is_unification_pattern_evar env ev (Array.to_list l) t
+    | _ ->
+	false
 
 (* From a unification problem "?X l1 = term1 l2" such that l1 is made
    of distinct rel's, build "\x1...xn.(term1 l2)" (patterns unification) *)
@@ -1045,16 +1118,47 @@ let solve_simple_eqn conv_algo env evd (pbty,(evk1,args1 as ev1),t2) =
 	    then solve_evar_evar evar_define env evd ev1 ev2
 	    else add_conv_pb (pbty,env,mkEvar ev1,t2) evd
       | _ ->
-	  evar_define env ev1 t2 evd in
+	  let evd = evar_define env ev1 t2 evd in
+	  let evm = evars_of evd in
+	  let evi = Evd.find evm evk1 in
+	    if occur_existential evm evi.evar_concl then
+	      let evenv = evar_env evi in
+	      let evc = nf_isevar evd evi.evar_concl in
+	      let body = match evi.evar_body with Evar_defined b -> b | Evar_empty -> assert false in
+	      let ty = nf_isevar evd (Retyping.get_type_of_with_meta evenv evm (metas_of evd) body) in
+		add_conv_pb (Reduction.CUMUL,evenv,ty,evc) evd
+	    else evd
+    in
     let (evd,pbs) = extract_changed_conv_pbs evd status_changed in
-    List.fold_left
-      (fun (evd,b as p) (pbty,env,t1,t2) ->
-	if b then conv_algo env evd pbty t1 t2 else p) (evd,true)
-      pbs
+      List.fold_left
+	(fun (evd,b as p) (pbty,env,t1,t2) ->
+	  if b then conv_algo env evd pbty t1 t2 else p) (evd,true)
+	pbs
   with e when precatchable_exception e ->
     (evd,false)
 
+let evars_of_term c = 
+  let rec evrec acc c =
+    match kind_of_term c with
+    | Evar (n, _) -> Intset.add n acc
+    | _ -> fold_constr evrec acc c
+  in 
+    evrec Intset.empty c
 
+let evars_of_named_context nc =
+  List.fold_right (fun (_, b, t) s ->
+    Option.fold_left (fun s t -> 
+      Intset.union s (evars_of_term t))
+      s b) nc Intset.empty
+
+let evars_of_evar_info evi =
+  Intset.union (evars_of_term evi.evar_concl)
+    (Intset.union 
+	(match evi.evar_body with 
+	| Evar_empty -> Intset.empty
+	| Evar_defined b -> evars_of_term b)
+	(evars_of_named_context (named_context_of_val evi.evar_hyps)))
+    
 (* [check_evars] fails if some unresolved evar remains *)
 (* it assumes that the defined existentials have already been substituted *)
 

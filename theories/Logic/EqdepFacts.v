@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: EqdepFacts.v 11095 2008-06-10 19:36:10Z herbelin $ i*)
+(*i $Id: EqdepFacts.v 11735 2009-01-02 17:22:31Z herbelin $ i*)
 
 (** This file defines dependent equality and shows its equivalence with
     equality on dependent pairs (inhabiting sigma-types). It derives
@@ -53,7 +53,7 @@ Section Dependent_Equality.
 
   Inductive eq_dep (p:U) (x:P p) : forall q:U, P q -> Prop :=
     eq_dep_intro : eq_dep p x p x.
-  Hint Constructors eq_dep: core v62.
+  Hint Constructors eq_dep: core.
 
   Lemma eq_dep_refl : forall (p:U) (x:P p), eq_dep p x p x.
   Proof eq_dep_intro.
@@ -63,7 +63,7 @@ Section Dependent_Equality.
   Proof.
     destruct 1; auto.
   Qed.
-  Hint Immediate eq_dep_sym: core v62.
+  Hint Immediate eq_dep_sym: core.
 
   Lemma eq_dep_trans :
     forall (p q r:U) (x:P p) (y:P q) (z:P r),
@@ -135,8 +135,8 @@ Qed.
 
 (** Exported hints *)
 
-Hint Resolve eq_dep_intro: core v62.
-Hint Immediate eq_dep_sym: core v62.
+Hint Resolve eq_dep_intro: core.
+Hint Immediate eq_dep_sym: core.
 
 (************************************************************************)
 (** * Eq_rect_eq <-> Eq_dep_eq <-> UIP <-> UIP_refl <-> K          *)

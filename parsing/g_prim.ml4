@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(*i $Id: g_prim.ml4 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: g_prim.ml4 11525 2008-10-30 22:18:54Z amahboub $ i*)
 
 open Pcoq
 open Names
@@ -45,7 +45,7 @@ GEXTEND Gram
     [ [ s = IDENT -> id_of_string s ] ]
   ;
   pattern_ident:
-    [ [ s = PATTERNIDENT -> id_of_string s ] ]
+    [ [ LEFTQMARK; id = ident -> id ] ]
   ;
   pattern_identref:
     [ [ id = pattern_ident -> (loc, id) ] ]

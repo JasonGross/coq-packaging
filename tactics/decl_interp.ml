@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: decl_interp.ml 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: decl_interp.ml 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 open Util
 open Names
@@ -94,8 +94,10 @@ let rec add_vars_of_simple_pattern globs = function
 	(UserError ("simple_pattern",str "\"(_ | _)\" is not allowed here"))
   | CPatDelimiters (_,_,p) ->
       add_vars_of_simple_pattern globs p
-  | CPatCstr (_,_,pl) | CPatNotation(_,_,pl) ->
+  | CPatCstr (_,_,pl) ->
       List.fold_left add_vars_of_simple_pattern globs pl
+  | CPatNotation(_,_,(pl,pll)) ->
+      List.fold_left add_vars_of_simple_pattern globs (List.flatten (pl::pll))
   | CPatAtom (_,Some (Libnames.Ident (_,id))) -> add_var id globs
   |  _  -> globs 
 
@@ -342,7 +344,7 @@ let interp_cases info sigma env params (pat:cases_pattern_expr) hyps =
 	(fun (loc,(id,_)) -> 
 	   RVar (loc,id)) params in 
     let dum_args= 
-      list_tabulate (fun _ -> RHole (dummy_loc,Evd.QuestionMark false))
+      list_tabulate (fun _ -> RHole (dummy_loc,Evd.QuestionMark (Evd.Define false)))
 	oib.Declarations.mind_nrealargs in
       raw_app(dummy_loc,rind,rparams@rparams_rec@dum_args) in
   let pat_vars,aliases,patt = interp_pattern env pat in

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modops.ml 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: modops.ml 11514 2008-10-28 13:39:02Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -113,16 +113,18 @@ let module_body_of_type mtb =
     mod_retroknowledge = []}
 
 let module_type_of_module mp mb =
-  {typ_expr = 
+  let mp1,expr = 
       (match mb.mod_type with
-	| Some expr -> expr
+	| Some expr -> mp,expr
 	| None -> (match mb.mod_expr with
-		     | Some expr -> expr
+		     | Some (SEBident mp') ->(Some mp'),(SEBident mp')
+		     | Some expr -> mp,expr
 		     | None -> 
-			 anomaly "Modops: empty expr and type"));
-   typ_alias = mb.mod_alias;
-   typ_strength = mp
-  }
+			 anomaly "Modops: empty expr and type")) in
+    {typ_expr = expr;
+      typ_alias = mb.mod_alias;
+      typ_strength = mp1
+    }
 
 let rec check_modpath_equiv env mp1 mp2 = 
   if mp1=mp2 then () else
@@ -132,13 +134,14 @@ let rec check_modpath_equiv env mp1 mp2 =
     else 
       error_not_equal mp1 mp2
 	
-let subst_with_body sub = function
-  | With_module_body(id,mp,cst) ->
-      With_module_body(id,subst_mp sub mp,cst)
+let rec subst_with_body sub = function
+  | With_module_body(id,mp,typ_opt,cst) ->
+      With_module_body(id,subst_mp sub mp,Option.smartmap 
+			 (subst_struct_expr sub) typ_opt,cst)
   | With_definition_body(id,cb) ->
       With_definition_body( id,subst_const_body sub cb)
 
-let rec subst_modtype sub mtb =
+and subst_modtype sub mtb =
   let typ_expr' = subst_struct_expr sub mtb.typ_expr in
     if typ_expr'==mtb.typ_expr then
       mtb
@@ -156,8 +159,9 @@ and subst_structure sub sign =
 	SFBmodule (subst_module sub mb)
     | SFBmodtype mtb -> 
 	SFBmodtype (subst_modtype sub mtb)
-    | SFBalias (mp,cst) ->
-	SFBalias (subst_mp sub mp,cst)
+    | SFBalias (mp,typ_opt,cst) ->
+	SFBalias (subst_mp sub mp,Option.smartmap 
+		    (subst_struct_expr sub) typ_opt,cst)
   in
     List.map (fun (l,b) -> (l,subst_body b)) sign
 
@@ -277,7 +281,7 @@ let rec eval_struct env = function
   | SEBwith (mtb,(With_definition_body _ as wdb)) ->
       let mtb',_ = merge_with env mtb wdb empty_subst in
 	mtb'
-  | SEBwith (mtb, (With_module_body (_,mp,_) as wdb)) ->
+  | SEBwith (mtb, (With_module_body (_,mp,_,_) as wdb)) ->
       let alias_in_mp =
 	(lookup_modtype mp env).typ_alias in
       let alias_in_mp = match eval_struct env (SEBident mp) with
@@ -303,8 +307,8 @@ and merge_with env mtb with_decl alias=
     | _ -> error_signature_expected mtb
   in
   let id,idl = match with_decl with 
-    | With_definition_body (id::idl,_) | With_module_body (id::idl,_,_) -> id,idl
-    | With_definition_body ([],_) | With_module_body ([],_,_) -> assert false
+    | With_definition_body (id::idl,_) | With_module_body (id::idl,_,_,_) -> id,idl
+    | With_definition_body ([],_) | With_module_body ([],_,_,_) -> assert false
   in
   let l = label_of_id id in
     try
@@ -314,47 +318,54 @@ and merge_with env mtb with_decl alias=
 	| [] -> MPself msid
 	| i::r -> MPdot(mp_rec r,label_of_id i)
       in 
+      let env' = add_signature (MPself msid) before env in
       let new_spec,subst = match with_decl with
         | With_definition_body ([],_)
-        | With_module_body ([],_,_) -> assert false
+        | With_module_body ([],_,_,_) -> assert false
 	| With_definition_body ([id],c) -> 
 	    SFBconst c,None
-	| With_module_body ([id], mp,cst) ->
-	    let mp' = scrape_alias mp env in
+	| With_module_body ([id], mp,typ_opt,cst) ->
+	    let mp' = scrape_alias mp env' in
 	    let new_alias = update_subst alias (map_mp (mp_rec [id]) mp') in
-	      SFBalias (mp,Some cst),
+	      SFBalias (mp,typ_opt,Some cst),
 	    Some(join (map_mp (mp_rec [id]) mp') new_alias)
 	| With_definition_body (_::_,_) 
-        | With_module_body (_::_,_,_) -> 
-	    let old = match spec with
-		SFBmodule msb -> msb
+        | With_module_body (_::_,_,_,_) -> 
+	    let old,aliasold = match spec with
+		SFBmodule msb -> Some msb, None
+	      | SFBalias (mpold,typ_opt,cst) ->None, Some (mpold,typ_opt,cst)
 	      | _ -> error_not_a_module (string_of_label l)
 	    in
-            let new_with_decl,subst1 = 
-	      match with_decl with
-                  With_definition_body (_,c) -> With_definition_body (idl,c),None
-		| With_module_body (idc,mp,cst) -> 
-		    let mp' = scrape_alias mp env in
-		    With_module_body (idl,mp,cst),
-		      Some(map_mp (mp_rec (List.rev idc)) mp') 
-	    in
-	    let subst = match subst1 with
-	      | None -> None
-	      | Some s -> Some (join s (update_subst alias s)) in
-            let modtype,subst_msb = 
-              merge_with env (type_of_mb env old) new_with_decl alias in
-            let msb =
-	      { mod_expr = None;
-		mod_type = Some modtype; 
-		mod_constraints = old.mod_constraints;
-		mod_alias = begin 
-		  match subst_msb with
-		    |None -> empty_subst
-		    |Some s -> s
-		end;
-		mod_retroknowledge = old.mod_retroknowledge}
-	    in
-	      (SFBmodule msb),subst
+	      if aliasold = None then
+		let old = Option.get old in
+		let new_with_decl,subst1 = 
+		  match with_decl with
+                      With_definition_body (_,c) -> With_definition_body (idl,c),None
+		    | With_module_body (idc,mp,typ_opt,cst) -> 
+			let mp' = scrape_alias mp env' in
+			  With_module_body (idl,mp,typ_opt,cst),
+			Some(map_mp (mp_rec (List.rev idc)) mp') 
+		in
+		let subst = match subst1 with
+		  | None -> None
+		  | Some s -> Some (join s (update_subst alias s)) in
+		let modtype,subst_msb = 
+		  merge_with env' (type_of_mb env' old) new_with_decl alias in
+		let msb =
+		  { mod_expr = None;
+		    mod_type = Some modtype; 
+		    mod_constraints = old.mod_constraints;
+		    mod_alias = begin 
+		      match subst_msb with
+			|None -> empty_subst
+			|Some s -> s
+		    end;
+		    mod_retroknowledge = old.mod_retroknowledge}
+		in
+		  (SFBmodule msb),subst
+	      else 
+		let mpold,typ_opt,cst =  Option.get aliasold in 
+		  SFBalias (mpold,typ_opt,cst),None
       in
 	SEBstruct(msid,  before@(l,new_spec)::
 		    (Option.fold_right subst_structure subst after)),subst
@@ -371,7 +382,7 @@ and add_signature mp sign env =
 	| SFBmodule mb -> 
 	    add_module (MPdot (mp,l)) mb env 
 	      (* adds components as well *)
-	| SFBalias (mp1,cst) -> 
+	| SFBalias (mp1,_,cst) -> 
 	    Environ.register_alias (MPdot(mp,l)) mp1 env
 	| SFBmodtype mtb -> Environ.add_modtype (MPdot(mp,l)) 
 	    mtb env
@@ -402,7 +413,7 @@ and  constants_of_specification env mp sign =
        let new_env =  add_module (MPdot (mp,l)) mb env in 
        new_env,(constants_of_modtype env (MPdot (mp,l))
 		   (type_of_mb env mb)) @ res
-   | SFBalias (mp1,cst) ->
+   | SFBalias (mp1,typ_opt,cst) ->
        let new_env =  register_alias (MPdot (mp,l)) mp1 env in 
        new_env,(constants_of_modtype env (MPdot (mp,l))
 		   (eval_struct env (SEBident mp1))) @ res
@@ -494,7 +505,7 @@ and strengthen_sig env msid sign mp = match sign with
 	  (MPdot (MPself msid,l)) mb env in
         let rest' = strengthen_sig env' msid rest mp in
 	item':: rest'
-  | ((l,SFBalias (mp1,cst)) as item) :: rest ->
+  | ((l,SFBalias (mp1,_,cst)) as item) :: rest ->
       let env' = register_alias (MPdot(MPself msid,l)) mp1 env in
       let rest' = strengthen_sig env' msid rest mp in
 	item::rest'

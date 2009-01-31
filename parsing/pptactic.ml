@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pptactic.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: pptactic.ml 11784 2009-01-14 11:36:32Z herbelin $ *)
 
 open Pp
 open Names
@@ -21,6 +21,7 @@ open Pattern
 open Ppextend
 open Ppconstr
 open Printer
+open Termops
 
 let pr_global x = Nametab.pr_global_env Idset.empty x
 
@@ -79,7 +80,7 @@ let pr_and_short_name pr (c,_) = pr c
 
 let pr_or_by_notation f = function
   | AN v -> f v
-  | ByNotation (_,s) -> str s
+  | ByNotation (_,s,sc) -> qs s ++ pr_opt (fun sc -> str "%" ++ str sc) sc
 
 let pr_located pr (loc,x) = pr x
 
@@ -122,10 +123,6 @@ let pr_with_constr prc = function
   | None -> mt ()
   | Some c -> spc () ++ hov 1 (str "with" ++ spc () ++ prc c)
 
-let pr_with_names = function
-  | None -> mt ()
-  | Some ipat -> spc () ++ hov 1 (str "as" ++ spc () ++ pr_intro_pattern ipat)
-
 let rec pr_message_token prid = function
   | MsgString s -> qs s
   | MsgInt n -> int n
@@ -140,6 +137,8 @@ let out_bindings = function
   | ExplicitBindings l -> ExplicitBindings (List.map (fun (loc,id,c) -> (loc,id,snd c)) l)
   | NoBindings -> NoBindings
 
+let if_pattern_ident b pr c = (if b then str "?" else mt()) ++ pr c
+
 let rec pr_raw_generic prc prlc prtac prref (x:Genarg.rlevel Genarg.generic_argument) =
   match Genarg.genarg_tag x with
   | BoolArgType -> str (if out_gen rawwit_bool x then "true" else "false")
@@ -148,7 +147,7 @@ let rec pr_raw_generic prc prlc prtac prref (x:Genarg.rlevel Genarg.generic_argu
   | StringArgType -> str "\"" ++ str (out_gen rawwit_string x) ++ str "\""
   | PreIdentArgType -> str (out_gen rawwit_pre_ident x)
   | IntroPatternArgType -> pr_intro_pattern (out_gen rawwit_intro_pattern x)
-  | IdentArgType -> pr_id (out_gen rawwit_ident x)
+  | IdentArgType b -> if_pattern_ident b pr_id (out_gen rawwit_ident x)
   | VarArgType -> pr_located pr_id (out_gen rawwit_var x)
   | RefArgType -> prref (out_gen rawwit_ref x)
   | SortArgType -> pr_rawsort (out_gen rawwit_sort x)
@@ -179,7 +178,7 @@ let rec pr_raw_generic prc prlc prtac prref (x:Genarg.rlevel Genarg.generic_argu
 	  x)
   | ExtraArgType s -> 
       try pi1 (Stringmap.find s !genarg_pprule) prc prlc prtac x
-      with Not_found -> str " [no printer for " ++ str s ++ str "] "
+      with Not_found -> str "[no printer for " ++ str s ++ str "]"
 
 
 let rec pr_glob_generic prc prlc prtac x =
@@ -190,7 +189,7 @@ let rec pr_glob_generic prc prlc prtac x =
   | StringArgType -> str "\"" ++ str (out_gen globwit_string x) ++ str "\""
   | PreIdentArgType -> str (out_gen globwit_pre_ident x)
   | IntroPatternArgType -> pr_intro_pattern (out_gen globwit_intro_pattern x)
-  | IdentArgType -> pr_id (out_gen globwit_ident x)
+  | IdentArgType b -> if_pattern_ident b pr_id (out_gen globwit_ident x)
   | VarArgType -> pr_located pr_id (out_gen globwit_var x)
   | RefArgType -> pr_or_var (pr_located pr_global) (out_gen globwit_ref x)
   | SortArgType -> pr_rawsort (out_gen globwit_sort x)
@@ -224,7 +223,7 @@ let rec pr_glob_generic prc prlc prtac x =
 	  x)
   | ExtraArgType s -> 
       try pi2 (Stringmap.find s !genarg_pprule) prc prlc prtac x
-      with Not_found -> str "[no printer for " ++ str s ++ str "] "
+      with Not_found -> str "[no printer for " ++ str s ++ str "]"
 
 open Closure
 
@@ -236,7 +235,7 @@ let rec pr_generic prc prlc prtac x =
   | StringArgType -> str "\"" ++ str (out_gen wit_string x) ++ str "\""
   | PreIdentArgType -> str (out_gen wit_pre_ident x)
   | IntroPatternArgType -> pr_intro_pattern (out_gen wit_intro_pattern x)
-  | IdentArgType -> pr_id (out_gen wit_ident x)
+  | IdentArgType b -> if_pattern_ident b pr_id (out_gen wit_ident x)
   | VarArgType -> pr_id (out_gen wit_var x)
   | RefArgType -> pr_global (out_gen wit_ref x)
   | SortArgType -> pr_sort (out_gen wit_sort x)
@@ -326,9 +325,6 @@ let pr_evaluable_reference_env env = function
   | EvalConstRef sp -> 
       Nametab.pr_global_env (Termops.vars_of_env env) (Libnames.ConstRef sp)
 
-let pr_inductive env ind =
-  Nametab.pr_global_env (Termops.vars_of_env env) (Libnames.IndRef ind)
-
 let pr_quantified_hypothesis = function
   | AnonHyp n -> int n
   | NamedHyp id -> pr_id id 
@@ -376,9 +372,9 @@ let pr_with_inversion_names = function
   | None -> mt ()
   | Some ipat -> pr_as_intro_pattern ipat
 
-let pr_with_names = function
-  | _,IntroAnonymous -> mt ()
-  | ipat -> pr_as_intro_pattern ipat
+let pr_as_ipat = function
+  | None -> mt ()
+  | Some ipat -> pr_as_intro_pattern ipat
 
 let pr_as_name = function
   | Anonymous -> mt ()
@@ -397,7 +393,7 @@ let pr_assertion _prlc prc ipat c = match ipat with
       spc() ++ surround (pr_intro_pattern ipat ++ str " :" ++ spc() ++ prlc c)
 *)
   | ipat ->
-      spc() ++ prc c ++ pr_with_names ipat
+      spc() ++ prc c ++ pr_as_ipat ipat
 
 let pr_assumption prlc prc ipat c = match ipat with
 (* Use this "optimisation" or use only the general case ?
@@ -405,7 +401,7 @@ let pr_assumption prlc prc ipat c = match ipat with
       spc() ++ surround (pr_intro_pattern ipat ++ str " :" ++ spc() ++ prlc c)
 *)
   | ipat ->
-      spc() ++ prc c ++ pr_with_names ipat
+      spc() ++ prc c ++ pr_as_ipat ipat
 
 let pr_by_tactic prt = function
   | TacId [] -> mt ()
@@ -425,6 +421,10 @@ let pr_in pp = spc () ++ hov 0 (str "in" ++ pp)
 let pr_simple_clause pr_id = function
   | [] -> mt ()
   | l -> pr_in (spc () ++ prlist_with_sep spc pr_id l)
+
+let pr_in_hyp_as pr_id = function
+  | None -> mt ()
+  | Some (id,ipat) -> pr_simple_clause pr_id [id] ++ pr_as_ipat ipat
 
 let pr_clauses pr_id = function
   | { onhyps=None; concl_occs=occs } ->
@@ -468,12 +468,16 @@ let pr_lazy lz = if lz then str "lazy" else mt ()
 
 let pr_match_pattern pr_pat = function
   | Term a -> pr_pat a
-  | Subterm (None,a) -> str "context [" ++ pr_pat a ++ str "]"
-  | Subterm (Some id,a) ->
-      str "context " ++ pr_id id ++ str "[" ++ pr_pat a ++ str "]"
+  | Subterm (b,None,a) -> (if b then str"appcontext [" else str "context [") ++ pr_pat a ++ str "]"
+  | Subterm (b,Some id,a) ->
+      (if b then str"appcontext " else str "context ") ++ pr_id id ++ str "[" ++ pr_pat a ++ str "]"
 
-let pr_match_hyps pr_pat (Hyp (nal,mp)) =
-  pr_lname nal ++ str ":" ++ pr_match_pattern pr_pat mp
+let pr_match_hyps pr_pat = function
+  | Hyp (nal,mp) ->
+      pr_lname nal ++ str ":" ++ pr_match_pattern pr_pat mp
+  | Def (nal,mv,mp) ->
+      pr_lname nal ++ str ":=" ++ pr_match_pattern pr_pat mv
+      ++ str ":" ++ pr_match_pattern pr_pat mp
 
 let pr_match_rule m pr pr_pat = function
   | Pat ([],mp,t) when m ->
@@ -695,10 +699,11 @@ and pr_atom1 = function
   | TacExact c -> hov 1 (str "exact" ++ pr_constrarg c)
   | TacExactNoCheck c -> hov 1 (str "exact_no_check" ++ pr_constrarg c)
   | TacVmCastNoCheck c -> hov 1 (str "vm_cast_no_check" ++ pr_constrarg c)
-  | TacApply (a,ev,cb) ->
+  | TacApply (a,ev,cb,inhyp) ->
       hov 1 ((if a then mt() else str "simple ") ++
              str (with_evars ev "apply") ++ spc () ++ 
-             prlist_with_sep pr_coma pr_with_bindings cb)
+             prlist_with_sep pr_coma pr_with_bindings cb ++
+             pr_in_hyp_as pr_ident inhyp)
   | TacElim (ev,cb,cbo) ->
       hov 1 (str (with_evars ev "elim") ++ pr_arg pr_with_bindings cb ++ 
         pr_opt pr_eliminator cbo)
@@ -1019,7 +1024,7 @@ let rec raw_printers =
     (pr_raw_tactic_level, 
      drop_env pr_constr_expr,
      drop_env pr_lconstr_expr,
-     pr_lpattern_expr,
+     pr_lconstr_pattern_expr,
      drop_env (pr_or_by_notation pr_reference),
      drop_env (pr_or_by_notation pr_reference),
      pr_reference,

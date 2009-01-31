@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: himsg.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: himsg.ml 11784 2009-01-14 11:36:32Z herbelin $ *)
 
 open Pp
 open Util
@@ -312,7 +312,13 @@ let explain_occur_check env ev rhs =
   str "Cannot define " ++ str id ++ str " with term" ++ brk(1,1) ++
   pt ++ spc () ++ str "that would depend on itself."
 
-let explain_hole_kind env = function
+let pr_ne_context_of header footer env =
+  if Environ.rel_context env = empty_rel_context &
+    Environ.named_context env = empty_named_context
+  then footer
+  else pr_ne_context_of header env
+
+let explain_hole_kind env evi = function
   | QuestionMark _ -> str "this placeholder"
   | CasesType ->
       str "the type of this pattern-matching problem"
@@ -326,7 +332,12 @@ let explain_hole_kind env = function
       pr_id id ++ spc () ++ str "of" ++
       spc () ++ Nametab.pr_global_env Idset.empty c
   | InternalHole ->
-      str "an internal placeholder"
+      str "an internal placeholder" ++
+	Option.cata (fun evi ->
+	  let env = Evd.evar_env evi in
+	    str " of type "  ++ pr_lconstr_env env evi.evar_concl ++
+	      pr_ne_context_of (str " in environment:"++ fnl ()) (mt ()) env)
+	(mt ()) evi
   | TomatchTypeParameter (tyi,n) ->
       str "the " ++ nth n ++
       str " argument of the inductive type (" ++ pr_inductive env tyi ++
@@ -340,7 +351,7 @@ let explain_not_clean env ev t k =
   let env = make_all_name_different env in
   let id = Evd.string_of_existential ev in
   let var = pr_lconstr_env env t in
-  str "Tried to instantiate " ++ explain_hole_kind env k ++
+  str "Tried to instantiate " ++ explain_hole_kind env None k ++
   str " (" ++ str id ++ str ")" ++ spc () ++
   str "with a term using variable " ++ var ++ spc () ++
   str "which is not in its scope."
@@ -350,25 +361,20 @@ let explain_unsolvability = function
   | Some (SeveralInstancesFound n) ->
       strbrk " (several distinct possible instances found)"
 
-let pr_ne_context_of header footer env =
-  if Environ.rel_context env = empty_rel_context &
-    Environ.named_context env = empty_named_context  then footer
-  else pr_ne_context_of header env
-
 let explain_typeclass_resolution env evi k =
   match k with
-      InternalHole | ImplicitArg _ ->
-	(match Typeclasses.class_of_constr evi.evar_concl with
-	  | Some c -> 
-	      let env = Evd.evar_env evi in
-		fnl () ++ str "Could not find an instance for " ++ 
-		  pr_lconstr_env env evi.evar_concl ++ 
-		  pr_ne_context_of (str " in environment:"++ fnl ()) (str ".") env
-	  | None -> mt())
-    | _ -> mt()
-
+  | GoalEvar | InternalHole | ImplicitArg _ ->
+      (match Typeclasses.class_of_constr evi.evar_concl with
+      | Some c -> 
+	  let env = Evd.evar_env evi in
+	    fnl () ++ str "Could not find an instance for " ++ 
+	      pr_lconstr_env env evi.evar_concl ++ 
+	      pr_ne_context_of (str " in environment:"++ fnl ()) (str ".") env
+      | None -> mt())
+  | _ -> mt()
+      
 let explain_unsolvable_implicit env evi k explain =
-  str "Cannot infer " ++ explain_hole_kind env k ++ 
+  str "Cannot infer " ++ explain_hole_kind env (Some evi) k ++ 
   explain_unsolvability explain ++ str "." ++ 
   explain_typeclass_resolution env evi k
 
@@ -500,7 +506,7 @@ let explain_no_instance env (_,id) l =
   str "applied to arguments" ++ spc () ++ 
     prlist_with_sep pr_spc (pr_lconstr_env env) l
 
-let pr_constraints env evm =
+let pr_constraints printenv env evm =
   let l = Evd.to_list evm in
   let (ev, evi) = List.hd l in
     if List.for_all (fun (ev', evi') ->
@@ -508,7 +514,7 @@ let pr_constraints env evm =
     then
       let pe = pr_ne_context_of (str "In environment:") (mt ()) 
 	(reset_with_named_context evi.evar_hyps env) in
-	pe ++ fnl () ++ 
+	(if printenv then pe ++ fnl () else mt ()) ++
 	  prlist_with_sep (fun () -> fnl ()) 
 	  (fun (ev, evi) -> str(string_of_existential ev)++ str " == " ++ pr_constr evi.evar_concl) l
     else
@@ -518,13 +524,13 @@ let explain_unsatisfiable_constraints env evd constr =
   let evm = Evd.evars_of evd in
   match constr with
   | None ->
-      str"Unable to satisfy the following typeclass constraints:" ++ fnl() ++
-	pr_constraints env evm
+      str"Unable to satisfy the following constraints:" ++ fnl() ++
+	pr_constraints true env evm
   | Some (evi, k) -> 
       explain_unsolvable_implicit env evi k None ++ fnl () ++
 	if List.length (Evd.to_list evm) > 1 then
-	  str"With the following meta variables:" ++ 
-	    fnl() ++ Evd.pr_evar_map evm 
+	  str"With the following constraints:" ++ fnl() ++ 
+	    pr_constraints false env evm
 	else mt ()
 	
 let explain_mismatched_contexts env c i j = 
@@ -572,6 +578,10 @@ let explain_non_linear_proof c =
   str "Cannot refine with term" ++ brk(1,1) ++ pr_lconstr c ++
   spc () ++ str "because a metavariable has several occurrences."
 
+let explain_meta_in_type c =
+  str "In refiner, a meta appears in the type " ++ brk(1,1) ++ pr_lconstr c ++ 
+  str " of another meta"
+    
 let explain_refiner_error = function
   | BadType (arg,ty,conclty) -> explain_refiner_bad_type arg ty conclty
   | UnresolvedBindings t -> explain_refiner_unresolved_bindings t
@@ -580,6 +590,7 @@ let explain_refiner_error = function
   | IntroNeedsProduct -> explain_intro_needs_product ()
   | DoesNotOccurIn (c,hyp) -> explain_does_not_occur_in c hyp
   | NonLinearProof c -> explain_non_linear_proof c
+  | MetaInType c -> explain_meta_in_type c
 
 (* Inductive errors *)
 
@@ -618,8 +629,8 @@ let error_bad_ind_parameters env c n v1 v2  =
   let pc = pr_lconstr_env_at_top env c in
   let pv1 = pr_lconstr_env env v1 in
   let pv2 = pr_lconstr_env env v2 in
-  str "The " ++ nth n ++ str " argument of " ++ pv2 ++ brk(1,1) ++
-  str "must be " ++ pv1 ++ str " in" ++ brk(1,1) ++ pc ++ str "."
+  str "Last occurrence of " ++ pv2 ++ str " must have " ++ pv1 ++
+  str " as " ++ nth n ++ str " argument in " ++ brk(1,1) ++ pc ++ str "."
 
 let error_same_names_types id =
   str "The name" ++ spc () ++ pr_id id ++ spc () ++
@@ -640,17 +651,16 @@ let error_not_an_arity id =
 let error_bad_entry () =
   str "Bad inductive definition."
 
-let error_not_allowed_case_analysis dep kind i =
-  str (if dep then "Dependent" else "Non dependent") ++
-  str " case analysis on sort: " ++ pr_sort kind ++ fnl () ++
-  str "is not allowed for inductive definition: " ++
-  pr_inductive (Global.env()) i ++ str "."
+let error_large_non_prop_inductive_not_in_type () =
+  str "Large non-propositional inductive types must be in Type."
 
-let error_bad_induction dep indid kind =
-  str (if dep then "Dependent" else "Non dependent") ++
-  str " induction for type " ++ pr_id indid ++
-  str " and sort " ++ pr_sort kind ++ spc () ++
-  str "is not allowed."
+(* Recursion schemes errors *)
+
+let error_not_allowed_case_analysis isrec kind i =
+  str (if isrec then "Induction" else "Case analysis") ++
+  strbrk " on sort " ++ pr_sort kind ++ 
+  strbrk " is not allowed for inductive definition " ++
+  pr_inductive (Global.env()) i ++ str "."
 
 let error_not_mutual_in_scheme ind ind' =
   if ind = ind' then
@@ -674,13 +684,13 @@ let explain_inductive_error = function
   | SameNamesOverlap idl -> error_same_names_overlap idl
   | NotAnArity id -> error_not_an_arity id
   | BadEntry -> error_bad_entry ()
+  | LargeNonPropInductiveNotInType -> error_large_non_prop_inductive_not_in_type ()
 
 (* Recursion schemes errors *)
 
 let explain_recursion_scheme_error = function
-  | NotAllowedCaseAnalysis (dep,k,i) ->
-      error_not_allowed_case_analysis dep k i
-  | BadInduction (dep,indid,kind) -> error_bad_induction dep indid kind
+  | NotAllowedCaseAnalysis (isrec,k,i) ->
+      error_not_allowed_case_analysis isrec k i
   | NotMutualInScheme (ind,ind')-> error_not_mutual_in_scheme ind ind'
 
 (* Pattern-matching errors *)

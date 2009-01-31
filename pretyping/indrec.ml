@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: indrec.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: indrec.ml 11735 2009-01-02 17:22:31Z herbelin $ *)
 
 open Pp
 open Util
@@ -29,8 +29,7 @@ open Sign
 
 (* Errors related to recursors building *)
 type recursion_scheme_error =
-  | NotAllowedCaseAnalysis of bool * sorts * inductive
-  | BadInduction of bool * identifier * sorts
+  | NotAllowedCaseAnalysis of (*isrec:*) bool * sorts * inductive
   | NotMutualInScheme of inductive * inductive
 
 exception RecursionSchemeError of recursion_scheme_error
@@ -57,8 +56,7 @@ let mis_make_case_com depopt env sigma ind (mib,mip as specif) kind =
   if not (List.mem kind (elim_sorts specif)) then
     raise
       (RecursionSchemeError
-	 (NotAllowedCaseAnalysis
-	    (dep,(new_sort_in_family kind),ind)));
+	 (NotAllowedCaseAnalysis (false,new_sort_in_family kind,ind)));
 
   let ndepar = mip.mind_nrealargs + 1 in
 
@@ -502,10 +500,10 @@ let instantiate_type_indrec_scheme sort npars term =
 let check_arities listdepkind = 
   let _ = List.fold_left
     (fun ln ((_,ni as mind),mibi,mipi,dep,kind) -> 
-       let id = mipi.mind_typename  in
        let kelim = elim_sorts (mibi,mipi) in
        if not (List.exists ((=) kind) kelim) then raise
-	 (RecursionSchemeError (BadInduction (dep,id,new_sort_in_family kind)))
+	 (RecursionSchemeError
+	   (NotAllowedCaseAnalysis (true,new_sort_in_family kind,mind)))
        else if List.mem ni ln then raise
 	 (RecursionSchemeError (NotMutualInScheme (mind,mind)))
        else ni::ln)
@@ -593,7 +591,8 @@ let lookup_eliminator ind_sp s =
     errorlabstrm "default_elim"
       (strbrk "Cannot find the elimination combinator " ++
        pr_id id ++ strbrk ", the elimination of the inductive definition " ++
-       pr_id id ++ strbrk " on sort " ++ pr_sort_family s ++
+       pr_global_env Idset.empty (IndRef ind_sp) ++ 
+       strbrk " on sort " ++ pr_sort_family s ++
        strbrk " is probably not allowed.")
 
 

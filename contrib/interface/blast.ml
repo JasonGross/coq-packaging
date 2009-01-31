@@ -148,6 +148,8 @@ let pp_string x =
 (* A tactic similar to Auto, but using EApply, Assumption and e_give_exact *)
 (***************************************************************************)
 
+let priority l = List.map snd (List.filter (fun (pr,_) -> pr = 0) l)
+
 let unify_e_resolve  (c,clenv) gls = 
   let clenv' = connect_clenv gls clenv in
   let _ = clenv_unique_resolver false clenv' gls in
@@ -190,12 +192,11 @@ and e_my_find_search db_list local_db hdc concl =
                tclTHEN (unify_e_resolve (term,cl)) 
 		 (e_trivial_fail_db db_list local_db)
 	   | Unfold_nth c -> unfold_in_concl [all_occurrences,c]
-	   | Extern tacast -> Auto.conclPattern concl 
-	       (Option.get p) tacast
+	   | Extern tacast -> Auto.conclPattern concl p tacast
        in 
-       (free_try tac,fmt_autotactic t))
+       (free_try tac,pr_autotactic t))
        (*i
-	 fun gls -> pPNL (fmt_autotactic t); Format.print_flush (); 
+	 fun gls -> pPNL (pr_autotactic t); Format.print_flush (); 
                      try tac gls
 		     with e when Logic.catchable_exception(e) -> 
                             (Format.print_string "Fail\n"; 
@@ -207,14 +208,14 @@ and e_my_find_search db_list local_db hdc concl =
     
 and e_trivial_resolve db_list local_db gl = 
   try 
-    Auto.priority 
+    priority 
       (e_my_find_search db_list local_db 
-	 (List.hd (head_constr_bound gl [])) gl)
+	 (fst (head_constr_bound gl)) gl)
   with Bound | Not_found -> []
 
 let e_possible_resolve db_list local_db gl =
   try List.map snd (e_my_find_search db_list local_db 
-		      (List.hd (head_constr_bound gl [])) gl)
+		      (fst (head_constr_bound gl)) gl)
   with Bound | Not_found -> []
 
 let assumption_tac_list id = apply_tac_list (e_give_exact_constr (mkVar id))
@@ -406,13 +407,12 @@ and my_find_search db_list local_db hdc concl =
 		(unify_resolve st (term,cl)) 
 		(trivial_fail_db db_list local_db)
 	  | Unfold_nth c -> unfold_in_concl [all_occurrences,c]
-	  | Extern tacast -> 
-	      conclPattern concl (Option.get p) tacast))
+	  | Extern tacast -> conclPattern concl p tacast))
     tacl
 
 and trivial_resolve db_list local_db cl = 
   try 
-    let hdconstr = List.hd (head_constr_bound cl []) in
+    let hdconstr = fst (head_constr_bound cl) in
     priority 
       (my_find_search db_list local_db (head_of_constr_reference hdconstr) cl)
   with Bound | Not_found -> 
@@ -424,7 +424,7 @@ and trivial_resolve db_list local_db cl =
 
 let possible_resolve db_list local_db cl =
   try 
-    let hdconstr = List.hd (head_constr_bound cl []) in
+    let hdconstr = fst (head_constr_bound cl) in
     List.map snd 
       (my_find_search db_list local_db (head_of_constr_reference hdconstr) cl)
   with Bound | Not_found -> 
@@ -432,8 +432,8 @@ let possible_resolve db_list local_db cl =
 
 let decomp_unary_term c gls = 
   let typc = pf_type_of gls c in 
-  let hd = List.hd (head_constr typc) in 
-  if Hipattern.is_conjunction hd then 
+  let t = head_constr typc in 
+  if Hipattern.is_conjunction (applist t) then 
     simplest_case c gls 
   else 
     errorlabstrm "Auto.decomp_unary_term" (str "not a unary type")
@@ -473,7 +473,7 @@ let rec search_gen decomp n db_list local_db extra_sign goal =
 	 let hintl = 
 	   try 
 	     [make_apply_entry (pf_env g') (project g')
-		(true,false) 
+		(true,true,false) 
 		None
 		(mkVar hid,htyp)]
 	   with Failure _ -> [] 

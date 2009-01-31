@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: clenvtac.ml 11166 2008-06-22 13:23:35Z herbelin $ *)
+(* $Id: clenvtac.ml 11709 2008-12-20 11:42:15Z msozeau $ *)
 
 open Pp
 open Util
@@ -47,16 +47,17 @@ let clenv_cast_meta clenv =
 	    
   and crec_hd u =
     match kind_of_term (strip_outer_cast u) with
-      | Meta mv ->
-	  (try 
+    | Meta mv ->
+	(try 
             let b = Typing.meta_type clenv.evd mv in
-	    if occur_meta b then u
-            else mkCast (mkMeta mv, DEFAULTcast, b)
+	      if occur_meta b then
+		raise (RefinerError (MetaInType b));
+	      mkCast (mkMeta mv, DEFAULTcast, b)
 	  with Not_found -> u)
-      | App(f,args) -> mkApp (crec_hd f, Array.map crec args)
-      | Case(ci,p,c,br) ->
-	  mkCase (ci, crec_hd p, crec_hd c, Array.map crec br)
-      | _ -> u
+    | App(f,args) -> mkApp (crec_hd f, Array.map crec args)
+    | Case(ci,p,c,br) ->
+	mkCase (ci, crec_hd p, crec_hd c, Array.map crec br)
+    | _ -> u
   in 
   crec
 
@@ -71,10 +72,15 @@ let clenv_pose_dependent_evars with_evars clenv =
   clenv_pose_metas_as_evars clenv dep_mvs
 
 
-let clenv_refine with_evars clenv gls =
+let clenv_refine with_evars ?(with_classes=true) clenv gls =
   let clenv = clenv_pose_dependent_evars with_evars clenv in
+  let evd' = 
+    if with_classes then 
+      Typeclasses.resolve_typeclasses ~fail:(not with_evars) clenv.env clenv.evd 
+    else clenv.evd
+  in
   tclTHEN
-    (tclEVARS (evars_of clenv.evd)) 
+    (tclEVARS (evars_of evd')) 
     (refine (clenv_cast_meta clenv (clenv_value clenv)))
     gls
 
@@ -105,11 +111,11 @@ let fail_quick_unif_flags = {
 }
 
 (* let unifyTerms m n = walking (fun wc -> fst (w_Unify CONV m n [] wc)) *)
-let unifyTerms m n gls = 
+let unifyTerms ?(flags=fail_quick_unif_flags) m n gls = 
   let env = pf_env gls in
   let evd = create_goal_evar_defs (project gls) in
-  let evd' = w_unify false env CONV ~flags:fail_quick_unif_flags m n evd in
+  let evd' = w_unify false env CONV ~flags m n evd in
   tclIDTAC {it = gls.it; sigma = evars_of evd'}
 
-let unify m gls =
-  let n = pf_concl gls in unifyTerms m n gls
+let unify ?(flags=fail_quick_unif_flags) m gls =
+  let n = pf_concl gls in unifyTerms ~flags m n gls

@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
 
-(* $Id: q_constr.ml4 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id: q_constr.ml4 11576 2008-11-10 19:13:15Z msozeau $ *)
 
 open Rawterm
 open Term
@@ -75,7 +75,7 @@ EXTEND
     | "0"
       [ s = sort -> <:expr< Rawterm.RSort ($dloc$,s) >>
       | id = ident -> <:expr< Rawterm.RVar ($dloc$,$id$) >>
-      | "_" -> <:expr< Rawterm.RHole ($dloc$, QuestionMark False) >>
+      | "_" -> <:expr< Rawterm.RHole ($dloc$, QuestionMark (Define False)) >>
       | "?"; id = ident -> <:expr< Rawterm.RPatVar($dloc$,(False,$id$)) >>
       | "{"; c1 = constr; "}"; "+"; "{"; c2 = constr; "}" ->
           apply_ref <:expr< coq_sumbool_ref >> [c1;c2]

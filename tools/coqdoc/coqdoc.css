@@ -25,7 +25,7 @@ body { padding: 0px 0px;
        padding: 10px;
        overflow: hidden;
        font-size: 100%;
-       line-height: 80% }
+       line-height: 100% }
 
 #main  a.idref:visited {color : #416DFF; text-decoration : none; }
 #main  a.idref:link {color : #416DFF; text-decoration : none; }
@@ -43,8 +43,6 @@ body { padding: 0px 0px;
 #main .section { background-color:#90bdff;
                  font-size : 175% }
 
-#main code { font-family: monospace }
-
 #main .doc { margin: 0px;
              padding: 10px;
              font-family: sans-serif;
@@ -55,7 +53,13 @@ body { padding: 0px 0px;
              background-color: #90bdff;
              border-style: plain}
 
-#main .doc code { font-family: monospace} 
+.inlinecode { 
+    display: inline;
+    font-family: monospace } 
+
+.code { 
+    display: block;
+    font-family: monospace } 
 
 /* Pied de page */
 
@@ -66,3 +70,29 @@ body { padding: 0px 0px;
 #footer a:link { text-decoration: none; 
                  color: #888888; }
 
+.id { display: inline; }
+
+.id[type="constructor"] { 
+    color: rgb(60%,0%,0%);
+}
+
+.id[type="var"] { 
+    color: rgb(40%,0%,40%);
+}
+
+.id[type="definition"] { 
+    color: rgb(0%,40%,0%);
+}
+
+.id[type="lemma"] { 
+    color: rgb(0%,40%,0%);
+}
+
+.id[type="inductive"] { 
+    color: rgb(0%,0%,80%);
+}
+
+.id[type="keyword"] { 
+ color : #cf1d1d;
+/*     color: black; */
+}

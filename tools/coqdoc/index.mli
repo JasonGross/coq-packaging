@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: index.mli 11065 2008-06-06 22:39:43Z msozeau $ i*)
+(*i $Id: index.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 open Cdglobals
 
@@ -39,6 +39,8 @@ type index_entry =
   | Mod of coq_module * string
 
 val find : coq_module -> loc -> index_entry
+
+val find_string : coq_module -> string -> index_entry
 
 val add_module : coq_module -> unit
 

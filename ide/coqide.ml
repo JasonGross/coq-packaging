@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqide.ml 11221 2008-07-11 23:28:25Z herbelin $ *)
+(* $Id: coqide.ml 11853 2009-01-23 18:40:58Z notin $ *)
 
 open Preferences
 open Vernacexpr
@@ -482,10 +482,11 @@ let input_channel b ic =
       Buffer.add_substring b buf 0 !len
     done
 
-let with_file name ~f =
-  let ic = open_in_gen [Open_rdonly;Open_creat] 0o644 name in
-    try f ic; close_in ic with exn -> 
-      close_in ic; !flash_info ("Error: "^Printexc.to_string exn)
+let with_file handler name ~f =
+  try
+    let ic = open_in_gen [Open_rdonly;Open_creat] 0o644 name in
+    try f ic; close_in ic with e -> close_in ic; raise e
+  with Sys_error s -> handler s
 
 type info =  {start:GText.mark;
 	      stop:GText.mark;
@@ -713,7 +714,7 @@ object(self)
 		try
 		  if is_active then self#reset_initial;
 		  let b = Buffer.create 1024 in
-		    with_file f ~f:(input_channel b);
+		    with_file !flash_info f ~f:(input_channel b);
 		    let s = try_convert (Buffer.contents b) in
 		      input_buffer#set_text s;
 		      self#update_stats;
@@ -1839,7 +1840,7 @@ let main files =
     ~title:"CoqIde" ()
   in
     (try
-	 let icon_image = lib_ide_file "coq.ico" in
+	 let icon_image = lib_ide_file "coq.png" in
 	 let icon = GdkPixbuf.from_file icon_image in
 	   w#set_icon (Some icon)
      with _ -> ());
@@ -1871,7 +1872,7 @@ let main files =
       let file_factory = new GMenu.factory ~accel_path:"<CoqIde MenuBar>/File/" file_menu ~accel_group in
 
       (* File/Load Menu *)
-      let load f =
+      let load_file handler f =
 	let f = absolute_filename f in		
 	  try
 	    prerr_endline "Loading file starts";
@@ -1886,7 +1887,7 @@ let main files =
 	    prerr_endline "Loading: must open";
 	    let b = Buffer.create 1024 in
 	      prerr_endline "Loading: get raw content";
-	      with_file f ~f:(input_channel b);
+	      with_file handler f ~f:(input_channel b);
 	      prerr_endline "Loading: convert content";
 	      let s = do_convert (Buffer.contents b) in
 		prerr_endline "Loading: create view";
@@ -1922,8 +1923,9 @@ let main files =
 		      prerr_endline "Loading: success"
 	  with       
 	    | Vector.Found i -> set_current_view i
-	    | e -> !flash_info ("Load failed: "^(Printexc.to_string e))
+	    | e -> handler ("Load failed: "^(Printexc.to_string e))
       in
+      let load f = load_file !flash_info f in
       let load_m = file_factory#add_item "_New" 
 	~key:GdkKeysyms._N in
       let load_f () = 	  
@@ -2478,7 +2480,7 @@ let main files =
 				(fun () -> 	 
 				   let av = Option.get ((get_current_view()).analyzed_view) in 
 				     match av#filename with
-				       | None -> ()
+				       | None -> warning "Call to external editor available only on named files"
 				       | Some f ->
 					   save_f ();
 					   let com = Flags.subst_command_placeholder !current.cmd_editor (Filename.quote f) in
@@ -3632,9 +3634,9 @@ with _ := Induction for _ Sort _.\n",61,10, Some GdkKeysyms._S);
 								begin
 								  List.iter (fun f -> 
 									       if Sys.file_exists f then load f else 
-										 if Filename.check_suffix f ".v" 
-										 then load f 
-										 else load (f^".v")) files;
+                                                                                 let f = if Filename.check_suffix f ".v" then f else f^".v" in
+										 load_file (fun s -> print_endline s; exit 1) f)
+                                                                    files;
 								  activate_input 0
 								end
 							      else

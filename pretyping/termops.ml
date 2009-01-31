@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: termops.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: termops.ml 11639 2008-11-27 17:48:32Z barras $ *)
 
 open Pp
 open Util
@@ -425,11 +425,11 @@ let fold_constr_with_binders g f n acc c = match kind_of_term c with
   | Fix (_,(lna,tl,bl)) -> 
       let n' = iterate g (Array.length tl) n in
       let fd = array_map2 (fun t b -> (t,b)) tl bl in
-      Array.fold_left (fun acc (t,b) -> f n (f n' acc t) b) acc fd
+      Array.fold_left (fun acc (t,b) -> f n' (f n acc t) b) acc fd
   | CoFix (_,(lna,tl,bl)) ->
       let n' = iterate g (Array.length tl) n in
       let fd = array_map2 (fun t b -> (t,b)) tl bl in
-      Array.fold_left (fun acc (t,b) -> f n (f n' acc t) b) acc fd
+      Array.fold_left (fun acc (t,b) -> f n' (f n acc t) b) acc fd
 
 (* [iter_constr_with_full_binders g f acc c] iters [f acc] on the immediate
    subterms of [c]; it carries an extra data [acc] which is processed by [g] at
@@ -470,6 +470,13 @@ let occur_meta c =
 let occur_existential c = 
   let rec occrec c = match kind_of_term c with
     | Evar _ -> raise Occur
+    | _ -> iter_constr occrec c
+  in try occrec c; false with Occur -> true
+
+let occur_meta_or_existential c = 
+  let rec occrec c = match kind_of_term c with
+    | Evar _ -> raise Occur
+    | Meta _ -> raise Occur
     | _ -> iter_constr occrec c
   in try occrec c; false with Occur -> true
 
@@ -671,10 +678,18 @@ let subst_term_occ (nowhere_except_in,locs as plocs) c t =
     if rest <> [] then error_invalid_occurrence rest;
     t'
 
-let subst_term_occ_decl (nowhere_except_in,locs as plocs) c (id,bodyopt,typ as d) =
-  match bodyopt with
-    | None -> (id,None,subst_term_occ plocs c typ)
-    | Some body -> 
+type hyp_location_flag = (* To distinguish body and type of local defs *)
+  | InHyp
+  | InHypTypeOnly
+  | InHypValueOnly
+
+let subst_term_occ_decl ((nowhere_except_in,locs as plocs),hloc) c (id,bodyopt,typ as d) =
+  match bodyopt,hloc with
+  | None, InHypValueOnly -> errorlabstrm "" (pr_id id ++ str " has no value")
+  | None, _ -> (id,None,subst_term_occ plocs c typ)
+  | Some body, InHypTypeOnly -> (id,Some body,subst_term_occ plocs c typ)
+  | Some body, InHypValueOnly -> (id,Some (subst_term_occ plocs c body),typ)
+  | Some body, InHyp ->
 	if locs = [] then
 	  if nowhere_except_in then d
 	  else (id,Some (subst_term c body),subst_term c typ)
@@ -684,7 +699,6 @@ let subst_term_occ_decl (nowhere_except_in,locs as plocs) c (id,bodyopt,typ as d
 	  let rest = List.filter (fun o -> o >= nbocc') locs in
 	  if rest <> [] then error_invalid_occurrence rest;
 	  (id,Some body',t')
-
 
 (* First character of a constr *)
 
@@ -1039,6 +1053,19 @@ let global_vars_set_of_decl env = function
   | (_,Some c,t) ->
       Idset.union (global_vars_set env t)
         (global_vars_set env c)
+
+let dependency_closure env sign hyps =
+  if Idset.is_empty hyps then [] else
+    let (_,lh) =
+      Sign.fold_named_context_reverse
+        (fun (hs,hl) (x,_,_ as d) ->
+          if Idset.mem x hs then
+            (Idset.union (global_vars_set_of_decl env d) (Idset.remove x hs),
+            x::hl)
+          else (hs,hl))
+        ~init:(hyps,[])
+        sign in
+    List.rev lh
 
 let default_x = id_of_string "x"
 

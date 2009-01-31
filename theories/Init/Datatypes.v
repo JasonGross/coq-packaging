@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Datatypes.v 11073 2008-06-08 20:24:51Z herbelin $ i*)
+(*i $Id: Datatypes.v 11735 2009-01-02 17:22:31Z herbelin $ i*)
 
 Set Implicit Arguments.
 
@@ -59,18 +59,38 @@ Lemma andb_prop : forall a b:bool, andb a b = true -> a = true /\ b = true.
 Proof.
   destruct a; destruct b; intros; split; try (reflexivity || discriminate).
 Qed.
-Hint Resolve andb_prop: bool v62.
+Hint Resolve andb_prop: bool.
 
 Lemma andb_true_intro :
   forall b1 b2:bool, b1 = true /\ b2 = true -> andb b1 b2 = true.
 Proof.
   destruct b1; destruct b2; simpl in |- *; tauto || auto with bool.
 Qed.
-Hint Resolve andb_true_intro: bool v62.
+Hint Resolve andb_true_intro: bool.
 
 (** Interpretation of booleans as propositions *)
 
 Inductive eq_true : bool -> Prop := is_eq_true : eq_true true.
+
+(** Additional rewriting lemmas about [eq_true] *)
+
+Lemma eq_true_ind_r :
+  forall (P : bool -> Prop) (b : bool), P b -> eq_true b -> P true.
+Proof.
+  intros P b H H0; destruct H0 in H; assumption.
+Defined.
+
+Lemma eq_true_rec_r :
+  forall (P : bool -> Set) (b : bool), P b -> eq_true b -> P true.
+Proof.
+  intros P b H H0; destruct H0 in H; assumption.
+Defined.
+
+Lemma eq_true_rect_r :
+  forall (P : bool -> Type) (b : bool), P b -> eq_true b -> P true.
+Proof.
+  intros P b H H0; destruct H0 in H; assumption.
+Defined.
 
 (** [nat] is the datatype of natural numbers built from [O] and successor [S];
     note that the constructor name is the letter O.
@@ -95,7 +115,7 @@ Inductive Empty_set : Set :=.
 
 Inductive identity (A:Type) (a:A) : A -> Type :=
   refl_identity : identity (A:=A) a a.
-Hint Resolve refl_identity: core v62.
+Hint Resolve refl_identity: core.
 
 Implicit Arguments identity_ind [A].
 Implicit Arguments identity_rec [A].
@@ -144,7 +164,7 @@ Section projections.
                               end.
 End projections. 
 
-Hint Resolve pair inl inr: core v62.
+Hint Resolve pair inl inr: core.
 
 Lemma surjective_pairing :
   forall (A B:Type) (p:A * B), p = pair (fst p) (snd p).

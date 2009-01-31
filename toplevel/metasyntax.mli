@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: metasyntax.mli 9677 2007-02-24 14:17:54Z herbelin $ i*)
+(*i $Id: metasyntax.mli 11481 2008-10-20 19:23:51Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -56,3 +56,7 @@ val print_grammar : string -> unit
 (* Removes quotes in a notation *)
 
 val standardize_locatable_notation : string -> string
+
+(* Evaluate whether a notation is not printable *)
+
+val is_not_printable : aconstr -> bool

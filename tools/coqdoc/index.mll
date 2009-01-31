@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: index.mll 11065 2008-06-06 22:39:43Z msozeau $ i*)
+(*i $Id: index.mll 11790 2009-01-15 20:19:58Z msozeau $ i*)
 
 {
 
@@ -47,9 +47,14 @@ let current_type = ref Library
 let current_library = ref ""
   (** refers to the file being parsed *)
 
-let table = Hashtbl.create 97
-  (** [table] is used to store references and definitions *)
+(** [deftable] stores only definitions and is used to interpolate idents 
+    inside comments, which are not globalized otherwise. *)
 
+let deftable = Hashtbl.create 97
+
+(** [reftable] stores references and definitions *)
+let reftable = Hashtbl.create 97
+  
 let full_ident sp id =
   if sp <> "<>" then 
     if id <> "<>" then 
@@ -60,15 +65,24 @@ let full_ident sp id =
   else ""
     
 let add_def loc ty sp id = 
-  Hashtbl.add table (!current_library, loc) (Def (full_ident sp id, ty))
-
-let add_ref m loc m' sp id ty = 
-  Hashtbl.add table (m, loc) (Ref (m', full_ident sp id, ty))
+  Hashtbl.add reftable (!current_library, loc) (Def (full_ident sp id, ty));
+  Hashtbl.add deftable id (Ref (!current_library, full_ident sp id, ty))
     
-let add_mod m loc m' id = Hashtbl.add table (m, loc) (Mod (m', id))
-
-let find m l = Hashtbl.find table (m, l)
-
+let add_ref m loc m' sp id ty = 
+  if Hashtbl.mem reftable (m, loc) then ()
+  else Hashtbl.add reftable (m, loc) (Ref (m', full_ident sp id, ty));
+  let idx = if id = "<>" then m' else id in
+    if Hashtbl.mem deftable idx then ()
+    else Hashtbl.add deftable idx (Ref (m', full_ident sp id, ty))  
+    
+let add_mod m loc m' id = 
+  Hashtbl.add reftable (m, loc) (Mod (m', id));
+  Hashtbl.add deftable m (Mod (m', id))
+    
+let find m l = Hashtbl.find reftable (m, l)
+  
+let find_string m s = Hashtbl.find deftable s
+  
 (*s Manipulating path prefixes *) 
 
 type stack = string list 
@@ -216,7 +230,7 @@ let all_entries () =
     | Def (s,t) -> add_g s m t; add_bt t s m
     | Ref _ | Mod _ -> ()
   in
-    Hashtbl.iter classify table;
+    Hashtbl.iter classify reftable;
     Hashtbl.iter (fun id m -> add_g id m Library; add_bt Library id m) modules;
     { idx_name = "global"; 
       idx_entries = sort_entries !gl; 
@@ -238,7 +252,9 @@ let firstchar =
 let identchar = 
   ['$' 'A'-'Z' 'a'-'z' '_' '\192'-'\214' '\216'-'\246' '\248'-'\255' 
      '\'' '0'-'9']
-let ident = firstchar identchar*
+let id = firstchar identchar*
+let pfx_id = (id '.')*
+let ident = id | pfx_id id
 
 let begin_hide = "(*" space* "begin" space+ "hide" space* "*)"
 let end_hide = "(*" space* "end" space+ "hide" space* "*)"
@@ -406,9 +422,9 @@ and module_refs = parse
   | ident  
       { let id =  lexeme lexbuf in
 	  (try
-	      add_mod !current_library (lexeme_start lexbuf) (Hashtbl.find modules id) id
-	    with
-		Not_found -> ()
+	     add_mod !current_library (lexeme_start lexbuf) (Hashtbl.find modules id) id
+	   with
+	       Not_found -> ()
 	  ); 
 	module_refs lexbuf }
   | eof    
@@ -418,7 +434,7 @@ and module_refs = parse
 
 {
   let type_of_string = function
-    | "def" | "coe" | "subclass" | "canonstruc" 
+    | "def" | "coe" | "subclass" | "canonstruc" | "fix" | "cofix"
     | "ex" | "scheme" -> Definition
     | "prf" | "thm" -> Lemma
     | "ind" | "coind" -> Inductive

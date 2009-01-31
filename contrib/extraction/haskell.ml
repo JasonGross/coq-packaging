@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: haskell.ml 10233 2007-10-17 23:29:08Z letouzey $ i*)
+(*i $Id: haskell.ml 11559 2008-11-07 22:03:34Z letouzey $ i*)
 
 (*s Production of Haskell syntax. *)
 
@@ -21,6 +21,9 @@ open Mlutil
 open Common
 
 (*s Haskell renaming issues. *)
+
+let pr_lower_id id = str (String.uncapitalize (string_of_id id))
+let pr_upper_id id = str (String.capitalize (string_of_id id))
 
 let keywords =     
   List.fold_right (fun s -> Idset.add (id_of_string s))
@@ -61,8 +64,6 @@ let pp_abst = function
   | l  -> (str "\\" ++
              prlist_with_sep (fun () -> (str " ")) pr_id l ++
              str " ->" ++ spc ())
-
-let pr_lower_id id = pr_id (lowercase_id id)
 
 (*s The pretty-printer for haskell syntax *)
 
@@ -313,7 +314,7 @@ let pp_structure_elem = function
 
 let pp_struct = 
   let pp_sel (mp,sel) = 
-    push_visible mp; 
+    push_visible mp None; 
     let p = prlist_strict pp_structure_elem sel in 
     pop_visible (); p
   in 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: topconstr.mli 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: topconstr.mli 11739 2009-01-02 19:33:19Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -77,11 +77,14 @@ type scope_name = string
 
 type tmp_scope_name = scope_name
 
-type interpretation = 
-    (identifier * (tmp_scope_name option * scope_name list)) list * aconstr
+type subscopes = tmp_scope_name option * scope_name list
+
+type interpretation =
+    (* regular vars of notation    / recursive parts of notation    / body *)
+    ((identifier * subscopes) list * (identifier * subscopes) list) * aconstr
 
 val match_aconstr : rawconstr -> interpretation ->
-      (rawconstr * (tmp_scope_name option * scope_name list)) list
+      (rawconstr * subscopes) list * (rawconstr list * subscopes) list
 
 (**********************************************************************)
 (* Substitution of kernel names in interpretation data                *)
@@ -95,18 +98,27 @@ type notation = string
 
 type explicitation = ExplByPos of int * identifier option | ExplByName of identifier
   
-type binder_kind = Default of binding_kind | TypeClass of binding_kind * binding_kind
+type binder_kind = 
+  | Default of binding_kind 
+  | Generalized of binding_kind * binding_kind * bool
+      (* Inner binding, outer bindings, typeclass-specific flag
+	 for implicit generalization of superclasses *)
+
+type abstraction_kind = AbsLambda | AbsPi
 
 type proj_flag = int option (* [Some n] = proj of the n-th visible argument *)
 
 type prim_token = Numeral of Bigint.bigint | String of string
+
+type 'a notation_substitution =
+    'a list * (* for recursive notations: *) 'a list list
 
 type cases_pattern_expr =
   | CPatAlias of loc * cases_pattern_expr * identifier
   | CPatCstr of loc * reference * cases_pattern_expr list
   | CPatAtom of loc * reference option
   | CPatOr of loc * cases_pattern_expr list
-  | CPatNotation of loc * notation * cases_pattern_expr list
+  | CPatNotation of loc * notation * cases_pattern_expr notation_substitution
   | CPatPrim of loc * prim_token
   | CPatDelimiters of loc * string * cases_pattern_expr
 
@@ -121,6 +133,7 @@ type constr_expr =
   | CAppExpl of loc * (proj_flag * reference) * constr_expr list
   | CApp of loc * (proj_flag * constr_expr) * 
       (constr_expr * explicitation located option) list
+  | CRecord of loc * constr_expr option * (identifier located * constr_expr) list
   | CCases of loc * case_style * constr_expr option *
       (constr_expr * (name option * constr_expr option)) list *
       (loc * cases_pattern_expr list located list * constr_expr) list
@@ -133,7 +146,8 @@ type constr_expr =
   | CEvar of loc * existential_key * constr_expr list option
   | CSort of loc * rawsort
   | CCast of loc * constr_expr * constr_expr cast_type
-  | CNotation of loc * notation * constr_expr list
+  | CNotation of loc * notation * constr_expr notation_substitution
+  | CGeneralization of loc * binding_kind * abstraction_kind option * constr_expr
   | CPrim of loc * prim_token
   | CDelimiters of loc * string * constr_expr
   | CDynamic of loc * Dyn.t
@@ -157,6 +171,8 @@ and local_binder =
 type typeclass_constraint = name located * binding_kind * constr_expr
 
 and typeclass_context = typeclass_constraint list
+
+type constr_pattern_expr = constr_expr
 
 (**********************************************************************)
 (* Utilities on constr_expr                                           *)
@@ -240,3 +256,5 @@ type include_ast =
   | CIMTE of module_type_ast
   | CIME of module_ast
 
+val ntn_loc : Util.loc -> constr_expr list -> string -> int
+val patntn_loc : Util.loc -> cases_pattern_expr list -> string -> int

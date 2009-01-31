@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: refiner.mli 10879 2008-05-01 22:14:20Z msozeau $ i*)
+(*i $Id: refiner.mli 11735 2009-01-02 17:22:31Z herbelin $ i*)
 
 (*i*)
 open Term
@@ -137,6 +137,7 @@ exception FailError of int * Pp.std_ppcmds
    level or do nothing. *)
 val catch_failerror  : exn -> unit
 
+val tclORELSE0       : tactic -> tactic -> tactic
 val tclORELSE        : tactic -> tactic -> tactic
 val tclREPEAT        : tactic -> tactic
 val tclREPEAT_MAIN   : tactic -> tactic

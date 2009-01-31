@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: reductionops.ml 11343 2008-09-01 20:55:13Z herbelin $ *)
+(* $Id: reductionops.ml 11796 2009-01-18 13:41:39Z herbelin $ *)
 
 open Pp
 open Util
@@ -537,6 +537,8 @@ let nf_evar sigma =
   local_strong (whd_evar sigma)
 
 (* lazy reduction functions. The infos must be created for each term *)
+(* Note by HH [oct 08] : why would it be the job of clos_norm_flags to add
+   a [nf_evar] here *)
 let clos_norm_flags flgs env sigma t =
   norm_val (create_clos_infos flgs env) (inject (nf_evar sigma t))
 
@@ -625,8 +627,23 @@ let pb_equal = function
 
 let sort_cmp = sort_cmp
 
+
+let nf_red_env sigma env =
+  let nf_decl = function
+      (x,Some t,ty) -> (x,Some (nf_evar sigma t),ty)
+    | d -> d in
+  let sign = named_context env in
+  let ctxt = rel_context env in
+  let env = reset_context env in
+  let env = Sign.fold_named_context
+    (fun d env -> push_named (nf_decl d) env) ~init:env sign in
+  Sign.fold_rel_context
+    (fun d env -> push_rel (nf_decl d) env) ~init:env ctxt
+
+
 let test_conversion f env sigma x y =
-  try let _ = f env (nf_evar sigma x) (nf_evar sigma y) in true
+  try let _ =
+    f (nf_red_env sigma env) (nf_evar sigma x) (nf_evar sigma y) in true
   with NotConvertible -> false
 
 let is_conv env sigma = test_conversion Reduction.conv env sigma
@@ -652,11 +669,11 @@ let whd_meta metamap c = match kind_of_term c with
 (* Try to replace all metas. Does not replace metas in the metas' values
  * Differs from (strong whd_meta). *)
 let plain_instance s c = 
-  let rec irec u = match kind_of_term u with
-    | Meta p -> (try List.assoc p s with Not_found -> u)
+  let rec irec n u = match kind_of_term u with
+    | Meta p -> (try lift n (List.assoc p s) with Not_found -> u)
     | App (f,l) when isCast f ->
         let (f,_,t) = destCast f in
-        let l' = Array.map irec l in 
+        let l' = Array.map (irec n) l in 
         (match kind_of_term f with
         | Meta p ->
 	    (* Don't flatten application nodes: this is used to extract a
@@ -669,12 +686,13 @@ let plain_instance s c =
                 mkLetIn (Name h,g,t,mkApp(mkRel 1,Array.map (lift 1) l'))
             | _ -> mkApp (g,l')
 	    with Not_found -> mkApp (f,l'))
-        | _ -> mkApp (irec f,l'))	
+        | _ -> mkApp (irec n f,l'))	
     | Cast (m,_,_) when isMeta m ->
-	(try List.assoc (destMeta m) s with Not_found -> u)
-    | _ -> map_constr irec u
+	(try lift n (List.assoc (destMeta m) s) with Not_found -> u)
+    | _ ->
+	map_constr_with_binders succ irec n u
   in 
-  if s = [] then c else irec c
+  if s = [] then c else irec 0 c
 
 (* [instance] is used for [res_pf]; the call to [local_strong whd_betaiota]
    has (unfortunately) different subtle side effects: 
@@ -706,8 +724,8 @@ let plain_instance s c =
      If a lemma has the type "(fun x => p) t" then rewriting t may fail
      if the type of the lemma is first beta-reduced (this typically happens
      when rewriting a single variable and the type of the lemma is obtained
-     by meta_instance (with empty map) which itself call instance with this
-     empty map.
+     by meta_instance (with empty map) which itself calls instance with this
+     empty map).
  *)
 
 let instance s c =

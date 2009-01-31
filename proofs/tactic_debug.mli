@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tactic_debug.mli 9092 2006-08-28 11:42:14Z bertot $ i*)
+(*i $Id: tactic_debug.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 open Environ
 open Pattern
@@ -45,7 +45,7 @@ val db_pattern_rule :
 
 (* Prints a matched hypothesis *)
 val db_matched_hyp :
-  debug_info -> env -> identifier * constr -> name -> unit
+  debug_info -> env -> identifier * constr option * constr -> name -> unit
 
 (* Prints the matched conclusion *)
 val db_matched_concl : debug_info -> env -> constr -> unit

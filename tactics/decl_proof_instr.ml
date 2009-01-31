@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: decl_proof_instr.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: decl_proof_instr.ml 11671 2008-12-12 12:43:03Z herbelin $ *)
 
 open Util
 open Pp
@@ -107,7 +107,7 @@ let clean_tmp gls =
     clean_all (tmp_ids gls) gls
 
 let assert_postpone id t =
-  assert_as true (dummy_loc, Genarg.IntroIdentifier id) t
+  assert_tac (Name id) t
 
 (* start a proof *)
 
@@ -264,7 +264,7 @@ let add_justification_hyps keep items gls =
       | _ -> 
 	  let id=pf_get_new_id local_hyp_prefix gls in 
 	    keep:=Idset.add id !keep; 
-	    tclTHEN (letin_tac None (Names.Name id) c Tacexpr.nowhere)
+	    tclTHEN (letin_tac None (Names.Name id) c None Tacexpr.nowhere)
               (thin_body [id]) gls in 
     tclMAP add_aux items gls   
 
@@ -780,7 +780,7 @@ let consider_tac c hyps gls =
     | _ -> 
 	let id = pf_get_new_id (id_of_string "_tmp") gls in
 	tclTHEN 
-	  (forward None (dummy_loc, Genarg.IntroIdentifier id) c)
+	  (forward None (Some (dummy_loc, Genarg.IntroIdentifier id)) c)
  	  (consider_match false [] [id] hyps) gls 
 	  
 
@@ -811,7 +811,7 @@ let rec build_function args body =
 
 let define_tac id args body gls =
   let t = build_function args body in
-    letin_tac None (Name id) t Tacexpr.nowhere gls
+    letin_tac None (Name id) t None Tacexpr.nowhere gls
 
 (* tactics for reconsider *)
 

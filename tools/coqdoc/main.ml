@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: main.ml 11236 2008-07-18 15:58:12Z notin $ i*)
+(*i $Id: main.ml 11828 2009-01-22 06:44:11Z notin $ i*)
 
 (* Modified by Lionel Elie Mamane <lionel@mamane.lu> on 9 & 10 Mar 2004:
  *  - handling of absolute filenames (function coq_module)
@@ -30,6 +30,7 @@ let usage () =
   prerr_endline "  --html               produce a HTML document (default)";
   prerr_endline "  --latex              produce a LaTeX document";
   prerr_endline "  --texmacs            produce a TeXmacs document";
+  prerr_endline "  --raw                produce a text document";
   prerr_endline "  --dvi                output the DVI";
   prerr_endline "  --ps                 output the PostScript";
   prerr_endline "  --pdf                output the Pdf";
@@ -56,12 +57,14 @@ let usage () =
   prerr_endline "  --no-externals       no links to Coq standard library";
   prerr_endline "  --coqlib <url>       set URL for Coq standard library";
   prerr_endline "                       (default is http://coq.inria.fr/library/)";
+  prerr_endline "  --boot               run in boot mode";
   prerr_endline "  --coqlib_path <dir>  set the path where Coq files are installed";
   prerr_endline "  -R <dir> <coqdir>    map physical dir to Coq dir";
   prerr_endline "  --latin1             set ISO-8859-1 input language";
   prerr_endline "  --utf8               set UTF-8 input language";
   prerr_endline "  --charset <string>   set HTML charset";
   prerr_endline "  --inputenc <string>  set LaTeX input encoding";
+  prerr_endline "  --interpolate        try to typeset identifiers in comments using definitions in the same module";
   prerr_endline "";
   exit 1
 
@@ -81,6 +84,7 @@ let banner () =
 let target_full_name f = 
   match !Cdglobals.target_language with
     | HTML -> f ^ ".html"
+    | Raw -> f ^ ".txt"
     | _ -> f ^ ".tex"
 	
 (*s \textbf{Separation of files.} Files given on the command line are
@@ -257,6 +261,8 @@ let parse () =
 	Cdglobals.target_language := HTML; parse_rec rem
     | ("-texmacs" | "--texmacs") :: rem ->
 	Cdglobals.target_language := TeXmacs; parse_rec rem
+    | ("-raw" | "--raw") :: rem ->
+	Cdglobals.target_language := Raw; parse_rec rem
     | ("-charset" | "--charset") :: s :: rem ->
 	Cdglobals.charset := s; parse_rec rem
     | ("-charset" | "--charset") :: [] ->
@@ -267,6 +273,9 @@ let parse () =
 	usage ()
     | ("-raw-comments" | "--raw-comments") :: rem ->
 	Cdglobals.raw_comments := true; parse_rec rem
+    | ("-interpolate" | "--interpolate") :: rem ->
+	Cdglobals.interpolate := true; parse_rec rem
+
     | ("-latin1" | "--latin1") :: rem ->
 	Cdglobals.set_latin1 (); parse_rec rem
     | ("-utf8" | "--utf8") :: rem ->
@@ -310,6 +319,8 @@ let parse () =
 	Cdglobals.coqlib := u; parse_rec rem
     | ("--coqlib" | "-coqlib") :: [] ->
 	usage ()
+    | ("--boot" | "-boot") :: rem ->
+	Cdglobals.coqlib_path := Coq_config.coqsrc; parse_rec rem
     | ("--coqlib_path" | "-coqlib_path") :: d :: rem ->
 	Cdglobals.coqlib_path := d; parse_rec rem
     | ("--coqlib_path" | "-coqlib_path") :: [] ->
@@ -318,6 +329,7 @@ let parse () =
 	add_file (what_file f); parse_rec rem
   in 
     parse_rec (List.tl (Array.to_list Sys.argv));
+    Output.initialize ();
     List.rev !files
 
       
@@ -414,10 +426,10 @@ let read_glob x =
   match x with
     | Vernac_file (f,m) ->   
 	let glob = (Filename.chop_extension f) ^ ".glob" in
-	  (try
+ 	  (try
 	      Vernac_file (f, Index.read_glob glob)
-	    with _ -> 
-	      eprintf "Warning: file %s cannot be opened; links will not be available\n" glob;
+            with e -> 
+              eprintf "Warning: file %s cannot be used; links will not be available: %s\n" glob (Printexc.to_string e);
 	      x)
   | Latex_file _ -> x
 
@@ -430,13 +442,13 @@ let produce_document l =
   (if !target_language=HTML then
     let src = (Filename.concat !Cdglobals.coqlib_path "/tools/coqdoc/coqdoc.css") in
     let dst = if !output_dir <> "" then Filename.concat !output_dir "coqdoc.css" else "coqdoc.css" in
-      copy src dst);
+      if (Sys.file_exists src) then (copy src dst) else eprintf "Warning: file %s does not exist\n" src);
   (if !target_language=LaTeX then
       let src = (Filename.concat !Cdglobals.coqlib_path "/tools/coqdoc/coqdoc.sty") in
       let dst = if !output_dir <> "" then 
 	  Filename.concat !output_dir "coqdoc.sty" 
 	else "coqdoc.sty" in
-	copy src dst);
+	if Sys.file_exists src then copy src dst else eprintf "Warning: file %s does not exist\n" src);
   (match !Cdglobals.glob_source with
     | NoGlob -> ()
     | DotGlob -> ignore (List.map read_glob l)

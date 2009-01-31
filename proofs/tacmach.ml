@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacmach.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: tacmach.ml 11639 2008-11-27 17:48:32Z barras $ *)
 
 open Pp
 open Util
@@ -201,6 +201,9 @@ let thin_body_no_check ids gl =
 
 let move_hyp_no_check with_dep id1 id2 gl = 
   refiner (Prim (Move (with_dep,id1,id2))) gl
+
+let order_hyps idl gl =
+  refiner (Prim (Order idl)) gl
 
 let rec rename_hyp_no_check l gl = match l with 
   | [] -> tclIDTAC gl 

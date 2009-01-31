@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetFacts.v 11282 2008-07-28 11:51:53Z msozeau $ *)
+(* $Id: FSetFacts.v 11720 2008-12-28 07:12:15Z letouzey $ *)
 
 (** * Finite sets library *)
 
@@ -21,11 +21,9 @@ Require Export FSetInterface.
 Set Implicit Arguments.
 Unset Strict Implicit.
 
-(** First, a functor for Weak Sets. Since the signature [WS] includes
-    an EqualityType and not a stronger DecidableType, this functor 
-    should take two arguments in order to compensate this. *)
+(** First, a functor for Weak Sets in functorial version. *)
 
-Module WFacts (Import E : DecidableType)(Import M : WSfun E).
+Module WFacts_fun (Import E : DecidableType)(Import M : WSfun E).
 
 Notation eq_dec := E.eq_dec.
 Definition eqb x y := if eq_dec x y then true else false.
@@ -293,12 +291,12 @@ End BoolSpec.
 
 (** * [E.eq] and [Equal] are setoid equalities *)
 
-Definition E_ST : Setoid_Theory elt E.eq.
+Definition E_ST : Equivalence E.eq.
 Proof.
 constructor ; red; [apply E.eq_refl|apply E.eq_sym|apply E.eq_trans].
 Qed.
 
-Definition Equal_ST : Setoid_Theory t Equal.
+Definition Equal_ST : Equivalence Equal.
 Proof. 
 constructor ; red; [apply eq_refl | apply eq_sym | apply eq_trans].
 Qed.
@@ -308,8 +306,6 @@ Add Relation elt E.eq
  symmetry proved by E.eq_sym
  transitivity proved by E.eq_trans 
  as EltSetoid.
-
-Typeclasses unfold elt.
 
 Add Relation t Equal 
  reflexivity proved by eq_refl 
@@ -418,18 +414,15 @@ Qed.
 (* [Subset] is a setoid order *)
 
 Lemma Subset_refl : forall s, s[<=]s.
-Proof. red; auto. Defined.
+Proof. red; auto. Qed.
 
 Lemma Subset_trans : forall s s' s'', s[<=]s'->s'[<=]s''->s[<=]s''.
-Proof. unfold Subset; eauto. Defined.
+Proof. unfold Subset; eauto. Qed.
 
-Add Relation t Subset 
+Add Relation t Subset
  reflexivity proved by Subset_refl
  transitivity proved by Subset_trans
  as SubsetSetoid.
-(* NB: for the moment, it is important to use Defined and not Qed in 
-   the two previous lemmas, in order to allow conversion of 
-   SubsetSetoid coming from separate Facts modules. See bug #1738. *)
 
 Instance In_s_m : Morphism (E.eq ==> Subset ++> impl) In | 1.
 Proof.
@@ -480,28 +473,35 @@ Proof.
 unfold Equal; intros; repeat rewrite filter_iff; auto; rewrite H0; tauto.
 Qed.
 
+Lemma filter_ext : forall f f', compat_bool E.eq f -> (forall x, f x = f' x) ->
+ forall s s', s[=]s' -> filter f s [=] filter f' s'.
+Proof.
+intros f f' Hf Hff' s s' Hss' x. do 2 (rewrite filter_iff; auto).
+rewrite Hff', Hss'; intuition.
+red; intros; rewrite <- 2 Hff'; auto.
+Qed.
+
 Lemma filter_subset : forall f, compat_bool E.eq f -> 
   forall s s', s[<=]s' -> filter f s [<=] filter f s'.
 Proof.
 unfold Subset; intros; rewrite filter_iff in *; intuition.
 Qed.
 
-(* For [elements], [min_elt], [max_elt] and [choose], we would need setoid 
+(* For [elements], [min_elt], [max_elt] and [choose], we would need setoid
    structures on [list elt] and [option elt]. *)
 
 (* Later:
 Add Morphism cardinal ; cardinal_m.
 *)
 
-End WFacts.
+End WFacts_fun.
 
+(** Now comes variants for self-contained weak sets and for full sets.
+    For these variants, only one argument is necessary. Thanks to
+    the subtyping [WS<=S], the [Facts] functor which is meant to be
+    used on modules [(M:S)] can simply be an alias of [WFacts]. *)
 
-(** Now comes a special version dedicated to full sets. For this 
-    one, only one argument [(M:S)] is necessary. *)
+Module WFacts (M:WS) := WFacts_fun M.E M.
+Module Facts := WFacts.
 
-Module Facts (Import M:S).
-  Module D:=OT_as_DT M.E.
-  Include WFacts D M.
-
-End Facts.
 

@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(* $Id: g_constr.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: g_constr.ml4 11709 2008-12-20 11:42:15Z msozeau $ *)
 
 open Pcoq
 open Constr
@@ -24,7 +24,8 @@ open Util
 let constr_kw =
   [ "forall"; "fun"; "match"; "fix"; "cofix"; "with"; "in"; "for"; 
     "end"; "as"; "let"; "if"; "then"; "else"; "return";
-    "Prop"; "Set"; "Type"; ".("; "_"; ".." ]
+    "Prop"; "Set"; "Type"; ".("; "_"; "..";
+    "`{"; "`("; "{|"; "|}" ]
 
 let _ = List.iter (fun s -> Lexer.add_token("",s)) constr_kw
 
@@ -41,6 +42,11 @@ let loc_of_binder_let = function
   | LocalRawDef ((loc,_),_)::_ -> loc
   | _ -> dummy_loc
 
+let binders_of_lidents l =
+  List.map (fun (loc, id) -> 
+    LocalRawAssum ([loc, Name id], Default Rawterm.Explicit, 
+		  CHole (loc, Some (Evd.BinderType (Name id))))) l
+    
 let rec index_and_rec_order_of_annot loc bl ann =
   match names_of_local_assums bl,ann with
     | [loc,Name id], (None, r) -> Some (loc, id), r
@@ -124,12 +130,24 @@ let ident_colon =
               | _ -> raise Stream.Failure)
         | _ -> raise Stream.Failure)
 
+let ident_with =
+  Gram.Entry.of_parser "ident_with"
+    (fun strm ->
+      match Stream.npeek 1 strm with
+      | [("IDENT",s)] ->
+          (match Stream.npeek 2 strm with
+          | [_; ("", "with")] ->
+              Stream.junk strm; Stream.junk strm;
+              Names.id_of_string s
+          | _ -> raise Stream.Failure)
+      | _ -> raise Stream.Failure)
+    
 let aliasvar = function CPatAlias (_, _, id) -> Some (Name id) | _ -> None
 
 GEXTEND Gram
   GLOBAL: binder_constr lconstr constr operconstr sort global
   constr_pattern lconstr_pattern Constr.ident
-  binder binder_let binders_let
+  binder binder_let binders_let record_declaration
   binders_let_fixannot typeclass_constraint pattern appl_arg;
   Constr.ident:
     [ [ id = Prim.ident -> id
@@ -202,8 +220,14 @@ GEXTEND Gram
       | "("; c = operconstr LEVEL "200"; ")" ->
           (match c with
               CPrim (_,Numeral z) when Bigint.is_pos_or_zero z ->
-                CNotation(loc,"( _ )",[c])
-            | _ -> c) ] ]
+                CNotation(loc,"( _ )",([c],[]))
+            | _ -> c)
+      | "{|"; c = record_declaration; "|}" -> c
+      | "`{"; c = operconstr LEVEL "200"; "}" ->
+	  CGeneralization (loc, Implicit, None, c)
+      | "`("; c = operconstr LEVEL "200"; ")" ->
+	  CGeneralization (loc, Explicit, None, c)
+      ] ]
   ;
   forall: 
     [ [ "forall" -> () 
@@ -214,6 +238,16 @@ GEXTEND Gram
     [ [ "fun" -> () 
     | IDENT "λ" -> ()
     ] ]
+  ;
+  record_declaration:
+    [ [ fs = LIST1 record_field_declaration SEP ";" -> CRecord (loc, None, fs)
+(*       | c = lconstr; "with"; fs = LIST1 record_field_declaration SEP ";" -> *)
+(* 	  CRecord (loc, Some c, fs) *)
+    ] ]
+  ;
+  record_field_declaration:
+    [ [ id = identref; params = LIST0 identref; ":="; c = lconstr -> 
+      (id, Topconstr.abstract_constr_expr c (binders_of_lidents params)) ] ]
   ;
   binder_constr:
     [ [ forall; bl = binder_list; ","; c = operconstr LEVEL "200" ->
@@ -337,7 +371,7 @@ GEXTEND Gram
       | "("; p = pattern LEVEL "200"; ")" ->
           (match p with
               CPatPrim (_,Numeral z) when Bigint.is_pos_or_zero z ->
-                CPatNotation(loc,"( _ )",[p])
+                CPatNotation(loc,"( _ )",([p],[]))
             | _ -> p)
       | n = INT -> CPatPrim (loc, Numeral (Bigint.of_string n))
       | s = string -> CPatPrim (loc, String s) ] ]
@@ -398,12 +432,10 @@ GEXTEND Gram
         [LocalRawAssum ([id],Default Implicit,c)]
     | "{"; id=name; idl=LIST1 name; "}" -> 
         List.map (fun id -> LocalRawAssum ([id],Default Implicit,CHole (loc, None))) (id::idl)
-    | "("; "("; tc = LIST1 typeclass_constraint SEP "," ; ")"; ")" ->
-	List.map (fun (n, b, t) -> LocalRawAssum ([n], TypeClass (Explicit, b), t)) tc
-    | "{"; "{"; tc = LIST1 typeclass_constraint SEP "," ; "}"; "}" ->
-	List.map (fun (n, b, t) -> LocalRawAssum ([n], TypeClass (Implicit, b), t)) tc
-    | "["; tc = LIST1 typeclass_constraint SEP ","; "]" -> 
-	List.map (fun (n, b, t) -> LocalRawAssum ([n], TypeClass (Implicit, b), t)) tc
+    | "`("; tc = LIST1 typeclass_constraint SEP "," ; ")" ->
+	List.map (fun (n, b, t) -> LocalRawAssum ([n], Generalized (Implicit, Explicit, b), t)) tc
+    | "`{"; tc = LIST1 typeclass_constraint SEP "," ; "}" ->
+	List.map (fun (n, b, t) -> LocalRawAssum ([n], Generalized (Implicit, Implicit, b), t)) tc
     ] ]
   ;
   binder:
@@ -413,13 +445,13 @@ GEXTEND Gram
     ] ]
   ;
   typeclass_constraint:
-    [ [ "!" ; c = operconstr LEVEL "200" -> (loc, Anonymous), Explicit, c
-      | "{"; id = name; "}"; ":" ; expl = [ "!" -> Explicit | -> Implicit ] ; c = operconstr LEVEL "200" ->
+    [ [ "!" ; c = operconstr LEVEL "200" -> (loc, Anonymous), true, c
+      | "{"; id = name; "}"; ":" ; expl = [ "!" -> true | -> false ] ; c = operconstr LEVEL "200" ->
 	  id, expl, c
-      | iid=ident_colon ; expl = [ "!" -> Explicit | -> Implicit ] ; c = operconstr LEVEL "200" ->
+      | iid=ident_colon ; expl = [ "!" -> true | -> false ] ; c = operconstr LEVEL "200" ->
 	  (loc, Name iid), expl, c
       | c = operconstr LEVEL "200" ->
-	  (loc, Anonymous), Implicit, c
+	  (loc, Anonymous), false, c
     ] ]
   ;
   

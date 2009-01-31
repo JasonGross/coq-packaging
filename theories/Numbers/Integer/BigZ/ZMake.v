@@ -8,7 +8,7 @@
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
 
-(*i $Id: ZMake.v 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: ZMake.v 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 Require Import ZArith.
 Require Import BigNumPrelude.
@@ -30,7 +30,6 @@ Module Make (N:NType) <: ZType.
   | Neg : N.t -> t_.
  
  Definition t := t_.
- Typeclasses unfold t.
 
  Definition zero := Pos N.zero.
  Definition one  := Pos N.one.

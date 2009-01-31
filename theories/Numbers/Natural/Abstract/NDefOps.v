@@ -8,7 +8,7 @@
 (*                      Evgeny Makarov, INRIA, 2007                     *)
 (************************************************************************)
 
-(*i $Id: NDefOps.v 11039 2008-06-02 23:26:13Z letouzey $ i*)
+(*i $Id: NDefOps.v 11674 2008-12-12 19:48:40Z letouzey $ i*)
 
 Require Import Bool. (* To get the orb and negb function *)
 Require Export NStrongRec.
@@ -243,7 +243,7 @@ Definition E2 := prod_rel Neq Neq.
 
 Add Relation (prod N N) E2
 reflexivity proved by (prod_rel_refl N N Neq Neq E_equiv E_equiv)
-symmetry proved by (prod_rel_symm N N Neq Neq E_equiv E_equiv)
+symmetry proved by (prod_rel_sym N N Neq Neq E_equiv E_equiv)
 transitivity proved by (prod_rel_trans N N Neq Neq E_equiv E_equiv)
 as E2_rel.
 

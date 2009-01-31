@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FMapList.v 10616 2008-03-04 17:33:35Z letouzey $ *)
+(* $Id: FMapList.v 11699 2008-12-18 11:49:08Z letouzey $ *)
 
 (** * Finite map library *)
 
@@ -402,7 +402,7 @@ Proof.
  elim (Sort_Inf_NotIn H6 H7).
  destruct H as (e'', hyp); exists e''; auto.
  apply MapsTo_eq with k; auto; order.
- apply H1 with k; destruct (eq_dec x k); auto.
+ apply H1 with k; destruct (X.eq_dec x k); auto.
 
 
  destruct (X.compare x x'); try contradiction; clear y.

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: impargs.mli 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: impargs.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -83,14 +83,16 @@ val declare_implicits : bool -> global_reference -> unit
 
 (* [declare_manual_implicits local ref enriching l]
    Manual declaration of which arguments are expected implicit.
+   If not set, we decide if it should enrich by automatically inferd
+   implicits depending on the current state.
    Unsets implicits if [l] is empty. *)
 
-val declare_manual_implicits : bool -> global_reference -> bool ->
+val declare_manual_implicits : bool -> global_reference -> ?enriching:bool ->
   manual_explicitation list -> unit
 
 (* If the list is empty, do nothing, otherwise declare the implicits. *)
 
-val maybe_declare_manual_implicits : bool -> global_reference -> bool ->
+val maybe_declare_manual_implicits : bool -> global_reference -> ?enriching:bool ->
   manual_explicitation list -> unit
 
 val implicits_of_global : global_reference -> implicits_list

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: names.ml 11238 2008-07-19 09:34:03Z herbelin $ *)
+(* $Id: names.ml 11750 2009-01-05 20:47:34Z herbelin $ *)
 
 open Pp
 open Util
@@ -17,7 +17,7 @@ type identifier = string
 
 let id_ord = Pervasives.compare
 
-let id_of_string s = check_ident s; String.copy s
+let id_of_string s = check_ident_soft s; String.copy s
 
 let string_of_id id = String.copy id
 
@@ -86,6 +86,7 @@ type label = string
 
 type mod_self_id = uniq_ident
 let make_msid = make_uid
+let repr_msid (n, id, dp) = (n, id, dp)
 let debug_string_of_msid = debug_string_of_uid
 let refresh_msid (_,s,dir) = make_uid dir s
 let string_of_msid = string_of_uid
@@ -94,6 +95,7 @@ let label_of_msid (_,s,_) = s
 
 type mod_bound_id = uniq_ident
 let make_mbid = make_uid
+let repr_mbid (n, id, dp) = (n, id, dp)
 let debug_string_of_mbid = debug_string_of_uid
 let string_of_mbid = string_of_uid
 let id_of_mbid (_,s,_) = s
@@ -115,8 +117,14 @@ type module_path =
   | MPself of mod_self_id 
   | MPdot of module_path * label
 
+
+let rec check_bound_mp = function
+  | MPbound _ -> true
+  | MPdot(mp,_) ->check_bound_mp mp
+  | _ -> false
+
 let rec string_of_mp = function
-  | MPfile sl -> string_of_dirpath sl
+  | MPfile sl -> "MPfile (" ^ string_of_dirpath sl ^ ")"
   | MPbound uid -> string_of_uid uid
   | MPself uid -> string_of_uid uid
   | MPdot (mp,l) -> string_of_mp mp ^ "." ^ string_of_label l

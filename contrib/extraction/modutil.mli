@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modutil.mli 10620 2008-03-05 10:54:41Z letouzey $ i*)
+(*i $Id: modutil.mli 11602 2008-11-18 00:08:33Z letouzey $ i*)
 
 open Names
 open Declarations
@@ -14,12 +14,6 @@ open Environ
 open Libnames
 open Miniml
 open Mod_subst
-
-(*s Functions upon modules missing in [Modops]. *) 
-
-(* Change a msid in a module type, to follow a module expr. *)
-
-val replicate_msid : struct_expr_body -> struct_expr_body -> struct_expr_body
 
 (*s Functions upon ML modules. *)
 
@@ -30,14 +24,10 @@ type do_ref = global_reference -> unit
 
 val decl_iter_references : do_ref -> do_ref -> do_ref -> ml_decl -> unit
 val spec_iter_references : do_ref -> do_ref -> do_ref -> ml_spec -> unit
-val struct_iter_references : do_ref -> do_ref -> do_ref -> ml_structure -> unit
-
-type 'a kinds = { mutable typ : 'a ; mutable trm : 'a; mutable cons : 'a }
-
-val struct_get_references_set : ml_structure -> Refset.t kinds
-val struct_get_references_list : ml_structure -> global_reference list kinds
 
 val signature_of_structure : ml_structure -> ml_signature
+
+val msid_of_mt : ml_module_type -> module_path
 
 val get_decl_in_structure : global_reference -> ml_structure -> ml_decl
 

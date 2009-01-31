@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: BigN.v 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: BigN.v 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 (** * Natural numbers in base 2^31 *)
 
@@ -77,8 +77,6 @@ exact mul_comm.
 exact mul_assoc.
 exact mul_add_distr_r.
 Qed.
-
-Typeclasses unfold NZadd NZsub NZmul.
 
 Add Ring BigNr : BigNring.
 

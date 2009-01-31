@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evar_tactics.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: evar_tactics.ml 11576 2008-11-10 19:13:15Z msozeau $ *)
 
 open Term
 open Util
@@ -75,5 +75,5 @@ let let_evar name typ gls =
   let evd = Evd.create_goal_evar_defs gls.sigma in
   let evd',evar = Evarutil.new_evar evd (pf_env gls) typ in
   Refiner.tclTHEN (Refiner.tclEVARS (evars_of evd'))
-    (Tactics.letin_tac None name evar nowhere) gls
+    (Tactics.letin_tac None name evar None nowhere) gls
  

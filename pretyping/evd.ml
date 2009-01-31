@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evd.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: evd.ml 11865 2009-01-28 17:34:30Z herbelin $ *)
 
 open Pp
 open Util
@@ -300,6 +300,9 @@ let is_defined (sigma,_) = is_defined sigma
 let existential_value (sigma,_) = existential_value sigma
 let existential_type (sigma,_) = existential_type sigma
 let existential_opt_value (sigma,_) = existential_opt_value sigma
+let eq_evar_map x y = x == y ||
+  (Evarmap.equal eq_evar_info (fst x) (fst y) &&
+      UniverseMap.equal (=) (snd x) (snd y))
 
 let merge e e' = fold (fun n v sigma -> add sigma n v) e' e
 
@@ -400,10 +403,12 @@ let metamap_to_list m =
 (*************************)
 (* Unification state *)
 
+type obligation_definition_status = Define of bool | Expand
+
 type hole_kind =
   | ImplicitArg of global_reference * (int * identifier option)
   | BinderType of name
-  | QuestionMark of bool
+  | QuestionMark of obligation_definition_status
   | CasesType
   | InternalHole
   | TomatchTypeParameter of inductive * int

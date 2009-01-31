@@ -1,4 +1,3 @@
-(* -*- coq-prog-args: ("-emacs-U" "-nois") -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -13,7 +12,7 @@
    Institution: LRI, CNRS UMR 8623 - UniversitÃcopyright Paris Sud
    91405 Orsay, France *) 
 
-(* $Id: Equivalence.v 11282 2008-07-28 11:51:53Z msozeau $ *)
+(* $Id: Equivalence.v 11709 2008-12-20 11:42:15Z msozeau $ *)
 
 Require Export Coq.Program.Basics.
 Require Import Coq.Program.Tactics.
@@ -28,9 +27,7 @@ Unset Strict Implicit.
 
 Open Local Scope signature_scope.
 
-Definition equiv [ Equivalence A R ] : relation A := R.
-
-Typeclasses unfold equiv.
+Definition equiv `{Equivalence A R} : relation A := R.
 
 (** Overloaded notations for setoid equivalence and inequivalence. Not to be confused with [eq] and [=]. *)
 
@@ -42,9 +39,7 @@ Open Local Scope equiv_scope.
 
 (** Overloading for [PER]. *)
 
-Definition pequiv [ PER A R ] : relation A := R.
-
-Typeclasses unfold pequiv.
+Definition pequiv `{PER A R} : relation A := R.
 
 (** Overloaded notation for partial equivalence. *)
 
@@ -52,16 +47,11 @@ Infix "=~=" := pequiv (at level 70, no associativity) : equiv_scope.
 
 (** Shortcuts to make proof search easier. *)
 
-Program Instance equiv_reflexive [ sa : Equivalence A ] : Reflexive equiv.
+Program Instance equiv_reflexive `(sa : Equivalence A) : Reflexive equiv.
 
-Program Instance equiv_symmetric [ sa : Equivalence A ] : Symmetric equiv.
+Program Instance equiv_symmetric `(sa : Equivalence A) : Symmetric equiv.
 
-  Next Obligation.
-  Proof.
-    symmetry ; auto.
-  Qed.
-
-Program Instance equiv_transitive [ sa : Equivalence A ] : Transitive equiv.
+Program Instance equiv_transitive `(sa : Equivalence A) : Transitive equiv.
 
   Next Obligation.
   Proof.
@@ -113,13 +103,12 @@ Section Respecting.
   (** Here we build an equivalence instance for functions which relates respectful ones only, 
      we do not export it. *)
 
-  Definition respecting [ Equivalence A (R : relation A), Equivalence B (R' : relation B) ] : Type := 
+  Definition respecting `(eqa : Equivalence A (R : relation A), eqb : Equivalence B (R' : relation B)) : Type := 
     { morph : A -> B | respectful R R' morph morph }.
   
-  Program Instance respecting_equiv [ eqa : Equivalence A R, eqb : Equivalence B R' ] :
-    Equivalence respecting
-    (fun (f g : respecting) => forall (x y : A), R x y -> R' (proj1_sig f x) (proj1_sig g y)).
-
+  Program Instance respecting_equiv `(eqa : Equivalence A R, eqb : Equivalence B R') :
+    Equivalence (fun (f g : respecting eqa eqb) => forall (x y : A), R x y -> R' (proj1_sig f x) (proj1_sig g y)).
+  
   Solve Obligations using unfold respecting in * ; simpl_relation ; program_simpl.
 
   Next Obligation.
@@ -131,13 +120,10 @@ End Respecting.
 
 (** The default equivalence on function spaces, with higher-priority than [eq]. *)
 
-Program Instance pointwise_equivalence [ eqb : Equivalence B eqB ] :
-  Equivalence (A -> B) (pointwise_relation eqB) | 9.
-
-  Solve Obligations using simpl_relation ; first [ reflexivity | (symmetry ; auto) ].
+Program Instance pointwise_equivalence {A} `(eqb : Equivalence B eqB) :
+  Equivalence (pointwise_relation A eqB) | 9.
 
   Next Obligation.
   Proof.
-    transitivity (y x0) ; auto.
+    transitivity (y a) ; auto.
   Qed.
-

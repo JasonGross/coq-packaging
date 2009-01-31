@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalDescription.v 11238 2008-07-19 09:34:03Z herbelin $ i*)
+(*i $Id: ClassicalDescription.v 11481 2008-10-20 19:23:51Z herbelin $ i*)
 
 (** This file provides classical logic and definite description, which is
     equivalent to providing classical logic and Church's iota operator *)
@@ -21,7 +21,7 @@ Set Implicit Arguments.
 Require Export Classical.
 Require Import ChoiceFacts.
 
-Notation Local inhabited A := A.
+Notation Local inhabited A := A (only parsing).
 
 Axiom constructive_definite_description :
   forall (A : Type) (P : A->Prop), (exists! x : A, P x) -> { x : A | P x }.

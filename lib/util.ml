@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: util.ml 11350 2008-09-02 15:37:49Z barras $ *)
+(* $Id: util.ml 11845 2009-01-22 18:55:08Z letouzey $ *)
 
 open Pp
 
@@ -59,6 +59,9 @@ let is_letter c = (c >= 'a' && c <= 'z') or (c >= 'A' && c <= 'Z')
 let is_digit c = (c >= '0' && c <= '9')
 let is_ident_tail c =
   is_letter c or is_digit c or c = '\'' or c = '_'
+let is_blank = function
+  | ' ' | '\r' | '\t' | '\n' -> true
+  | _ -> false
 
 (* Strings *)
 
@@ -73,6 +76,21 @@ let explode s =
 
 let implode sl = String.concat "" sl
 
+let strip s =
+  let n = String.length s in
+  let rec lstrip_rec i =
+    if i < n && is_blank s.[i] then
+      lstrip_rec (i+1)
+    else i
+  in
+  let rec rstrip_rec i =
+    if i >= 0 && is_blank s.[i] then
+      rstrip_rec (i-1)
+    else i
+  in
+  let a = lstrip_rec 0 and b = rstrip_rec (n-1) in
+  String.sub s a (b-a+1)
+
 (* substring searching... *)
 
 (* gdzie = where, co = what *)
@@ -83,6 +101,9 @@ let rec is_sub gdzie gl gi co cl ci =
    (is_sub gdzie gl (gi+1) co cl (ci+1)))
 
 let rec raw_str_index i gdzie l c co cl = 
+  (* First adapt to ocaml 3.11 new semantics of index_from *)
+  if (i+cl > l) then raise Not_found;
+  (* Then proceed as in ocaml < 3.11 *)
   let i' = String.index_from gdzie i c in
     if (i'+cl <= l) && (is_sub gdzie l i' co cl 0) then i' else
       raw_str_index (i'+1) gdzie l c co cl
@@ -106,19 +127,23 @@ let ordinal n =
 
 (* string parsing *)
 
-let parse_loadpath s =
+let split_string_at c s =
   let len = String.length s in
-  let rec decoupe_dirs n =
+  let rec split n =
     try  
-      let pos = String.index_from s n '/' in
-      if pos = n then
-	invalid_arg "parse_loadpath: find an empty dir in loadpath";
+      let pos = String.index_from s n c in
       let dir = String.sub s n (pos-n) in
-      dir :: (decoupe_dirs (succ pos))
+      dir :: split (succ pos)
     with
       | Not_found -> [String.sub s n (len-n)]
   in
-  if len = 0 then [] else decoupe_dirs 0
+  if len = 0 then [] else split 0
+
+let parse_loadpath s =
+  let l = split_string_at '/' s in
+  if List.mem "" l then
+    invalid_arg "parse_loadpath: find an empty dir in loadpath";
+  l
 
 module Stringset = Set.Make(struct type t = string let compare = compare end)
 
@@ -239,6 +264,8 @@ let classify_unicode unicode =
     end
     | _ ->
     begin match unicode with
+    (* utf-8 CJC Symbols and Punctuation  *)
+    | x when 0x3008 <= x & x <= 0x3020 -> UnicodeSymbol
     (* utf-8 Hiragana U3040-309F and Katakana U30A0-30FF *)
     | x when 0x3040 <= x & x <= 0x30FF -> UnicodeLetter
     (* utf-8 Unified CJK Ideographs U4E00-9FA5 *)
@@ -304,27 +331,40 @@ let next_utf8 s i =
 
 (* Check the well-formedness of an identifier *)
 
-let check_ident s =
+let check_initial handle j n s =
+  match classify_unicode n with
+  | UnicodeLetter -> ()
+  | _ ->
+      let c = String.sub s 0 j in
+      handle ("Invalid character '"^c^"' at beginning of identifier \""^s^"\".")
+
+let check_trailing handle i j n s =
+  match classify_unicode n with
+  | UnicodeLetter | UnicodeIdentPart -> ()
+  | _ ->
+      let c = String.sub s i j in
+      handle ("Invalid character '"^c^"' in identifier \""^s^"\".")
+
+let check_ident_gen handle s =
   let i = ref 0 in
   if s <> ".." then try
     let j, n = next_utf8 s 0 in
-    match classify_unicode n with
-    | UnicodeLetter ->
-	i := !i + j;
-	begin try
-	  while true do
-	    let j, n = next_utf8 s !i in
-	    match classify_unicode n with
-	    | UnicodeLetter | UnicodeIdentPart -> i := !i + j
-	    | _ -> error
-		("invalid character "^(String.sub s !i j)^" in identifier "^s)
-	  done
-	with End_of_input -> () end
-    | _ -> error (s^": an identifier should start with a letter")
+    check_initial handle j n s;
+    i := !i + j;
+    try
+      while true do
+	let j, n = next_utf8 s !i in
+	check_trailing handle !i j n s;
+	i := !i + j
+      done
+    with End_of_input -> ()
   with 
-  | End_of_input -> error "The empty string is not an identifier"
-  | UnsupportedUtf8 -> error (s^": unsupported character in utf8 sequence")
-  | Invalid_argument _ -> error (s^": invalid utf8 sequence")
+  | End_of_input -> error "The empty string is not an identifier."
+  | UnsupportedUtf8 -> error (s^": unsupported character in utf8 sequence.")
+  | Invalid_argument _ -> error (s^": invalid utf8 sequence.")
+
+let check_ident_soft = check_ident_gen warning
+let check_ident = check_ident_gen error
 
 let lowercase_unicode s unicode =
     match unicode land 0x1F000 with
@@ -626,6 +666,10 @@ let rec list_remove_first a = function
   | b::l -> b::list_remove_first a l
   | [] -> raise Not_found
 
+let rec list_remove_assoc_in_triple x = function
+  | [] -> []
+  | (y,_,_ as z)::l -> if x = y then l else z::list_remove_assoc_in_triple x l
+
 let list_add_set x l = if List.mem x l then l else x::l
 
 let list_eq_set l1 l2 =
@@ -726,13 +770,21 @@ let list_subset l1 l2 =
   in 
   look l1
 
-let list_splitby p = 
-  let rec splitby_loop x y = 
+let list_split_at p = 
+  let rec split_at_loop x y = 
     match y with 
       | []      -> ([],[])
-      | (a::l)  -> if (p a) then (x,y) else (splitby_loop (x@[a]) l)
+      | (a::l)  -> if (p a) then (List.rev x,y) else split_at_loop (a::x) l
   in 
-  splitby_loop []
+  split_at_loop []
+
+let list_split_by p = 
+  let rec split_loop = function
+  | []      -> ([],[])
+  | (a::l)  ->
+      let (l1,l2) = split_loop l in if (p a) then (a::l1,l2) else (l1,a::l2)
+  in 
+  split_loop
 
 let rec list_split3 = function
   | [] -> ([], [], [])
@@ -859,6 +911,20 @@ let list_cartesians op init ll =
 
 let list_combinations l = list_cartesians (fun x l -> x::l) [] l
 
+(* Keep only those products that do not return None *)
+
+let rec list_cartesian_filter op l1 l2 = 
+  list_map_append (fun x -> list_map_filter (op x) l2) l1
+
+(* Keep only those products that do not return None *)
+
+let rec list_cartesians_filter op init ll = 
+  List.fold_right (list_cartesian_filter op) ll [init]
+
+(* Drop the last element of a list *)
+
+let rec list_drop_last = function [] -> assert false | hd :: [] -> [] | hd :: tl -> hd :: list_drop_last tl
+
 (* Arrays *)
 
 let array_exists f v = 
@@ -901,6 +967,10 @@ let array_for_all4 f v1 v2 v3 v4 =
   lv1 = Array.length v3 &&
   lv1 = Array.length v4 &&
     allrec (pred lv1) 
+
+let array_for_all_i f i v = 
+  let rec allrec i n = n = Array.length v || f i v.(n) && allrec (i+1) (n+1) in 
+  allrec i 0
 
 let array_hd v = 
   match Array.length v with
@@ -1117,15 +1187,15 @@ let array_fold_map2' f v1 v2 e =
   (v',!e')
 
 let array_distinct v =
+  let visited = Hashtbl.create 23 in
   try
-    for i=0 to Array.length v-1 do
-      for j=i+1 to Array.length v-1 do
-	if v.(i)=v.(j) then raise Exit
-      done
-    done;
+    Array.iter
+      (fun x ->
+        if Hashtbl.mem visited x then raise Exit
+        else Hashtbl.add visited x x)
+      v;
     true
-  with Exit ->
-    false
+  with Exit -> false
 
 let array_union_map f a acc =
   Array.fold_left
@@ -1209,11 +1279,13 @@ let rec prlist elem l = match l with
   | h::t -> Stream.lapp (fun () -> elem h) (prlist elem t)
 
 (* unlike all other functions below, [prlist] works lazily.
-   if a strict behavior is needed, use [prlist_strict] instead. *)
+   if a strict behavior is needed, use [prlist_strict] instead.
+   evaluation is done from left to right. *)
 
 let rec prlist_strict elem l = match l with 
   | []   -> mt ()
-  | h::t -> (elem h)++(prlist_strict elem t)
+  | h::t ->
+      let e = elem h in let r = prlist_strict elem t in e++r
 
 (* [prlist_with_sep sep pr [a ; ... ; c]] outputs
    [pr a ++ sep() ++ ... ++ sep() ++ pr c] *)
@@ -1275,7 +1347,7 @@ let prvect_with_sep sep elem v =
 let prvect elem v = prvect_with_sep mt elem v
 
 let pr_located pr (loc,x) =
-  if Flags.do_translate() && loc<>dummy_loc then
+  if Flags.do_beautify() && loc<>dummy_loc then
     let (b,e) = unloc loc in
     comment b ++ pr x ++ comment e
   else pr x

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: rules.ml 11094 2008-06-10 19:35:23Z herbelin $ *)
+(* $Id: rules.ml 11512 2008-10-27 12:28:36Z herbelin $ *)
 
 open Util
 open Names
@@ -213,4 +213,4 @@ let normalize_evaluables=
 	 None->unfold_in_concl (Lazy.force defined_connectives)
        | Some ((_,id),_)-> 
 	   unfold_in_hyp (Lazy.force defined_connectives) 
-	   ((Rawterm.all_occurrences_expr,id),Tacexpr.InHypTypeOnly))
+	   ((Rawterm.all_occurrences_expr,id),InHypTypeOnly))

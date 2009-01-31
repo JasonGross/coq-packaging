@@ -6,10 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: output.mli 8669 2006-03-28 17:34:15Z notin $ i*)
+(*i $Id: output.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 open Cdglobals
 open Index
+
+val initialize : unit -> unit
 
 val add_printing_token : string -> string option * string option -> unit
 val remove_printing_token : string -> unit

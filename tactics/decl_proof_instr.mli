@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: decl_proof_instr.mli 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id: decl_proof_instr.mli 11481 2008-10-20 19:23:51Z herbelin $ *)
 
 open Refiner
 open Names

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: auxiliary.v 9302 2006-10-27 21:21:17Z barras $ i*)
+(*i $Id: auxiliary.v 11739 2009-01-02 19:33:19Z herbelin $ i*)
 
 (** Binary Integers (Pierre Crégut, CNET, Lannion, France) *)
 
@@ -89,46 +89,6 @@ Theorem Zgt_left_rev : forall n m:Z, n + - m > 0 -> n > m.
 Proof.
   intros x y H; apply Zplus_gt_reg_r with (- y).
   rewrite Zplus_opp_r; trivial.
-Qed.
-
-(**********************************************************************)
-(** * Factorization lemmas *)
-
-Theorem Zred_factor0 : forall n:Z, n = n * 1.
-  intro x; rewrite (Zmult_1_r x); reflexivity.
-Qed.
-
-Theorem Zred_factor1 : forall n:Z, n + n = n * 2.
-Proof.
-  exact Zplus_diag_eq_mult_2.
-Qed.
-
-Theorem Zred_factor2 : forall n m:Z, n + n * m = n * (1 + m).
-Proof.
-  intros x y; pattern x at 1 in |- *; rewrite <- (Zmult_1_r x);
-    rewrite <- Zmult_plus_distr_r; trivial with arith.
-Qed.
-
-Theorem Zred_factor3 : forall n m:Z, n * m + n = n * (1 + m).
-Proof.
-  intros x y; pattern x at 2 in |- *; rewrite <- (Zmult_1_r x);
-    rewrite <- Zmult_plus_distr_r; rewrite Zplus_comm; 
-      trivial with arith.
-Qed.
-
-Theorem Zred_factor4 : forall n m p:Z, n * m + n * p = n * (m + p).
-Proof.
-  intros x y z; symmetry  in |- *; apply Zmult_plus_distr_r.
-Qed.
-
-Theorem Zred_factor5 : forall n m:Z, n * 0 + m = m.
-Proof.
-  intros x y; rewrite <- Zmult_0_r_reverse; auto with arith.
-Qed.
-
-Theorem Zred_factor6 : forall n:Z, n = n + 0.
-Proof.
-  intro; rewrite Zplus_0_r; trivial with arith.
 Qed.
 
 Theorem Zle_mult_approx :

@@ -1,3 +1,4 @@
+
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -6,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: hiddentac.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: hiddentac.mli 11671 2008-12-12 12:43:03Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -19,6 +20,7 @@ open Tacexpr
 open Rawterm
 open Evd
 open Clenv
+open Termops
 (*i*)
 
 (* Tactics for the interpreter. They left a trace in the proof tree
@@ -36,7 +38,10 @@ val h_exact_no_check  : constr -> tactic
 val h_vm_cast_no_check  : constr -> tactic
 
 val h_apply           : advanced_flag -> evars_flag -> 
-                        constr with_ebindings list -> tactic
+  open_constr with_bindings list -> tactic
+val h_apply_in        : advanced_flag -> evars_flag -> 
+  open_constr with_bindings list -> 
+  identifier * intro_pattern_expr located option -> tactic
 
 val h_elim            : evars_flag -> constr with_ebindings ->
                         constr with_ebindings option -> tactic

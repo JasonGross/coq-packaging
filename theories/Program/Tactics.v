@@ -6,10 +6,23 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Tactics.v 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: Tactics.v 11709 2008-12-20 11:42:15Z msozeau $ i*)
 
 (** This module implements various tactics used to simplify the goals produced by Program,
    which are also generally useful. *)
+
+(** The [do] tactic but using a Coq-side nat. *)
+
+Ltac do_nat n tac :=
+  match n with
+    | 0 => idtac
+    | S ?n' => tac ; do_nat n' tac
+  end.
+
+(** Do something on the last hypothesis, or fail *)
+
+Ltac on_last_hyp tac :=
+  match goal with [ H : _ |- _ ] => tac H || fail 1 end.
 
 (** Destructs one pair, without care regarding naming. *)
 
@@ -80,7 +93,7 @@ Ltac clear_dup :=
         | [ H' : ?Y |- _ ] =>
           match H with
             | H' => fail 2
-            | _ => conv X Y ; (clear H' || clear H)
+            | _ => unify X Y ; (clear H' || clear H)
           end
       end
   end.
@@ -91,7 +104,7 @@ Ltac clear_dups := repeat clear_dup.
 
 Ltac subst_no_fail :=
   repeat (match goal with 
-            [ H : ?X = ?Y |- _ ] => subst X || subst Y                  
+            [ H : ?X = ?Y |- _ ] => subst X || subst Y
           end).
 
 Tactic Notation "subst" "*" := subst_no_fail.
@@ -108,6 +121,26 @@ Ltac on_application f tac T :=
     | context [f ?x ?y] => tac (f x y) 
     | context [f ?x] => tac (f x)
   end.
+
+(** A variant of [apply] using [refine], doing as much conversion as necessary. *)
+
+Ltac rapply p := 
+  refine (p _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) ||
+  refine (p _ _ _ _ _ _ _ _ _ _ _ _ _ _) ||
+  refine (p _ _ _ _ _ _ _ _ _ _ _ _ _) ||
+  refine (p _ _ _ _ _ _ _ _ _ _ _ _) ||
+  refine (p _ _ _ _ _ _ _ _ _ _ _) ||
+  refine (p _ _ _ _ _ _ _ _ _ _) ||
+  refine (p _ _ _ _ _ _ _ _ _) ||
+  refine (p _ _ _ _ _ _ _ _) ||
+  refine (p _ _ _ _ _ _ _) ||
+  refine (p _ _ _ _ _ _) ||
+  refine (p _ _ _ _ _) ||
+  refine (p _ _ _ _) ||
+  refine (p _ _ _) ||
+  refine (p _ _) ||
+  refine (p _) ||
+  refine p.
   
 (** Tactical [on_call f tac] applies [tac] on any application of [f] in the hypothesis or goal. *)
 
@@ -154,13 +187,14 @@ Tactic Notation "destruct_call" constr(f) "as" simple_intropattern(l) "in" hyp(i
 
 (** Try to inject any potential constructor equality hypothesis. *)
 
-Ltac autoinjection :=
-  let tac H := progress (inversion H ; subst ; clear_dups) ; clear H in
-    match goal with
-      | [ H : ?f ?a = ?f' ?a' |- _ ] => tac H
-    end.
+Ltac autoinjection tac :=
+  match goal with
+    | [ H : ?f ?a = ?f' ?a' |- _ ] => tac H
+  end.
 
-Ltac autoinjections := repeat autoinjection.
+Ltac inject H := progress (inversion H ; subst*; clear_dups) ; clear H.
+
+Ltac autoinjections := repeat (clear_dups ; autoinjection ltac:inject).
 
 (** Destruct an hypothesis by first copying it to avoid dependencies. *)
 

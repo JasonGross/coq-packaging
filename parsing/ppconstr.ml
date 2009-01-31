@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppconstr.ml 11309 2008-08-06 10:30:35Z herbelin $ *)      
+(* $Id: ppconstr.ml 11739 2009-01-02 19:33:19Z herbelin $ *)      
 
 (*i*)
 open Util
@@ -62,42 +62,46 @@ let prec_of_prim_token = function
   | Numeral p -> if Bigint.is_pos_or_zero p then lposint else lnegint
   | String _ -> latom
 
-let env_assoc_value v env =
-  try List.nth env (v-1)
-  with Not_found -> anomaly ("Inconsistent environment for pretty-print rule")
-
-let decode_constrlist_value = function
-  | CAppExpl (_,_,l) -> l
-  | CApp (_,_,l) -> List.map fst l
-  | _ -> anomaly "Ill-formed list argument of notation"
-
-let decode_patlist_value = function
-  | CPatCstr (_,_,l) -> l
-  | _ -> anomaly "Ill-formed list argument of notation"
-
 open Notation
 
-let rec print_hunk n decode pr env = function
-  | UnpMetaVar (e,prec) -> pr (n,prec) (env_assoc_value e env)
-  | UnpListMetaVar (e,prec,sl) -> 
-      prlist_with_sep (fun () -> prlist (print_hunk n decode pr env) sl)
-      (pr (n,prec)) (decode (env_assoc_value e env))
-  | UnpTerminal s -> str s
-  | UnpBox (b,sub) -> ppcmd_of_box b (prlist (print_hunk n decode pr env) sub)
-  | UnpCut cut -> ppcmd_of_cut cut
+let print_hunks n pr (env,envlist) unp =
+  let env = ref env and envlist = ref envlist in
+  let pop r = let a = List.hd !r in r := List.tl !r; a in
+  let rec aux = function
+  | [] -> mt ()
+  | UnpMetaVar (_,prec) :: l ->
+      let c = pop env in pr (n,prec) c ++ aux l
+  | UnpListMetaVar (_,prec,sl) :: l ->
+      let cl = pop envlist in
+      let pp1 = prlist_with_sep (fun () -> aux sl) (pr (n,prec)) cl in
+      let pp2 = aux l in
+      pp1 ++ pp2
+  | UnpTerminal s :: l -> str s ++ aux l
+  | UnpBox (b,sub) :: l ->
+      (* Keep order: side-effects *)
+      let pp1 = ppcmd_of_box b (aux sub) in
+      let pp2 = aux l in
+      pp1 ++ pp2
+  | UnpCut cut :: l -> ppcmd_of_cut cut ++ aux l in
+  aux unp
 
-let pr_notation_gen decode pr s env =
+let pr_notation pr s env =
   let unpl, level = find_notation_printing_rule s in
-  prlist (print_hunk level decode pr env) unpl, level
-
-let pr_notation = pr_notation_gen decode_constrlist_value
-let pr_patnotation = pr_notation_gen decode_patlist_value
+  print_hunks level pr env unpl, level
 
 let pr_delimiters key strm =
   strm ++ str ("%"^key)
 
+let pr_generalization bk ak c =
+  let hd, tl =
+    match bk with 
+    | Implicit -> "{", "}"
+    | Explicit -> "(", ")"
+  in (* TODO: syntax Abstraction Kind *) 
+    str "`" ++ str hd ++ c ++ str tl
+
 let pr_com_at n =
-  if Flags.do_translate() && n <> 0 then comment n 
+  if Flags.do_beautify() && n <> 0 then comment n 
   else mt()
 
 let pr_with_comments loc pp = pr_located (fun x -> x) (loc,pp)
@@ -179,9 +183,9 @@ let rec pr_patt sep inh p =
   | CPatAtom (_,Some r) -> pr_reference r, latom
   | CPatOr (_,pl) ->
       hov 0 (prlist_with_sep pr_bar (pr_patt spc (lpator,L)) pl), lpator
-  | CPatNotation (_,"( _ )",[p]) ->
+  | CPatNotation (_,"( _ )",([p],[])) ->
       pr_patt (fun()->str"(") (max_int,E) p ++ str")", latom
-  | CPatNotation (_,s,env) -> pr_patnotation (pr_patt mt) s env
+  | CPatNotation (_,s,env) -> pr_notation (pr_patt mt) s env
   | CPatPrim (_,p) -> pr_prim_token p, latom
   | CPatDelimiters (_,k,p) -> pr_delimiters k (pr_patt mt lsimple p), 1
   in
@@ -209,17 +213,23 @@ let begin_of_binders = function
   | b::_ -> begin_of_binder b
   | _ -> 0
 
+let surround_impl k p = 
+  match k with
+  | Explicit -> str"(" ++ p ++ str")"
+  | Implicit -> str"{" ++ p ++ str"}"
+
 let surround_binder k p = 
   match k with
-      Default Explicit -> hov 1 (str"(" ++ p ++ str")")
-    | Default Implicit -> hov 1 (str"{" ++ p ++ str"}")
-    | TypeClass _ -> hov 1 (str"[" ++ p ++ str"]")
-
+  | Default b -> hov 1 (surround_impl b p)
+  | Generalized (b, b', t) -> 
+      hov 1 (surround_impl b' (surround_impl b p))
+	
 let surround_implicit k p =
   match k with
-      Default Explicit -> p
-    | Default Implicit -> (str"{" ++ p ++ str"}")
-    | TypeClass _ -> (str"[" ++ p ++ str"]")
+  | Default Explicit -> p
+  | Default Implicit -> (str"{" ++ p ++ str"}")
+  | Generalized (b, b', t) -> 
+      surround_impl b' (surround_impl b p)
 
 let pr_binder many pr (nal,k,t) =
   match t with
@@ -542,6 +552,17 @@ let rec pr sep inherited a =
       else
 	p, lproj
   | CApp (_,(None,a),l) -> pr_app (pr mt) a l, lapp
+  | CRecord (_,w,l) ->
+      let beg = 
+	match w with
+	| None -> spc () 
+	| Some t -> spc () ++ pr spc ltop t ++ spc () ++ str"with" ++ spc ()
+      in
+	hv 0 (str"{" ++ beg ++	       
+		 prlist_with_sep (fun () -> spc () ++ str";" ++ spc ())
+		 (fun ((_,id), c) -> pr_id id ++ spc () ++ str":=" ++ spc () ++ pr spc ltop c)
+		 l), latom
+
   | CCases (_,LetPatternStyle,rtntypopt,[c,asin],[(_,[(loc,[p])],b)]) ->
       hv 0 (
 	str "let '" ++ 
@@ -592,9 +613,10 @@ let rec pr sep inherited a =
   | CCast (_,a,CastCoerce) ->
       hv 0 (pr mt (lcast,L) a ++ cut () ++ str ":>"),
       lcast
-  | CNotation (_,"( _ )",[t]) ->
+  | CNotation (_,"( _ )",([t],[])) ->
       pr (fun()->str"(") (max_int,L) t ++ str")", latom
   | CNotation (_,s,env) -> pr_notation (pr mt) s env
+  | CGeneralization (_,bk,ak,c) -> pr_generalization bk ak (pr mt lsimple c), latom
   | CPrim (_,p) -> pr_prim_token p, prec_of_prim_token p
   | CDelimiters (_,sc,a) -> pr_delimiters sc (pr mt lsimple a), 1
   | CDynamic _ -> str "<dynamic>", latom
@@ -644,15 +666,15 @@ let rec strip_context n iscast t =
 type term_pr = {
   pr_constr_expr   : constr_expr -> std_ppcmds;
   pr_lconstr_expr  : constr_expr -> std_ppcmds;
-  pr_pattern_expr  : Tacexpr.pattern_expr -> std_ppcmds;
-  pr_lpattern_expr : Tacexpr.pattern_expr -> std_ppcmds
+  pr_constr_pattern_expr  : constr_pattern_expr -> std_ppcmds;
+  pr_lconstr_pattern_expr : constr_pattern_expr -> std_ppcmds
 }
 
 let default_term_pr = {
   pr_constr_expr   = pr lsimple;
   pr_lconstr_expr  = pr ltop;
-  pr_pattern_expr  = pr lsimple;
-  pr_lpattern_expr = pr ltop
+  pr_constr_pattern_expr  = pr lsimple;
+  pr_lconstr_pattern_expr = pr ltop
 }
 
 let term_pr = ref default_term_pr
@@ -661,8 +683,8 @@ let set_term_pr = (:=) term_pr
 
 let pr_constr_expr c   = !term_pr.pr_constr_expr   c
 let pr_lconstr_expr c  = !term_pr.pr_lconstr_expr  c
-let pr_pattern_expr c  = !term_pr.pr_pattern_expr  c
-let pr_lpattern_expr c = !term_pr.pr_lpattern_expr c
+let pr_constr_pattern_expr c  = !term_pr.pr_constr_pattern_expr  c
+let pr_lconstr_pattern_expr c = !term_pr.pr_lconstr_pattern_expr c
 
 let pr_cases_pattern_expr = pr_patt ltop
 

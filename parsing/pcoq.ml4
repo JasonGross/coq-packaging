@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo pa_macro.cmo" i*)
 
-(*i $Id: pcoq.ml4 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: pcoq.ml4 11784 2009-01-14 11:36:32Z herbelin $ i*)
 
 open Pp
 open Util
@@ -407,7 +407,7 @@ module Prim =
 
     let name = Gram.Entry.create "Prim.name"
     let identref = Gram.Entry.create "Prim.identref"
-    let pattern_ident = Gram.Entry.create "pattern_ident"
+    let pattern_ident = gec_gen rawwit_pattern_ident "pattern_ident"
     let pattern_identref = Gram.Entry.create "pattern_identref"
 
     (* A synonym of ident - maybe ident will be located one day *)
@@ -445,6 +445,7 @@ module Constr =
     let binders_let = Gram.Entry.create "constr:binders_let"
     let binders_let_fixannot = Gram.Entry.create "constr:binders_let_fixannot"
     let typeclass_constraint = Gram.Entry.create "constr:typeclass_constraint"
+    let record_declaration = Gram.Entry.create "constr:record_declaration"
     let appl_arg = Gram.Entry.create "constr:appl_arg"
   end
 

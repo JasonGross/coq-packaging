@@ -8,13 +8,14 @@
 
 (*i camlp4deps: "parsing/grammar.cma parsing/q_constr.cmo" i*)
 
-(* $Id: hipattern.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: hipattern.ml4 11739 2009-01-02 19:33:19Z herbelin $ *)
 
 open Pp
 open Util
 open Names
 open Nameops
 open Term
+open Sign
 open Termops
 open Reductionops
 open Inductiveops
@@ -64,43 +65,107 @@ let match_with_non_recursive_type t =
 
 let is_non_recursive_type t = op2bool (match_with_non_recursive_type t)
 
-(* A general conjunction type is a non-recursive inductive type with
-   only one constructor. *)
+(* Test dependencies *)
 
-let match_with_conjunction t =
+let rec has_nodep_prod_after n c =
+  match kind_of_term c with
+    | Prod (_,_,b) -> 
+	( n>0 || not (dependent (mkRel 1) b)) 
+	&& (has_nodep_prod_after (n-1) b)
+    | _            -> true
+	  
+let has_nodep_prod = has_nodep_prod_after 0
+
+(* A general conjunctive type is a non-recursive with-no-indices inductive 
+   type with only one constructor and no dependencies between argument;
+   it is strict if it has the form 
+   "Inductive I A1 ... An := C (_:A1) ... (_:An)" *)
+
+(* style: None = record; Some false = conjunction; Some true = strict conj *)
+
+let match_with_one_constructor style t =
   let (hdapp,args) = decompose_app t in 
   match kind_of_term hdapp with
-    | Ind ind -> 
-	let (mib,mip) = Global.lookup_inductive ind in
-	if (Array.length mip.mind_consnames = 1)
-	  && (not (mis_is_recursive (ind,mib,mip)))
-          && (mip.mind_nrealargs = 0)
-        then 
-	  Some (hdapp,args)
-        else 
-	  None
-    | _ -> None
+  | Ind ind -> 
+      let (mib,mip) = Global.lookup_inductive ind in
+      if (Array.length mip.mind_consnames = 1)
+	&& (not (mis_is_recursive (ind,mib,mip)))
+        && (mip.mind_nrealargs = 0)
+      then
+	if style = Some true (* strict conjunction *) then
+	  let ctx = 
+	    fst (decompose_prod_assum (snd 
+	      (decompose_prod_n_assum mib.mind_nparams mip.mind_nf_lc.(0)))) in
+	  if 
+	    List.for_all
+	      (fun (_,b,c) -> b=None && c = mkRel mib.mind_nparams) ctx
+	  then
+	    Some (hdapp,args)
+	  else None
+	else
+	  let ctyp = prod_applist mip.mind_nf_lc.(0) args in
+	  let cargs = List.map pi3 (fst (decompose_prod_assum ctyp)) in
+	  if style <> Some false || has_nodep_prod ctyp then
+	    (* Record or non strict conjunction *)
+	    Some (hdapp,List.rev cargs)
+	  else
+	      None
+      else
+	None
+  | _ -> None
 
-let is_conjunction t = op2bool (match_with_conjunction t)
-    
-(* A general disjunction type is a non-recursive inductive type all
-   whose constructors have a single argument. *)
+let match_with_conjunction ?(strict=false) t =
+  match_with_one_constructor (Some strict) t
 
-let match_with_disjunction t =
+let match_with_record t = 
+  match_with_one_constructor None t
+
+let is_conjunction ?(strict=false) t =
+  op2bool (match_with_conjunction ~strict t)
+
+let is_record t =
+  op2bool (match_with_record t)
+
+
+(* A general disjunction type is a non-recursive with-no-indices inductive 
+   type with of which all constructors have a single argument;
+   it is strict if it has the form 
+   "Inductive I A1 ... An := C1 (_:A1) | ... | Cn : (_:An)" *)
+
+let test_strict_disjunction n lc =
+  array_for_all_i (fun i c ->
+    match fst (decompose_prod_assum (snd (decompose_prod_n_assum n c))) with
+    | [_,None,c] -> c = mkRel (n - i)
+    | _ -> false) 0 lc
+
+let match_with_disjunction ?(strict=false) t =
   let (hdapp,args) = decompose_app t in 
   match kind_of_term hdapp with
-    | Ind ind  ->
-        let car = mis_constr_nargs ind in
-	if array_for_all (fun ar -> ar = 1) car &&
-	   (let (mib,mip) = Global.lookup_inductive ind in
-            not (mis_is_recursive (ind,mib,mip)))
-        then 
-	  Some (hdapp,args)
-        else 
-	  None
-    | _ -> None
+  | Ind ind  ->
+      let car = mis_constr_nargs ind in
+      let (mib,mip) = Global.lookup_inductive ind in
+      if array_for_all (fun ar -> ar = 1) car &&
+	not (mis_is_recursive (ind,mib,mip))
+      then
+	if strict then
+	  if test_strict_disjunction mib.mind_nparams mip.mind_nf_lc then
+	    Some (hdapp,args)
+	  else
+	    None
+	else
+	  let cargs =
+	    Array.map (fun ar -> pi2 (destProd (prod_applist ar args)))
+	      mip.mind_nf_lc in
+	  Some (hdapp,Array.to_list cargs)
+      else 
+	None
+  | _ -> None
 
-let is_disjunction t = op2bool (match_with_disjunction t)
+let is_disjunction ?(strict=false) t =
+  op2bool (match_with_disjunction ~strict t)
+
+(* An empty type is an inductive type, possible with indices, that has no
+   constructors *)
 
 let match_with_empty_type t =
   let (hdapp,args) = decompose_app t in
@@ -113,22 +178,32 @@ let match_with_empty_type t =
 	  
 let is_empty_type t = op2bool (match_with_empty_type t)
 
-let match_with_unit_type t =
+(* This filters inductive types with one constructor with no arguments;
+   Parameters and indices are allowed *)
+
+let match_with_unit_or_eq_type t =
   let (hdapp,args) = decompose_app t in
   match (kind_of_term hdapp) with
     | Ind ind  -> 
         let (mib,mip) = Global.lookup_inductive ind in
         let constr_types = mip.mind_nf_lc in 
         let nconstr = Array.length mip.mind_consnames in
-        let zero_args c =
-          nb_prod c = mib.mind_nparams in  
-	if nconstr = 1 && array_for_all zero_args constr_types then 
+        let zero_args c = nb_prod c = mib.mind_nparams in  
+	if nconstr = 1 && zero_args constr_types.(0) then 
 	  Some hdapp
-        else 
+	else 
 	  None
     | _ -> None
 
-let is_unit_type t = op2bool (match_with_unit_type t)
+let is_unit_or_eq_type t = op2bool (match_with_unit_or_eq_type t)
+
+(* A unit type is an inductive type with no indices but possibly
+   (useless) parameters, and that has no constructors *)
+
+let is_unit_type t =
+  match match_with_conjunction t with
+  | Some (_,t) when List.length t = 0 -> true
+  | _ -> false
 
 (* Checks if a given term is an application of an
    inductive binary relation R, so that R has only one constructor
@@ -156,6 +231,19 @@ let match_with_equation t =
     | _ -> None
 
 let is_equation t = op2bool (match_with_equation  t)
+
+let match_with_equality_type t =
+  let (hdapp,args) = decompose_app t in
+  match (kind_of_term hdapp) with
+    | Ind ind when args <> [] -> 
+        let (mib,mip) = Global.lookup_inductive ind in
+        let nconstr = Array.length mip.mind_consnames in
+	if nconstr = 1 && constructor_nrealargs (Global.env()) (ind,1) = 0
+        then 
+	  Some (hdapp,args)
+        else 
+	  None
+    | _ -> None
 
 let coq_arrow_pattern = PATTERN [ ?X1 -> ?X2 ]
 
@@ -186,15 +274,6 @@ let match_with_imp_term c=
 
 let is_imp_term c = op2bool (match_with_imp_term c) 
 
-let rec has_nodep_prod_after n c =
-  match kind_of_term c with
-    | Prod (_,_,b) -> 
-	( n>0 || not (dependent (mkRel 1) b)) 
-	&& (has_nodep_prod_after (n-1) b)
-    | _            -> true
-	  
-let has_nodep_prod = has_nodep_prod_after 0
-	
 let match_with_nodep_ind t =
   let (hdapp,args) = decompose_app t in
     match (kind_of_term hdapp) with

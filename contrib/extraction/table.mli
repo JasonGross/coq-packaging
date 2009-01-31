@@ -6,20 +6,20 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: table.mli 11262 2008-07-24 20:59:29Z letouzey $ i*)
+(*i $Id: table.mli 11844 2009-01-22 16:45:06Z letouzey $ i*)
 
 open Names
 open Libnames
 open Miniml
 open Declarations
 
-val id_of_global : global_reference -> identifier
-val pr_long_global : global_reference -> Pp.std_ppcmds
-
+val safe_id_of_global : global_reference -> identifier
 
 (*s Warning and Error messages. *)
 
 val warning_axioms : unit -> unit
+val warning_both_mod_and_cst :
+ qualid -> module_path -> global_reference -> unit
 val error_axiom_scheme : global_reference -> int -> 'a
 val error_constant : global_reference -> 'a
 val error_inductive : global_reference -> 'a
@@ -55,7 +55,6 @@ val modfile_of_mp : module_path -> module_path
 val common_prefix_from_list : module_path -> module_path list -> module_path
 val add_labels_mp : module_path -> label list -> module_path
 val get_nth_label_mp : int -> module_path -> label
-val get_nth_label : int -> global_reference -> label
 val labels_of_ref : global_reference -> module_path * label list
 
 (*s Some table-related operations *)
@@ -142,6 +141,11 @@ val extract_constant_inline :
   bool -> reference -> string list -> string -> unit
 val extract_inductive : reference -> string * string list -> unit
 
+(*s Table of blacklisted filenames *)
+
+val extraction_blacklist : identifier list -> unit
+val reset_extraction_blacklist : unit -> unit
+val print_extraction_blacklist : unit -> unit
 
 
 

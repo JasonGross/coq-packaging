@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: library.ml 11313 2008-08-07 11:15:03Z barras $ *)
+(* $Id: library.ml 11801 2009-01-18 20:11:41Z herbelin $ *)
 
 open Pp
 open Util
@@ -18,7 +18,6 @@ open Safe_typing
 open Libobject
 open Lib
 open Nametab
-open Declaremods
 
 (*************************************************************************)
 (*s Load path. Mapping from physical to logical paths etc.*)
@@ -29,43 +28,15 @@ let load_paths = ref ([] : (System.physical_path * logical_path * bool) list)
 
 let get_load_paths () = List.map pi1 !load_paths
 
-(* Hints to partially detects if two paths refer to the same repertory *)
-let rec remove_path_dot p = 
-  let curdir = Filename.concat Filename.current_dir_name "" in (* Unix: "./" *)
-  let n = String.length curdir in
-  if String.length p > n && String.sub p 0 n = curdir then
-    remove_path_dot (String.sub p n (String.length p - n))
-  else
-    p
-
-let strip_path p =
-  let cwd = Filename.concat (Sys.getcwd ()) "" in (* Unix: "`pwd`/" *)
-  let n = String.length cwd in
-  if String.length p > n && String.sub p 0 n = cwd then
-    remove_path_dot (String.sub p n (String.length p - n))
-  else
-    remove_path_dot p
-
-let canonical_path_name p =
-  let current = Sys.getcwd () in
-  try 
-    Sys.chdir p;
-    let p' = Sys.getcwd () in
-    Sys.chdir current;
-    p'
-  with Sys_error _ ->
-    (* We give up to find a canonical name and just simplify it... *)
-    strip_path p
-
 let find_logical_path phys_dir =
-  let phys_dir = canonical_path_name phys_dir in
+  let phys_dir = System.canonical_path_name phys_dir in
   match List.filter (fun (p,d,_) -> p = phys_dir) !load_paths with
   | [_,dir,_] -> dir
   | [] -> Nameops.default_root_prefix
   | l -> anomaly ("Two logical paths are associated to "^phys_dir)
 
 let is_in_load_paths phys_dir =
-  let dir = canonical_path_name phys_dir in
+  let dir = System.canonical_path_name phys_dir in
   let lp = get_load_paths () in
   let check_p = fun p -> (String.compare dir p) == 0 in
     List.exists check_p lp 
@@ -74,13 +45,13 @@ let remove_load_path dir =
   load_paths := List.filter (fun (p,d,_) -> p <> dir) !load_paths
 
 let add_load_path isroot (phys_path,coq_path) =
-  let phys_path = canonical_path_name phys_path in
+  let phys_path = System.canonical_path_name phys_path in
     match List.filter (fun (p,d,_) -> p = phys_path) !load_paths with
       | [_,dir,_] ->
 	  if coq_path <> dir 
             (* If this is not the default -I . to coqtop *)
             && not
-            (phys_path = canonical_path_name Filename.current_dir_name
+            (phys_path = System.canonical_path_name Filename.current_dir_name
 		&& coq_path = Nameops.default_root_prefix)
 	  then
 	    begin
@@ -149,7 +120,7 @@ type compilation_unit_name = dir_path
 type library_disk = { 
   md_name : compilation_unit_name;
   md_compiled : compiled_library;
-  md_objects : library_objects;
+  md_objects : Declaremods.library_objects;
   md_deps : (compilation_unit_name * Digest.t) list;
   md_imports : compilation_unit_name list }
 
@@ -159,7 +130,7 @@ type library_disk = {
 type library_t = {
   library_name : compilation_unit_name;
   library_compiled : compiled_library;
-  library_objects : library_objects;
+  library_objects : Declaremods.library_objects;
   library_deps : (compilation_unit_name * Digest.t) list;
   library_imports : compilation_unit_name list;
   library_digest : Digest.t }
@@ -324,14 +295,14 @@ let open_libraries export modl =
 (**********************************************************************)
 (* import and export  -  synchronous operations*)
 
-let cache_import (_,(dir,export)) = 
-  open_libraries export [try_find_library dir]
-
-let open_import i (_,(dir,_) as obj) =
+let open_import i (_,(dir,export)) =
   if i=1 then
     (* even if the library is already imported, we re-import it *)
     (* if not (library_is_opened dir) then *)
-      cache_import obj
+      open_libraries export [try_find_library dir]
+
+let cache_import obj = 
+  open_import 1 obj
 
 let subst_import (_,_,o) = o
 
@@ -379,7 +350,7 @@ let locate_absolute_library dir =
   if loadpath = [] then raise LibUnmappedDir;
   try
     let name = (string_of_id base)^".vo" in
-    let _, file = System.where_in_path false loadpath name in
+    let _, file = System.where_in_path ~warn:false loadpath name in
     (dir, file)
   with Not_found ->
   (* Last chance, removed from the file system but still in memory *)
@@ -395,7 +366,7 @@ let locate_qualified_library warn qid =
     let loadpath = loadpaths_matching_dir_path dir in
     if loadpath = [] then raise LibUnmappedDir;
     let name = string_of_id base ^ ".vo" in
-    let lpath, file = System.where_in_path warn (List.map fst loadpath) name in
+    let lpath, file = System.where_in_path ~warn (List.map fst loadpath) name in
     let dir = extend_dirpath (List.assoc lpath loadpath) base in
     (* Look if loaded *)
     if library_is_loaded dir then (LibLoaded, dir, library_full_filename dir)
@@ -506,12 +477,14 @@ let rec_intern_by_filename_only id f =
 
 let rec_intern_library_from_file idopt f =
   (* A name is specified, we have to check it contains library id *)
-  let _, f = System.find_file_in_path (get_load_paths ()) (f^".vo") in
+  let paths = get_load_paths () in
+  let _, f = 
+    System.find_file_in_path ~warn:(Flags.is_verbose()) paths (f^".vo") in
   rec_intern_by_filename_only idopt f
 
 (**********************************************************************)
-(*s [require_library] loads and opens a library. This is a synchronized
-    operation. It is performed as follows:
+(*s [require_library] loads and possibly opens a library. This is a 
+    synchronized operation. It is performed as follows:
 
   preparation phase: (functions require_library* ) the library and its 
     dependencies are read from to disk (using intern_* )
@@ -524,10 +497,6 @@ let rec_intern_library_from_file idopt f =
     the library is loaded in the environment and Nametab, the objects are 
     registered etc, using functions from Declaremods (via load_library, 
     which recursively loads its dependencies)
-
-
-  The [read_library] operation is very similar, but does not "open"
-    the library
 *)
 
 type library_reference = dir_path list * bool option
@@ -540,14 +509,21 @@ let register_library (dir,m) =
     m.library_digest;
   register_loaded_library m
 
-  (* [needed] is the ordered list of libraries not already loaded *)
-let cache_require (_,(needed,modl,export)) =
-  List.iter register_library needed;
+(* Follow the semantics of Anticipate object:
+   - called at module or module type closing when a Require occurs in 
+     the module or module type
+   - not called from a library (i.e. a module identified with a file) *)
+let load_require _ (_,(needed,modl,_)) =
+  List.iter register_library needed
+
+let open_require i (_,(_,modl,export)) =
   Option.iter (fun exp -> open_libraries exp (List.map find_library modl))
     export
 
-let load_require  _ (_,(needed,modl,_)) =
-  List.iter register_library needed
+  (* [needed] is the ordered list of libraries not already loaded *)
+let cache_require o =
+  load_require 1 o;
+  open_require 1 o
 
   (* keeps the require marker for closed section replay but removes
      OS dependent fields from .vo files for cross-platform compatibility *)
@@ -555,18 +531,19 @@ let export_require (_,l,e) = Some ([],l,e)
 
 let discharge_require (_,o) = Some o
 
+(* open_function is never called from here because an Anticipate object *) 
+
 let (in_require, out_require) =
   declare_object {(default_object "REQUIRE") with
        cache_function = cache_require;
        load_function = load_require;
+       open_function = (fun _ _ -> assert false);
        export_function = export_require;
        discharge_function = discharge_require;
        classify_function = (fun (_,o) -> Anticipate o) }
 
 (* Require libraries, import them if [export <> None], mark them for export
    if [export = Some true] *)
-
-(* read = require without opening *)
 
 let xml_require = ref (fun d -> ())
 let set_xml_require f = xml_require := f
@@ -575,19 +552,16 @@ let require_library qidl export =
   let modrefl = List.map try_locate_qualified_library qidl in
   let needed = List.rev (List.fold_left rec_intern_library [] modrefl) in
   let modrefl = List.map fst modrefl in
-    if Lib.is_modtype () || Lib.is_module () then begin
-      add_anonymous_leaf (in_require (needed,modrefl,None));
-      Option.iter (fun exp ->
-	List.iter (fun dir -> add_anonymous_leaf (in_import(dir,exp))) modrefl)
-	export
-    end
+    if Lib.is_modtype () || Lib.is_module () then 
+      begin
+	add_anonymous_leaf (in_require (needed,modrefl,None));
+	Option.iter (fun exp ->
+	  List.iter (fun dir -> add_anonymous_leaf (in_import(dir,exp))) modrefl)
+	  export
+      end
     else
       add_anonymous_leaf (in_require (needed,modrefl,export));
-  if !Flags.dump then List.iter2 (fun (loc, _) dp -> 
-    Flags.dump_string (Printf.sprintf "R%d %s <> <> %s\n" 
-		    (fst (unloc loc)) (string_of_dirpath dp) "lib"))
-    qidl modrefl;
-  if !Flags.xml_export then List.iter !xml_require modrefl;
+    if !Flags.xml_export then List.iter !xml_require modrefl;
   add_frozen_state ()
 
 let require_library_from_file idopt file export =
@@ -608,25 +582,33 @@ let require_library_from_file idopt file export =
 let import_module export (loc,qid) =
   try
     match Nametab.locate_module qid with
-	MPfile dir -> 
+      | MPfile dir -> 
 	  if Lib.is_modtype () || Lib.is_module () || not export then
 	    add_anonymous_leaf (in_import (dir, export))
 	  else
-	    add_anonymous_leaf (in_require ([],[dir], Some export))
+	    add_anonymous_leaf (in_import (dir, export))
       | mp ->
-	  import_module export mp
+	  Declaremods.import_module export mp
   with
       Not_found ->
 	user_err_loc
-        (loc,"import_library",
-	 str ((string_of_qualid qid)^" is not a module"))
+          (loc,"import_library",
+	  str ((string_of_qualid qid)^" is not a module"))
   
 (************************************************************************)
 (*s Initializing the compilation of a library. *)
 
+let check_coq_overwriting p =
+  let l = repr_dirpath p in
+  if not !Flags.boot && l <> [] && string_of_id (list_last l) = "Coq" then
+    errorlabstrm "" (strbrk ("Name "^string_of_dirpath p^" starts with prefix \"Coq\" which is reserved for the Coq library."))
+
 let start_library f = 
-  let _,longf = System.find_file_in_path (get_load_paths ()) (f^".v") in
+  let paths = get_load_paths () in
+  let _,longf =
+    System.find_file_in_path ~warn:(Flags.is_verbose()) paths (f^".v") in
   let ldir0 = find_logical_path (Filename.dirname longf) in
+  check_coq_overwriting ldir0;
   let id = id_of_string (Filename.basename f) in
   let ldir = extend_dirpath ldir0 id in
   Declaremods.start_library ldir;

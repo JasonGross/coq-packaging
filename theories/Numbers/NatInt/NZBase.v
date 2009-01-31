@@ -8,14 +8,14 @@
 (*                      Evgeny Makarov, INRIA, 2007                     *)
 (************************************************************************)
 
-(*i $Id: NZBase.v 10934 2008-05-15 21:58:20Z letouzey $ i*)
+(*i $Id: NZBase.v 11674 2008-12-12 19:48:40Z letouzey $ i*)
 
 Require Import NZAxioms.
 
 Module NZBasePropFunct (Import NZAxiomsMod : NZAxiomsSig).
 Open Local Scope NatIntScope.
 
-Theorem NZneq_symm : forall n m : NZ, n ~= m -> m ~= n.
+Theorem NZneq_sym : forall n m : NZ, n ~= m -> m ~= n.
 Proof.
 intros n m H1 H2; symmetry in H2; false_hyp H2 H1.
 Qed.

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernac.ml 10836 2008-04-23 11:43:58Z courtieu $ *)
+(* $Id: vernac.ml 11801 2009-01-18 20:11:41Z herbelin $ *)
 
 (* Parsing of vernacular. *)
 
@@ -32,7 +32,8 @@ exception DuringCommandInterp of Util.loc * exn
 let raise_with_file file exc =
   let (cmdloc,re) =
     match exc with
-      | DuringCommandInterp(loc,e) -> (loc,e)
+      | DuringCommandInterp(loc,e)
+      | Stdpp.Exc_located (loc,DuringSyntaxChecking e) -> (loc,e)
       | e -> (dummy_loc,e) 
   in
   let (inner,inex) =
@@ -56,7 +57,9 @@ let real_error = function
    the file we parse seems a bit risky to me.  B.B.  *)
 
 let open_file_twice_if verbosely fname =
-  let _,longfname = find_file_in_path (Library.get_load_paths ()) fname in
+  let paths = Library.get_load_paths () in
+  let _,longfname =
+    find_file_in_path ~warn:(Flags.is_verbose()) paths fname in
   let in_chan = open_in longfname in
   let verb_ch = if verbosely then Some (open_in longfname) else None in
   let po = Pcoq.Gram.parsable (Stream.of_channel in_chan) in
@@ -93,23 +96,24 @@ let parse_phrase (po, verbch) =
  * parses, and is verbose on "primitives" commands if verbosely is true *)
 
 let just_parsing = ref false
-let chan_translate = ref stdout
+let chan_beautify = ref stdout
+let beautify_suffix = ".beautified"
 
 let set_formatter_translator() =
-  let ch = !chan_translate in
+  let ch = !chan_beautify in
   let out s b e = output ch s b e in
   Format.set_formatter_output_functions out (fun () -> flush ch);
   Format.set_max_boxes max_int
 
 let pr_new_syntax loc ocom =
   let loc = unloc loc in
-  if !translate_file then set_formatter_translator();
+  if !beautify_file then set_formatter_translator();
   let fs = States.freeze () in
   let com = match ocom with
     | Some VernacNop -> mt()
     | Some com -> pr_vernac com
     | None -> mt() in
-  if !translate_file then
+  if !beautify_file then
     msg (hov 0 (comment (fst loc) ++ com ++ comment (snd loc)))
   else
     msgnl (hov 4 (str"New Syntax:" ++ fnl() ++ (hov 0 com)));
@@ -121,33 +125,34 @@ let rec vernac_com interpfun (loc,com) =
     | VernacLoad (verbosely, fname) ->
 	let fname = expand_path_macros fname in
         (* translator state *)
-        let ch = !chan_translate in
+        let ch = !chan_beautify in
         let cs = Lexer.com_state() in
         let cl = !Pp.comments in
         (* end translator state *)
         (* coqdoc state *)
-        let cds = Constrintern.coqdoc_freeze() in
-          if !Flags.translate_file then 
+        let cds = Dumpglob.coqdoc_freeze() in
+          if !Flags.beautify_file then 
 	    begin
-              let _,f = find_file_in_path (Library.get_load_paths ())
+              let _,f = find_file_in_path ~warn:(Flags.is_verbose())
+		(Library.get_load_paths ())
 		(make_suffix fname ".v") in
-		chan_translate := open_out (f^"8");
+		chan_beautify := open_out (f^beautify_suffix);
 		Pp.comments := []
             end;
           begin 
 	    try
 	      read_vernac_file verbosely (make_suffix fname ".v");
-              if !Flags.translate_file then close_out !chan_translate;
-              chan_translate := ch;
+              if !Flags.beautify_file then close_out !chan_beautify;
+              chan_beautify := ch;
               Lexer.restore_com_state cs;
               Pp.comments := cl;
-              Constrintern.coqdoc_unfreeze cds
+              Dumpglob.coqdoc_unfreeze cds
 	    with e -> 
-	      if !Flags.translate_file then close_out !chan_translate;
-              chan_translate := ch;
+	      if !Flags.beautify_file then close_out !chan_beautify;
+              chan_beautify := ch;
               Lexer.restore_com_state cs;
               Pp.comments := cl;
-              Constrintern.coqdoc_unfreeze cds;
+              Dumpglob.coqdoc_unfreeze cds;
 	      raise e
 	  end
 	      
@@ -164,7 +169,7 @@ let rec vernac_com interpfun (loc,com) =
 
   in 
     try
-      if do_translate () then pr_new_syntax loc (Some com);
+      if do_beautify () then pr_new_syntax loc (Some com);
       interp com
     with e -> 
       Format.set_formatter_out_channel stdout;
@@ -191,7 +196,7 @@ and read_vernac_file verbosely s =
     close_input in_chan input;    (* we must close the file first *)
     match real_error e with
       | End_of_input ->
-          if do_translate () then pr_new_syntax (make_loc (max_int,max_int)) None
+          if do_beautify () then pr_new_syntax (make_loc (max_int,max_int)) None
       | _ -> raise_with_file fname e
 
 (* raw_do_vernac : char Stream.t -> unit
@@ -214,23 +219,26 @@ let set_xml_end_library f = xml_end_library := f
 
 (* Load a vernac file. Errors are annotated with file and location *)
 let load_vernac verb file =
-  chan_translate :=
-    if !Flags.translate_file then open_out (file^"8") else stdout;
+  chan_beautify :=
+    if !Flags.beautify_file then open_out (file^beautify_suffix) else stdout;
   try 
     read_vernac_file verb file;
-    if !Flags.translate_file then close_out !chan_translate;
+    if !Flags.beautify_file then close_out !chan_beautify;
   with e -> 
-    if !Flags.translate_file then close_out !chan_translate;
+    if !Flags.beautify_file then close_out !chan_beautify;
     raise_with_file file e
 
 (* Compile a vernac file (f is assumed without .v suffix) *)
 let compile verbosely f =
-  let ldir,long_f_dot_v = Library.start_library f in
-  if !dump then dump_string ("F" ^ Names.string_of_dirpath ldir ^ "\n");
-  if !Flags.xml_export then !xml_start_library ();
-  let _ = load_vernac verbosely long_f_dot_v in
-  if Pfedit.get_all_proof_names () <> [] then
-    (message "Error: There are pending proofs"; exit 1);
-  if !Flags.xml_export then !xml_end_library ();
-  Library.save_library_to ldir (long_f_dot_v ^ "o")
+  let ldir,long_f_dot_v = Flags.verbosely Library.start_library f in
+    if Dumpglob.multi_dump () then 
+      Dumpglob.open_glob_file (f ^ ".glob");
+    Dumpglob.dump_string ("F" ^ Names.string_of_dirpath ldir ^ "\n");
+    if !Flags.xml_export then !xml_start_library ();
+    let _ = load_vernac verbosely long_f_dot_v in
+     if Pfedit.get_all_proof_names () <> [] then
+	(message "Error: There are pending proofs"; exit 1);
+      if !Flags.xml_export then !xml_end_library ();
+      if Dumpglob.multi_dump () then Dumpglob.close_glob_file ();
+      Library.save_library_to ldir (long_f_dot_v ^ "o")
 

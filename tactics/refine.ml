@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: refine.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: refine.ml 11671 2008-12-12 12:43:03Z herbelin $ *)
 
 (* JCF -- 6 janvier 1998  EXPERIMENTAL *)
 
@@ -275,7 +275,7 @@ let rec tcc_aux subst (TH (c,mm,sgp) as _th) gl =
     | Lambda (Name id,_,m), _ ->
 	assert (isMeta (strip_outer_cast m));
 	begin match sgp with
-	  | [None] -> introduction id gl
+	  | [None] -> intro_mustbe_force id gl
 	  | [Some th] ->
               tclTHEN (introduction id)
                 (onLastHyp (fun id -> tcc_aux (mkVar id::subst) th)) gl
@@ -314,7 +314,7 @@ let rec tcc_aux subst (TH (c,mm,sgp) as _th) gl =
        because of evars limitation, use non dependent assert instead *)
     | LetIn (Name id,c1,t1,c2), _ ->
 	tclTHENS
-          (assert_tac true (Name id) t1) 
+          (assert_tac (Name id) t1) 
 	  [(match List.hd sgp with 
 	     | None -> tclIDTAC
 	     | Some th -> onLastHyp (fun id -> tcc_aux (mkVar id::subst) th));

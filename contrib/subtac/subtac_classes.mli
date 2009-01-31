@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: subtac_classes.mli 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: subtac_classes.mli 11709 2008-12-20 11:42:15Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -34,9 +34,9 @@ val type_ctx_instance :     Evd.evar_defs ref ->
 
 val new_instance : 
   ?global:bool ->
-  Topconstr.local_binder list ->
+  local_binder list ->
   typeclass_constraint ->
-  binder_def_list ->
-  ?on_free_vars:(identifier list -> unit) ->
+  constr_expr ->
+  ?generalize:bool ->
   int option ->
-  identifier
+  identifier * Subtac_obligations.progress

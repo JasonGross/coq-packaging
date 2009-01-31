@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqtop.ml 11209 2008-07-05 10:17:49Z herbelin $ *)
+(* $Id: coqtop.ml 11830 2009-01-22 06:45:13Z notin $ *)
 
 open Pp
 open Util
@@ -21,7 +21,8 @@ open Coqinit
 
 let get_version_date () =
   try
-    let ch = open_in (Coq_config.coqlib^"/revision") in
+    let coqlib = Envars.coqlib () in 
+    let ch = open_in (Filename.concat coqlib "revision") in
     let ver = input_line ch in
     let rev = input_line ch in
       (ver,rev)
@@ -51,7 +52,9 @@ let set_batch_mode () = batch_mode := true
 
 let toplevel_default_name = make_dirpath [id_of_string "Top"]
 let toplevel_name = ref (Some toplevel_default_name)
-let set_toplevel_name dir = toplevel_name := Some dir
+let set_toplevel_name dir =
+  if dir = empty_dirpath then error "Need a non empty toplevel module name";
+  toplevel_name := Some dir
 let unset_toplevel_name () = toplevel_name := None
 
 let remove_top_ml () = Mltop.remove ()
@@ -68,16 +71,16 @@ let outputstate = ref ""
 let set_outputstate s = outputstate:=s
 let outputstate () = if !outputstate <> "" then extern_state !outputstate
 
-let check_coq_overwriting p = 
-  if string_of_id (list_last (repr_dirpath p)) = "Coq" then
-    error "The \"Coq\" logical root directory is reserved for the Coq library"
-
 let set_default_include d = push_include (d,Nameops.default_root_prefix)
 let set_default_rec_include d = push_rec_include(d,Nameops.default_root_prefix)
 let set_include d p =
-  let p = dirpath_of_string p in check_coq_overwriting p; push_include (d,p)
+  let p = dirpath_of_string p in
+  Library.check_coq_overwriting p;
+  push_include (d,p)
 let set_rec_include d p =
-  let p = dirpath_of_string p in check_coq_overwriting p; push_rec_include(d,p)
+  let p = dirpath_of_string p in 
+  Library.check_coq_overwriting p;
+  push_rec_include(d,p)
  
 let load_vernacular_list = ref ([] : (string * bool) list)
 let add_load_vernacular verb s =
@@ -85,8 +88,8 @@ let add_load_vernacular verb s =
 let load_vernacular () =
   List.iter
     (fun (s,b) -> 
-      if Flags.do_translate () then
-	with_option translate_file (Vernac.load_vernac b) s
+      if Flags.do_beautify () then
+	with_option beautify_file (Vernac.load_vernac b) s
       else
 	Vernac.load_vernac b s)
     (List.rev !load_vernacular_list)
@@ -110,13 +113,13 @@ let add_compile verbose s =
   compile_list := (verbose,s) :: !compile_list
 let compile_files () =
   let init_state = States.freeze() in
-  let coqdoc_init_state = Constrintern.coqdoc_freeze () in
+  let coqdoc_init_state = Dumpglob.coqdoc_freeze () in
     List.iter
       (fun (v,f) ->
 	 States.unfreeze init_state;
-	 Constrintern.coqdoc_unfreeze coqdoc_init_state;
-	 if Flags.do_translate () then
-	   with_option translate_file (Vernac.compile v) f
+	 Dumpglob.coqdoc_unfreeze coqdoc_init_state;
+	 if Flags.do_beautify () then
+	   with_option beautify_file (Vernac.compile v) f
 	 else
 	   Vernac.compile v f)
       (List.rev !compile_list)
@@ -132,7 +135,7 @@ let set_opt () = re_exec_version := "opt"
 
 let re_exec is_ide =
   let s = !re_exec_version in
-  let is_native = (Mltop.get()) = Mltop.Native in
+  let is_native = Mltop.is_native in
   (* Unix.readlink is not implemented on Windows architectures :-(
      let prog =
        try Unix.readlink "/proc/self/exe"
@@ -177,8 +180,10 @@ let usage () =
 
 let warning s = msg_warning (str s)
 
+
 let ide_args = ref []
 let parse_args is_ide =
+  let glob_opt = ref false in
   let rec parse = function
     | [] -> ()
     | "-with-geoproof" :: s :: rem -> 
@@ -240,21 +245,25 @@ let parse_args is_ide =
     | "-load-vernac-object" :: f :: rem -> add_vernac_obj f; parse rem
     | "-load-vernac-object" :: []       -> usage ()
 
-    | "-dump-glob" :: f :: rem -> dump_into_file f; parse rem
+    | "-dump-glob" :: "stdout" :: rem -> Dumpglob.dump_to_stdout (); glob_opt := true; parse rem
+	  (* À ne pas documenter : l'option 'stdout' n'étant
+	     éventuellement utile que pour le debugging... *)
+    | "-dump-glob" :: f :: rem -> Dumpglob.dump_into_file f; glob_opt := true; parse rem
     | "-dump-glob" :: []       -> usage ()
+    | ("-no-glob" | "-noglob") :: rem -> Dumpglob.noglob (); glob_opt := true; parse rem
 
     | "-require" :: f :: rem -> add_require f; parse rem
     | "-require" :: []       -> usage ()
 
-    | "-compile" :: f :: rem -> add_compile false f; parse rem
+    | "-compile" :: f :: rem -> add_compile false f; if not !glob_opt then Dumpglob.dump_to_dotglob (); parse rem
     | "-compile" :: []       -> usage ()
 
-    | "-compile-verbose" :: f :: rem -> add_compile true f; parse rem
+    | "-compile-verbose" :: f :: rem -> add_compile true f;  if not !glob_opt then Dumpglob.dump_to_dotglob (); parse rem
     | "-compile-verbose" :: []       -> usage ()
 
     | "-dont-load-proofs" :: rem -> Flags.dont_load_proofs := true; parse rem
 
-    | "-translate" :: rem -> make_translate true; parse rem
+    | "-beautify" :: rem -> make_beautify true; parse rem
 
     | "-unsafe" :: f :: rem -> add_unsafe f; parse rem
     | "-unsafe" :: []       -> usage ()
@@ -265,10 +274,15 @@ let parse_args is_ide =
     | "-emacs" :: rem -> Flags.print_emacs := true; Pp.make_pp_emacs(); parse rem
     | "-emacs-U" :: rem -> Flags.print_emacs := true; 
 	Flags.print_emacs_safechar := true; Pp.make_pp_emacs(); parse rem
-	
+	    
     | "-unicode" :: rem -> Flags.unicode_syntax := true; parse rem
 
-    | "-where" :: _ -> print_endline (getenv_else "COQLIB" Coq_config.coqlib); exit 0
+    | "-coqlib" :: d :: rem -> Flags.coqlib_spec:=true; Flags.coqlib:=d; parse rem
+    | "-coqlib" :: [] -> usage ()
+
+    | "-where" :: _ -> print_endline (Envars.coqlib ()); exit 0
+
+    | ("-config"|"--config") :: _ -> Usage.print_config (); exit 0
 
     | ("-quiet"|"-silent") :: rem -> Flags.make_silent true; parse rem
 

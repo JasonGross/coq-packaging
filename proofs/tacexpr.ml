@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacexpr.ml 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: tacexpr.ml 11739 2009-01-02 19:33:19Z herbelin $ i*)
 
 open Names
 open Topconstr
@@ -58,12 +58,7 @@ let make_red_flag =
   add_flag
     {rBeta = false; rIota = false; rZeta = false; rDelta = false; rConst = []} 
 
-type hyp_location_flag = (* To distinguish body and type of local defs *)
-  | InHyp
-  | InHypTypeOnly
-  | InHypValueOnly
-
-type 'a raw_hyp_location = 'a with_occurrences * hyp_location_flag
+type 'a raw_hyp_location = 'a with_occurrences * Termops.hyp_location_flag
 
 type 'id move_location =
   | MoveAfter of 'id
@@ -103,7 +98,6 @@ type 'id message_token =
   | MsgInt of int
   | MsgIdent of 'id
 
-
 type 'id gsimple_clause = ('id raw_hyp_location) option
 (* onhyps:
      [None] means *on every hypothesis*
@@ -133,16 +127,15 @@ type multi =
   | RepeatStar
   | RepeatPlus
 
-type pattern_expr = constr_expr
-
 (* Type of patterns *)
 type 'a match_pattern =
   | Term of 'a
-  | Subterm of identifier option * 'a
+  | Subterm of bool * identifier option * 'a
 
 (* Type of hypotheses for a Match Context rule *)
 type 'a match_context_hyps =
   | Hyp of name located * 'a match_pattern
+  | Def of name located * 'a match_pattern * 'a match_pattern
 
 (* Type of a Match rule for Match Context and Match *)
 type ('a,'t) match_rule =
@@ -158,7 +151,8 @@ type ('constr,'pat,'cst,'ind,'ref,'id,'tac) gen_atomic_tactic_expr =
   | TacExact of 'constr
   | TacExactNoCheck of 'constr
   | TacVmCastNoCheck of 'constr
-  | TacApply of advanced_flag * evars_flag * 'constr with_bindings list
+  | TacApply of advanced_flag * evars_flag * 'constr with_bindings list * 
+      ('id * intro_pattern_expr located option) option
   | TacElim of evars_flag * 'constr with_bindings * 
       'constr with_bindings option
   | TacElimType of 'constr
@@ -170,7 +164,7 @@ type ('constr,'pat,'cst,'ind,'ref,'id,'tac) gen_atomic_tactic_expr =
   | TacCofix of identifier option
   | TacMutualCofix of hidden_flag * identifier * (identifier * 'constr) list
   | TacCut of 'constr
-  | TacAssert of 'tac option * intro_pattern_expr located * 'constr
+  | TacAssert of 'tac option * intro_pattern_expr located option * 'constr
   | TacGeneralize of ('constr with_occurrences * name) list
   | TacGeneralizeDep of 'constr
   | TacLetTac of name * 'constr * 'id gclause * letin_flag
@@ -287,7 +281,7 @@ and glob_tactic_expr =
 
 type raw_tactic_expr =
     (constr_expr,
-     pattern_expr,
+     constr_pattern_expr,
      reference or_by_notation,
      reference or_by_notation,
      reference,
@@ -296,7 +290,7 @@ type raw_tactic_expr =
 
 type raw_atomic_tactic_expr =
     (constr_expr,                  (* constr *)
-     pattern_expr,                 (* pattern *)
+     constr_pattern_expr,                 (* pattern *)
      reference or_by_notation,     (* evaluable reference *)
      reference or_by_notation,     (* inductive *)
      reference,                    (* ltac reference *)
@@ -305,7 +299,7 @@ type raw_atomic_tactic_expr =
 
 type raw_tactic_arg =
     (constr_expr,
-     pattern_expr,
+     constr_pattern_expr,
      reference or_by_notation,
      reference or_by_notation,
      reference,

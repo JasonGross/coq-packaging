@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: logic.mli 10785 2008-04-13 21:41:54Z herbelin $ i*)
+(*i $Id: logic.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -54,6 +54,7 @@ type refiner_error =
   | CannotApply of constr * constr
   | NotWellTyped of constr
   | NonLinearProof of constr
+  | MetaInType of constr
 
   (*i Errors raised by the tactics i*)
   | IntroNeedsProduct

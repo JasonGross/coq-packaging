@@ -11,7 +11,7 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: FSetAVL.v 10811 2008-04-17 16:29:49Z letouzey $ *)
+(* $Id: FSetAVL.v 11699 2008-12-18 11:49:08Z letouzey $ *)
 
 (** * FSetAVL *)
 
@@ -1879,6 +1879,14 @@ Module IntMake (I:Int)(X: OrderedType) <: S with Module E := X.
   intros (s,b) (s',b').
   generalize (compare_Cmp s s').
   destruct Raw.compare; intros; [apply EQ|apply LT|apply GT]; red; auto.
+ Defined.
+
+ Definition eq_dec (s s':t) : { eq s s' } + { ~ eq s s' }.
+ Proof.
+  intros (s,b) (s',b'); unfold eq; simpl.
+  case_eq (Raw.equal s s'); intro H; [left|right].
+  apply equal_2; auto.
+  intro H'; rewrite equal_1 in H; auto; discriminate.
  Defined.
 
  (* specs *)

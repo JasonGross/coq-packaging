@@ -1192,7 +1192,7 @@ let do_build_inductive
   let rel_ind i ext_rel_constructors = 
     ((dummy_loc,relnames.(i)),
     rel_params,
-    rel_arities.(i),
+    Some rel_arities.(i),
     ext_rel_constructors),None
   in
   let ext_rel_constructors = (Array.mapi rel_ind ext_rels_constructors) in 
@@ -1224,9 +1224,14 @@ let do_build_inductive
     | UserError(s,msg) as e ->
 	let _time3 = System.get_time () in
 (* 	Pp.msgnl (str "error : "++ str (string_of_float (System.time_difference time2 time3))); *)
+	let repacked_rel_inds = 
+	  List.map  (fun ((a , b , c , l),ntn) -> ((false,a) , b, c , Vernacexpr.Inductive_kw, Vernacexpr.Constructors l),ntn )
+	                  rel_inds
+	in
 	let msg = 		     
 	  str "while trying to define"++ spc () ++
-	    Ppvernac.pr_vernac (Vernacexpr.VernacInductive(true,rel_inds)) ++ fnl () ++
+	    Ppvernac.pr_vernac (Vernacexpr.VernacInductive(Decl_kinds.Finite,repacked_rel_inds))
+	    ++ fnl () ++
 	    msg
 	in
 	observe (msg);
@@ -1234,9 +1239,14 @@ let do_build_inductive
     | e -> 
 	let _time3 = System.get_time () in
 (* 	Pp.msgnl (str "error : "++ str (string_of_float (System.time_difference time2 time3))); *)
+	let repacked_rel_inds = 
+	  List.map  (fun ((a , b , c , l),ntn) -> ((false,a) , b, c , Vernacexpr.Inductive_kw, Vernacexpr.Constructors l),ntn )
+	                  rel_inds
+	in
 	let msg = 		     
 	  str "while trying to define"++ spc () ++
-	    Ppvernac.pr_vernac (Vernacexpr.VernacInductive(true,rel_inds)) ++ fnl () ++
+	    Ppvernac.pr_vernac (Vernacexpr.VernacInductive(Decl_kinds.Finite,repacked_rel_inds)) 
+	    ++ fnl () ++
 	    Cerrors.explain_exn e
 	in
  	observe msg;

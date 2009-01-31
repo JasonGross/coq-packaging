@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(* $Id: g_tactic.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: g_tactic.ml4 11741 2009-01-03 14:34:39Z herbelin $ *)
 
 open Pp
 open Pcoq
@@ -18,6 +18,7 @@ open Rawterm
 open Genarg
 open Topconstr
 open Libnames
+open Termops
 
 let all_with delta = make_red_flag [FBeta;FIota;FZeta;delta]
 
@@ -215,7 +216,8 @@ GEXTEND Gram
   ;
   smart_global:
     [ [ c = global -> AN c
-      | s = ne_string -> ByNotation (loc,s) ] ]
+      | s = ne_string; sc = OPT ["%"; key = IDENT -> key ] -> 
+	  ByNotation (loc,s,sc) ] ]
   ;
   occs_nums:
     [ [ nl = LIST1 nat_or_var -> no_occurrences_expr_but nl
@@ -254,6 +256,11 @@ GEXTEND Gram
     [ [ prefix = pattern_ident -> loc, IntroFresh prefix
       | "?" -> loc, IntroAnonymous
       | id = ident -> loc, IntroIdentifier id ] ]
+  ;
+  intropattern_modifier:
+    [ [ IDENT "_eqn"; 
+        id = [ ":"; id = naming_intropattern -> id | -> loc, IntroAnonymous ]
+        -> id ] ]
   ;
   simple_intropattern:
     [ [ pat = disjunctive_intropattern -> pat
@@ -362,9 +369,13 @@ GEXTEND Gram
     [ [ "*"; occs = occs -> occs
       | -> no_occurrences_expr ] ]
   ;
-  simple_clause:
+  in_hyp_list:
     [ [ "in"; idl = LIST1 id_or_meta -> idl
       | -> [] ] ]
+  ;
+  in_hyp_as:
+    [ [ "in"; id = id_or_meta; ipat = as_ipat -> Some (id,ipat)
+      | -> None ] ]
   ;
   orient: 
     [ [ "->" -> true 
@@ -404,18 +415,17 @@ GEXTEND Gram
   eliminator:
     [ [ "using"; el = constr_with_bindings -> el ] ]
   ;
-  with_names:
-    [ [ "as"; ipat = simple_intropattern -> ipat
-      | -> dummy_loc,IntroAnonymous ] ]
+  as_ipat:
+    [ [ "as"; ipat = simple_intropattern -> Some ipat
+      | -> None ] ]
   ;
   with_inversion_names:
-    [ [ "as"; ipat = disjunctive_intropattern -> Some ipat
+    [ [ "as"; ipat = simple_intropattern -> Some ipat
       | -> None ] ]
   ;
   with_induction_names:
-    [ [ "as"; eq = OPT naming_intropattern; ipat = disjunctive_intropattern
+    [ [ "as"; ipat = simple_intropattern; eq = OPT intropattern_modifier
         -> (eq,Some ipat)
-      | "as"; eq = naming_intropattern -> (Some eq,None)
       | -> (None,None) ] ]
   ;
   as_name:
@@ -433,19 +443,10 @@ GEXTEND Gram
     [ [ id1 = id_or_meta; IDENT "into"; id2 = id_or_meta -> (id1,id2) ] ]
   ;
   rewriter : 
-    [ [ 
-    (* hack for allowing "rewrite ?t" and "rewrite NN?t" that normally 
-       produce a pattern_ident *)
-        c = pattern_ident -> 
-	  let c = (CRef (Ident (loc,c)), NoBindings) in  
-	  (RepeatStar, c)
-      | n = natural; c = pattern_ident -> 
-	  let c = (CRef (Ident (loc,c)), NoBindings) in  
-	  (UpTo n, c)
-      | "!"; c = constr_with_bindings -> (RepeatPlus,c)
-      |	"?"; c = constr_with_bindings -> (RepeatStar,c)
+    [ [ "!"; c = constr_with_bindings -> (RepeatPlus,c)
+      | ["?"| LEFTQMARK]; c = constr_with_bindings -> (RepeatStar,c)
       | n = natural; "!"; c = constr_with_bindings -> (Precisely n,c)
-      |	n = natural; "?"; c = constr_with_bindings -> (UpTo n,c)
+      |	n = natural; ["?" | LEFTQMARK]; c = constr_with_bindings -> (UpTo n,c)
       | n = natural; c = constr_with_bindings -> (Precisely n,c)
       | c = constr_with_bindings -> (Precisely 1, c)
       ] ]
@@ -480,13 +481,14 @@ GEXTEND Gram
       | IDENT "exact_no_check"; c = constr -> TacExactNoCheck c
       | IDENT "vm_cast_no_check"; c = constr -> TacVmCastNoCheck c
 
-      | IDENT "apply"; cl = LIST1 constr_with_bindings SEP "," ->
-	  TacApply (true,false,cl)
-      | IDENT "eapply"; cl = LIST1 constr_with_bindings SEP "," ->
-          TacApply (true,true,cl)
-      | IDENT "simple"; IDENT "apply"; cl = LIST1 constr_with_bindings SEP "," 
-          -> TacApply (false,false,cl)
-      | IDENT "simple"; IDENT "eapply"; cl = LIST1 constr_with_bindings SEP ","           -> TacApply (false,true,cl)
+      | IDENT "apply"; cl = LIST1 constr_with_bindings SEP ","; 
+          inhyp = in_hyp_as -> TacApply (true,false,cl,inhyp)
+      | IDENT "eapply"; cl = LIST1 constr_with_bindings SEP ",";
+          inhyp = in_hyp_as -> TacApply (true,true,cl,inhyp)
+      | IDENT "simple"; IDENT "apply"; cl = LIST1 constr_with_bindings SEP ",";
+          inhyp = in_hyp_as -> TacApply (false,false,cl,inhyp)
+      | IDENT "simple"; IDENT "eapply"; cl = LIST1 constr_with_bindings SEP",";
+          inhyp = in_hyp_as -> TacApply (false,true,cl,inhyp)
       | IDENT "elim"; cl = constr_with_bindings; el = OPT eliminator ->
           TacElim (false,cl,el)
       | IDENT "eelim"; cl = constr_with_bindings; el = OPT eliminator ->
@@ -518,15 +520,15 @@ GEXTEND Gram
       (* Begin compatibility *)
       | IDENT "assert"; test_lpar_id_coloneq; "("; (loc,id) = identref; ":="; 
 	  c = lconstr; ")" -> 
-	  TacAssert (None,(loc,IntroIdentifier id),c)
+	  TacAssert (None,Some (loc,IntroIdentifier id),c)
       | IDENT "assert"; test_lpar_id_colon; "("; (loc,id) = identref; ":"; 
 	  c = lconstr; ")"; tac=by_tactic -> 
-	  TacAssert (Some tac,(loc,IntroIdentifier id),c)
+	  TacAssert (Some tac,Some (loc,IntroIdentifier id),c)
       (* End compatibility *)
 
-      | IDENT "assert"; c = constr; ipat = with_names; tac = by_tactic ->
+      | IDENT "assert"; c = constr; ipat = as_ipat; tac = by_tactic ->
 	  TacAssert (Some tac,ipat,c)
-      | IDENT "pose"; IDENT "proof"; c = lconstr; ipat = with_names ->
+      | IDENT "pose"; IDENT "proof"; c = lconstr; ipat = as_ipat ->
 	  TacAssert (None,ipat,c)
 
       | IDENT "cut"; c = constr -> TacCut c
@@ -587,8 +589,8 @@ GEXTEND Gram
       | IDENT "clear"; "-"; l = LIST1 id_or_meta -> TacClear (true, l)
       | IDENT "clear"; l = LIST0 id_or_meta -> TacClear (l=[], l)
       | IDENT "clearbody"; l = LIST1 id_or_meta -> TacClearBody l
-      | IDENT "move"; dep = [IDENT "dependent" -> true | -> false]; 
-	  hfrom = id_or_meta; hto = move_location -> TacMove (dep,hfrom,hto)
+      | IDENT "move"; hfrom = id_or_meta; hto = move_location ->
+	  TacMove (true,hfrom,hto)
       | IDENT "rename"; l = LIST1 rename SEP "," -> TacRename l
       | IDENT "revert"; l = LIST1 id_or_meta -> TacRevert l
 
@@ -627,18 +629,18 @@ GEXTEND Gram
 	    TacInversion (DepInversion (k,co,ids),hyp)
       | IDENT "simple"; IDENT "inversion";
 	  hyp = quantified_hypothesis; ids = with_inversion_names;
-	  cl = simple_clause ->
+	  cl = in_hyp_list ->
 	    TacInversion (NonDepInversion (SimpleInversion, cl, ids), hyp)
       | IDENT "inversion"; 
 	  hyp = quantified_hypothesis; ids = with_inversion_names;
-	  cl = simple_clause ->
+	  cl = in_hyp_list ->
 	    TacInversion (NonDepInversion (FullInversion, cl, ids), hyp)
       | IDENT "inversion_clear"; 
 	  hyp = quantified_hypothesis; ids = with_inversion_names; 
-	  cl = simple_clause ->
+	  cl = in_hyp_list ->
 	    TacInversion (NonDepInversion (FullInversionClear, cl, ids), hyp)
       | IDENT "inversion"; hyp = quantified_hypothesis; 
-	  "using"; c = constr; cl = simple_clause ->
+	  "using"; c = constr; cl = in_hyp_list ->
 	    TacInversion (InversionUsing (c,cl), hyp)
 
       (* Conversion *)

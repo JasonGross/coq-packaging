@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetList.v 10616 2008-03-04 17:33:35Z letouzey $ *)
+(* $Id: FSetList.v 11866 2009-01-28 19:10:15Z letouzey $ *)
 
 (** * Finite sets library *)
 
@@ -1261,6 +1261,14 @@ Module Make (X: OrderedType) <: S with Module E := X.
   elim (Raw.compare s.(sorted) s'.(sorted));
    [ constructor 1 | constructor 2 | constructor 3 ]; 
    auto. 
+  Defined.
+
+  Definition eq_dec : { eq s s' } + { ~ eq s s' }.
+  Proof.
+  change eq with Equal.
+  case_eq (equal s s'); intro H; [left | right].
+  apply equal_2; auto.
+  intro H'; rewrite equal_1 in H; auto; discriminate.
   Defined.
 
  End Spec.
