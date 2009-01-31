@@ -32,7 +32,7 @@ Suggests: ocaml-nox (>= 3.08), proofgeneral-coq, ledit, cle, coq-doc
 Description: proof assistant for higher-order logic (toplevel and compiler)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
- specification. It is developed using Objective Caml and Camlp4.
+ specification. It is developed using Objective Caml and Camlp5.
  For more information, see <http://coq.inria.fr/>.
  .
  This packages provides coqtop, a command line interface to Coq.
@@ -52,7 +52,7 @@ Depends:
 Description: proof assistant for higher-order logic (gtk interface)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
- specification. It is developed using Objective Caml and Camlp4.
+ specification. It is developed using Objective Caml and Camlp5.
  For more information, see <http://coq.inria.fr/>.
  .
  This package provides CoqIde, a graphical user interface for
@@ -66,7 +66,7 @@ Conflicts: coq (<< 8.0), coq-doc (<= 8.0pl1.0-2)
 Description: proof assistant for higher-order logic (theories)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
- specification. It is developed using Objective Caml and Camlp4.
+ specification. It is developed using Objective Caml and Camlp5.
  For more information, see <http://coq.inria.fr/>.
  .
  This package provides existing theories that new proofs can be
