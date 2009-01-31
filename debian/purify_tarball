@@ -19,6 +19,7 @@ rm -rf coq-$VERSION/doc/refman
 rm -rf coq-$VERSION/doc/rt
 rm -rf coq-$VERSION/doc/tools
 rm -rf coq-$VERSION/doc/tutorial
+find coq-$VERSION -name '*~' -delete
 
 tar zcf coq_$VERSION+dfsg.orig.tar.gz coq-$VERSION/
 rm -rf coq-$VERSION
