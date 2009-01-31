@@ -10,7 +10,7 @@
  * on May-June 2006 for implementation of abstraction of pretty-printing of objects.
  *)
 
-(* $Id: prettyp.ml 11343 2008-09-01 20:55:13Z herbelin $ *)
+(* $Id: prettyp.ml 11622 2008-11-23 08:45:56Z herbelin $ *)
 
 open Pp
 open Util
@@ -349,10 +349,10 @@ let pr_record (sp,tyi) =
       str ": " ++ pr_lconstr_env envpar arity ++ brk(1,2) ++ 
       str ":= " ++ pr_id cstrnames.(0)) ++ 
     brk(1,2) ++
-    hv 2 (str "{ " ++
-      prlist_with_sep (fun () -> str "; " ++ brk(1,0))
+    hv 2 (str "{" ++
+      prlist_with_sep (fun () -> str ";" ++ brk(1,0))
         (fun (id,b,c) -> 
-	  pr_id id ++ str (if b then " : " else " := ") ++ 
+	  str " " ++ pr_id id ++ str (if b then " : " else " := ") ++ 
 	  pr_lconstr_env envpar c) fields) ++ str" }")
 
 let gallina_print_inductive sp =
@@ -784,6 +784,11 @@ let pr_instance env i =
   (* lighter *)
   print_ref false (ConstRef (instance_impl i))
     
+let print_all_instances () =
+  let env = Global.env () in
+  let inst = all_instances () in 
+    prlist_with_sep fnl (pr_instance env) inst
+
 let print_instances r =
   let env = Global.env () in
   let inst = instances r in 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: search.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: search.mli 11739 2009-01-02 19:33:19Z herbelin $ i*)
 
 open Pp
 open Names
@@ -19,13 +19,14 @@ open Nametab
 (*s Search facilities. *)
 
 type glob_search_about_item =
-  | GlobSearchRef of global_reference
+  | GlobSearchSubPattern of constr_pattern
   | GlobSearchString of string
 
 val search_by_head : global_reference -> dir_path list * bool -> unit
 val search_rewrite : constr_pattern -> dir_path list * bool -> unit
 val search_pattern : constr_pattern -> dir_path list * bool -> unit
-val search_about  : glob_search_about_item list -> dir_path list * bool -> unit
+val search_about : 
+  (bool * glob_search_about_item) list -> dir_path list * bool -> unit
 
 (* The filtering function that is by standard search facilities.
    It can be passed as argument to the raw search functions.
@@ -46,4 +47,4 @@ val raw_search_rewrite : (global_reference -> env -> constr -> bool) ->
   (global_reference -> env -> constr -> unit) -> constr_pattern -> unit
 val raw_search_about : (global_reference -> env -> constr -> bool) ->
   (global_reference -> env -> constr -> unit) -> 
-      glob_search_about_item list -> unit
+      (bool * glob_search_about_item) list -> unit

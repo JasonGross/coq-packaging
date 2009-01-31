@@ -8,7 +8,7 @@
 (*                      Evgeny Makarov, INRIA, 2007                     *)
 (************************************************************************)
 
-(*i $Id: ZDomain.v 10934 2008-05-15 21:58:20Z letouzey $ i*)
+(*i $Id: ZDomain.v 11674 2008-12-12 19:48:40Z letouzey $ i*)
 
 Require Export NumPrelude.
 
@@ -49,7 +49,7 @@ assert (x == y); [rewrite Exx'; now rewrite Eyy' |
 rewrite <- H2; assert (H3 : e x y); [now apply -> eq_equiv_e | now inversion H3]]].
 Qed.
 
-Theorem neq_symm : forall n m, n # m -> m # n.
+Theorem neq_sym : forall n m, n # m -> m # n.
 Proof.
 intros n m H1 H2; symmetry in H2; false_hyp H2 H1.
 Qed.

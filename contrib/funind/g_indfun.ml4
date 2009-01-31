@@ -6,6 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 (*i camlp4deps: "parsing/grammar.cma" i*)
+open Util
 open Term
 open Names
 open Pp
@@ -128,25 +129,52 @@ ARGUMENT EXTEND auto_using'
 | [ ] -> [ [] ]
 END
 
+let pr_rec_annotation2_aux s r id l =
+  str ("{"^s^" ") ++ Ppconstr.pr_constr_expr r ++ 
+    Util.pr_opt Nameops.pr_id id ++ 
+    Pptactic.pr_auto_using Ppconstr.pr_constr_expr l ++ str "}"
+
+let pr_rec_annotation2 = function
+  | Struct id -> str "{struct" ++ Nameops.pr_id id ++ str "}"
+  | Wf(r,id,l) -> pr_rec_annotation2_aux "wf" r id l
+  | Mes(r,id,l) -> pr_rec_annotation2_aux "measure" r id l
+
 VERNAC ARGUMENT EXTEND rec_annotation2
+PRINTED BY pr_rec_annotation2
   [ "{"  "struct" ident(id)  "}"] -> [ Struct id ]
 | [ "{" "wf" constr(r) ident_opt(id) auto_using'(l) "}" ] -> [ Wf(r,id,l) ]
 | [ "{" "measure" constr(r) ident_opt(id) auto_using'(l) "}" ] -> [ Mes(r,id,l) ] 
 END
 
+let pr_binder2 (idl,c) =
+  str "(" ++ Util.prlist_with_sep spc Nameops.pr_id idl ++ spc () ++ 
+    str ": " ++ Ppconstr.pr_lconstr_expr c ++ str ")"
 
 VERNAC ARGUMENT EXTEND binder2
-    [ "(" ne_ident_list(idl) ":" lconstr(c)  ")"] ->
-     [
-       LocalRawAssum (List.map (fun id -> (Util.dummy_loc,Name id)) idl,Topconstr.default_binder_kind,c) ]
+PRINTED BY pr_binder2
+    [ "(" ne_ident_list(idl) ":" lconstr(c)  ")"] -> [ (idl,c) ]
 END
 
+let make_binder2 (idl,c) =
+  LocalRawAssum (List.map (fun id -> (Util.dummy_loc,Name id)) idl,Topconstr.default_binder_kind,c)
+
+let pr_rec_definition2 (id,bl,annot,type_,def) =
+  Nameops.pr_id id ++ spc () ++ Util.prlist_with_sep spc pr_binder2 bl ++ 
+    Util.pr_opt pr_rec_annotation2 annot ++ spc () ++ str ":" ++ spc () ++
+    Ppconstr.pr_lconstr_expr type_ ++ str " :=" ++ spc () ++ 
+    Ppconstr.pr_lconstr_expr def
 
 VERNAC ARGUMENT EXTEND rec_definition2
- [ ident(id)  binder2_list( bl)
-     rec_annotation2_opt(annot) ":" lconstr( type_)
+PRINTED BY pr_rec_definition2
+ [ ident(id)  binder2_list(bl)
+     rec_annotation2_opt(annot) ":" lconstr(type_)
 	":=" lconstr(def)] ->
-    [let names = List.map snd (Topconstr.names_of_local_assums bl) in
+    [ (id,bl,annot,type_,def) ]
+END
+
+let make_rec_definitions2 (id,bl,annot,type_,def) =
+     let bl = List.map make_binder2 bl in
+     let names = List.map snd (Topconstr.names_of_local_assums bl) in
      let check_one_name () =
        if List.length names > 1 then
          Util.user_err_loc
@@ -173,52 +201,73 @@ VERNAC ARGUMENT EXTEND rec_definition2
 	 | Some an ->
 	     check_exists_args an
      in
-     ((Util.dummy_loc,id), ni, bl, type_, def) ]
-      END
-
-
-VERNAC ARGUMENT EXTEND rec_definitions2
-| [ rec_definition2(rd) ] -> [ [rd] ]
-| [ rec_definition2(hd) "with" rec_definitions2(tl) ] -> [ hd::tl ]
-END
+     ((Util.dummy_loc,id), ni, bl, type_, def)
 
 
 VERNAC COMMAND EXTEND Function
-   ["Function" rec_definitions2(recsl)] ->
+   ["Function" ne_rec_definition2_list_sep(recsl,"with")] ->
 	[ 
-	  do_generate_principle false  recsl; 
+	  do_generate_principle false (List.map make_rec_definitions2 recsl); 
 	  
 	]
 END
 
+let pr_fun_scheme_arg (princ_name,fun_name,s) = 
+  Nameops.pr_id princ_name ++ str " :=" ++ spc() ++ str "Induction for " ++ 
+  Libnames.pr_reference fun_name ++ spc() ++ str "Sort " ++ 
+  Ppconstr.pr_rawsort s
 
 VERNAC ARGUMENT EXTEND fun_scheme_arg
+PRINTED BY pr_fun_scheme_arg
 | [ ident(princ_name) ":=" "Induction" "for" reference(fun_name) "Sort" sort(s) ] -> [ (princ_name,fun_name,s) ] 
 END 
 
-VERNAC ARGUMENT EXTEND fun_scheme_args
-| [ fun_scheme_arg(fa) ] -> [ [fa] ] 
-| [ fun_scheme_arg(fa) "with" fun_scheme_args(fas) ] -> [fa::fas]
-END 
+
+let warning_error names e = 
+  match e with 
+    | Building_graph e -> 
+	Pp.msg_warning 
+	  (str "Cannot define graph(s) for " ++ 
+	     h 1 (prlist_with_sep (fun _ -> str","++spc ()) Libnames.pr_reference names) ++
+	     if do_observe () then (spc () ++ Cerrors.explain_exn e) else mt ())
+    | Defining_principle e -> 
+	Pp.msg_warning
+	  (str "Cannot define principle(s) for "++ 
+	     h 1 (prlist_with_sep (fun _ -> str","++spc ()) Libnames.pr_reference names) ++
+	     if do_observe () then Cerrors.explain_exn e else mt ())
+    | _ -> anomaly ""
+
 
 VERNAC COMMAND EXTEND NewFunctionalScheme
-   ["Functional" "Scheme" fun_scheme_args(fas) ] ->
+   ["Functional" "Scheme" ne_fun_scheme_arg_list_sep(fas,"with") ] ->
     [
-      try 
-	Functional_principles_types.build_scheme fas
-      with Functional_principles_types.No_graph_found -> 
-	match fas with 
-	  | (_,fun_name,_)::_ -> 
-	      begin
-		begin
-		    make_graph (Nametab.global fun_name)
-		end
-		;
-		try Functional_principles_types.build_scheme fas
-		with Functional_principles_types.No_graph_found -> 
-		  Util.error ("Cannot generate induction principle(s)")
-	      end
-	  | _ -> assert false (* we can only have non empty  list *)
+      begin
+	try 
+	  Functional_principles_types.build_scheme fas
+	with Functional_principles_types.No_graph_found -> 
+	  begin
+	    match fas with 
+	      | (_,fun_name,_)::_ -> 
+		  begin
+		    begin
+		      make_graph (Nametab.global fun_name)
+		    end
+		    ;
+		    try Functional_principles_types.build_scheme fas
+		    with Functional_principles_types.No_graph_found -> 
+		      Util.error ("Cannot generate induction principle(s)")
+    		      | e -> 
+			  let names = List.map (fun (_,na,_) -> na) fas in 
+			  warning_error names e
+			    
+		  end
+	      | _ -> assert false (* we can only have non empty  list *)
+	  end
+    	  | e -> 
+	      let names = List.map (fun (_,na,_) -> na) fas in 
+	      warning_error names e
+
+      end
     ]
 END
 (***** debug only ***)
@@ -307,9 +356,9 @@ let mkEq typ c1 c2 =
 let poseq_unsafe idunsafe cstr gl =
   let typ = Tacmach.pf_type_of gl cstr in
   tclTHEN
-    (Tactics.letin_tac None (Name idunsafe) cstr allClauses)
+    (Tactics.letin_tac None (Name idunsafe) cstr None allClauses)
     (tclTHENFIRST 
-      (Tactics.assert_as true (Util.dummy_loc,IntroAnonymous) (mkEq typ (mkVar idunsafe) cstr)) 
+      (Tactics.assert_tac Anonymous (mkEq typ (mkVar idunsafe) cstr)) 
       Tactics.reflexivity)
     gl
   

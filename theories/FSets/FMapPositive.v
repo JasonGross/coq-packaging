@@ -11,7 +11,7 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: FMapPositive.v 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id: FMapPositive.v 11699 2008-12-18 11:49:08Z letouzey $ *)
 
 Require Import Bool.
 Require Import ZArith.
@@ -111,17 +111,17 @@ Module PositiveOrderedTypeBits <: UsualOrderedType.
   apply EQ; red; auto.
   Qed.
 
-End PositiveOrderedTypeBits.
-
-(** Other positive stuff *)
-
-Lemma peq_dec (x y: positive): {x = y} + {x <> y}.
-Proof.
+  Lemma eq_dec (x y: positive): {x = y} + {x <> y}.
+  Proof.
   intros. case_eq ((x ?= y) Eq); intros.
   left. apply Pcompare_Eq_eq; auto.
   right. red. intro. subst y. rewrite (Pcompare_refl x) in H. discriminate.
   right. red. intro. subst y. rewrite (Pcompare_refl x) in H. discriminate.
-Qed.
+  Qed.
+
+End PositiveOrderedTypeBits.
+
+(** Other positive stuff *)
  
 Fixpoint append (i j : positive) {struct i} : positive :=
     match i with
@@ -717,7 +717,7 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   Lemma remove_3 : MapsTo y e (remove x m) -> MapsTo y e m.
   Proof. 
   unfold MapsTo.
-  destruct (peq_dec x y).
+  destruct (E.eq_dec x y).
   subst.
   rewrite grs; intros; discriminate.
   rewrite gro; auto.
@@ -820,16 +820,21 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
  
   Variable B : Type.
 
-  Fixpoint xmapi (f : positive -> A -> B) (m : t A) (i : positive)
-             {struct m} : t B :=
-     match m with
-      | Leaf => @Leaf B
-      | Node l o r => Node (xmapi f l (append i (xO xH)))
-                           (option_map (f i) o)
-                           (xmapi f r (append i (xI xH)))
-     end.
+  Section Mapi.
 
-  Definition mapi (f : positive -> A -> B) m := xmapi f m xH.
+    Variable f : positive -> A -> B.
+
+    Fixpoint xmapi (m : t A) (i : positive) {struct m} : t B :=
+       match m with
+        | Leaf => @Leaf B
+        | Node l o r => Node (xmapi l (append i (xO xH)))
+                             (option_map (f i) o)
+                             (xmapi r (append i (xI xH)))
+       end.
+
+    Definition mapi m := xmapi m xH.
+
+  End Mapi.
 
   Definition map (f : A -> B) m := mapi (fun _ => f) m.
 
@@ -983,14 +988,47 @@ Module PositiveMap <: S with Module E:=PositiveOrderedTypeBits.
   Qed.
 
 
-  Definition fold (A : Type)(B : Type) (f: positive -> A -> B -> B) (tr: t A) (v: B) :=
-     List.fold_left (fun a p => f (fst p) (snd p) a) (elements tr) v.
-  
+  Section Fold.
+
+    Variables A B : Type.
+    Variable f : positive -> A -> B -> B.
+
+    Fixpoint xfoldi (m : t A) (v : B) (i : positive) :=
+      match m with
+        | Leaf => v
+        | Node l (Some x) r =>
+          xfoldi r (f i x (xfoldi l v (append i 2))) (append i 3)
+        | Node l None r =>
+          xfoldi r (xfoldi l v (append i 2)) (append i 3)
+      end.
+
+    Lemma xfoldi_1 :
+      forall m v i,
+      xfoldi m v i = fold_left (fun a p => f (fst p) (snd p) a) (xelements m i) v.
+    Proof.
+      set (F := fun a p => f (fst p) (snd p) a).
+      induction m; intros; simpl; auto.
+      destruct o.
+      rewrite fold_left_app; simpl.
+      rewrite <- IHm1.
+      rewrite <- IHm2.
+      unfold F; simpl; reflexivity.
+      rewrite fold_left_app; simpl.
+      rewrite <- IHm1.
+      rewrite <- IHm2.
+      reflexivity.
+    Qed.
+
+    Definition fold m i := xfoldi m i 1.
+
+  End Fold.
+
   Lemma fold_1 :
     forall (A:Type)(m:t A)(B:Type)(i : B) (f : key -> A -> B -> B),
     fold f m i = fold_left (fun a p => f (fst p) (snd p) a) (elements m) i.
   Proof.
-  intros; unfold fold; auto.
+    intros; unfold fold, elements.
+    rewrite xfoldi_1; reflexivity.
   Qed.
 
   Fixpoint equal (A:Type)(cmp : A -> A -> bool)(m1 m2 : t A) {struct m1} : bool := 
@@ -1128,10 +1166,10 @@ Module PositiveMapAdditionalFacts.
   (* Derivable from the Map interface *)
   Theorem gsspec:
     forall (A:Type)(i j: positive) (x: A) (m: t A),
-    find i (add j x m) = if peq_dec i j then Some x else find i m.
+    find i (add j x m) = if E.eq_dec i j then Some x else find i m.
   Proof.
     intros.
-    destruct (peq_dec i j); [ rewrite e; apply gss | apply gso; auto ].
+    destruct (E.eq_dec i j); [ rewrite e; apply gss | apply gso; auto ].
   Qed.
 
    (* Not derivable from the Map interface *)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mltop.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id: mltop.mli 11528 2008-10-31 08:40:42Z glondu $ i*)
 
 (* If there is a toplevel under Coq, it is described by the following 
    record. *)
@@ -16,25 +16,20 @@ type toplevel = {
   add_dir  : string -> unit;
   ml_loop  : unit -> unit }
 
-(* Determines the behaviour of Coq with respect to ML files (compiled 
-   or not) *) 
-type kind_load=
-  | WithTop of toplevel
-  | WithoutTop
-  | Native
+(* Sets and initializes a toplevel (if any) *)
+val set_top : toplevel -> unit
 
-(* Sets and initializes the kind of loading *)
-val set : kind_load -> unit
-val get : unit -> kind_load
+(* Are we in a native version of Coq? *)
+val is_native : bool
 
-(* Resets the kind of loading *)
+(* Removes the toplevel (if any) *)
 val remove : unit -> unit
 
 (* Tests if an Ocaml toplevel runs under Coq *)
 val is_ocaml_top : unit -> bool
 
 (* Tests if we can load ML files *)
-val enable_load : unit -> bool
+val has_dynlink : bool
 
 (* Starts the Ocaml toplevel loop *)
 val ocaml_toploop : unit -> unit

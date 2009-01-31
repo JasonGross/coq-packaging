@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalFacts.v 11238 2008-07-19 09:34:03Z herbelin $ i*)
+(*i $Id: ClassicalFacts.v 11481 2008-10-20 19:23:51Z herbelin $ i*)
 
 (** Some facts and definitions about classical logic
 
@@ -119,7 +119,7 @@ Qed.
 
 *)
 
-Notation Local inhabited A := A.
+Notation Local inhabited A := A (only parsing).
 
 Lemma prop_ext_A_eq_A_imp_A :
   prop_extensionality -> forall A:Prop, inhabited A -> (A -> A) = A.

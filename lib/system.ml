@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: system.ml 11209 2008-07-05 10:17:49Z herbelin $ *)
+(* $Id: system.ml 11801 2009-01-18 20:11:41Z herbelin $ *)
 
 open Pp
 open Util
@@ -63,6 +63,34 @@ type load_path = physical_path list
 let physical_path_of_string s = s
 let string_of_physical_path p = p
 
+(* Hints to partially detects if two paths refer to the same repertory *)
+let rec remove_path_dot p = 
+  let curdir = Filename.concat Filename.current_dir_name "" in (* Unix: "./" *)
+  let n = String.length curdir in
+  if String.length p > n && String.sub p 0 n = curdir then
+    remove_path_dot (String.sub p n (String.length p - n))
+  else
+    p
+
+let strip_path p =
+  let cwd = Filename.concat (Sys.getcwd ()) "" in (* Unix: "`pwd`/" *)
+  let n = String.length cwd in
+  if String.length p > n && String.sub p 0 n = cwd then
+    remove_path_dot (String.sub p n (String.length p - n))
+  else
+    remove_path_dot p
+
+let canonical_path_name p =
+  let current = Sys.getcwd () in
+  try 
+    Sys.chdir p;
+    let p' = Sys.getcwd () in
+    Sys.chdir current;
+    p'
+  with Sys_error _ ->
+    (* We give up to find a canonical name and just simplify it... *)
+    strip_path p
+
 (* All subdirectories, recursively *)
 
 let exists_dir dir =
@@ -100,7 +128,7 @@ let all_subdirs ~unix_path:root =
   if exists_dir root then traverse root [];
   List.rev !l
 
-let where_in_path warn path filename =
+let where_in_path ?(warn=true) path filename =
   let rec search = function
     | lpe :: rem ->
 	let f = Filename.concat lpe filename in
@@ -116,25 +144,26 @@ let where_in_path warn path filename =
 	    msg_warning
 	      (str filename ++ str " has been found in" ++ spc () ++
 	       hov 0 (str "[ " ++
-	         hv 0 (prlist_with_sep pr_semicolon (fun (lpe,_) -> str lpe) l)
+	         hv 0 (prlist_with_sep (fun () -> str " " ++ pr_semicolon())
+		   (fun (lpe,_) -> str lpe) l)
 	         ++ str " ];") ++ fnl () ++
 	       str "loading " ++ str f);
 	  (lpe, f) in
   check_and_warn (search path)
 
-let find_file_in_path paths filename =
+let find_file_in_path ?(warn=true) paths filename =
   if not (Filename.is_implicit filename) then
     let root = Filename.dirname filename in
     root, filename
   else 
-    try where_in_path true paths filename
+    try where_in_path ~warn paths filename
     with Not_found ->
       errorlabstrm "System.find_file_in_path"
 	(hov 0 (str "Can't find file" ++ spc () ++ str filename ++ spc () ++ 
 		str "on loadpath"))
 
 let is_in_path lpath filename =
-  try ignore (where_in_path false lpath filename); true
+  try ignore (where_in_path ~warn:false lpath filename); true
   with Not_found -> false
 
 let make_suffix name suffix =
@@ -172,7 +201,7 @@ let raw_extern_intern magic suffix =
   in 
   (extern_state,intern_state)
 
-let extern_intern magic suffix =
+let extern_intern ?(warn=true) magic suffix =
   let (raw_extern,raw_intern) = raw_extern_intern magic suffix in
   let extern_state name val_0 = 
     try
@@ -185,7 +214,7 @@ let extern_intern magic suffix =
     with Sys_error s -> error ("System error: " ^ s)
   and intern_state paths name = 
     try
-      let _,filename = find_file_in_path paths (make_suffix name suffix) in
+      let _,filename = find_file_in_path ~warn paths (make_suffix name suffix) in
       let channel = raw_intern filename in
       let v = marshal_in channel in
       close_in channel; 

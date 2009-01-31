@@ -7,6 +7,7 @@ open Names;;
 open Ascent;;
 open Genarg;;
 open Rawterm;;
+open Termops;;
 open Tacexpr;;
 open Vernacexpr;;
 open Decl_kinds;;
@@ -274,9 +275,11 @@ let rec xlate_match_pattern =
  	CT_coerce_NUM_to_MATCH_PATTERN
 	  (CT_int_encapsulator(Bigint.to_string n))
     | CPatPrim (_,String _) -> xlate_error "CPatPrim (String): TODO"
-    | CPatNotation(_, s, l) -> 
+    | CPatNotation(_, s, (l,[])) -> 
 	CT_pattern_notation(CT_string s,
 			    CT_match_pattern_list(List.map xlate_match_pattern l))
+    | CPatNotation(_, s, (l,_)) ->
+	 xlate_error "CPatNotation (recursive notation): TODO"
 ;;
 
 
@@ -373,6 +376,7 @@ and (xlate_formula:Topconstr.constr_expr -> Ascent.ct_FORMULA) = function
 		 (xlate_formula f, List.map xlate_formula_expl l'))
    | CApp(_, (_,f), l) -> 
        CT_appc(xlate_formula f, xlate_formula_expl_ne_list l)
+   | CRecord (_,_,_) -> xlate_error "CRecord: TODO"
    | CCases (_, _, _, [], _) -> assert false
    | CCases (_, _, ret_type, tm::tml, eqns)->
        CT_cases(CT_matched_formula_ne_list(xlate_matched_formula tm,
@@ -392,7 +396,9 @@ and (xlate_formula:Topconstr.constr_expr -> Ascent.ct_FORMULA) = function
 	  xlate_formula b1, xlate_formula b2)
 
    | CSort(_, s) -> CT_coerce_SORT_TYPE_to_FORMULA(xlate_sort s)
-   | CNotation(_, s, l) -> notation_to_formula s (List.map xlate_formula l)
+   | CNotation(_, s,(l,[])) -> notation_to_formula s (List.map xlate_formula l)
+   | CNotation(_, s,(l,_)) -> xlate_error "CNotation (recursive): TODO"
+   | CGeneralization(_,_,_,_) -> xlate_error "CGeneralization: TODO"
    | CPrim (_, Numeral i) -> 
        CT_coerce_NUM_to_FORMULA(CT_int_encapsulator(Bigint.to_string i))
    | CPrim (_, String _) -> xlate_error "CPrim (String): TODO"
@@ -642,12 +648,14 @@ let is_tactic_special_case = function
 let xlate_context_pattern = function
   | Term v -> 
       CT_coerce_FORMULA_to_CONTEXT_PATTERN (xlate_formula v)
-  | Subterm (idopt, v) ->
+  | Subterm (b, idopt, v) -> (* TODO: application pattern *)
       CT_context(xlate_ident_opt idopt, xlate_formula v)
 
 
 let xlate_match_context_hyps = function
-  | Hyp (na,b) -> CT_premise_pattern(xlate_id_opt na, xlate_context_pattern b);;
+  | Hyp (na,b) -> CT_premise_pattern(xlate_id_opt na, xlate_context_pattern b)
+  | Def (na,b,t) -> xlate_error "TODO: Let hyps"
+      (* CT_premise_pattern(xlate_id_opt na, xlate_context_pattern b, xlate_context_pattern t);; *)
 
 let xlate_arg_to_id_opt = function
     Some id -> CT_coerce_ID_to_ID_OPT(CT_ident (string_of_id id))
@@ -1155,12 +1163,12 @@ and xlate_tac =
 	xlate_error "TODO: trivial using"
     | TacReduce (red, l) ->
      CT_reduce (xlate_red_tactic red, xlate_clause l)
-    | TacApply (true,false,[c,bindl]) ->
+    | TacApply (true,false,[c,bindl],None) ->
      CT_apply (xlate_formula c, xlate_bindings bindl)
-    | TacApply (true,true,[c,bindl]) ->
+    | TacApply (true,true,[c,bindl],None) ->
      CT_eapply (xlate_formula c, xlate_bindings bindl)
-    | TacApply (_,_,_) ->
-	xlate_error "TODO: simple (e)apply and iterated apply"
+    | TacApply (_,_,_,_) ->
+	xlate_error "TODO: simple (e)apply and iterated apply and apply in"
     | TacConstructor (false,n_or_meta, bindl) ->
 	let n = match n_or_meta with AI n -> n | MetaId _ -> xlate_error ""
 	in CT_constructor (CT_int n, xlate_bindings bindl)
@@ -1248,13 +1256,13 @@ and xlate_tac =
 		     but the structures are different *)
 		  xlate_clause cl)
     | TacLetTac (na, c, cl, false) -> xlate_error "TODO: remember"
-    | TacAssert (None, (_,IntroIdentifier id), c) -> 
+    | TacAssert (None, Some (_,IntroIdentifier id), c) -> 
         CT_assert(xlate_id_opt ((0,0),Name id), xlate_formula c)
-    | TacAssert (None, (_,IntroAnonymous), c) -> 
+    | TacAssert (None, None, c) -> 
         CT_assert(xlate_id_opt ((0,0),Anonymous), xlate_formula c)
-    | TacAssert (Some (TacId []), (_,IntroIdentifier id), c) -> 
+    | TacAssert (Some (TacId []), Some (_,IntroIdentifier id), c) -> 
         CT_truecut(xlate_id_opt ((0,0),Name id), xlate_formula c)
-    | TacAssert (Some (TacId []), (_,IntroAnonymous), c) -> 
+    | TacAssert (Some (TacId []), None, c) -> 
         CT_truecut(xlate_id_opt ((0,0),Anonymous), xlate_formula c)
     | TacAssert _ ->
 	xlate_error "TODO: assert with 'as' and 'by' and pose proof with 'as'"
@@ -1302,11 +1310,13 @@ and coerce_genarg_to_TARG x =
 	     (CT_coerce_ID_to_ID_OR_INT id))
   | IntroPatternArgType ->
       xlate_error "TODO"
-  | IdentArgType ->
+  | IdentArgType true ->
       let id = xlate_ident (out_gen rawwit_ident x) in
 	CT_coerce_FORMULA_OR_INT_to_TARG
 	  (CT_coerce_ID_OR_INT_to_FORMULA_OR_INT
 	     (CT_coerce_ID_to_ID_OR_INT id))
+  | IdentArgType false ->
+      xlate_error "TODO"
   | VarArgType ->
       let id = xlate_ident (snd (out_gen rawwit_var x)) in
 	CT_coerce_FORMULA_OR_INT_to_TARG
@@ -1400,11 +1410,13 @@ let coerce_genarg_to_VARG x =
 	        (CT_coerce_ID_to_ID_OPT id))
   | IntroPatternArgType ->
       xlate_error "TODO"
-  | IdentArgType ->
+  | IdentArgType true ->
       let id = xlate_ident (out_gen rawwit_ident x) in
       CT_coerce_ID_OPT_OR_ALL_to_VARG
 	      (CT_coerce_ID_OPT_to_ID_OPT_OR_ALL
 	        (CT_coerce_ID_to_ID_OPT id))
+  | IdentArgType false ->
+      xlate_error "TODO"
   | VarArgType ->
       let id = xlate_ident (snd (out_gen rawwit_var x)) in
       CT_coerce_ID_OPT_OR_ALL_to_VARG
@@ -1489,7 +1501,7 @@ let build_constructors l =
  CT_constr_list (List.map f l)
 
 let build_record_field_list l =
- let build_record_field (coe,d) = match d with
+ let build_record_field ((coe,d),not) = match d with
   | AssumExpr (id,c) ->
       if coe then CT_recconstr_coercion (xlate_id_opt id, xlate_formula c)
       else
@@ -1735,6 +1747,8 @@ let rec xlate_vernac =
 	  (fst::rest) -> CT_formula_ne_list(fst,rest)
 	| _ -> assert false in
       CT_hintrewrite(ct_orient, f_ne_list, CT_ident base, xlate_tactic t)
+  | VernacCreateHintDb (local,dbname,b) ->
+      xlate_error "TODO: VernacCreateHintDb"
   | VernacHints (local,dbnames,h) ->
       let dblist = CT_id_list(List.map (fun x -> CT_ident x) dbnames) in
       (match h with
@@ -1749,7 +1763,10 @@ let rec xlate_vernac =
 	     CT_hints(CT_ident "Constructors",
 		      CT_id_ne_list(n1, names), dblist)
 	| HintsExtern (n, c, t) ->
-	    CT_hint_extern(CT_int n, xlate_formula c, xlate_tactic t, dblist)
+	    let pat = match c with 
+	      | None -> CT_coerce_ID_OPT_to_FORMULA_OPT (CT_coerce_NONE_to_ID_OPT CT_none)
+	      | Some c -> CT_coerce_FORMULA_to_FORMULA_OPT (xlate_formula c) 
+	    in CT_hint_extern(CT_int n, pat, xlate_tactic t, dblist)
         | HintsImmediate l -> 
 	 let f1, formulas = match List.map xlate_formula l with
 	     a :: tl -> a, tl
@@ -1768,7 +1785,7 @@ let rec xlate_vernac =
 		| HintsImmediate _ -> CT_hints_immediate(l', dblist)
 		| _ -> assert false)
         | HintsResolve l -> 
-	 let f1, formulas = match List.map xlate_formula (List.map snd l) with
+	 let f1, formulas = match List.map xlate_formula (List.map pi3 l) with
 	     a :: tl -> a, tl
 	   | _  -> failwith "" in
 	 let l' = CT_formula_ne_list(f1, formulas) in
@@ -1793,6 +1810,16 @@ let rec xlate_vernac =
 			    CT_id_ne_list(n1, names), dblist)
 	   else	     
              CT_hints(CT_ident "Unfold", CT_id_ne_list(n1, names), dblist)
+        | HintsTransparency (l,b) -> 
+	 let n1, names = match List.map loc_qualid_to_ct_ID l with
+	     n1 :: names -> n1, names
+	   | _  -> failwith "" in
+	 let ty = if b then "Transparent" else "Opaque" in
+	   if local then
+             CT_local_hints(CT_ident ty,
+			    CT_id_ne_list(n1, names), dblist)
+	   else	     
+             CT_hints(CT_ident ty, CT_id_ne_list(n1, names), dblist)
        	| HintsDestruct(id, n, loc, f, t) ->
 	    let dl = match loc with
 		ConclLocation() -> CT_conclusion_location
@@ -1859,7 +1886,8 @@ let rec xlate_vernac =
 	| PrintHint id ->
 	    CT_print_hint (CT_coerce_ID_to_ID_OPT (loc_qualid_to_ct_ID id))
 	| PrintHintGoal -> CT_print_hint ctv_ID_OPT_NONE
-	| PrintLoadPath -> CT_print_loadpath
+	| PrintLoadPath None -> CT_print_loadpath
+	| PrintLoadPath _ -> xlate_error "TODO: Print LoadPath dir"
 	| PrintMLLoadPath -> CT_ml_print_path
 	| PrintMLModules -> CT_ml_print_modules
 	| PrintGraph -> CT_print_graph
@@ -1878,7 +1906,6 @@ let rec xlate_vernac =
 	    xlate_error "TODO: Print TypeClasses"
 	| PrintInspect n -> CT_inspect (CT_int n)
 	| PrintUniverses opt_s -> CT_print_universes(ctf_STRING_OPT opt_s)
-	| PrintSetoids -> CT_print_setoids
 	| PrintTables -> CT_print_tables
         | PrintModuleType a -> CT_print_module_type (loc_qualid_to_ct_ID a)
         | PrintModule a -> CT_print_module (loc_qualid_to_ct_ID a)
@@ -1927,37 +1954,44 @@ let rec xlate_vernac =
 	| SearchRewrite c ->
 	    CT_search_rewrite(xlate_formula c, translated_restriction)
 	| SearchAbout (a::l) ->
-	    let xlate_search_about_item it =
+	    let xlate_search_about_item (b,it) =
+              if not b then xlate_error "TODO: negative searchabout constraint";
 	      match it with
-		  SearchRef x -> 
+		  SearchSubPattern (CRef x) -> 
 		    CT_coerce_ID_to_ID_OR_STRING(loc_qualid_to_ct_ID x)
-		| SearchString s -> 
-		    CT_coerce_STRING_to_ID_OR_STRING(CT_string s) in
+		| SearchString (s,None) -> 
+		    CT_coerce_STRING_to_ID_OR_STRING(CT_string s)
+		| SearchString _ | SearchSubPattern _ ->
+                    xlate_error
+		    "TODO: search subpatterns or notation with explicit scope"
+	    in
 	    CT_search_about
 	      (CT_id_or_string_ne_list(xlate_search_about_item a,
 				       List.map xlate_search_about_item l),
 	       translated_restriction)
   	| SearchAbout [] -> assert false)
 
-  | (*Record from tactics/Record.v *)
-    VernacRecord 
-      (_, (add_coercion, (_,s)), binders, c1,
-       rec_constructor_or_none, field_list) ->
-      let record_constructor =
-        xlate_ident_opt (Option.map snd rec_constructor_or_none) in
-      CT_record
-       ((if add_coercion then CT_coercion_atm else
-          CT_coerce_NONE_to_COERCION_OPT(CT_none)),
-        xlate_ident s, xlate_binder_list binders, 
-	xlate_formula c1, record_constructor,
-         build_record_field_list field_list)
+(*   | (\*Record from tactics/Record.v *\) *)
+(*     VernacRecord  *)
+(*       (_, (add_coercion, (_,s)), binders, c1, *)
+(*        rec_constructor_or_none, field_list) -> *)
+(*       let record_constructor = *)
+(*         xlate_ident_opt (Option.map snd rec_constructor_or_none) in *)
+(*       CT_record *)
+(*        ((if add_coercion then CT_coercion_atm else *)
+(*           CT_coerce_NONE_to_COERCION_OPT(CT_none)), *)
+(*         xlate_ident s, xlate_binder_list binders,  *)
+(* 	xlate_formula (Option.get c1), record_constructor, *)
+(*          build_record_field_list field_list) *)
    | VernacInductive (isind, lmi) ->
-      let co_or_ind = if isind then "Inductive" else "CoInductive" in
-      let strip_mutind (((_,s), parameters, c, constructors), notopt) =
+      let co_or_ind = if Decl_kinds.recursivity_flag_of_kind isind then "Inductive" else "CoInductive" in
+      let strip_mutind = function
+          (((_, (_,s)), parameters, c, _, Constructors constructors), notopt) ->
           CT_ind_spec
-            (xlate_ident s, xlate_binder_list parameters, xlate_formula c,
+            (xlate_ident s, xlate_binder_list parameters, xlate_formula (Option.get c),
              build_constructors constructors,
-	     translate_opt_notation_decl notopt) in
+	     translate_opt_notation_decl notopt) 
+	| _ -> xlate_error "TODO: Record notation in (Co)Inductive" in
         CT_mind_decl
 	  (CT_co_ind co_or_ind, CT_ind_spec_list (List.map strip_mutind lmi))
    | VernacFixpoint ([],_) -> xlate_error "mutual recursive"
@@ -2116,7 +2150,7 @@ let rec xlate_vernac =
 
     (* Type Classes *) 
    | VernacDeclareInstance _|VernacContext _|
-	 VernacInstance (_, _, _, _, _)|VernacClass (_, _, _, _, _) ->
+	 VernacInstance (_, _, _, _, _) ->
 	   xlate_error "TODO: Type Classes commands"
 
   | VernacResetName id -> CT_reset (xlate_ident (snd id))

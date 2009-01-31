@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inductive.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: inductive.ml 11647 2008-12-02 10:40:11Z barras $ *)
 
 open Util
 open Names
@@ -683,7 +683,8 @@ let check_one_fix renv recpos def =
                     List.iter (check_rec_call renv) l
                 | Some c ->
                     try List.iter (check_rec_call renv) l
-                    with FixGuardError _ -> check_rec_call renv (applist(c,l))
+                    with FixGuardError _ ->
+                      check_rec_call renv (applist(lift p c,l))
               end
 
         | Case (ci,p,c_0,lrest) ->

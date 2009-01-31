@@ -1,4 +1,3 @@
-(* -*- coq-prog-args: ("-emacs-U" "-nois") -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -13,7 +12,7 @@
    Institution: LRI, CNRS UMR 8623 - UniversitÃcopyright Paris Sud
    91405 Orsay, France *)
 
-(* $Id: SetoidClass.v 11282 2008-07-28 11:51:53Z msozeau $ *)
+(* $Id: SetoidClass.v 11800 2009-01-18 18:34:15Z msozeau $ *)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -27,11 +26,9 @@ Require Import Coq.Classes.Functions.
 
 (** A setoid wraps an equivalence. *)
 
-Class Setoid A :=
+Class Setoid A := {
   equiv : relation A ;
-  setoid_equiv :> Equivalence A equiv.
-
-Typeclasses unfold equiv.
+  setoid_equiv :> Equivalence equiv }.
 
 (* Too dangerous instance *)
 (* Program Instance [ eqa : Equivalence A eqA ] =>  *)
@@ -40,13 +37,13 @@ Typeclasses unfold equiv.
 
 (** Shortcuts to make proof search easier. *)
 
-Definition setoid_refl [ sa : Setoid A ] : Reflexive equiv.
+Definition setoid_refl `(sa : Setoid A) : Reflexive equiv.
 Proof. typeclasses eauto. Qed.
 
-Definition setoid_sym [ sa : Setoid A ] : Symmetric equiv.
+Definition setoid_sym `(sa : Setoid A) : Symmetric equiv.
 Proof. typeclasses eauto. Qed.
 
-Definition setoid_trans [ sa : Setoid A ] : Transitive equiv.
+Definition setoid_trans `(sa : Setoid A) : Transitive equiv.
 Proof. typeclasses eauto. Qed.
 
 Existing Instance setoid_refl.
@@ -58,8 +55,8 @@ Existing Instance setoid_trans.
 (* Program Instance eq_setoid : Setoid A := *)
 (*   equiv := eq ; setoid_equiv := eq_equivalence. *)
 
-Program Instance iff_setoid : Setoid Prop :=
-  equiv := iff ; setoid_equiv := iff_equivalence.
+Program Instance iff_setoid : Setoid Prop := 
+  { equiv := iff ; setoid_equiv := iff_equivalence }.
 
 (** Overloaded notations for setoid equivalence and inequivalence. Not to be confused with [eq] and [=]. *)
 
@@ -87,7 +84,7 @@ Ltac clsubst_nofail :=
 
 Tactic Notation "clsubst" "*" := clsubst_nofail.
 
-Lemma nequiv_equiv_trans : forall [ Setoid A ] (x y z : A), x =/= y -> y == z -> x =/= z.
+Lemma nequiv_equiv_trans : forall `{Setoid A} (x y z : A), x =/= y -> y == z -> x =/= z.
 Proof with auto.
   intros; intro.
   assert(z == y) by (symmetry ; auto).
@@ -95,7 +92,7 @@ Proof with auto.
   contradiction.
 Qed.
 
-Lemma equiv_nequiv_trans : forall [ Setoid A ] (x y z : A), x == y -> y =/= z -> x =/= z.
+Lemma equiv_nequiv_trans : forall `{Setoid A} (x y z : A), x == y -> y =/= z -> x =/= z.
 Proof.
   intros; intro. 
   assert(y == x) by (symmetry ; auto).
@@ -122,23 +119,11 @@ Ltac setoidify := repeat setoidify_tac.
 
 (** Every setoid relation gives rise to a morphism, in fact every partial setoid does. *)
 
-Program Definition setoid_morphism [ sa : Setoid A ] : Morphism (equiv ++> equiv ++> iff) equiv :=
-  PER_morphism.
+Program Instance setoid_morphism `(sa : Setoid A) : Morphism (equiv ++> equiv ++> iff) equiv :=
+  respect.
 
-(** Add this very useful instance in the database. *)
-
-Implicit Arguments setoid_morphism [[!sa]].
-Existing Instance setoid_morphism.
-
-Program Definition setoid_partial_app_morphism [ sa : Setoid A ] (x : A) : Morphism (equiv ++> iff) (equiv x) :=
-  Reflexive_partial_app_morphism.
-
-Existing Instance setoid_partial_app_morphism.
-
-Definition type_eq : relation Type :=
-  fun x y => x = y.
-
-Program Instance type_equivalence : Equivalence Type type_eq.
+Program Instance setoid_partial_app_morphism `(sa : Setoid A) (x : A) : Morphism (equiv ++> iff) (equiv x) :=
+  respect.
 
 Ltac morphism_tac := try red ; unfold arrow ; intros ; program_simpl ; try tauto.
 
@@ -148,29 +133,12 @@ Ltac obligation_tactic ::= morphism_tac.
    using [iff_impl_id_morphism] if the proof is in [Prop] and
    [eq_arrow_id_morphism] if it is in Type. *)
 
-Program Instance iff_impl_id_morphism : Morphism (iff ++> impl) Basics.id.
-
-(* Program Instance eq_arrow_id_morphism : ? Morphism (eq +++> arrow) id. *)
-
-(* Definition compose_respect (A B C : Type) (R : relation (A -> B)) (R' : relation (B -> C)) *)
-(*   (x y : A -> C) : Prop := forall (f : A -> B) (g : B -> C), R f f -> R' g g. *)
-
-(* Program Instance (A B C : Type) (R : relation (A -> B)) (R' : relation (B -> C)) *)
-(*   [ mg : ? Morphism R' g ] [ mf : ? Morphism R f ] =>  *)
-(*   compose_morphism : ? Morphism (compose_respect R R') (g o f). *)
-
-(* Next Obligation. *)
-(* Proof. *)
-(*   apply (respect (m0:=mg)). *)
-(*   apply (respect (m0:=mf)). *)
-(*   assumption. *)
-(* Qed. *)
+Program Instance iff_impl_id_morphism : Morphism (iff ++> impl) id.
 
 (** Partial setoids don't require reflexivity so we can build a partial setoid on the function space. *)
 
-Class PartialSetoid (carrier : Type) :=
-  pequiv : relation carrier ;
-  pequiv_prf :> PER carrier pequiv.
+Class PartialSetoid (A : Type) := 
+  { pequiv : relation A ; pequiv_prf :> PER pequiv }.
 
 (** Overloaded notation for partial setoid equivalence. *)
 

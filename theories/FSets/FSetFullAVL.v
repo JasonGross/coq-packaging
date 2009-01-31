@@ -11,7 +11,7 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: FSetFullAVL.v 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id: FSetFullAVL.v 11699 2008-12-18 11:49:08Z letouzey $ *)
 
 (** * FSetFullAVL
    
@@ -911,6 +911,14 @@ Module IntMake (I:Int)(X: OrderedType) <: S with Module E := X.
   generalize (ocaml_compare_Cmp s s').
   destruct ocaml_compare; intros; [apply EQ|apply LT|apply GT]; red; auto.
   change (Raw.Equal s s'); auto.
+ Defined.
+
+ Definition eq_dec (s s':t) : { eq s s' } + { ~ eq s s' }.
+ Proof.
+  intros (s,b,a) (s',b',a'); unfold eq; simpl.
+  case_eq (Raw.equal s s'); intro H; [left|right].
+  apply equal_2; auto.
+  intro H'; rewrite equal_1 in H; auto; discriminate.
  Defined.
 
  (* specs *)

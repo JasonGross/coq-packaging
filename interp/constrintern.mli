@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: constrintern.mli 11024 2008-05-30 12:41:39Z msozeau $ i*)
+(*i $Id: constrintern.mli 11739 2009-01-02 19:33:19Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -39,8 +39,10 @@ open Pretyping
    argument associates a list of implicit positions and scopes to
    identifiers declared in the [rel_context] of [env] *)
 
+type var_internalisation_type = Inductive | Recursive | Method 
+    
 type var_internalisation_data =
-    identifier list * Impargs.implicits_list * scope_name option list
+  var_internalisation_type * identifier list * Impargs.implicits_list * scope_name option list
 
 type implicits_env = (identifier * var_internalisation_data) list
 type full_implicits_env = identifier list * implicits_env
@@ -65,7 +67,7 @@ val intern_pattern : env -> cases_pattern_expr ->
   Names.identifier list *
     ((Names.identifier * Names.identifier) list * Rawterm.cases_pattern) list
 
-val intern_context : evar_map -> env -> local_binder list -> raw_binder list
+val intern_context : bool -> evar_map -> env -> local_binder list -> raw_binder list
 
 (*s Composing internalisation with pretyping *)
 
@@ -111,8 +113,9 @@ val interp_constr_judgment : evar_map -> env -> constr_expr -> unsafe_judgment
 
 (* Interprets constr patterns *)
 
-val interp_constrpattern : 
-  evar_map -> env -> constr_expr -> patvar list * constr_pattern
+val intern_constr_pattern : 
+  evar_map -> env -> ?as_type:bool -> ?ltacvars:ltac_sign -> 
+    constr_pattern_expr -> patvar list * constr_pattern
 
 val interp_reference : ltac_sign -> reference -> rawconstr
 
@@ -124,9 +127,10 @@ val interp_binder_evars : evar_defs ref -> env -> name -> constr_expr -> types
 
 (* Interpret contexts: returns extended env and context *)
 
-val interp_context : evar_map -> env -> local_binder list -> (env * rel_context) * manual_implicits
+val interp_context : ?fail_anonymous:bool -> 
+  evar_map -> env -> local_binder list -> (env * rel_context) * manual_implicits
 
-val interp_context_evars : 
+val interp_context_evars : ?fail_anonymous:bool -> 
   evar_defs ref -> env -> local_binder list -> (env * rel_context) * manual_implicits
 
 (* Locating references of constructions, possibly via a syntactic definition *)
@@ -139,15 +143,8 @@ val global_reference_in_absolute_module : dir_path -> identifier -> constr
 
 (* Interprets into a abbreviatable constr *)
 
-val interp_aconstr : implicits_env -> identifier list -> constr_expr ->
-  interpretation
+val interp_aconstr : implicits_env -> identifier list * identifier list 
+  -> constr_expr -> interpretation
 
 (* Globalization leak for Grammar *)
 val for_grammar : ('a -> 'b) -> 'a -> 'b
-
-(* Coqdoc utility functions *)
-type coqdoc_state
-val coqdoc_freeze : unit -> coqdoc_state
-val coqdoc_unfreeze : coqdoc_state -> unit
-
-val add_glob : Util.loc -> global_reference -> unit

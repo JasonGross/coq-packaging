@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libnames.mli 11209 2008-07-05 10:17:49Z herbelin $ i*)
+(*i $Id: libnames.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 (*i*)
 open Pp
@@ -25,6 +25,7 @@ type global_reference =
 
 val isVarRef : global_reference -> bool
 
+val subst_constructor : substitution -> constructor -> constructor * constr
 val subst_global : substitution -> global_reference -> global_reference * constr
 
 (* Turn a global reference into a construction *)

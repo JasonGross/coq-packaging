@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacexpr.ml 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: vernacexpr.ml 11809 2009-01-20 11:39:55Z aspiwack $ i*)
 
 open Util
 open Names
@@ -38,7 +38,7 @@ type printable =
   | PrintSectionContext of reference
   | PrintInspect of int
   | PrintGrammar of string
-  | PrintLoadPath
+  | PrintLoadPath of dir_path option
   | PrintModules
   | PrintModule of reference
   | PrintModuleType of reference
@@ -60,7 +60,6 @@ type printable =
   | PrintHintDbName of string
   | PrintRewriteHintDbName of string
   | PrintHintDb
-  | PrintSetoids
   | PrintScopes
   | PrintScope of string
   | PrintVisibility of string option
@@ -69,14 +68,14 @@ type printable =
   | PrintAssumptions of reference
 
 type search_about_item =
-  | SearchRef of reference
-  | SearchString of string
+  | SearchSubPattern of constr_pattern_expr
+  | SearchString of string * scope_name option
 
 type searchable =
-  | SearchPattern of pattern_expr
-  | SearchRewrite of pattern_expr
+  | SearchPattern of constr_pattern_expr
+  | SearchRewrite of constr_pattern_expr
   | SearchHead of reference
-  | SearchAbout of search_about_item list
+  | SearchAbout of (bool * search_about_item) list
 
 type locatable =
   | LocateTerm of reference
@@ -112,11 +111,12 @@ type comment =
   | CommentInt of int
 
 type hints =
-  | HintsResolve of (int option * constr_expr) list
+  | HintsResolve of (int option * bool * constr_expr) list
   | HintsImmediate of constr_expr list
   | HintsUnfold of reference list
+  | HintsTransparency of reference list * bool
   | HintsConstructors of reference list
-  | HintsExtern of int * constr_expr * raw_tactic_expr
+  | HintsExtern of int * constr_expr option * raw_tactic_expr
   | HintsDestruct of identifier *
       int * (bool,unit) location * constr_expr * raw_tactic_expr
 
@@ -140,18 +140,10 @@ type locality_flag  = bool (* true = Local;         false = Global         *)
 type coercion_flag  = bool (* true = AddCoercion;   false = NoCoercion     *)
 type export_flag    = bool (* true = Export;        false = Import         *)
 type specif_flag    = bool (* true = Specification; false = Implementation *)
-type inductive_flag = bool (* true = Inductive;     false = CoInductive    *)
+type inductive_flag = Decl_kinds.recursivity_kind
 type onlyparsing_flag = bool (* true = Parse only;  false = Print also     *)
 
 type sort_expr = Rawterm.rawsort
-
-type decl_notation = (string * constr_expr * scope_name option) option
-type simple_binder = lident list  * constr_expr
-type class_binder = lident * constr_expr list
-type 'a with_coercion = coercion_flag * 'a
-type constructor_expr = (lident * constr_expr) with_coercion
-type inductive_expr =
-     lident * local_binder list * constr_expr * constructor_expr list
 
 type definition_expr =
   | ProveBody of local_binder list * constr_expr
@@ -161,6 +153,20 @@ type definition_expr =
 type local_decl_expr =
   | AssumExpr of lname * constr_expr
   | DefExpr of lname * constr_expr * constr_expr option
+
+type inductive_kind = Inductive_kw | CoInductive | Record | Structure | Class of bool (* true = definitional, false = inductive *)
+type decl_notation = (string * constr_expr * scope_name option) option
+type simple_binder = lident list  * constr_expr
+type class_binder = lident * constr_expr list
+type 'a with_coercion = coercion_flag * 'a
+type 'a with_notation = 'a * decl_notation
+type constructor_expr = (lident * constr_expr) with_coercion
+type constructor_list_or_record_decl_expr =
+  | Constructors of constructor_expr list
+  | RecordDecl of lident option * local_decl_expr with_coercion with_notation list
+type inductive_expr =
+  lident with_coercion * local_binder list * constr_expr option * inductive_kind * 
+    constructor_list_or_record_decl_expr
 
 type module_binder = bool option * lident list * module_type_ast
 
@@ -211,9 +217,6 @@ type vernac_expr =
   | VernacCombinedScheme of lident * lident list
 
   (* Gallina extensions *)
-  | VernacRecord of bool (* = Record or Structure *)
-      * lident with_coercion * local_binder list
-      * constr_expr * lident option * local_decl_expr with_coercion list
   | VernacBeginSection of lident
   | VernacEndSegment of lident
   | VernacRequire of
@@ -225,18 +228,18 @@ type vernac_expr =
       class_rawexpr * class_rawexpr
 
   (* Type classes *)
-  | VernacClass of
-      lident * (* name *)
-	local_binder list * (* params *)
-	sort_expr located option * (* arity *)
-	local_binder list * (* constraints *)
-	(lident * bool * constr_expr) list (* props, with substructure hints *)
+(*   | VernacClass of *)
+(*       lident * (\* name *\) *)
+(* 	local_binder list * (\* params *\) *)
+(* 	sort_expr located option * (\* arity *\) *)
+(* 	local_binder list * (\* constraints *\) *)
+(* 	(lident * bool * constr_expr) list (\* props, with substructure hints *\) *)
 	
   | VernacInstance of
       bool * (* global *)
       local_binder list * (* super *)
 	typeclass_constraint * (* instance name, class name, params *)
-	(lident * lident list * constr_expr) list * (* props *)
+	constr_expr * (* props *)
 	int option (* Priority *)
 
   | VernacContext of local_binder list
@@ -287,6 +290,7 @@ type vernac_expr =
   (* Commands *)
   | VernacDeclareTacticDefinition of
       rec_flag * (reference * bool * raw_tactic_expr) list
+  | VernacCreateHintDb of locality_flag * lstring * bool
   | VernacHints of locality_flag * lstring list * hints
   | VernacSyntacticDefinition of identifier located * (identifier list * constr_expr) *
       locality_flag * onlyparsing_flag
@@ -332,3 +336,72 @@ type vernac_expr =
   | VernacExtend of string * raw_generic_argument list
 
 and located_vernac_expr = loc * vernac_expr
+
+(* Locating errors raised just after the dot is parsed but before the
+   interpretation phase *)
+
+exception DuringSyntaxChecking of exn
+
+let syntax_checking_error s = 
+  raise (DuringSyntaxChecking (UserError ("",Pp.str s)))
+
+(* Managing locality *)
+
+let locality_flag = ref None
+
+let local_of_bool = function true -> Local | false -> Global
+
+let check_locality () =
+  if !locality_flag = Some true then
+    syntax_checking_error "This command does not support the \"Local\" prefix.";
+  if !locality_flag = Some false then
+    syntax_checking_error "This command does not support the \"Global\" prefix."
+
+let use_locality () =
+  let local = match !locality_flag with Some true -> true | _ -> false in
+  locality_flag := None;
+  local
+
+let use_locality_exp () = local_of_bool (use_locality ())
+
+let use_section_locality () =
+  let local = 
+    match !locality_flag with Some b -> b | None -> Lib.sections_are_opened ()
+  in
+  locality_flag := None;
+  local
+
+let use_non_locality () =
+  let local = match !locality_flag with Some false -> false | _ -> true in
+  locality_flag := None;
+  local
+
+let enforce_locality () =
+  let local =
+    match !locality_flag with 
+    | Some false ->
+	error "Cannot be simultaneously Local and Global."
+    | _ -> 
+	Flags.if_verbose
+	  Pp.warning "Obsolete syntax: use \"Local\" as a prefix."; 
+	true in
+  locality_flag := None;
+  local
+
+let enforce_locality_exp () = local_of_bool (enforce_locality ())
+
+let enforce_locality_of local =
+  let local = 
+    match !locality_flag with 
+    | Some false when local ->
+	error "Cannot be simultaneously Local and Global."
+    | Some true when local ->
+	error "Use only prefix \"Local\"."
+    | None ->
+	if local then
+	  Flags.if_verbose
+	    Pp.warning "Obsolete syntax: use \"Local\" as a prefix.";
+	local
+    | Some b -> b in
+  locality_flag := None;
+  local

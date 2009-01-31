@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: subtac_cases.ml 11282 2008-07-28 11:51:53Z msozeau $ *)
+(* $Id: subtac_cases.ml 11576 2008-11-10 19:13:15Z msozeau $ *)
 
 open Cases
 open Util
@@ -1572,7 +1572,7 @@ let mk_JMeq typ x typ' y =
   mkApp (Lazy.force Subtac_utils.jmeq_ind, [| typ; x ; typ'; y |])
 let mk_JMeq_refl typ x = mkApp (Lazy.force Subtac_utils.jmeq_refl, [| typ; x |])
     
-let hole = RHole (dummy_loc, Evd.QuestionMark true)
+let hole = RHole (dummy_loc, Evd.QuestionMark (Evd.Define true))
 
 let context_of_arsign l =
   let (x, _) = List.fold_right

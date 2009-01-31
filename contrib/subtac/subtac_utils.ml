@@ -159,7 +159,7 @@ let app_opt c e =
 let print_args env args = 
   Array.fold_right (fun a acc -> my_print_constr env a ++ spc () ++ acc) args (str "")
 
-let make_existential loc ?(opaque = true) env isevars c =
+let make_existential loc ?(opaque = Define true) env isevars c =
   let evar = Evarutil.e_new_evar isevars env ~src:(loc, QuestionMark opaque) c in
   let (key, args) = destEvar evar in
     (try trace (str "Constructed evar " ++ int key ++ str " applied to args: " ++
@@ -232,7 +232,7 @@ let build_dependent_sum l =
 	  trace (spc () ++ str ("treating evar " ^ string_of_id n));
 	  (try trace (str " assert: " ++ my_print_constr (Global.env ()) hyptype)
 	   with _ -> ());
-	let tac = assert_tac true (Name n) hyptype in
+	let tac = assert_tac (Name n) hyptype in
 	let conttac = 
 	  (fun cont -> 
 	     conttac
@@ -369,7 +369,7 @@ let solve_by_tac evi t =
     Pfedit.start_proof id goal_kind evi.evar_hyps evi.evar_concl
     (fun _ _ -> ());
     Pfedit.by (tclCOMPLETE t);
-    let _,(const,_,_) = Pfedit.cook_proof ignore in
+    let _,(const,_,_,_) = Pfedit.cook_proof ignore in
       Pfedit.delete_current_proof (); const.Entries.const_entry_body
   with e ->
     Pfedit.delete_current_proof();
@@ -470,4 +470,3 @@ let tactics_tac s =
 
 let tactics_call tac args =
   TacArg(TacCall(dummy_loc, ArgArg(dummy_loc, Lazy.force (tactics_tac tac)),args))
-

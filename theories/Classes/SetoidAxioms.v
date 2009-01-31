@@ -1,4 +1,3 @@
-(* -*- coq-prog-args: ("-emacs-U" "-nois") -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -13,7 +12,7 @@
  * Institution: LRI, CNRS UMR 8623 - UniversitÃcopyright Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: SetoidAxioms.v 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id: SetoidAxioms.v 11709 2008-12-20 11:42:15Z msozeau $ *)
 
 Require Import Coq.Program.Program.
 
@@ -22,10 +21,10 @@ Unset Strict Implicit.
 
 Require Export Coq.Classes.SetoidClass.
 
-(* Application of the extensionality axiom to turn a goal on leibinz equality to 
-   a setoid equivalence. *)
+(* Application of the extensionality axiom to turn a goal on 
+   Leibinz equality to a setoid equivalence (use with care!). *)
 
-Axiom setoideq_eq : forall [ sa : Setoid a ] (x y : a), x == y -> x = y.
+Axiom setoideq_eq : forall `{sa : Setoid a} (x y : a), x == y -> x = y.
 
 (** Application of the extensionality principle for setoids. *)
 

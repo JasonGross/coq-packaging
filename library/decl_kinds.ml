@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: decl_kinds.ml 11024 2008-05-30 12:41:39Z msozeau $ *)
+(* $Id: decl_kinds.ml 11809 2009-01-20 11:39:55Z aspiwack $ *)
 
 open Util
 open Libnames
@@ -112,3 +112,18 @@ let strength_of_global = function
 let string_of_strength = function
   | Local -> "Local"
   | Global -> "Global"
+
+
+(* Recursive power *)
+
+(* spiwack: this definition might be of use in the kernel, for now I do not
+                   push them deeper than needed, though. *)
+type recursivity_kind =
+  | Finite (* = inductive *)
+  | CoFinite (* = coinductive *)
+  | BiFinite (* = non-recursive, like in "Record" definitions *)
+
+(* helper, converts to "finiteness flag" booleans *)
+let recursivity_flag_of_kind = function
+  | Finite | BiFinite -> true
+  | CoFinite -> false

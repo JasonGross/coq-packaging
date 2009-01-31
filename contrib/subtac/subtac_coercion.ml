@@ -6,7 +6,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: subtac_coercion.ml 11343 2008-09-01 20:55:13Z herbelin $ *)
+(* $Id: subtac_coercion.ml 11576 2008-11-10 19:13:15Z msozeau $ *)
 
 open Util
 open Names
@@ -33,37 +33,36 @@ open Pp
 let pair_of_array a = (a.(0), a.(1))
 let make_name s = Name (id_of_string s)
 
+let rec disc_subset x = 
+  match kind_of_term x with
+  | App (c, l) ->
+      (match kind_of_term c with
+      Ind i ->
+	let len = Array.length l in
+	let sig_ = Lazy.force sig_ in
+	  if len = 2 && i = Term.destInd sig_.typ
+	  then
+	    let (a, b) = pair_of_array l in
+	      Some (a, b)
+	  else None
+      | _ -> None)
+  | _ -> None
+      
+and disc_exist env x =
+  match kind_of_term x with
+  | App (c, l) ->
+      (match kind_of_term c with
+      Construct c ->	       
+	if c = Term.destConstruct (Lazy.force sig_).intro
+	then Some (l.(0), l.(1), l.(2), l.(3))
+	else None
+      | _ -> None)
+  | _ -> None
+      
 module Coercion = struct
-
+    
   exception NoSubtacCoercion
-
-  let rec disc_subset x = 
-    match kind_of_term x with
-      | App (c, l) ->
-	  (match kind_of_term c with
-	       Ind i ->
-		 let len = Array.length l in
-		 let sig_ = Lazy.force sig_ in
-		   if len = 2 && i = Term.destInd sig_.typ
-		   then
-		     let (a, b) = pair_of_array l in
-		       Some (a, b)
-		   else None
-	     | _ -> None)
-      | _ -> None
-	  
-  and disc_exist env x =
-    match kind_of_term x with
-      | App (c, l) ->
-	  (match kind_of_term c with
-	       Construct c ->	       
-		 if c = Term.destConstruct (Lazy.force sig_).intro
-		 then Some (l.(0), l.(1), l.(2), l.(3))
-		 else None
-	     | _ -> None)
-      | _ -> None
-
-
+    
   let disc_proj_exist env x =
     match kind_of_term x with
       | App (c, l) ->

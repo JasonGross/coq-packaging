@@ -49,7 +49,7 @@ CAMLP4BIN="CAMLP4BINDIRECTORY"
 CAMLVERSION=CAMLTAG
 
 # Ocaml .h directory
-CAMLHLIB="CAMLLIBDIRECTORY"/caml
+CAMLHLIB="CAMLLIBDIRECTORY"
 
 # Camlp4 library directory (avoid CAMLP4LIB used on Windows)
 CAMLP4O=CAMLP4TOOL
@@ -96,6 +96,7 @@ BEST=BESTCOMPILER
 # Your architecture
 # Can be obtain by UNIX command arch
 ARCH=ARCHITECTURE
+HASNATDYNLINK=HASNATIVEDYNLINK
 
 # Your C compiler and co
 CC="CCEXEC"
@@ -113,6 +114,7 @@ OSDEPLIBS=OSDEPENDENTLIBS
 #  Unix systems:
 #  Win32 systems : .exe
 EXE=EXECUTEEXTENSION
+DLLEXT=DLLEXTENSION
 
 # the command MKDIR (try to replace it with mkdirhier if you have problems)
 MKDIR=mkdir -p
@@ -151,4 +153,3 @@ WITHDOC=WITHDOCOPT
 
 # make or sed are bogus and believe lines not terminating by a return
 # are inexistent
-

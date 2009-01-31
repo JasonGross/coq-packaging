@@ -6,10 +6,15 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: flags.ml 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: flags.ml 11801 2009-01-18 20:11:41Z herbelin $ i*)
 
 let with_option o f x =
   let old = !o in o:=true;
+  try let r = f x in o := old; r
+  with e -> o := old; raise e
+
+let without_option o f x =
+  let old = !o in o:=false;
   try let r = f x in o := old; r
   with e -> o := old; raise e
 
@@ -33,13 +38,10 @@ let raw_print = ref false
 let unicode_syntax = ref false
 
 (* Translate *)
-let translate = ref false
-let make_translate f = translate := f
-let do_translate () = !translate
-let translate_file = ref false
-
-(* True only when interning from pp*new.ml *)
-let translate_syntax = ref false
+let beautify = ref false
+let make_beautify f = beautify := f
+let do_beautify () = !beautify
+let beautify_file = ref false
 
 (* Silent / Verbose *)
 let silent = ref false
@@ -47,16 +49,8 @@ let make_silent flag = silent := flag; ()
 let is_silent () = !silent
 let is_verbose () = not !silent
 
-let silently f x =
-  let oldsilent = !silent in
-  try 
-    silent := true;
-    let rslt = f x in
-    silent := oldsilent; 
-    rslt
-  with e -> begin
-    silent := oldsilent; raise e
-  end
+let silently f x = with_option silent f x
+let verbosely f x = without_option silent f x
 
 let if_silent f x = if !silent then f x
 let if_verbose f x = if not !silent then f x
@@ -82,33 +76,13 @@ let unsafe_set = ref Stringset.empty
 let add_unsafe s = unsafe_set := Stringset.add s !unsafe_set
 let is_unsafe s = Stringset.mem s !unsafe_set
 
-(* Dump of globalization (to be used by coqdoc) *)
-
-let dump = ref false
-let dump_file = ref ""
-let dump_into_file f = dump := true; dump_file := f
-
-let dump_buffer = Buffer.create 8192
-
-let dump_string = Buffer.add_string dump_buffer
-
-let dump_it () = 
-  if !dump then begin
-    let mode = [Open_wronly; Open_append; Open_creat] in
-    let c = open_out_gen mode 0o666 !dump_file in
-    output_string c (Buffer.contents dump_buffer);
-    close_out c
-  end
-
-let _ = at_exit dump_it
-
-(* Flags.for the virtual machine *)
+(* Flags for the virtual machine *)
 
 let boxed_definitions = ref true
 let set_boxed_definitions b = boxed_definitions := b
 let boxed_definitions _ = !boxed_definitions 
  
-(* Flags.for external tools *)
+(* Flags for external tools *)
 
 let subst_command_placeholder s t =
   let buff = Buffer.create (String.length s + String.length t) in
@@ -127,3 +101,16 @@ let browser_cmd_fmt =
   Sys.getenv coq_netscape_remote_var
  with
   Not_found -> Coq_config.browser
+
+(* Options for changing coqlib *)
+let coqlib_spec = ref false
+let coqlib = ref Coq_config.coqlib
+
+(* Options for changing camlbin (used by coqmktop) *)
+let camlbin_spec = ref false
+let camlbin = ref Coq_config.camlbin
+
+(* Options for changing camlp4bin (used by coqmktop) *)
+let camlp4bin_spec = ref false
+let camlp4bin = ref Coq_config.camlp4bin
+

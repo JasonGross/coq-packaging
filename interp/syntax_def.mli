@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: syntax_def.mli 10730 2008-03-30 21:42:58Z herbelin $ i*)
+(*i $Id: syntax_def.mli 11512 2008-10-27 12:28:36Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -18,10 +18,12 @@ open Libnames
 
 (* Syntactic definitions. *)
 
-val declare_syntactic_definition : bool -> identifier -> bool -> interpretation
-  -> unit
+type syndef_interpretation = (identifier * subscopes) list * aconstr
 
-val search_syntactic_definition : loc -> kernel_name -> interpretation
+val declare_syntactic_definition : bool -> identifier -> bool -> 
+  syndef_interpretation -> unit
+
+val search_syntactic_definition : loc -> kernel_name -> syndef_interpretation
 
 (* [locate_global_with_alias] locates global reference possibly following
    a notation if this notation has a role of aliasing; raise Not_found

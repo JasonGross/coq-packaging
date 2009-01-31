@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: cctac.ml 10670 2008-03-14 19:30:48Z letouzey $ *)
+(* $Id: cctac.ml 11671 2008-12-12 12:43:03Z herbelin $ *)
 
 (* This file is the interface between the c-c algorithm and Coq *)
 
@@ -48,10 +48,6 @@ let _eq = constant ["Init";"Logic"] "eq"
 
 let _False = constant ["Init";"Logic"] "False"
 
-(* decompose member of equality in an applicative format *)
-
-let sf_of env sigma c = family_of_sort (destSort (type_of env sigma c))
-
 let whd env=
   let infos=Closure.create_clos_infos Closure.betaiotazeta env in
     (fun t -> Closure.whd_val infos (Closure.inject t))
@@ -59,6 +55,10 @@ let whd env=
 let whd_delta env=
    let infos=Closure.create_clos_infos Closure.betadeltaiota env in
     (fun t -> Closure.whd_val infos (Closure.inject t))
+
+(* decompose member of equality in an applicative format *)
+
+let sf_of env sigma c = family_of_sort (destSort (whd_delta env (type_of env sigma c)))
 
 let rec decompose_term env sigma t=
     match kind_of_term (whd env t) with
@@ -317,7 +317,7 @@ let refute_tac c t1 t2 p gls =
 	  [|intype;tt1;tt2|]) in
   let hid=pf_get_new_id (id_of_string "Heq") gls in
   let false_t=mkApp (c,[|mkVar hid|]) in
-    tclTHENS (true_cut (Name hid) neweq)
+    tclTHENS (assert_tac (Name hid) neweq)
       [proof_tac p; simplest_elim false_t] gls
 
 let convert_to_goal_tac c t1 t2 p gls =
@@ -329,14 +329,14 @@ let convert_to_goal_tac c t1 t2 p gls =
   let identity=mkLambda (Name x,sort,mkRel 1) in 
   let endt=mkApp (Lazy.force _eq_rect,
 		  [|sort;tt1;identity;c;tt2;mkVar e|]) in
-    tclTHENS (true_cut (Name e) neweq) 
+    tclTHENS (assert_tac (Name e) neweq) 
       [proof_tac p;exact_check endt] gls
 
 let convert_to_hyp_tac c1 t1 c2 t2 p gls =
   let tt2=constr_of_term t2 in
   let h=pf_get_new_id (id_of_string "H") gls in
   let false_t=mkApp (c2,[|mkVar h|]) in
-    tclTHENS (true_cut (Name h) tt2)
+    tclTHENS (assert_tac (Name h) tt2)
       [convert_to_goal_tac c1 t1 t2 p;
        simplest_elim false_t] gls
   
@@ -358,7 +358,7 @@ let discriminate_tac cstr p gls =
   let endt=mkApp (Lazy.force _eq_rect,
 		  [|outtype;trivial;pred;identity;concl;injt|]) in
   let neweq=mkApp(Lazy.force _eq,[|intype;t1;t2|]) in
-    tclTHENS (true_cut (Name hid) neweq) 
+    tclTHENS (assert_tac (Name hid) neweq) 
       [proof_tac p;exact_check endt] gls
       
 (* wrap everything *)
@@ -431,6 +431,12 @@ let congruence_tac depth l =
     (tclTHEN (tclREPEAT introf) (cc_tactic depth l)) 
     cc_fail
 
+(* Beware: reflexivity = constructor 1 = apply refl_equal
+   might be slow now, let's rather do something equivalent
+   to a "simple apply refl_equal" *)
+
+let simple_reflexivity () = apply (Lazy.force _refl_equal)
+
 (* The [f_equal] tactic.
 
    It mimics the use of lemmas [f_equal], [f_equal2], etc.
@@ -442,7 +448,8 @@ let f_equal gl =
   let cut_eq c1 c2 = 
     let ty = refresh_universes (pf_type_of gl c1) in 
     tclTHENTRY
-      (Tactics.cut (mkApp (Lazy.force _eq, [|ty; c1; c2|]))) reflexivity
+      (Tactics.cut (mkApp (Lazy.force _eq, [|ty; c1; c2|])))
+      (simple_reflexivity ())
   in 
   try match kind_of_term (pf_concl gl) with 
     | App (r,[|_;t;t'|]) when eq_constr r (Lazy.force _eq) -> 

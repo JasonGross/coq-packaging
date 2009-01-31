@@ -8,7 +8,7 @@
 (*                      Evgeny Makarov, INRIA, 2007                     *)
 (************************************************************************)
 
-(*i $Id: ZNatPairs.v 11040 2008-06-03 00:04:16Z letouzey $ i*)
+(*i $Id: ZNatPairs.v 11674 2008-12-12 19:48:40Z letouzey $ i*)
 
 Require Import NSub. (* The most complete file for natural numbers *)
 Require Export ZMulOrder. (* The most complete file for integers *)
@@ -110,7 +110,7 @@ Proof.
 unfold reflexive, Zeq. reflexivity.
 Qed.
 
-Theorem ZE_symm : symmetric Z Zeq.
+Theorem ZE_sym : symmetric Z Zeq.
 Proof.
 unfold symmetric, Zeq; now symmetry.
 Qed.
@@ -127,7 +127,7 @@ Qed.
 
 Theorem NZeq_equiv : equiv Z Zeq.
 Proof.
-unfold equiv; repeat split; [apply ZE_refl | apply ZE_trans | apply ZE_symm].
+unfold equiv; repeat split; [apply ZE_refl | apply ZE_trans | apply ZE_sym].
 Qed.
 
 Add Relation Z Zeq

@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i 	$Id: Decidable.v 10500 2008-02-02 15:51:00Z letouzey $	 i*)
+(*i 	$Id: Decidable.v 11735 2009-01-02 17:22:31Z herbelin $	 i*)
 
 (** Properties of decidable propositions *)
 
@@ -76,6 +76,13 @@ unfold decidable; tauto.
 Qed.
 
 Theorem imp_simp : forall A B:Prop, decidable A -> (A -> B) -> ~ A \/ B.
+Proof.
+unfold decidable; tauto.
+Qed.
+
+Theorem not_iff : 
+  forall A B:Prop, decidable A -> decidable B -> 
+    ~ (A <-> B) -> (A /\ ~ B) \/ (~ A /\ B).
 Proof.
 unfold decidable; tauto.
 Qed.

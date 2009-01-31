@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: genarg.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: genarg.ml 11481 2008-10-20 19:23:51Z herbelin $ *)
 
 open Pp
 open Util
@@ -26,7 +26,7 @@ type argument_type =
   | StringArgType
   | PreIdentArgType
   | IntroPatternArgType
-  | IdentArgType
+  | IdentArgType of bool
   | VarArgType
   | RefArgType
   (* Specific types *)
@@ -45,7 +45,9 @@ type argument_type =
   | ExtraArgType of string
 
 type 'a and_short_name = 'a * identifier located option
-type 'a or_by_notation = AN of 'a | ByNotation of loc * string
+type 'a or_by_notation =
+  | AN of 'a
+  | ByNotation of loc * string * Notation.delimiters option
 
 type rawconstr_and_expr = rawconstr * constr_expr option
 type open_constr_expr = unit * constr_expr
@@ -124,9 +126,17 @@ let rawwit_intro_pattern = IntroPatternArgType
 let globwit_intro_pattern = IntroPatternArgType
 let wit_intro_pattern = IntroPatternArgType
 
-let rawwit_ident = IdentArgType
-let globwit_ident = IdentArgType
-let wit_ident = IdentArgType
+let rawwit_ident_gen b = IdentArgType b
+let globwit_ident_gen b = IdentArgType b
+let wit_ident_gen b = IdentArgType b
+
+let rawwit_ident = rawwit_ident_gen true
+let globwit_ident = globwit_ident_gen true
+let wit_ident = wit_ident_gen true
+
+let rawwit_pattern_ident = rawwit_ident_gen false
+let globwit_pattern_ident = globwit_ident_gen false
+let wit_pattern_ident = wit_ident_gen false
 
 let rawwit_var = VarArgType
 let globwit_var = VarArgType

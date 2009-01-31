@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqdep.ml 11282 2008-07-28 11:51:53Z msozeau $ *)
+(* $Id: coqdep.ml 11749 2009-01-05 14:01:04Z notin $ *)
 
 open Printf
 open Coqdep_lexer
@@ -15,8 +15,6 @@ open Unix
 let stderr = Pervasives.stderr
 let stdout = Pervasives.stdout
 
-let coqlib = ref Coq_config.coqlib
-
 let option_c = ref false
 let option_D = ref false
 let option_w = ref false
@@ -24,7 +22,6 @@ let option_i = ref false
 let option_sort = ref false
 let option_glob = ref false
 let option_slash = ref false
-let option_boot = ref false
 
 let suffixe = ref ".vo"
 let suffixe_spec = ref ".vi"
@@ -245,7 +242,11 @@ let traite_fichier_Coq verbose f =
 			addQueue deja_vu_ml s;
                	       try
               		 let mldir = Hashtbl.find mlKnown s in
-              		   printf " %s.cmo" (file_name ([String.uncapitalize s],mldir))
+			 let filename = file_name ([String.uncapitalize s],mldir) in
+              		 if Coq_config.has_natdynlink then
+			   printf " %s.cmo %s.cmxs" filename filename
+			 else
+			   printf " %s.cmo" filename
               	       with Not_found -> ()
 		     end)
 		sl
@@ -501,14 +502,14 @@ let rec parse = function
   | "-D" :: ll -> option_D := true; parse ll
   | "-w" :: ll -> option_w := true; parse ll
   | "-i" :: ll -> option_i := true; parse ll
-  | "-boot" :: ll -> option_boot := true; parse ll
+  | "-boot" :: ll -> Flags.boot := true; parse ll
   | "-sort" :: ll -> option_sort := true; parse ll
   | "-glob" :: ll -> option_glob := true; parse ll
   | "-I" :: r :: ll -> add_dir add_known r []; parse ll
   | "-I" :: [] -> usage ()
   | "-R" :: r :: ln :: ll -> add_rec_dir add_known r [ln]; parse ll
   | "-R" :: ([] | [_]) -> usage ()
-  | "-coqlib" :: (r :: ll) -> coqlib := r; parse ll
+  | "-coqlib" :: (r :: ll) -> Flags.coqlib_spec := true; Flags.coqlib := r; parse ll
   | "-coqlib" :: [] -> usage ()
   | "-suffix" :: (s :: ll) -> suffixe := s ; suffixe_spec := s; parse ll
   | "-suffix" :: [] -> usage ()
@@ -519,13 +520,14 @@ let rec parse = function
 let coqdep () =
   if Array.length Sys.argv < 2 then usage ();
   parse (List.tl (Array.to_list Sys.argv));
-  if !option_boot then begin
+  if !Flags.boot then begin
     add_rec_dir add_known "theories" ["Coq"];
     add_rec_dir add_known "contrib" ["Coq"]
-  end else begin 
-    add_rec_dir add_coqlib_known (!coqlib//"theories") ["Coq"]; 
-    add_rec_dir add_coqlib_known (!coqlib//"contrib") ["Coq"];
-    add_dir add_coqlib_known (!coqlib//"user-contrib") []
+  end else begin
+    let coqlib = Envars.coqlib () in
+      add_rec_dir add_coqlib_known (coqlib//"theories") ["Coq"]; 
+      add_rec_dir add_coqlib_known (coqlib//"contrib") ["Coq"];
+      add_dir add_coqlib_known (coqlib//"user-contrib") []
   end;
   List.iter (fun (f,_,d) -> Hashtbl.add mliKnown f d) !mliAccu;
   List.iter (fun (f,_,d) -> Hashtbl.add mlKnown f d) !mlAccu;

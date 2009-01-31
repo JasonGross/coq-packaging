@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evarutil.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: evarutil.mli 11745 2009-01-04 18:43:08Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -73,6 +73,7 @@ val non_instantiated : evar_map -> (evar * evar_info) list
 (* Unification utils *)
 
 val is_ground_term :  evar_defs -> constr -> bool
+val is_ground_env  :  evar_defs -> env -> bool
 val solve_refl : 
   (env ->  evar_defs -> conv_pb -> constr -> constr -> evar_defs * bool)
   -> env ->  evar_defs -> existential_key -> constr array -> constr array ->
@@ -90,9 +91,15 @@ val define_evar_as_product : evar_defs -> existential -> evar_defs * types
 val define_evar_as_lambda : evar_defs -> existential -> evar_defs * types
 val define_evar_as_sort : evar_defs -> existential -> evar_defs * sorts
 
-val is_unification_pattern_evar : env -> existential -> constr list -> bool
-val is_unification_pattern : env -> constr -> constr array -> bool
+val is_unification_pattern_evar : env -> existential -> constr list -> 
+  constr -> bool
+val is_unification_pattern : env * int -> constr -> constr array ->
+  constr -> bool
 val solve_pattern_eqn : env -> constr list -> constr -> constr
+
+val evars_of_term : constr -> Intset.t
+val evars_of_named_context : named_context -> Intset.t
+val evars_of_evar_info : evar_info -> Intset.t
 
 (***********************************************************)
 (* Value/Type constraints *)

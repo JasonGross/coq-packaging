@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: auto_ind_decl.ml 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: auto_ind_decl.ml 11671 2008-12-12 12:43:03Z herbelin $ i*)
 
 open Tacmach
 open Util
@@ -530,13 +530,13 @@ let compute_bl_tact ind lnamesparrec nparrec  =
                       tclORELSE reflexivity (Equality.discr_tac false None)
                      );
                      simpl_in_hyp
-		       ((Rawterm.all_occurrences_expr,freshz),Tacexpr.InHyp);
+		       ((Rawterm.all_occurrences_expr,freshz),InHyp);
 (*
 repeat ( apply andb_prop in z;let z1:= fresh "Z" in destruct z as [z1 z]).
 *)
                     tclREPEAT (
                       tclTHENSEQ [
-                         apply_in false freshz [(andb_prop()),Rawterm.NoBindings];
+                         apply_in false false freshz [(Evd.empty,andb_prop()),Rawterm.NoBindings] None;
                          fun gl ->
                            let fresht = fresh_id (!avoid) (id_of_string "Z") gsig 
                            in
@@ -748,8 +748,8 @@ let compute_dec_tact ind lnamesparrec nparrec =
       Pfedit.by ( tclTHENSEQ [
                         intros_using fresh_first_intros;
                         intros_using [freshn;freshm];
-                        assert_as true (dl,Genarg.IntroIdentifier freshH) (
-                    mkApp(sumbool(),[|eqtrue eqbnm; eqfalse eqbnm|])
+                        assert_tac (Name freshH) (
+                        mkApp(sumbool(),[|eqtrue eqbnm; eqfalse eqbnm|])
                   ) ]); 
 (*we do this so we don't have to prove the same goal twice *)
       Pfedit.by (  tclTHEN 
@@ -795,7 +795,7 @@ let compute_dec_tact ind lnamesparrec nparrec =
                       unfold_constr (Lazy.force Coqlib.coq_not_ref);
                       intro;
                       Equality.subst_all;
-                assert_as true (dl,Genarg.IntroIdentifier freshH3) 
+                assert_tac (Name freshH3) 
                 (mkApp(eq,[|bb;mkApp(eqI,[|mkVar freshm;mkVar freshm|]);tt|]))
           ]);
           Pfedit.by 

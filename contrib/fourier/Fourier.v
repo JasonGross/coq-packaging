@@ -6,15 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Fourier.v 9178 2006-09-26 11:18:22Z barras $ *)
+(* $Id: Fourier.v 11672 2008-12-12 14:45:09Z herbelin $ *)
 
 (* "Fourier's method to solve linear inequations/equations systems.".*)
-
-Declare ML Module "quote".
-Declare ML Module "ring".
-Declare ML Module "fourier".
-Declare ML Module "fourierR".
-Declare ML Module "field".
 
 Require Export Fourier_util.
 Require Export LegacyField.

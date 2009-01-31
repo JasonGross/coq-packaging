@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: refiner.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: refiner.ml 11865 2009-01-28 17:34:30Z herbelin $ *)
 
 open Pp
 open Util
@@ -462,7 +462,7 @@ let weak_progress gls ptree =
   (not (same_goal (List.hd gls.it) ptree.it))
 
 let progress gls ptree =
-  (not (ptree.sigma == gls.sigma)) ||
+  (not (eq_evar_map ptree.sigma gls.sigma)) ||
   (weak_progress gls ptree)
 
 

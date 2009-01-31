@@ -6,10 +6,10 @@
 # 
 ##################################
 
-VERSION=8.2
+VERSION=8.2rc2
 VOMAGIC=08193 
 STATEMAGIC=19764
-DATE="Jun. 2008"
+DATE=`LANG=C date +"%B %Y"`
 
 # Create the bin/ directory if non-existent
 test -d bin || mkdir bin
@@ -58,7 +58,7 @@ usage () {
     echo "-arch"
     printf "\tSpecifies the architecture\n"
     echo "-opt"
-    printf "\tSpecifies whether or not to generate optimized executables\n"
+    printf "\tSpecifies whether or not to use OCaml *.opt optimized compilers\n"
     echo "-fsets (all|basic)"
     echo "-reals (all|basic)"
     printf "\tSpecifies whether or not to compile full FSets/Reals library\n"
@@ -88,7 +88,7 @@ usage () {
 # Default OCaml binaries
 bytecamlc=ocamlc
 nativecamlc=ocamlopt
-ocamlmklib=ocamlmklib
+ocamlmklibexec=ocamlmklib
 ocamlexec=ocaml
 ocamldepexec=ocamldep
 ocamldocexec=ocamldoc
@@ -285,22 +285,11 @@ esac
 # executable extension
 
 case $ARCH in
-    win32) EXE=".exe";;
+    win32) 
+      EXE=".exe"
+      DLLEXT=".dll";;
     *) EXE=""
-esac
-
-# strip command
-
-case $ARCH in
-    win32)
-	# true -> strip : it exists under cygwin !
-	STRIPCOMMAND="strip";; 
-    *)
-    if [ "$coq_profile_flag" = "-p" ] || [ "$coq_debug_flag" = "-g" ]; then
-	STRIPCOMMAND="true"
-    else
-	STRIPCOMMAND="strip"
-    fi
+       DLLEXT=".so"
 esac
 
 # Is the source tree checked out from a recognised
@@ -386,7 +375,8 @@ case $camldir_spec in
 	 ocamldocexec=$CAMLBIN/ocamldoc
 	 ocamllexexec=$CAMLBIN/ocamllex
 	 ocamlyaccexec=$CAMLBIN/ocamlyacc
-	 camlmktopexec=$CAMLBIN/ocamlmktop
+	 ocamlmktopexec=$CAMLBIN/ocamlmktop
+	 ocamlmklibexec=$CAMLBIN/ocamlmklib
 	 camlp4oexec=$CAMLBIN/camlp4o
 esac
 
@@ -405,7 +395,7 @@ esac
 # ("native-code program cannot do a dynamic load")
 if [ `uname -s` = "FreeBSD" ]; then camlp4oexec=$camlp4oexec.byte; fi
 
-CAMLVERSION=`"$bytecamlc" -v | sed -n -e 's|.*version* *\(.*\)$|\1|p' `
+CAMLVERSION=`"$bytecamlc" -version`
 
 case $CAMLVERSION in
     1.*|2.*|3.00|3.01|3.02|3.03|3.03alpha|3.04|3.05beta|3.05|3.06|3.08.0)
@@ -446,9 +436,20 @@ case  $CAMLVERSION in
 	  cflags="$cflags -DOCAML_307";;
 esac
 
-if [ "$CAMLTAG" = "OCAML310" ] && [ "$coq_debug_flag" = "-g" ]; then
-    # Compilation debug flag
-    coq_debug_flag_opt="-g"
+if [ "$coq_debug_flag" = "-g" ]; then
+    case $CAMLTAG in
+        OCAML31*)
+            # Compilation debug flag
+            coq_debug_flag_opt="-g"
+            ;;
+    esac
+fi
+
+# Native dynlink
+if test -f `"$CAMLC" -where`/dynlink.cmxa; then
+    HASNATDYNLINK=true
+else
+    HASNATDYNLINK=false
 fi
 
 # Camlp4 / Camlp5 configuration
@@ -467,26 +468,31 @@ if [ "$camlp5dir" != "" ]; then
 	echo "Please compile Camlp5 in transitional mode."
 	exit 1
     fi
-elif [ "$CAMLTAG" = "OCAML310" ]; then
-    if [ -x "${CAMLLIB}/camlp5" ]; then 
-        CAMLP4LIB=+camlp5
-    elif [ -x "${CAMLLIB}/site-lib/camlp5" ]; then 
-        CAMLP4LIB=+site-lib/camlp5
-    else
-	echo "Objective Caml 3.10 found but no Camlp5 installed."
-	echo "Configuration script failed!"
-	exit 1
-    fi
-    CAMLP4=camlp5
-    camlp4oexec=`echo $camlp4oexec | sed -e 's/4/5/'`
-    if [ `$camlp4oexec -pmode 2>&1` = "strict" ]; then 
-	echo "Error: Camlp5 found, but in strict mode!"
-	echo "Please compile Camlp5 in transitional mode."
-	exit 1
-    fi
-else 
-    CAMLP4=camlp4
-    CAMLP4LIB=+camlp4
+else
+    case $CAMLTAG in
+        OCAML31*)
+            if [ -x "${CAMLLIB}/camlp5" ]; then
+                CAMLP4LIB=+camlp5
+            elif [ -x "${CAMLLIB}/site-lib/camlp5" ]; then
+                CAMLP4LIB=+site-lib/camlp5
+            else
+	        echo "Objective Caml $CAMLVERSION found but no Camlp5 installed."
+	        echo "Configuration script failed!"
+	        exit 1
+            fi
+            CAMLP4=camlp5
+            camlp4oexec=`echo $camlp4oexec | sed -e 's/4/5/'`
+            if [ `$camlp4oexec -pmode 2>&1` = "strict" ]; then
+	        echo "Error: Camlp5 found, but in strict mode!"
+	        echo "Please compile Camlp5 in transitional mode."
+	        exit 1
+            fi
+            ;;
+        *)
+            CAMLP4=camlp4
+            CAMLP4LIB=+camlp4
+            ;;
+    esac
 fi
 
 if [ "$CAMLP4" = "camlp5" ] && `$camlp4oexec -v 2>&1 | grep -q 5.00`; then
@@ -613,12 +619,16 @@ esac
 #CAMLOSTYPE=`config/giveostype`
 #rm config/giveostype
 
+# strip command
+
 case $ARCH in
     win32)
 	# true -> strip : it exists under cygwin !
 	STRIPCOMMAND="strip";; 
     *)
-    if [ "$coq_profile_flag" = "-p" ] || [ "$coq_debug_flag" = "-g" ]; then
+    if [ "$coq_profile_flag" = "-p" ] || [ "$coq_debug_flag" = "-g" ] ||
+       [ "`uname -s`" = "Darwin" -a "$HASNATDYNLINK" = "true" ]
+    then
 	STRIPCOMMAND="true"
     else
 	STRIPCOMMAND="strip"
@@ -673,7 +683,7 @@ case $ARCH in
 	 bindir_def=/usr/local/bin
 	 libdir_def=/usr/local/lib/coq
 	 mandir_def=/usr/local/man
-	 docdir_def=/usr/local/share/doc
+	 docdir_def=/usr/local/share/doc/coq
 	 emacslib_def=/usr/local/share/emacs/site-lisp
          coqdocdir_def=/usr/local/share/texmf/tex/latex/misc;;
 esac
@@ -684,7 +694,7 @@ case $bindir_spec/$prefix_spec/$local in
     yes/*/*) BINDIR=$bindir ;;
     */yes/*) BINDIR=$prefix/bin ;;
     */*/true) BINDIR=$COQTOP/bin ;;
-    *) echo "Where should I install the Coq binaries [$bindir_def] ?"
+    *) printf "Where should I install the Coq binaries [$bindir_def]? "
         read BINDIR
 	case $BINDIR in
 	    "") BINDIR=$bindir_def;;
@@ -700,7 +710,7 @@ case $libdir_spec/$prefix_spec/$local in
           *)  LIBDIR=$prefix/lib/coq ;;
         esac ;;
     */*/true) LIBDIR=$COQTOP ;;
-    *)  echo "Where should I install the Coq library [$libdir_def] ?"
+    *)  printf "Where should I install the Coq library [$libdir_def]? "
         read LIBDIR
 	case $LIBDIR in
 	    "") LIBDIR=$libdir_def;;
@@ -712,7 +722,7 @@ case $mandir_spec/$prefix_spec/$local in
     yes/*/*) MANDIR=$mandir;;
     */yes/*) MANDIR=$prefix/man ;;
     */*/true) MANDIR=$COQTOP/man ;;
-    *)  echo "Where should I install the Coq man pages [$mandir_def] ?"
+    *)  printf "Where should I install the Coq man pages [$mandir_def]? "
         read MANDIR
 	case $MANDIR in
 	    "") MANDIR=$mandir_def;;
@@ -722,9 +732,9 @@ esac
 
 case $docdir_spec/$prefix_spec/$local in
     yes/*/*) DOCDIR=$docdir;;
-    */yes/*) DOCDIR=$prefix/share/doc ;;
+    */yes/*) DOCDIR=$prefix/share/doc/coq ;;
     */*/true) DOCDIR=$COQTOP/man ;;
-    *)  echo "Where should I install the Coq documentation [$docdir_def] ?"
+    *)  printf "Where should I install the Coq documentation [$docdir_def]? "
         read DOCDIR
 	case $DOCDIR in
 	    "") DOCDIR=$docdir_def;;
@@ -740,7 +750,7 @@ case $emacslib_spec/$prefix_spec/$local in
           *)  EMACSLIB=$prefix/share/emacs/site-lisp ;;
         esac ;;
     */*/true) EMACSLIB=$COQTOP/tools/emacs ;;
-    *) echo "Where should I install the Coq Emacs mode [$emacslib_def] ?"
+    *) printf "Where should I install the Coq Emacs mode [$emacslib_def]? "
         read EMACSLIB
 	case $EMACSLIB in
 	    "") EMACSLIB=$emacslib_def;;
@@ -756,7 +766,7 @@ case $coqdocdir_spec/$prefix_spec/$local in
           *)  COQDOCDIR=$prefix/share/emacs/site-lisp ;;
         esac ;;
     */*/true) COQDOCDIR=$COQTOP/tools/coqdoc ;;
-    *) echo "Where should I install Coqdoc TeX/LaTeX files [$coqdocdir_def] ?"
+    *) printf "Where should I install Coqdoc TeX/LaTeX files [$coqdocdir_def]? "
         read COQDOCDIR
 	case $COQDOCDIR in
 	    "") COQDOCDIR=$coqdocdir_def;;
@@ -773,7 +783,7 @@ case $coqrunbyteflags_spec/$local in
 esac
 
 # case $emacs_spec in
-#     no) echo "Which Emacs command should I use to compile coq.el [$emacs_def] ?"
+#     no) printf "Which Emacs command should I use to compile coq.el [$emacs_def]? "
 #         read EMACS
 	
 # 	case $EMACS in
@@ -824,7 +834,7 @@ echo "  Paths for true installation:"
 echo "    binaries      will be copied in $BINDIR"
 echo "    library       will be copied in $LIBDIR"
 echo "    man pages     will be copied in $MANDIR"
-echo "    documentation will be copied in $MANDIR"
+echo "    documentation will be copied in $DOCDIR"
 echo "    emacs mode    will be copied in $EMACSLIB"
 echo ""
 
@@ -848,6 +858,7 @@ case $ARCH in
     win32)
 	ESCCOQTOP=`echo $COQTOP |sed -e 's|\\\|\\\\\\\|g'`
 	ESCBINDIR=`echo $BINDIR |sed -e 's|\\\|\\\\\\\|g'`
+	ESCSRCDIR=`cygpath -d $COQSRC |sed -e 's|\\\|\\\\\\\|g'`
 	ESCLIBDIR=`echo $LIBDIR |sed -e 's|\\\|\\\\\\\|g'`
 	ESCCAMLDIR=`echo $CAMLBIN |sed -e 's|\\\|\\\\\\\|g'`
 	ESCCAMLLIB=`echo $CAMLLIB |sed -e 's|\\\|\\\\\\\|g'`
@@ -858,10 +869,13 @@ case $ARCH in
    	ESCCAMLP4BIN=`echo $CAMLP4BIN |sed -e 's|\\\|\\\\\\\|g'`
 	ESCCAMLP4LIB=`echo $CAMLP4LIB |sed -e 's|\\\|\\\\\\\|g'`
 	ESCLABLGTKINCLUDES=`echo $LABLGTKINCLUDES |sed -e 's|\\\|\\\\\\\|g'`
-	;;
+	ESCCOQRUNBYTEFLAGS=`echo $COQRUNBYTEFLAGS |sed -e 's|\\\|\\\\\\\|g'`
+	ESCBUILDLDPATH=`echo $BUILDLDPATH |sed -e 's|\\\|\\\\\\\|g'`
+;;
     *)
         ESCCOQTOP="$COQTOP"
 	ESCBINDIR="$BINDIR"
+	ESCSRCDIR="$COQSRC"
 	ESCLIBDIR="$LIBDIR"
 	ESCCAMLDIR="$CAMLBIN"
 	ESCCAMLLIB="$CAMLLIB"
@@ -872,27 +886,30 @@ case $ARCH in
    	ESCCAMLP4BIN="$CAMLP4BIN"
    	ESCCAMLP4LIB="$CAMLP4LIB"
 	ESCLABLGTKINCLUDES="$LABLGTKINCLUDES"
+	ESCCOQRUNBYTEFLAGS="$COQRUNBYTEFLAGS"
 	;;
 esac
 
 mlconfig_file="$COQSRC/config/coq_config.ml"
-rm -f $mlconfig_file
+rm -f "$mlconfig_file"
 cat << END_OF_COQ_CONFIG > $mlconfig_file
 (* DO NOT EDIT THIS FILE: automatically generated by ../configure *)
 
 let local = $local
-let coqrunbyteflags = "$COQRUNBYTEFLAGS"
-let bindir = try Sys.getenv "COQBIN" with Not_found -> "$ESCBINDIR"
-let coqlib = try Sys.getenv "COQLIB" with Not_found -> "$ESCLIBDIR"
-let coqtop = try Sys.getenv "COQTOP" with Not_found -> "$ESCCOQTOP"
-let camldir = "$ESCCAMLDIR"
+let coqrunbyteflags = "$ESCCOQRUNBYTEFLAGS"
+let coqlib = "$ESCLIBDIR"
+let coqsrc = "$ESCSRCDIR"
+let camlbin = "$ESCCAMLDIR"
 let camllib = "$ESCCAMLLIB"
 let camlp4 = "$CAMLP4"
+let camlp4bin = "$ESCCAMLP4BIN"
 let camlp4lib = "$ESCCAMLP4LIB"
 let best = "$best_compiler"
 let arch = "$ARCH"
+let has_natdynlink = $HASNATDYNLINK
 let osdeplibs = "$OSDEPLIBS"
 let version = "$VERSION"
+let caml_version = "$CAMLVERSION"
 let date = "$DATE"
 let compile_date = "$COMPILEDATE"
 let vo_magic_number = $VOMAGIC
@@ -929,12 +946,12 @@ chmod a-w "$mlconfig_file"
 rm -f "$COQSRC/config/Makefile"
 
 sed -e "s|LOCALINSTALLATION|$local|" \
-    -e "s|XCOQRUNBYTEFLAGS|$COQRUNBYTEFLAGS|" \
+    -e "s|XCOQRUNBYTEFLAGS|$ESCCOQRUNBYTEFLAGS|" \
     -e "s|COQSRCDIRECTORY|$COQSRC|" \
     -e "s|COQVERSION|$VERSION|" \
     -e "s|BINDIRDIRECTORY|$ESCBINDIR|" \
     -e "s|COQLIBDIRECTORY|$ESCLIBDIR|" \
-    -e "s|BUILDLDPATH=|$BUILDLDPATH|" \
+    -e "s|BUILDLDPATH=|$ESCBUILDLDPATH|" \
     -e "s|MANDIRDIRECTORY|$ESCMANDIR|" \
     -e "s|DOCDIRDIRECTORY|$ESCDOCDIR|" \
     -e "s|EMACSLIBDIRECTORY|$ESCEMACSLIB|" \
@@ -957,16 +974,17 @@ sed -e "s|LOCALINSTALLATION|$local|" \
     -e "s|CAMLANNOTATEFLAG|$coq_annotate_flag|" \
     -e "s|CCOMPILEFLAGS|$cflags|" \
     -e "s|BESTCOMPILER|$best_compiler|" \
+    -e "s|DLLEXTENSION|$DLLEXT|" \
     -e "s|EXECUTEEXTENSION|$EXE|" \
     -e "s|BYTECAMLC|$bytecamlc|" \
-    -e "s|OCAMLMKLIBEXEC|$ocamlmklib|" \
+    -e "s|OCAMLMKLIBEXEC|$ocamlmklibexec|" \
     -e "s|NATIVECAMLC|$nativecamlc|" \
     -e "s|OCAMLEXEC|$ocamlexec|" \
     -e "s|OCAMLDEPEXEC|$ocamldepexec|" \
     -e "s|OCAMLDOCEXEC|$ocamldocexec|" \
     -e "s|OCAMLLEXEXEC|$ocamllexexec|" \
     -e "s|OCAMLYACCEXEC|$ocamlyaccexec|" \
-    -e "s|CAMLMKTOPEXEC|$camlmktopexec|" \
+    -e "s|CAMLMKTOPEXEC|$ocamlmktopexec|" \
     -e "s|CCEXEC|$gcc_exec|" \
     -e "s|AREXEC|$ar_exec|" \
     -e "s|RANLIBEXEC|$ranlib_exec|" \
@@ -976,6 +994,7 @@ sed -e "s|LOCALINSTALLATION|$local|" \
     -e "s|COQIDEOPT|$COQIDE|" \
     -e "s|CHECKEDOUTSOURCETREE|$checkedout|" \
     -e "s|WITHDOCOPT|$with_doc|" \
+    -e "s|HASNATIVEDYNLINK|$HASNATDYNLINK|" \
       "$COQSRC/config/Makefile.template" > "$COQSRC/config/Makefile"
 
 chmod a-w "$COQSRC/config/Makefile"
@@ -1002,7 +1021,11 @@ fi
 
 if [ ! "$COQIDE" = "no" ]; then 
     if grep "class view " "$lablgtkdir/gText.mli" | grep -q "\[>" ; then
+       if grep -q "?accepts_tab:bool" "$lablgtkdir/gText.mli" ; then
+        cp -f ide/undo_lablgtk_ge212.mli ide/undo.mli
+       else
 	cp -f ide/undo_lablgtk_ge26.mli ide/undo.mli
+       fi
     else
 	cp -f ide/undo_lablgtk_lt26.mli ide/undo.mli
     fi
@@ -1017,4 +1040,4 @@ echo
 echo "*Warning* To compile the system for a new architecture"
 echo "          don't forget to do a 'make archclean' before './configure'."
 
-# $Id: configure 11380 2008-09-07 12:27:27Z glondu $
+# $Id: configure 11858 2009-01-26 13:27:23Z notin $

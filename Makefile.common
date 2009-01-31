@@ -1,3 +1,4 @@
+
 #######################################################################
 #  v      #   The Coq Proof Assistant  /  The Coq Development Team    #
 # <O___,, #        INRIA-Rocquencourt  &  LRI-CNRS-Orsay              #
@@ -29,8 +30,14 @@ CHICKENOPT:=bin/coqchk.opt$(EXE)
 BESTCHICKEN:=bin/coqchk.$(BEST)$(EXE)
 CHICKEN:=bin/coqchk$(EXE)
 
+ifeq ($(HASNATDYNLINK),true)
+  DYNLINKCMXA:=dynlink.cmxa
+  NATDYNLINKDEF:=-DHasDynlink
+endif
+
 INSTALLBIN:=install
 INSTALLLIB:=install -m 644 
+INSTALLSH:=./install.sh
 MKDIR:=install -d
 
 COQIDEBYTE:=bin/coqide.byte$(EXE)
@@ -67,14 +74,15 @@ TOOLS:=$(COQDEP) $(COQMAKEFILE) $(GALLINA) $(COQTEX) \
 ###########################################################################
 
 LATEX:=latex
-BIBTEX:=bibtex -min-crossrefs=10
+BIBTEX:=BIBINPUTS=.: bibtex -min-crossrefs=10
 MAKEINDEX:=makeindex
 PDFLATEX:=pdflatex
 HEVEA:=hevea
 HEVEAOPTS:=-fix -exec xxdate.exe
 HEVEALIB:=/usr/local/lib/hevea:/usr/lib/hevea
+HTMLSTYLE:=simple
 export TEXINPUTS:=$(COQSRC)/doc:$(HEVEALIB):
-COQTEXOPTS:=-n 72 -image $(COQSRC)/$(COQTOPEXE) -v -sl -small
+COQTEXOPTS:=-n 72 -image "$(COQSRC)/$(COQTOPEXE) -boot" -sl -small
 
 DOCCOMMON:=doc/common/version.tex doc/common/title.tex doc/common/macros.tex 
 
@@ -113,7 +121,7 @@ REFMANPNGFILES:=$(REFMANEPSFILES:.eps=.png)
 
 COQRUN := coqrun
 LIBCOQRUN:=kernel/byterun/lib$(COQRUN).a
-DLLCOQRUN:=$(dir $(LIBCOQRUN))dll$(COQRUN).so
+DLLCOQRUN:=$(dir $(LIBCOQRUN))dll$(COQRUN)$(DLLEXT)
 
 CLIBS:=unix.cma
 
@@ -125,7 +133,7 @@ CONFIG:=\
 LIBREP:=\
   lib/pp_control.cmo lib/pp.cmo lib/compat.cmo lib/flags.cmo \
   lib/util.cmo lib/bigint.cmo lib/hashcons.cmo lib/dyn.cmo lib/system.cmo \
-  lib/bstack.cmo lib/edit.cmo lib/gset.cmo lib/gmap.cmo \
+  lib/envars.cmo lib/bstack.cmo lib/edit.cmo lib/gset.cmo lib/gmap.cmo \
   lib/tlm.cmo lib/gmapl.cmo lib/profile.cmo lib/explore.cmo \
   lib/predicate.cmo lib/rtree.cmo lib/heap.cmo lib/option.cmo
 # Rem: Cygwin already uses variable LIB 
@@ -172,7 +180,7 @@ PRETYPING:=\
 
 INTERP:=\
   parsing/lexer.cmo interp/topconstr.cmo interp/ppextend.cmo \
-  interp/notation.cmo \
+  interp/notation.cmo interp/dumpglob.cmo \
   interp/genarg.cmo interp/syntax_def.cmo interp/reserve.cmo \
   library/impargs.cmo interp/implicit_quantifiers.cmo interp/constrintern.cmo \
   interp/modintern.cmo interp/constrextern.cmo interp/coqlib.cmo \
@@ -206,8 +214,7 @@ TACTICS:=\
   tactics/evar_tactics.cmo \
   tactics/hiddentac.cmo tactics/elim.cmo \
   tactics/dhyp.cmo tactics/auto.cmo \
-  toplevel/ind_tables.cmo \
-  tactics/setoid_replace.cmo tactics/equality.cmo \
+  toplevel/ind_tables.cmo tactics/equality.cmo \
   tactics/contradiction.cmo tactics/inv.cmo tactics/leminv.cmo \
   tactics/tacinterp.cmo tactics/autorewrite.cmo \
   tactics/decl_interp.cmo tactics/decl_proof_instr.cmo
@@ -221,7 +228,7 @@ TOPLEVEL:=\
   toplevel/vernacinterp.cmo toplevel/mltop.cmo \
   toplevel/vernacentries.cmo toplevel/whelp.cmo toplevel/vernac.cmo \
   toplevel/line_oriented_parser.cmo toplevel/protectedtoplevel.cmo \
-  toplevel/toplevel.cmo toplevel/usage.cmo \
+  toplevel/toplevel.cmo $(REVISIONCMO) toplevel/usage.cmo \
   toplevel/coqinit.cmo toplevel/coqtop.cmo
 
 HIGHTACTICS:=\
@@ -281,12 +288,6 @@ EXTRACTIONCMO:=\
   contrib/extraction/extract_env.cmo \
   contrib/extraction/g_extraction.cmo
 
-JPROVERCMO:=\
-  contrib/jprover/opname.cmo \
-  contrib/jprover/jterm.cmo contrib/jprover/jlogic.cmo \
-  contrib/jprover/jtunify.cmo contrib/jprover/jall.cmo \
-  contrib/jprover/jprover.cmo
-
 FUNINDCMO:=\
   contrib/funind/indfun_common.cmo contrib/funind/rawtermops.cmo \
   contrib/funind/recdef.cmo \
@@ -311,15 +312,15 @@ SUBTACCMO:=contrib/subtac/subtac_utils.cmo contrib/subtac/eterm.cmo \
   contrib/subtac/subtac_obligations.cmo contrib/subtac/subtac_cases.cmo \
   contrib/subtac/subtac_pretyping_F.cmo contrib/subtac/subtac_pretyping.cmo \
   contrib/subtac/subtac_command.cmo contrib/subtac/subtac_classes.cmo \
-  contrib/subtac/subtac.cmo \
-  contrib/subtac/g_subtac.cmo
+  contrib/subtac/subtac.cmo contrib/subtac/g_subtac.cmo \
+  contrib/subtac/equations.cmo
 
 RTAUTOCMO:=contrib/rtauto/proof_search.cmo contrib/rtauto/refl_tauto.cmo \
 	contrib/rtauto/g_rtauto.cmo
 
 CONTRIB:=$(OMEGACMO) $(ROMEGACMO) $(MICROMEGACMO) \
         $(RINGCMO) $(NEWRINGCMO) $(DPCMO) $(FIELDCMO) \
-	$(FOURIERCMO) $(EXTRACTIONCMO) $(JPROVERCMO) $(XMLCMO) \
+	$(FOURIERCMO) $(EXTRACTIONCMO) $(XMLCMO) \
 	$(CCCMO)  $(FOCMO) $(SUBTACCMO) $(RTAUTOCMO) \
 	$(FUNINDCMO)
 
@@ -356,11 +357,14 @@ COQIDECMO:=ide/utils/okey.cmo ide/utils/config_file.cmo \
 
 COQIDECMX:=$(COQIDECMO:.cmo=.cmx)
 
-COQMKTOPCMO:=$(CONFIG) scripts/tolink.cmo scripts/coqmktop.cmo 
+COQENVCMO:=$(CONFIG) lib/pp_control.cmo lib/pp.cmo  lib/compat.cmo lib/flags.cmo \
+	lib/util.cmo lib/system.cmo lib/envars.cmo
 
-COQMKTOPCMX:=config/coq_config.cmx scripts/tolink.cmx scripts/coqmktop.cmx 
-COQCCMO:=$(CONFIG) toplevel/usage.cmo scripts/coqc.cmo
-COQCCMX:=config/coq_config.cmx toplevel/usage.cmx scripts/coqc.cmx
+COQMKTOPCMO:=$(COQENVCMO) scripts/tolink.cmo scripts/coqmktop.cmo 
+COQMKTOPCMX:=$(COQMKTOPCMO:.cmo=.cmx)
+
+COQCCMO:=$(COQENVCMO) $(REVISIONCMO) toplevel/usage.cmo scripts/coqc.cmo
+COQCCMX:=$(COQCCMO:.cmo=.cmx)
 
 INTERFACE:=\
   contrib/interface/vtp.cmo contrib/interface/xlate.cmo \
@@ -399,7 +403,7 @@ CSDPCERTCMX:= $(CSDPCERTCMO:.cmo=.cmx)
 
 DEBUGPRINTERS:=dev/top_printers.cmo dev/vm_printers.cmo dev/printers.cma
 
-COQDEPCMO:=config/coq_config.cmo tools/coqdep_lexer.cmo tools/coqdep.cmo
+COQDEPCMO:=$(COQENVCMO) tools/coqdep_lexer.cmo tools/coqdep.cmo
 GALLINACMO:=tools/gallina_lexer.cmo tools/gallina.cmo
 COQDOCCMO:=$(CONFIG) tools/coqdoc/cdglobals.cmo tools/coqdoc/alpha.cmo \
 	tools/coqdoc/index.cmo tools/coqdoc/output.cmo \
@@ -412,7 +416,7 @@ MCHECKER:=\
   config/coq_config.cmo \
   lib/pp_control.cmo lib/pp.cmo lib/compat.cmo \
   lib/flags.cmo lib/util.cmo lib/option.cmo lib/hashcons.cmo \
-  lib/system.cmo \
+  lib/system.cmo lib/envars.cmo \
   lib/predicate.cmo lib/rtree.cmo \
   kernel/names.cmo kernel/univ.cmo \
   kernel/esubst.cmo checker/term.cmo \
@@ -463,7 +467,7 @@ GRAMMARSCMO:=\
   parsing/g_prim.cmo parsing/g_tactic.cmo \
   parsing/g_ltac.cmo parsing/g_constr.cmo
 
-GRAMMARCMO:=$(CONFIG) $(GRAMMARNEEDEDCMO) $(CAMLP4EXTENSIONSCMO) $(GRAMMARSCMO)
+GRAMMARCMO:=config/coq_config.cmo $(GRAMMARNEEDEDCMO) $(CAMLP4EXTENSIONSCMO) $(GRAMMARSCMO)
 
 GRAMMARCMA:=parsing/grammar.cma
 
@@ -503,7 +507,7 @@ PRINTERSCMO:=\
   pretyping/unification.cmo pretyping/cases.cmo \
   pretyping/pretyping.cmo pretyping/clenv.cmo pretyping/pattern.cmo \
   parsing/lexer.cmo interp/ppextend.cmo interp/genarg.cmo \
-  interp/topconstr.cmo interp/notation.cmo interp/reserve.cmo		\
+  interp/topconstr.cmo interp/notation.cmo  interp/dumpglob.cmo interp/reserve.cmo		\
   library/impargs.cmo interp/constrextern.cmo \
   interp/syntax_def.cmo interp/implicit_quantifiers.cmo \
   interp/constrintern.cmo proofs/proof_trees.cmo proofs/tacexpr.cmo \
@@ -539,7 +543,7 @@ LOGICVO:=$(addprefix theories/Logic/, \
  EqdepFacts.vo            ProofIrrelevanceFacts.vo ClassicalEpsilon.vo 	\
  ClassicalUniqueChoice.vo DecidableType.vo         DecidableTypeEx.vo 	\
  Epsilon.vo               ConstructiveEpsilon.vo   Description.vo 	\
- IndefiniteDescription.vo SetIsType.vo )
+ IndefiniteDescription.vo SetIsType.vo             FunctionalExtensionality.vo )
 
 ARITHVO:=$(addprefix theories/Arith/, \
  Arith.vo	Gt.vo          	Between.vo	Le.vo         	\
@@ -736,8 +740,7 @@ CLASSESVO:=$(addprefix theories/Classes/, \
 
 PROGRAMVO:=$(addprefix theories/Program/, \
  Tactics.vo 	Equality.vo 	Subset.vo	Utils.vo 	\
- Wf.vo 		Basics.vo	FunctionalExtensionality.vo 	\
- Combinators.vo	Syntax.vo 	Program.vo )
+ Wf.vo 		Basics.vo	Combinators.vo	Syntax.vo 	Program.vo )
 
 THEORIESVO:=\
   $(INITVO) $(LOGICVO) $(ARITHVO) $(BOOLVO) $(NARITHVO) $(ZARITHVO) \
@@ -796,8 +799,6 @@ FUNINDVO:=
 RECDEFVO:=$(addprefix contrib/funind/, \
  Recdef.vo )
 
-JPROVERVO:= 
-
 CCVO:=
 
 DPVO:=$(addprefix contrib/dp/, \
@@ -807,7 +808,7 @@ RTAUTOVO:=$(addprefix contrib/rtauto/, \
  Bintree.vo	Rtauto.vo )
 
 CONTRIBVO:= $(OMEGAVO) $(ROMEGAVO) $(MICROMEGAVO) $(RINGVO) $(FIELDVO) \
-	    $(XMLVO) $(FOURIERVO) $(JPROVERVO) $(CCVO) $(FUNINDVO) \
+	    $(XMLVO) $(FOURIERVO) $(CCVO) $(FUNINDVO) \
 	    $(RTAUTOVO) $(RECDEFVO) $(NEWRINGVO) $(DPVO)
 
 ALLVO:= $(INITVO) $(THEORIESVO) $(CONTRIBVO)
@@ -859,6 +860,8 @@ COQMLI:=$(KERNELMLI) $(INTERPMLI) $(PRETYPINGMLI) $(TOPLEVELMLI) $(PROOFSMLI) \
 # Miscellaneous
 ###########################################################################
 
+DATE=$(shell LANG=C date +"%B %Y")
+
 SOURCEDOCDIR=dev/source-doc
 
 ## Targets forwarded by Makefile to a specific stage
@@ -866,16 +869,16 @@ STAGE1_TARGETS:= $(STAGE1) \
   $(filter-out parsing/q_constr.cmo,$(STAGE1_CMO)) \
   $(STAGE1_CMO:.cmo=.cmi) $(STAGE1_CMO:.cmo=.cmx) $(GENFILES) \
   source-doc revision toplevel/mltop.byteml toplevel/mltop.optml \
-  $(STAGE1_ML4:.ml4=.ml4.preprocessed)
+  $(STAGE1_ML4:.ml4=.ml4-preprocessed)
 STAGE2_TARGETS:=$(COQBINARIES) lib kernel byterun library proofs tactics \
   interp parsing pretyping highparsing toplevel hightactics \
   coqide-binaries coqide-byte coqide-opt $(COQIDEOPT) $(COQIDEBYTE) $(COQIDE) \
   pcoq-binaries $(COQINTERFACE) $(CSDPCERT) coqbinaries pcoq $(TOOLS) tools \
-  printers debug
+  printers debug initplugins
 VO_TARGETS:=logic arith bool narith zarith qarith lists strings sets \
   fsets allfsets relations wellfounded ints reals allreals \
   setoids sorting natural integer rational numbers noreal \
-  omega micromega ring setoid_ring dp xml extraction field fourier jprover \
+  omega micromega ring setoid_ring dp xml extraction field fourier \
   funind cc programs subtac rtauto
 DOC_TARGETS:=doc doc-html doc-ps doc-pdf stdlib refman tutorial faq rectutorial refman-quick refman-nodep stdlib-nodep
 STAGE3_TARGETS:=world install coqide coqide-files coq coqlib \

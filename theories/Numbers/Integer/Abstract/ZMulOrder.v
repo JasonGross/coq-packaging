@@ -8,7 +8,7 @@
 (*                      Evgeny Makarov, INRIA, 2007                     *)
 (************************************************************************)
 
-(*i $Id: ZMulOrder.v 11040 2008-06-03 00:04:16Z letouzey $ i*)
+(*i $Id: ZMulOrder.v 11674 2008-12-12 19:48:40Z letouzey $ i*)
 
 Require Export ZAddOrder.
 
@@ -173,7 +173,7 @@ Notation Zmul_neg := Zlt_mul_0 (only parsing).
 Theorem Zle_0_mul :
   forall n m : Z, 0 <= n * m -> 0 <= n /\ 0 <= m \/ n <= 0 /\ m <= 0.
 Proof.
-assert (R : forall n : Z, 0 == n <-> n == 0) by (intros; split; apply Zeq_symm).
+assert (R : forall n : Z, 0 == n <-> n == 0) by (intros; split; apply Zeq_sym).
 intros n m. repeat rewrite Zlt_eq_cases. repeat rewrite R.
 rewrite Zlt_0_mul, Zeq_mul_0.
 pose proof (Zlt_trichotomy n 0); pose proof (Zlt_trichotomy m 0). tauto.
@@ -184,7 +184,7 @@ Notation Zmul_nonneg := Zle_0_mul (only parsing).
 Theorem Zle_mul_0 :
   forall n m : Z, n * m <= 0 -> 0 <= n /\ m <= 0 \/ n <= 0 /\ 0 <= m.
 Proof.
-assert (R : forall n : Z, 0 == n <-> n == 0) by (intros; split; apply Zeq_symm).
+assert (R : forall n : Z, 0 == n <-> n == 0) by (intros; split; apply Zeq_sym).
 intros n m. repeat rewrite Zlt_eq_cases. repeat rewrite R.
 rewrite Zlt_mul_0, Zeq_mul_0.
 pose proof (Zlt_trichotomy n 0); pose proof (Zlt_trichotomy m 0). tauto.

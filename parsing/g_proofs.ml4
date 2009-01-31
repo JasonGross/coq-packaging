@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(* $Id: g_proofs.ml4 10628 2008-03-06 14:56:08Z msozeau $ *)
+(* $Id: g_proofs.ml4 11784 2009-01-14 11:36:32Z herbelin $ *)
 
 
 open Pcoq
@@ -90,9 +90,12 @@ GEXTEND Gram
       | IDENT "Go"; IDENT "next" -> VernacGo GoNext
       | IDENT "Guarded" -> VernacCheckGuard
 (* Hints for Auto and EAuto *)
-      | IDENT "Hint"; local = locality; h = hint;
+      | IDENT "Create"; IDENT "HintDb" ; 
+	  id = IDENT ; b = [ "discriminated" -> true | -> false ] ->
+	    VernacCreateHintDb (use_locality (), id, b)
+      | IDENT "Hint"; local = obsolete_locality; h = hint;
         dbnames = opt_hintbases ->
-	  VernacHints (local,dbnames, h)
+	  VernacHints (enforce_locality_of local,dbnames, h)
 	  
 
 (*This entry is not commented, only for debug*)
@@ -101,16 +104,18 @@ GEXTEND Gram
 	    [Genarg.in_gen Genarg.rawwit_constr c])
       ] ];
 
-  locality:
+  obsolete_locality:
     [ [ IDENT "Local" -> true | -> false ] ]
   ;
   hint:
     [ [ IDENT "Resolve"; lc = LIST1 constr; n = OPT [ n = natural -> n ] -> 
-          HintsResolve (List.map (fun x -> (n, x)) lc)
+          HintsResolve (List.map (fun x -> (n, true, x)) lc)
       | IDENT "Immediate"; lc = LIST1 constr -> HintsImmediate lc
+      | IDENT "Transparent"; lc = LIST1 global -> HintsTransparency (lc, true)
+      | IDENT "Opaque"; lc = LIST1 global -> HintsTransparency (lc, false)
       | IDENT "Unfold"; lqid = LIST1 global -> HintsUnfold lqid
       | IDENT "Constructors"; lc = LIST1 global -> HintsConstructors lc
-      | IDENT "Extern"; n = natural; c = constr_pattern ; "=>";
+      | IDENT "Extern"; n = natural; c = OPT constr_pattern ; "=>";
           tac = tactic ->
 	  HintsExtern (n,c,tac)
       | IDENT "Destruct"; 

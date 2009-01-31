@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tactic_debug.ml 10739 2008-04-01 14:45:20Z herbelin $ i*)
+(*i $Id: tactic_debug.ml 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 open Names
 open Constrextern
@@ -129,7 +129,7 @@ let hyp_bound = function
   | Name id -> " (bound to "^(Names.string_of_id id)^")"
 
 (* Prints a matched hypothesis *)
-let db_matched_hyp debug env (id,c) ido =
+let db_matched_hyp debug env (id,_,c) ido =
   if debug <> DebugOff & !skip = 0 then
     msgnl (str "Hypothesis " ++
            str ((Names.string_of_id id)^(hyp_bound ido)^
@@ -148,8 +148,8 @@ let db_mc_pattern_success debug =
 
 let pp_match_pattern env = function
   | Term c -> Term (extern_constr_pattern (names_of_rel_context env) c)
-  | Subterm (o,c) ->
-    Subterm (o,(extern_constr_pattern (names_of_rel_context env) c))
+  | Subterm (b,o,c) ->
+    Subterm (b,o,(extern_constr_pattern (names_of_rel_context env) c))
 
 (* Prints a failure message for an hypothesis pattern *)
 let db_hyp_pattern_failure debug env (na,hyp) =

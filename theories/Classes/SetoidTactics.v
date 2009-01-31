@@ -13,7 +13,7 @@
  * Institution: LRI, CNRS UMR 8623 - UniversitÃcopyright Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: SetoidTactics.v 11282 2008-07-28 11:51:53Z msozeau $ *)
+(* $Id: SetoidTactics.v 11709 2008-12-20 11:42:15Z msozeau $ *)
 
 Require Export Coq.Classes.RelationClasses.
 Require Export Coq.Classes.Morphisms.
@@ -45,11 +45,11 @@ Class DefaultRelation A (R : relation A).
 
 (** To search for the default relation, just call [default_relation]. *)
 
-Definition default_relation [ DefaultRelation A R ] := R.
+Definition default_relation `{DefaultRelation A R} := R.
 
 (** Every [Equivalence] gives a default relation, if no other is given (lowest priority). *)
 
-Instance equivalence_default [ Equivalence A R ] : DefaultRelation R | 4.
+Instance equivalence_default `(Equivalence A R) : DefaultRelation R | 4.
 
 (** The setoid_replace tactics in Ltac, defined in terms of default relations and
    the setoid_rewrite tactic. *)
@@ -178,7 +178,7 @@ Ltac reverse_arrows x :=
   end.
 
 Ltac default_add_morphism_tactic :=
-  intros ;
+  unfold flip ; intros ;
   (try destruct_morphism) ;
   match goal with
     | [ |- (?x ==> ?y) _ _ ] => red_subst_eq_morphism (x ==> y) ; reverse_arrows (x ==> y)

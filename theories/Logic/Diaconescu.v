@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Diaconescu.v 11238 2008-07-19 09:34:03Z herbelin $ i*)
+(*i $Id: Diaconescu.v 11481 2008-10-20 19:23:51Z herbelin $ i*)
 
 (** Diaconescu showed that the Axiom of Choice entails Excluded-Middle
    in topoi [Diaconescu75]. Lacas and Werner adapted the proof to show
@@ -267,7 +267,7 @@ End ProofIrrel_RelChoice_imp_EqEM.
 
 (** Proof sketch from Bell [Bell93] (with thanks to P. Castéran) *)
 
-Notation Local inhabited A := A.
+Notation Local inhabited A := A (only parsing).
 
 Section ExtensionalEpsilon_imp_EM.
 

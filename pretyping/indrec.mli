@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: indrec.mli 9831 2007-05-17 18:55:42Z herbelin $ i*)
+(*i $Id: indrec.mli 11562 2008-11-09 11:30:10Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -20,8 +20,7 @@ open Evd
 (* Errors related to recursors building *)
 
 type recursion_scheme_error =
-  | NotAllowedCaseAnalysis of bool * sorts * inductive
-  | BadInduction of bool * identifier * sorts
+  | NotAllowedCaseAnalysis of (*isrec:*) bool * sorts * inductive
   | NotMutualInScheme of inductive * inductive
 
 exception RecursionSchemeError of recursion_scheme_error

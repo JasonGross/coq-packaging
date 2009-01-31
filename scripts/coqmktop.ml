@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqmktop.ml 11380 2008-09-07 12:27:27Z glondu $ *)
+(* $Id: coqmktop.ml 11784 2009-01-14 11:36:32Z herbelin $ *)
 
 (* coqmktop is a script to link Coq, analogous to ocamlmktop.
    The command line contains options specific to coqmktop, options for the
@@ -17,7 +17,7 @@ open Unix
 (* Objects to link *)
 
 (* 1. Core objects *)
-let ocamlobjs = ["unix.cma";"nums.cma"]
+let ocamlobjs = ["str.cma";"unix.cma";"nums.cma"]
 let dynobjs = ["dynlink.cma"]
 let camlp4objs = ["gramlib.cma"]
 let libobjs = ocamlobjs @ camlp4objs
@@ -44,7 +44,6 @@ let notopobjs = gramobjs
 (* 4. High-level tactics objects *)
 
 (* environment *)
-let src_coqtop = ref Coq_config.coqtop
 let opt        = ref false
 let full       = ref false
 let top        = ref false
@@ -57,11 +56,14 @@ let src_dirs () =
   if !coqide then [[ "ide" ]] else []
 
 let includes () = 
-  List.fold_right
-    (fun d l -> "-I" :: List.fold_left Filename.concat !src_coqtop d :: l)
-    (src_dirs ())
-    (["-I"; "\"" ^ Coq_config.camlp4lib ^ "\""] @ 
-     (if !coqide then ["-thread"; "-I"; "+lablgtk2"] else []))
+  let coqlib = Envars.coqlib () in
+  let camlp4lib = Envars.camlp4lib () in
+    List.fold_right
+      (fun d l -> "-I" :: ("\"" ^ List.fold_left Filename.concat coqlib d ^ "\"") :: l)
+      (src_dirs ())
+      (["-I"; "\"" ^ camlp4lib ^ "\""] @ 
+	 ["-I"; "\"" ^ coqlib ^ "\""] @
+	 (if !coqide then ["-thread"; "-I"; "+lablgtk2"] else []))
 
 (* Transform bytecode object file names in native object file names *)
 let native_suffix f =
@@ -83,15 +85,16 @@ let module_of_file name =
 
 (* Build the list of files to link and the list of modules names *)
 let files_to_link userfiles =
-  let dyn_objs = if not !opt then dynobjs else [] in
+  let dyn_objs =
+    if not !opt || Coq_config.has_natdynlink then dynobjs else [] in
   let toplevel_objs =
     if !top then topobjs else if !opt then notopobjs else [] in
   let ide_objs = if !coqide then 
-    "str.cma"::"threads.cma"::"lablgtk.cma"::"gtkThread.cmo"::ide 
+    "threads.cma"::"lablgtk.cma"::"gtkThread.cmo"::ide 
   else [] 
   in
   let ide_libs = if !coqide then 
-    ["str.cma" ; "threads.cma" ; "lablgtk.cma" ; "gtkThread.cmo" ;
+    ["threads.cma" ; "lablgtk.cma" ; "gtkThread.cmo" ;
      "ide/ide.cma" ]
   else [] 
   in
@@ -135,22 +138,33 @@ let all_subdirs dir =
 let usage () =
   prerr_endline "Usage: coqmktop <options> <ocaml options> files
 Flags.are:
-  -srcdir dir   Specify where the Coq source files are
-  -o exec-file  Specify the name of the resulting toplevel
-  -opt          Compile in native code
-  -full         Link high level tactics
-  -top          Build Coq on a ocaml toplevel (incompatible with -opt)
-  -searchisos   Build a toplevel for SearchIsos
-  -ide          Build a toplevel for the Coq IDE
-  -R dir        Specify recursively directories for Ocaml\n";
+  -coqlib dir    Specify where the Coq object files are
+  -camlbin dir   Specify where the OCaml binaries are
+  -camlp4bin dir Specify where the CAmp4/5 binaries are
+  -o exec-file   Specify the name of the resulting toplevel
+  -boot          Run in boot mode
+  -opt           Compile in native code
+  -full          Link high level tactics
+  -top           Build Coq on a ocaml toplevel (incompatible with -opt)
+  -searchisos    Build a toplevel for SearchIsos
+  -ide           Build a toplevel for the Coq IDE
+  -R dir         Specify recursively directories for Ocaml\n";
   exit 1
 
 (* parsing of the command line *)
 let parse_args () =
   let rec parse (op,fl) = function
     | [] -> List.rev op, List.rev fl
-    | "-srcdir" :: d :: rem -> src_coqtop := d ; parse (op,fl) rem
-    | "-srcdir" :: _        -> usage ()
+    | "-coqlib" :: d :: rem -> 
+	Flags.coqlib_spec := true; Flags.coqlib := d ; parse (op,fl) rem
+    | "-coqlib" :: _        -> usage ()
+    | "-camlbin" :: d :: rem -> 
+	Flags.camlbin_spec := true; Flags.camlbin := d ; parse (op,fl) rem
+    | "-camlbin" :: _        -> usage ()
+    | "-camlp4bin" :: d :: rem -> 
+	Flags.camlp4bin_spec := true; Flags.camlp4bin := d ; parse (op,fl) rem
+    | "-camlp4bin" :: _        -> usage ()
+    | "-boot" :: rem -> Flags.boot := true; parse (op,fl) rem
     | "-opt" :: rem -> opt := true ; parse (op,fl) rem
     | "-full" :: rem -> full := true ; parse (op,fl) rem
     | "-top" :: rem -> top := true ; parse (op,fl) rem
@@ -198,59 +212,23 @@ let clean file =
     rm (basename ^ ".cmx")
   end
 
-(* Gives all modules in [dir]. Uses [.cmi] suffixes. Uses [Unix]. *)
-let all_modules_in_dir dir =
-  try
-    let lst = ref []
-    and dh = Unix.opendir dir in
-    try
-      while true do
-	let stg = Unix.readdir dh in
-        if (Filename.check_suffix stg ".cmi") then
-          lst := !lst @ [String.capitalize (Filename.chop_suffix stg ".cmi")]
-      done;
-      []
-    with End_of_file -> 
-      Unix.closedir dh; !lst
-  with Unix.Unix_error (_,"opendir",_) ->
-    failwith ("all_modules_in_dir: directory "^dir^" not found")
-
-(* Gives a part of command line (corresponding to dir) for [extract_crc] *)
-let crc_cmd dir =
-  " -I "^dir^(List.fold_right (fun x y -> " "^x^y) (all_modules_in_dir dir)
-  "")
-
-(* Same as [crc_cmd] but recursively *)
-let rec_crc_cmd dir =
-  List.fold_right (fun x y -> x^y) (List.map crc_cmd (all_subdirs dir)) ""
-
 (* Creates another temporary file for Dynlink if needed *)
 let tmp_dynlink()=
   let tmp = Filename.temp_file "coqdynlink" ".ml" in
   let _ = Sys.command ("echo \"Dynlink.init();;\" > "^tmp) in
-  let _ = Sys.command (Coq_config.camllib^"/extract_crc"^(crc_cmd
-      Coq_config.camllib)^(crc_cmd Coq_config.camlp4lib)^(rec_crc_cmd
-      Coq_config.coqtop)^" >> "^tmp) in
-  let _ = Sys.command ("echo \";;\" >> "^tmp) in
-  let _ = 
-    Sys.command ("echo \"Dynlink.add_available_units crc_unit_list;;\" >> "^
-		 tmp)
-  in
   tmp
 
 (* Initializes the kind of loading in the main program *)
 let declare_loading_string () =
-  if !opt then
-    "Mltop.set Mltop.Native;;\n"
-  else if not !top then
-    "Mltop.set Mltop.WithoutTop;;\n"
+  if not !top then
+    "Mltop.remove ();;"
   else
     "let ppf = Format.std_formatter;;
-     Mltop.set (Mltop.WithTop
+     Mltop.set_top
        {Mltop.load_obj=Topdirs.dir_load ppf;
         Mltop.use_file=Topdirs.dir_use ppf;
         Mltop.add_dir=Topdirs.dir_directory;
-        Mltop.ml_loop=(fun () -> Toploop.loop ppf) });;\n"
+        Mltop.ml_loop=(fun () -> Toploop.loop ppf) };;\n"
 
 (* create a temporary main file to link *)
 let create_tmp_main_file modules =
@@ -279,16 +257,17 @@ let create_tmp_main_file modules =
 let main () =
   let (options, userfiles) = parse_args () in
   (* which ocaml command to invoke *)
+  let camlbin = Envars.camlbin () in
   let prog =
     if !opt then begin
       (* native code *)
       if !top then failwith "no custom toplevel in native code !";
-      let ocamloptexec = Filename.concat Coq_config.camldir "ocamlopt" in
+      let ocamloptexec = Filename.concat camlbin "ocamlopt" in
         ocamloptexec^" -linkall"
     end else
       (* bytecode (we shunt ocamlmktop script which fails on win32) *)
       let ocamlmktoplib = " toplevellib.cma" in
-      let ocamlcexec = Filename.concat Coq_config.camldir "ocamlc" in
+      let ocamlcexec = Filename.concat camlbin "ocamlc" in
       let ocamlccustom = Printf.sprintf "%s %s -linkall "
         ocamlcexec Coq_config.coqrunbyteflags in
       (if !top then ocamlccustom^ocamlmktoplib else ocamlccustom)
@@ -307,22 +286,22 @@ let main () =
   try
     let args =
       options @ (includes ()) @ copts @ tolink @ dynlink @ [ main_file ] in
-    (* add topstart.cmo explicitly because we shunted ocamlmktop wrapper *)
+      (* add topstart.cmo explicitly because we shunted ocamlmktop wrapper *)
     let args = if !top then args @ [ "topstart.cmo" ] else args in
-    (* Now, with the .cma, we MUST use the -linkall option *)
+      (* Now, with the .cma, we MUST use the -linkall option *)
     let command = String.concat " " (prog::"-rectypes"::args) in
-    if !echo then 
-      begin 
-	print_endline command; 
-	print_endline 
-	  ("(command length is " ^ 
-	   (string_of_int (String.length command)) ^ " characters)");
-	flush Pervasives.stdout 
-      end;
-    let retcode = Sys.command command in
-    clean main_file;
-    (* command gives the exit code in HSB, and signal in LSB !!! *)
-    if retcode > 255 then retcode lsr 8 else retcode 
+      if !echo then 
+	begin 
+	  print_endline command; 
+	  print_endline 
+	    ("(command length is " ^ 
+	       (string_of_int (String.length command)) ^ " characters)");
+	  flush Pervasives.stdout 
+	end;
+      let retcode = Sys.command command in
+	clean main_file;
+	(* command gives the exit code in HSB, and signal in LSB !!! *)
+	if retcode > 255 then retcode lsr 8 else retcode 
   with e -> 
     clean main_file; raise e
 

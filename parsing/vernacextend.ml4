@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
 
-(* $Id: vernacextend.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: vernacextend.ml4 11622 2008-11-23 08:45:56Z herbelin $ *)
 
 open Util
 open Genarg
@@ -117,6 +117,9 @@ EXTEND
   args:
     [ [ e = LIDENT; "("; s = LIDENT; ")" ->
         let t, g = Q_util.interp_entry_name loc e "" in
+        VernacNonTerm (loc, t, g, Some s)
+      | e = LIDENT; "("; s = LIDENT; ","; sep = STRING; ")" ->
+        let t, g = Q_util.interp_entry_name loc e sep in
         VernacNonTerm (loc, t, g, Some s)
       | s = STRING ->
         VernacTerm s

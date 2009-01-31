@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetDecide.v 11064 2008-06-06 17:00:52Z letouzey $ *)
+(* $Id: FSetDecide.v 11699 2008-12-18 11:49:08Z letouzey $ *)
 
 (**************************************************************)
 (* FSetDecide.v                                               *)
@@ -19,10 +19,10 @@
 
 Require Import Decidable DecidableTypeEx FSetFacts.
 
-(** First, a version for Weak Sets *)
+(** First, a version for Weak Sets in functorial presentation *)
 
-Module WDecide (E : DecidableType)(Import M : WSfun E).
- Module F := FSetFacts.WFacts E M.
+Module WDecide_fun (E : DecidableType)(Import M : WSfun E).
+ Module F := FSetFacts.WFacts_fun E M.
 
 (** * Overview
     This functor defines the tactic [fsetdec], which will
@@ -509,7 +509,14 @@ the above form:
             | J : _ |- _ => progress (change T with E.t in J)
             | |- _ => progress (change T with E.t)
             end )
-        end).
+        | H : forall x : ?T, _ |- _ =>
+          progress (change T with E.t in H);
+          repeat (
+            match goal with
+            | J : _ |- _ => progress (change T with E.t in J)
+            | |- _ => progress (change T with E.t)
+            end )
+       end).
 
     (** These two tactics take us from Coq's built-in equality
         to [E.eq] (and vice versa) when possible. *)
@@ -747,6 +754,12 @@ the above form:
       In x (singleton x).
     Proof. fsetdec. Qed.
 
+    Lemma test_add_In : forall x y s,
+      In x (add y s) ->
+      ~ E.eq x y ->
+      In x s.
+    Proof. fsetdec. Qed.
+
     Lemma test_Subset_add_remove : forall x s,
       s [<=] (add x (remove x s)).
     Proof. fsetdec. Qed.
@@ -825,17 +838,27 @@ the above form:
       intros until 3. intros g_eq. rewrite <- g_eq. fsetdec.
     Qed.
 
+    Lemma test_baydemir :
+      forall (f : t -> t),
+      forall (s : t),
+      forall (x y : elt),
+      In x (add y (f s)) ->
+      ~ E.eq x y ->
+      In x (f s).
+    Proof.
+      fsetdec.
+    Qed.
+
   End FSetDecideTestCases.
 
-End WDecide.
+End WDecide_fun.
 
 Require Import FSetInterface.
 
-(** Now comes a special version dedicated to full sets. For this 
-    one, only one argument [(M:S)] is necessary. *)
+(** Now comes variants for self-contained weak sets and for full sets.
+    For these variants, only one argument is necessary. Thanks to
+    the subtyping [WS<=S], the [Decide] functor which is meant to be
+    used on modules [(M:S)] can simply be an alias of [WDecide]. *)
 
-Module Decide (M : S).
-  Module D:=OT_as_DT M.E.
-  Module WD := WDecide D M.
-  Ltac fsetdec := WD.fsetdec.
-End Decide.
+Module WDecide (M:WS) := WDecide_fun M.E M.
+Module Decide := WDecide.

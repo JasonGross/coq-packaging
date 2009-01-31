@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: command.mli 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: command.mli 11745 2009-01-04 18:43:08Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -56,17 +56,19 @@ val declare_assumption : identifier located list ->
 val declare_interning_data : 'a * Constrintern.implicits_env ->
     string * Topconstr.constr_expr * Topconstr.scope_name option -> unit
 
-val compute_interning_datas :  Environ.env -> 'a list -> 'b list ->
+val compute_interning_datas : Environ.env -> Constrintern.var_internalisation_type -> 
+  'a list -> 'b list ->
   Term.types list ->Impargs.manual_explicitation list list ->
   'a list *
-    ('b * (Names.identifier list * Impargs.implicits_list *
+    ('b * (Constrintern.var_internalisation_type * Names.identifier list * Impargs.implicits_list *
 	      Topconstr.scope_name option list))
     list
 
 val check_mutuality : Environ.env -> definition_object_kind ->
   (identifier * types) list -> unit
 
-val build_mutual : (inductive_expr * decl_notation) list -> bool -> unit
+val build_mutual : ((lident * local_binder list * constr_expr option * constructor_expr list) * 
+		                decl_notation) list -> bool -> unit
 
 val declare_mutual_with_eliminations :
   bool -> Entries.mutual_inductive_entry -> 
@@ -107,7 +109,7 @@ val abstract_constr_expr : constr_expr -> local_binder list -> constr_expr
 val set_start_hook : (types -> unit) -> unit
 
 val start_proof : identifier -> goal_kind -> types ->
-  ?init_tac:Proof_type.tactic -> declaration_hook -> unit
+  ?init_tac:Proof_type.tactic -> ?compute_guard:bool -> declaration_hook -> unit
 
 val start_proof_com : goal_kind -> 
   (lident option * (local_binder list * constr_expr)) list ->

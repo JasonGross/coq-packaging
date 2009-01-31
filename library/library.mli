@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: library.mli 11209 2008-07-05 10:17:49Z herbelin $ i*)
+(*i $Id: library.mli 11750 2009-01-05 20:47:34Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -76,6 +76,10 @@ type library_location = LibLoaded | LibInPath
 
 val locate_qualified_library :
   bool -> qualid -> library_location * dir_path * System.physical_path
+val try_locate_qualified_library : qualid located -> dir_path * string
+
+(* Reserve Coq prefix for the standard library *)
+val check_coq_overwriting : dir_path -> unit
 
 (*s Statistics: display the memory use of a library. *)
 val mem : dir_path -> Pp.std_ppcmds

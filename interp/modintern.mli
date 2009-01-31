@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modintern.mli 11065 2008-06-06 22:39:43Z msozeau $ i*)
+(*i $Id: modintern.mli 11582 2008-11-12 19:49:57Z notin $ i*)
 
 (*i*)
 open Declarations
@@ -26,6 +26,3 @@ val interp_modtype : env -> module_type_ast -> module_struct_entry
 val interp_modexpr : env -> module_ast -> module_struct_entry
 
 val lookup_module : qualid located -> module_path
-
-val dump_moddef : loc -> module_path -> string -> unit
-val dump_modref : loc -> module_path -> string -> unit

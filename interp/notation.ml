@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: notation.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: notation.ml 11512 2008-10-27 12:28:36Z herbelin $ *)
 
 (*i*)
 open Util
@@ -192,10 +192,6 @@ let aconstr_key = function (* Rem: AApp(ARef ref,[]) stands for @ref *)
   | AList (_,_,AApp (ARef ref,args),_,_) -> RefKey ref, Some (List.length args)
   | ARef ref -> RefKey ref, None
   | _ -> Oth, None
-
-let pattern_key = function
-  | PatCstr (_,cstr,_,_) -> RefKey (ConstructRef cstr)
-  | _ -> Oth
 
 (**********************************************************************)
 (* Interpreting numbers (not in summary because functional objects)   *)
@@ -408,7 +404,7 @@ let exists_notation_in_scope scopt ntn r =
     r' = r
   with Not_found -> false
 
-let isAVar = function AVar _ -> true | _ -> false
+let isAVar_or_AHole = function AVar _ | AHole _ -> true | _ -> false
 
 (**********************************************************************)
 (* Mapping classes to scopes *)
@@ -620,7 +616,7 @@ let browse_notation strict ntn map =
 let global_reference_of_notation test (ntn,(sc,c,_)) =
   match c with
   | ARef ref when test ref -> Some (ntn,sc,ref)
-  | AApp (ARef ref, l) when List.for_all isAVar l & test ref -> 
+  | AApp (ARef ref, l) when List.for_all isAVar_or_AHole l & test ref -> 
       Some (ntn,sc,ref)
   | _ -> None
 
@@ -632,8 +628,12 @@ let error_notation_not_reference loc ntn =
     str "Unable to interpret " ++ quote (str ntn) ++
     str " as a reference.")
 
-let interp_notation_as_global_reference loc test ntn =
-  let ntns = browse_notation true ntn !scope_map in
+let interp_notation_as_global_reference loc test ntn sc =
+  let scopes = match sc with
+  | Some sc ->
+      Gmap.add sc (find_scope (find_delimiters_scope dummy_loc sc)) Gmap.empty
+  | None -> !scope_map in
+  let ntns = browse_notation true ntn scopes in
   let refs = List.map (global_reference_of_notation test) ntns in
   match Option.List.flatten refs with
   | [_,_,ref] -> ref

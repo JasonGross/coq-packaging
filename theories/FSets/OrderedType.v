@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: OrderedType.v 10616 2008-03-04 17:33:35Z letouzey $ *)
+(* $Id: OrderedType.v 11700 2008-12-18 11:49:10Z letouzey $ *)
 
 Require Export SetoidList.
 Set Implicit Arguments.
@@ -19,7 +19,7 @@ Inductive Compare (X : Type) (lt eq : X -> X -> Prop) (x y : X) : Type :=
   | EQ : eq x y -> Compare lt eq x y
   | GT : lt y x -> Compare lt eq x y.
 
-Module Type OrderedType.
+Module Type MiniOrderedType.
 
   Parameter Inline t : Type.
 
@@ -29,7 +29,7 @@ Module Type OrderedType.
   Axiom eq_refl : forall x : t, eq x x.
   Axiom eq_sym : forall x y : t, eq x y -> eq y x.
   Axiom eq_trans : forall x y z : t, eq x y -> eq y z -> eq x z.
- 
+
   Axiom lt_trans : forall x y z : t, lt x y -> lt y z -> lt x z.
   Axiom lt_not_eq : forall x y : t, lt x y -> ~ eq x y.
 
@@ -38,15 +38,34 @@ Module Type OrderedType.
   Hint Immediate eq_sym.
   Hint Resolve eq_refl eq_trans lt_not_eq lt_trans.
 
+End MiniOrderedType.
+
+Module Type OrderedType.
+  Include Type MiniOrderedType.
+
+  (** A [eq_dec] can be deduced from [compare] below. But adding this
+     redundant field allows to see an OrderedType as a DecidableType. *)
+  Parameter eq_dec : forall x y, { eq x y } + { ~ eq x y }.
+
 End OrderedType.
+
+Module MOT_to_OT (Import O : MiniOrderedType) <: OrderedType.
+  Include O.
+
+  Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
+  Proof.
+   intros; elim (compare x y); intro H; [ right | left | right ]; auto.
+   assert (~ eq y x); auto.
+  Defined.
+
+End MOT_to_OT.
 
 (** * Ordered types properties *)
 
 (** Additional properties that can be derived from signature
     [OrderedType]. *)
 
-Module OrderedTypeFacts (O: OrderedType). 
-  Import O.
+Module OrderedTypeFacts (Import O: OrderedType).
 
   Lemma lt_antirefl : forall x, ~ lt x x.
   Proof.
@@ -293,10 +312,8 @@ Ltac false_order := elimtype False; order.
     elim (elim_compare_gt (x:=x) (y:=y));
      [ intros _1 _2; rewrite _2; clear _1 _2 | auto ].
 
-  Lemma eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
-  Proof.
-   intros; elim (compare x y); [ right | left | right ]; auto.
-  Defined.
+  (** For compatibility reasons *)
+  Definition eq_dec := eq_dec.
  
   Lemma lt_dec : forall x y : t, {lt x y} + {~ lt x y}.
   Proof.

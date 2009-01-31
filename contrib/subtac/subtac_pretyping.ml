@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: subtac_pretyping.ml 11282 2008-07-28 11:51:53Z msozeau $ *)
+(* $Id: subtac_pretyping.ml 11574 2008-11-10 13:45:05Z msozeau $ *)
 
 open Global
 open Pp
@@ -73,7 +73,7 @@ let interp env isevars c tycon =
   let _ = isevars := Evarutil.nf_evar_defs !isevars in
   let evd,_ = consider_remaining_unif_problems env !isevars in
 (*   let unevd = undefined_evars evd in *)
-  let unevd' = Typeclasses.resolve_typeclasses ~onlyargs:true ~fail:false env evd in
+  let unevd' = Typeclasses.resolve_typeclasses ~onlyargs:true ~split:true ~fail:true env evd in
   let evm = evars_of unevd' in
     isevars := unevd';
     nf_evar evm j.uj_val, nf_evar evm j.uj_type

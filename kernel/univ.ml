@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: univ.ml 11301 2008-08-04 19:41:18Z herbelin $ *)
+(* $Id: univ.ml 11596 2008-11-16 15:34:06Z letouzey $ *)
 
 (* Initial Caml version originates from CoC 4.8 [Dec 1988] *)
 (* Extension with algebraic universes by HH [Sep 2001] *)
@@ -43,13 +43,25 @@ type universe_level =
   | Set
   | Level of Names.dir_path * int
 
+(* A specialized comparison function: we compare the [int] part first.
+   This way, most of the time, the [dir_path] part is not considered. *)
+
+let cmp_univ_level u v = match u,v with
+  | Set, Set -> 0
+  | Set, _ -> -1
+  | _, Set -> 1
+  | Level (dp1,i1), Level (dp2,i2) ->
+      if i1 < i2 then -1
+      else if i1 > i2 then 1
+      else compare dp1 dp2
+
 type universe =
   | Atom of universe_level
   | Max of universe_level list * universe_level list
   
 module UniverseOrdered = struct
   type t = universe_level
-  let compare = Pervasives.compare
+  let compare = cmp_univ_level
 end
 
 let string_of_univ_level = function
@@ -86,7 +98,8 @@ let super = function
    Used to type the products. *)
 let sup u v =
   match u,v with
-    | Atom u, Atom v -> if u = v then Atom u else Max ([u;v],[])
+    | Atom u, Atom v ->
+	if cmp_univ_level u v = 0 then Atom u else Max ([u;v],[])
     | u, Max ([],[]) -> u
     | Max ([],[]), v -> v
     | Atom u, Max (gel,gtl) -> Max (list_add_set u gel,gtl)
@@ -601,12 +614,12 @@ let dump_universes output g =
 	let u_str = string_of_univ_level u in
 	  List.iter 
 	    (fun v -> 
-	       Printf.fprintf output "%s > %s ;\n" u_str
+	       Printf.fprintf output "%s < %s ;\n" u_str
 		 (string_of_univ_level v)) 
 	    lt;
 	  List.iter 
 	    (fun v -> 
-	       Printf.fprintf output "%s >= %s ;\n" u_str
+	       Printf.fprintf output "%s <= %s ;\n" u_str
 		 (string_of_univ_level v)) 
 	    le
     | Equiv (u,v) ->

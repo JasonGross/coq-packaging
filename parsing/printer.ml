@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: printer.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: printer.ml 11739 2009-01-02 19:33:19Z herbelin $ *)
 
 open Pp
 open Util
@@ -90,14 +90,14 @@ let pr_cases_pattern t =
   pr_cases_pattern_expr (extern_cases_pattern Idset.empty t)
 
 let pr_lconstr_pattern_env env c =
-  pr_lconstr_expr (extern_constr_pattern (names_of_rel_context env) c)
+  pr_lconstr_pattern_expr (extern_constr_pattern (names_of_rel_context env) c)
 let pr_constr_pattern_env env c =
-  pr_constr_expr (extern_constr_pattern (names_of_rel_context env) c)
+  pr_constr_pattern_expr (extern_constr_pattern (names_of_rel_context env) c)
 
 let pr_lconstr_pattern t =
-  pr_lconstr_expr (extern_constr_pattern empty_names_context t)
+  pr_lconstr_pattern_expr (extern_constr_pattern empty_names_context t)
 let pr_constr_pattern t =
-  pr_constr_expr (extern_constr_pattern empty_names_context t)
+  pr_constr_pattern_expr (extern_constr_pattern empty_names_context t)
 
 let pr_sort s = pr_rawsort (extern_sort s)
 
@@ -162,9 +162,9 @@ let pr_rel_decl env (na,c,typ) =
 
 (* Prints a signature, all declarations on the same line if possible *)
 let pr_named_context_of env =
-  hv 0 (fold_named_context
-	  (fun env d pps -> pps ++ ws 2 ++ pr_var_decl env d)
-          env ~init:(mt ()))
+  let make_decl_list env d pps = pr_var_decl env d :: pps in
+  let psl = List.rev (fold_named_context make_decl_list env ~init:[]) in
+  hv 0 (prlist_with_sep (fun _ -> ws 2) (fun x -> x) psl)
 
 let pr_named_context env ne_context = 
   hv 0 (Sign.fold_named_context
@@ -474,6 +474,9 @@ let pr_prim_rule = function
   | Move (withdep,id1,id2) ->
       (str (if withdep then "dependent " else "") ++
 	 str"move "  ++ pr_id id1 ++ pr_move_location pr_id id2)
+
+  | Order ord ->
+      (str"order "  ++ prlist_with_sep pr_spc pr_id ord)
 
   | Rename (id1,id2) ->
       (str "rename " ++ pr_id id1 ++ str " into " ++ pr_id id2)

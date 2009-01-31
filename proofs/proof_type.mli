@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: proof_type.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: proof_type.mli 11639 2008-11-27 17:48:32Z barras $ i*)
 
 (*i*)
 open Environ
@@ -37,6 +37,7 @@ type prim_rule =
   | Thin of identifier list
   | ThinBody of identifier list
   | Move of bool * identifier * identifier move_location
+  | Order of identifier list
   | Rename of identifier * identifier
   | Change_evars
 

@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: eauto.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: eauto.ml4 11735 2009-01-02 17:22:31Z herbelin $ *)
 
 open Pp
 open Util
@@ -31,9 +31,9 @@ open Auto
 open Rawterm
 open Hiddentac
 
-let e_give_exact c gl = let t1 = (pf_type_of gl c) and t2 = pf_concl gl in 
+let e_give_exact ?(flags=Unification.default_unify_flags) c gl = let t1 = (pf_type_of gl c) and t2 = pf_concl gl in 
   if occur_existential t1 or occur_existential t2 then 
-     tclTHEN (Clenvtac.unify t1) (exact_check c) gl
+     tclTHEN (Clenvtac.unify ~flags t1) (exact_check c) gl
   else exact_check c gl
 
 let assumption id = e_give_exact (mkVar id)
@@ -91,6 +91,8 @@ open Unification
 (* A tactic similar to Auto, but using EApply, Assumption and e_give_exact *)
 (***************************************************************************)
 
+let priority l = List.map snd (List.filter (fun (pr,_) -> pr = 0) l)
+
 (* no delta yet *)
 
 let unify_e_resolve flags (c,clenv) gls = 
@@ -140,12 +142,11 @@ and e_my_find_search_nodelta db_list local_db hdc concl =
                tclTHEN (unify_e_resolve_nodelta (term,cl)) 
 		 (e_trivial_fail_db false db_list local_db)
 	   | Unfold_nth c -> unfold_in_concl [all_occurrences,c]
-	   | Extern tacast -> conclPattern concl 
-	       (Option.get p) tacast
+	   | Extern tacast -> conclPattern concl p tacast
        in 
-       (tac,fmt_autotactic t))
+       (tac,pr_autotactic t))
        (*i
-	 fun gls -> pPNL (fmt_autotactic t); Format.print_flush (); 
+	 fun gls -> pPNL (pr_autotactic t); Format.print_flush (); 
                      try tac gls
 		     with e when Logic.catchable_exception(e) -> 
                             (Format.print_string "Fail\n"; 
@@ -174,17 +175,16 @@ and e_my_find_search_delta db_list local_db hdc concl =
 	 match t with
 	   | Res_pf (term,cl) -> unify_resolve st (term,cl)
 	   | ERes_pf (term,cl) -> unify_e_resolve st (term,cl)
-	   | Give_exact (c) -> e_give_exact_constr c
+	   | Give_exact (c) -> e_give_exact ~flags:st c
 	   | Res_pf_THEN_trivial_fail (term,cl) ->
                tclTHEN (unify_e_resolve st (term,cl)) 
 		 (e_trivial_fail_db true db_list local_db)
 	   | Unfold_nth c -> unfold_in_concl [all_occurrences,c]
-	   | Extern tacast -> conclPattern concl 
-	       (Option.get p) tacast
+	   | Extern tacast -> conclPattern concl p tacast
        in 
-       (tac,fmt_autotactic t))
+       (tac,pr_autotactic t))
        (*i
-	 fun gls -> pPNL (fmt_autotactic t); Format.print_flush (); 
+	 fun gls -> pPNL (pr_autotactic t); Format.print_flush (); 
                      try tac gls
 		     with e when Logic.catchable_exception(e) -> 
                             (Format.print_string "Fail\n"; 
@@ -196,15 +196,15 @@ and e_my_find_search_delta db_list local_db hdc concl =
     
 and e_trivial_resolve mod_delta db_list local_db gl = 
   try 
-    Auto.priority 
+    priority 
       (e_my_find_search mod_delta db_list local_db 
-	 (List.hd (head_constr_bound gl [])) gl)
+	 (fst (head_constr_bound gl)) gl)
   with Bound | Not_found -> []
 
 let e_possible_resolve mod_delta db_list local_db gl =
   try List.map snd 
     (e_my_find_search mod_delta db_list local_db 
-	(List.hd (head_constr_bound gl [])) gl)
+	(fst (head_constr_bound gl)) gl)
   with Bound | Not_found -> []
 
 let assumption_tac_list id = apply_tac_list (e_give_exact_constr (mkVar id))
@@ -459,4 +459,10 @@ let autosimpl db cl =
 TACTIC EXTEND autosimpl
 | [ "autosimpl" hintbases(db) ] ->
     [ autosimpl (match db with None -> ["core"] | Some x -> "core"::x) None ]
+END
+
+TACTIC EXTEND unify
+| ["unify" constr(x) constr(y) ] -> [ unify x y ]
+| ["unify" constr(x) constr(y) "with" preident(base)  ] -> [ 
+    unify ~state:(Hint_db.transparent_state (searchtable_map base)) x y ]
 END

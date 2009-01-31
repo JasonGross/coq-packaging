@@ -330,7 +330,7 @@ let add_path_action reqid string_arg =
 
 let print_version_action () =
   msgnl (mt ());
-  msgnl (str "$Id: parse.ml 9476 2007-01-10 15:44:44Z lmamane $");;
+  msgnl (str "$Id: parse.ml 11749 2009-01-05 14:01:04Z notin $");;
 
 let load_syntax_action reqid module_name =
  msg (str "loading " ++ str module_name ++ str "... ");
@@ -370,7 +370,7 @@ Libobject.relax true;
 (let coqdir = 
    try Sys.getenv "COQDIR"
    with Not_found -> 
-     let coqdir = Coq_config.coqlib in
+     let coqdir = Envars.coqlib () in
        if Sys.file_exists coqdir then
 	 coqdir
        else

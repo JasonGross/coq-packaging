@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pcoq.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: pcoq.mli 11784 2009-01-14 11:36:32Z herbelin $ i*)
 
 open Util
 open Names
@@ -166,7 +166,8 @@ module Constr :
     val binder_let : local_binder list Gram.Entry.e
     val binders_let : local_binder list Gram.Entry.e
     val binders_let_fixannot : (local_binder list * (identifier located option * recursion_order_expr)) Gram.Entry.e
-    val typeclass_constraint : (name located * binding_kind * constr_expr) Gram.Entry.e
+    val typeclass_constraint : (name located * bool * constr_expr) Gram.Entry.e
+    val record_declaration : constr_expr Gram.Entry.e
     val appl_arg : (constr_expr * explicitation located option) Gram.Entry.e
   end
 

@@ -8,7 +8,7 @@
 (*                      Evgeny Makarov, INRIA, 2007                     *)
 (************************************************************************)
 
-(*i $Id: NZOrder.v 11040 2008-06-03 00:04:16Z letouzey $ i*)
+(*i $Id: NZOrder.v 11674 2008-12-12 19:48:40Z letouzey $ i*)
 
 Require Import NZAxioms.
 Require Import NZMul.
@@ -118,7 +118,7 @@ Qed.
 
 Theorem NZneq_succ_diag_r : forall n : NZ, n ~= S n.
 Proof.
-intro n; apply NZneq_symm; apply NZneq_succ_diag_l.
+intro n; apply NZneq_sym; apply NZneq_succ_diag_l.
 Qed.
 
 Theorem NZnlt_succ_diag_l : forall n : NZ, ~ S n < n.

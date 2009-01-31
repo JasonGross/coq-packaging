@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: hipattern.mli 8866 2006-05-28 16:21:04Z herbelin $ i*)
+(*i $Id: hipattern.mli 11739 2009-01-02 19:33:19Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -52,22 +52,30 @@ type testing_function = constr -> bool
 val match_with_non_recursive_type : (constr * constr list) matching_function
 val is_non_recursive_type         : testing_function 
 
-val match_with_disjunction : (constr * constr list) matching_function
-val is_disjunction         : testing_function 
+val match_with_disjunction : ?strict:bool -> (constr * constr list) matching_function
+val is_disjunction         : ?strict:bool -> testing_function 
 
-val match_with_conjunction : (constr * constr list) matching_function
-val is_conjunction         : testing_function 
+val match_with_conjunction : ?strict:bool -> (constr * constr list) matching_function
+val is_conjunction         : ?strict:bool -> testing_function 
+
+val match_with_record      : (constr * constr list) matching_function
+val is_record              : testing_function 
 
 val match_with_empty_type  : constr matching_function
 val is_empty_type          : testing_function 
 
-val match_with_unit_type   : constr matching_function
+(* type with only one constructor and no arguments, possibly with indices *)
+val match_with_unit_or_eq_type : constr matching_function
+val is_unit_or_eq_type     : testing_function 
 
-(* type with only one constructor and no arguments *)
+(* type with only one constructor and no arguments, no indices *)
 val is_unit_type           : testing_function 
 
 val match_with_equation    : (constr * constr list) matching_function
 val is_equation            : testing_function 
+
+(* type with only one constructor, no arguments and at least one dependency *)
+val match_with_equality_type : (constr * constr list) matching_function
 
 val match_with_nottype     : (constr * constr) matching_function
 val is_nottype             : testing_function 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id: util.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: util.mli 11769 2009-01-08 17:59:22Z glondu $ i*)
 
 (*i*)
 open Pp
@@ -68,15 +68,18 @@ val pi3 : 'a * 'b * 'c -> 'c
 val is_letter : char -> bool
 val is_digit : char -> bool
 val is_ident_tail : char -> bool
+val is_blank : char -> bool
 
 (*s Strings. *)
 
 val explode : string -> string list
 val implode : string list -> string
+val strip : string -> string
 val string_index_from : string -> int -> string -> int
 val string_string_contains : where:string -> what:string -> bool
 val plural : int -> string -> string
 val ordinal : int -> string
+val split_string_at : char -> string -> string list
 
 val parse_loadpath : string -> string list
 
@@ -89,6 +92,7 @@ exception UnsupportedUtf8
 
 val classify_unicode : int -> utf8_status
 val check_ident : string -> unit
+val check_ident_soft : string -> unit
 val lowercase_first_char_utf8 : string -> string
 
 (*s Lists. *)
@@ -137,6 +141,7 @@ val list_for_all_i : (int -> 'a -> bool) -> int -> 'a list -> bool
 val list_except : 'a -> 'a list -> 'a list
 val list_remove : 'a -> 'a list -> 'a list
 val list_remove_first : 'a -> 'a list -> 'a list
+val list_remove_assoc_in_triple : 'a -> ('a * 'b * 'c) list -> ('a * 'b * 'c) list
 val list_for_all2eq : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
 val list_sep_last : 'a list -> 'a * 'a list
 val list_try_find_i : (int -> 'a -> 'b) -> int -> 'a list -> 'b
@@ -145,7 +150,8 @@ val list_uniquize : 'a list -> 'a list
 (* merges two sorted lists and preserves the uniqueness property: *)
 val list_merge_uniq : ('a -> 'a -> int) -> 'a list -> 'a list -> 'a list
 val list_subset : 'a list -> 'a list -> bool
-val list_splitby : ('a -> bool) -> 'a list -> 'a list * 'a list
+val list_split_at : ('a -> bool) -> 'a list -> 'a list * 'a list
+val list_split_by : ('a -> bool) -> 'a list -> 'a list * 'a list
 val list_split3 : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
 val list_partition_by : ('a -> 'a -> bool) -> 'a list -> 'a list list
 val list_firstn : int -> 'a list -> 'a list
@@ -155,6 +161,7 @@ val list_skipn : int -> 'a list -> 'a list
 val list_addn : int -> 'a -> 'a list -> 'a list
 val list_prefix_of : 'a list -> 'a list -> bool
 val list_drop_prefix : 'a list -> 'a list -> 'a list
+val list_drop_last : 'a list -> 'a list
 (* [map_append f [x1; ...; xn]] returns [(f x1)@(f x2)@...@(f xn)] *)
 val list_map_append : ('a -> 'b list) -> 'a list -> 'b list
 val list_join_map : ('a -> 'b list) -> 'a list -> 'b list
@@ -175,6 +182,11 @@ val list_cartesian : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 val list_cartesians : ('a -> 'b -> 'b) -> 'b -> 'a list list -> 'b list
 (* list_combinations [[a;b];[c;d]] returns [[a;c];[a;d];[b;c];[b;d]] *)
 val list_combinations : 'a list list -> 'a list list
+(* Keep only those products that do not return None *)
+val list_cartesian_filter :
+  ('a -> 'b -> 'c option) -> 'a list -> 'b list -> 'c list
+val list_cartesians_filter :
+  ('a -> 'b -> 'b option) -> 'b -> 'a list list -> 'b list
 
 val list_union_map : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
 
@@ -187,6 +199,7 @@ val array_for_all3 : ('a -> 'b -> 'c -> bool) ->
   'a array -> 'b array -> 'c array -> bool
 val array_for_all4 : ('a -> 'b -> 'c -> 'd -> bool) ->
   'a array -> 'b array -> 'c array -> 'd array -> bool
+val array_for_all_i : (int -> 'a -> bool) -> int -> 'a array -> bool
 val array_hd : 'a array -> 'a
 val array_tl : 'a array -> 'a array
 val array_last : 'a array -> 'a

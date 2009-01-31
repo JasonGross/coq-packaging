@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declaremods.ml 11246 2008-07-22 15:10:05Z soubiran $ i*)
+(*i $Id: declaremods.ml 11703 2008-12-18 15:54:41Z soubiran $ i*)
 open Pp
 open Util
 open Names
@@ -151,37 +151,60 @@ let check_subtypes mp sub_mtb =
   in
     ()  (* The constraints are checked and forgot immediately! *) 
 
-let subst_substobjs dir mp (subst,mbids,msid,objs) =
+let compute_subst_objects mp (subst,mbids,msid,objs) =
   match mbids with
-    | [] -> 
-	let prefix = dir,(mp,empty_dirpath) in
-	let subst' = join_alias (map_msid msid mp) subst in
-	let subst = join subst' subst in
-	  Some (subst_objects prefix (join (map_msid msid mp) subst) objs)
-    | _ -> None
+  | [] -> 
+      let subst' = join_alias (map_msid msid mp) subst in
+      Some (join (map_msid msid mp) (join subst' subst), objs)
+  | _ ->
+      None
 
-(* This function registers the visibility of the module and iterates
-   through its components. It is called by plenty module functions *)
+let subst_substobjs dir mp substobjs =
+  match compute_subst_objects mp substobjs with
+  | Some (subst, objs) ->
+	let prefix = dir,(mp,empty_dirpath) in
+	Some (subst_objects prefix subst objs)
+  | None -> None
+
+(* These functions register the visibility of the module and iterates
+   through its components. They are called by plenty module functions *)
+
+let compute_visibility exists what i dir dirinfo =
+  if exists then 
+    if 
+      try Nametab.locate_dir (qualid_of_dirpath dir) = dirinfo 
+      with Not_found -> false 
+    then
+      Nametab.Exactly i
+    else
+      errorlabstrm (what^"_module")
+	(pr_dirpath dir ++ str " should already exist!") 
+  else
+    if Nametab.exists_dir dir then
+      errorlabstrm (what^"_module") (pr_dirpath dir ++ str " already exists")
+    else
+      Nametab.Until i
+
+let do_load_and_subst_module i dir mp substobjs keep =
+  let prefix = (dir,(mp,empty_dirpath)) in
+  let dirinfo = DirModule (dir,(mp,empty_dirpath)) in
+  let vis = compute_visibility false "load_and_subst" i dir dirinfo in
+  let objects = compute_subst_objects mp substobjs in
+  Nametab.push_dir vis dir dirinfo;
+  modtab_substobjs := MPmap.add mp substobjs !modtab_substobjs;
+  match objects with
+  | Some (subst,seg) ->
+      let seg = load_and_subst_objects (i+1) prefix subst seg in
+      modtab_objects := MPmap.add mp (prefix,seg) !modtab_objects;
+      load_objects (i+1) prefix keep;
+      Some (seg@keep)
+  | None ->
+      None
 
 let do_module exists what iter_objects i dir mp substobjs objects =
   let prefix = (dir,(mp,empty_dirpath)) in
   let dirinfo = DirModule (dir,(mp,empty_dirpath)) in
-  let vis = 
-    if exists then 
-      if 
-	try Nametab.locate_dir (qualid_of_dirpath dir) = dirinfo 
-	with Not_found -> false 
-      then
-	Nametab.Exactly i
-      else
-	errorlabstrm (what^"_module") 
-	  (pr_dirpath dir ++ str " should already exist!") 
-    else
-      if Nametab.exists_dir dir then
-	errorlabstrm (what^"_module") (pr_dirpath dir ++ str " already exists")
-      else
-	Nametab.Until i
-  in
+  let vis = compute_visibility exists what i dir dirinfo in
     Nametab.push_dir vis dir dirinfo;
     modtab_substobjs := MPmap.add mp substobjs !modtab_substobjs;
     match objects with
@@ -324,22 +347,7 @@ and do_module_alias exists what iter_objects i dir mp alias substobjs objects =
     try Some (MPmap.find alias !modtab_objects) with
 	Not_found -> None in
   let dirinfo = DirModule (dir,(mp,empty_dirpath)) in
-  let vis = 
-    if exists then 
-      if 
-	try Nametab.locate_dir (qualid_of_dirpath dir) = dirinfo 
-	with Not_found -> false 
-      then
-	Nametab.Exactly i
-      else
-	errorlabstrm (what^"_module") 
-	  (pr_dirpath dir ++ str " should already exist!") 
-    else
-      if Nametab.exists_dir dir then
-	errorlabstrm (what^"_module") (pr_dirpath dir ++ str " already exists")
-      else
-	Nametab.Until i
-  in
+  let vis = compute_visibility exists what i dir dirinfo in
     Nametab.push_dir vis dir dirinfo;
     modtab_substobjs := MPmap.add mp substobjs !modtab_substobjs;
     match alias_objects,objects with
@@ -588,16 +596,21 @@ let rec replace_module_object idl (subst, mbids, msid, lib_stack) modobjs mp =
       let rec replace_idl = function 
 	| _,[] -> [] 
 	| id::idl,(id',obj)::tail when id = id' ->
-	    if object_tag obj = "MODULE" then
+	    let tag = object_tag obj in
+	    if tag = "MODULE" or tag ="MODULE ALIAS" then
               (match idl with
 		   [] -> (id, in_module_alias (Some
 						 ({mod_entry_type = None;
 						   mod_entry_expr = Some (MSEident mp)},None)
 						 ,modobjs,None))::tail
 		 | _ ->
-		     let (_,substobjs,_) = out_module obj in
+		     let (a,substobjs,_) = if tag =  "MODULE ALIAS" then
+		       out_module_alias obj else out_module obj in
                      let substobjs' = replace_module_object idl substobjs modobjs mp in
-                       (id, in_module (None,substobjs',None))::tail
+  		       if tag =  "MODULE ALIAS" then
+			 (id, in_module_alias (a,substobjs',None))::tail
+		       else
+			 (id, in_module (None,substobjs',None))::tail
               )
 	    else error "MODULE expected!"
 	| idl,lobj::tail -> lobj::replace_idl (idl,tail)
@@ -645,8 +658,8 @@ let rec get_modtype_substobjs env = function
 		 (* application outside the kernel, only for substitutive
                     objects (that are all non-logical objects) *)
 		((join 
-		    (join subst (map_mbid mbid mp (Some resolve)))
-		       sub3)
+		    (join subst sub3)
+		    (map_mbid mbid mp (Some resolve)))
 		       , mbids, msid, objs)
 	   | [] -> match mexpr with
 	       | MSEident _  -> error "Application of a non-functor"
@@ -662,8 +675,7 @@ let process_module_bindings argids args =
     let dir = make_dirpath [id] in
     let mp = MPbound mbid in
     let substobjs = get_modtype_substobjs (Global.env()) mty in
-    let substituted = subst_substobjs dir mp substobjs in
-      do_module false "start" load_objects 1 dir mp substobjs substituted
+    ignore (do_load_and_subst_module 1 dir mp substobjs [])
   in
     List.iter2 process_arg argids args
 
@@ -677,8 +689,7 @@ let intern_args interp_modtype (idl,arg) =
     (fun dir mbid -> 
       Global.add_module_parameter mbid mty;
       let mp = MPbound mbid in
-      let substituted = subst_substobjs dir mp substobjs in
-      do_module false "interp" load_objects 1 dir mp substobjs substituted;
+      ignore (do_load_and_subst_module 1 dir mp substobjs []);
       (mbid,mty))
     dirs mbids
 
@@ -792,25 +803,19 @@ type library_objects =
 
 let register_library dir cenv objs digest =
   let mp = MPfile dir in
-  let substobjs, objects =
-    try 
-      ignore(Global.lookup_module mp);
-      (* if it's in the environment, the cached objects should be correct *)
-      Dirmap.find dir !library_cache 
-    with
-	Not_found ->
-	  if mp <> Global.import cenv digest then
-	    anomaly "Unexpected disk module name";
-	  let msid,substitute,keep = objs in
-	  let substobjs = empty_subst, [], msid, substitute in
-	  let substituted = subst_substobjs dir mp substobjs in
-	  let objects = Option.map (fun seg -> seg@keep) substituted in
-	  let modobjs = substobjs, objects in
-	    library_cache := Dirmap.add dir modobjs !library_cache;
-	    modobjs
-  in
+  try 
+    ignore(Global.lookup_module mp);
+    (* if it's in the environment, the cached objects should be correct *)
+    let substobjs, objects = Dirmap.find dir !library_cache in
     do_module false "register_library" load_objects 1 dir mp substobjs objects
-
+  with Not_found ->
+    if mp <> Global.import cenv digest then
+      anomaly "Unexpected disk module name";
+    let msid,substitute,keep = objs in
+    let substobjs = empty_subst, [], msid, substitute in
+    let objects = do_load_and_subst_module 1 dir mp substobjs keep in
+    let modobjs = substobjs, objects in
+    library_cache := Dirmap.add dir modobjs !library_cache
 
 let start_library dir = 
   let mp = Global.start_library dir in
@@ -960,8 +965,8 @@ let rec get_module_substobjs env = function
 		 (* application outside the kernel, only for substitutive
                     objects (that are all non-logical objects) *)
 		((join 
-		    (join subst (map_mbid mbid mp (Some resolve)))
-		       sub3)
+		    (join subst sub3)
+		       (map_mbid mbid mp (Some resolve)))
 		       , mbids, msid, objs)
 	   | [] -> match mexpr with
 	       | MSEident _  -> error "Application of a non-functor"

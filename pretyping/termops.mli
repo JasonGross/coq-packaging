@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: termops.mli 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: termops.mli 11639 2008-11-27 17:48:32Z barras $ i*)
 
 open Util
 open Pp
@@ -93,6 +93,7 @@ val strip_head_cast : constr -> constr
 exception Occur
 val occur_meta : types -> bool
 val occur_existential : types -> bool
+val occur_meta_or_existential : types -> bool
 val occur_const : constant -> types -> bool
 val occur_evar : existential_key -> types -> bool
 val occur_in_global : env -> identifier -> constr -> unit
@@ -147,8 +148,15 @@ val subst_term_occ : occurrences -> constr -> constr -> constr
 
 (* [subst_term_occ_decl occl c decl] replaces occurrences of [c] at
    positions [occl] by [Rel 1] in [decl] *)
+
+type hyp_location_flag = (* To distinguish body and type of local defs *)
+  | InHyp
+  | InHypTypeOnly
+  | InHypValueOnly
+
 val subst_term_occ_decl :
-  occurrences -> constr -> named_declaration -> named_declaration
+  occurrences * hyp_location_flag -> constr -> named_declaration -> 
+      named_declaration
 
 val error_invalid_occurrence : int list -> 'a
 
@@ -243,6 +251,10 @@ val make_all_name_different : env -> env
 
 val global_vars : env -> constr -> identifier list
 val global_vars_set_of_decl : env -> named_declaration -> Idset.t
+
+(* Gives an ordered list of hypotheses, closed by dependencies,
+   containing a given set *)
+val dependency_closure : env -> named_context -> Idset.t -> identifier list
 
 (* Test if an identifier is the basename of a global reference *)
 val is_section_variable : identifier -> bool

@@ -8,7 +8,7 @@
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
 
-(*i $Id: NMake_gen.ml 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: NMake_gen.ml 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 (*S NMake_gen.ml : this file generates NMake.v *)
 
@@ -139,7 +139,6 @@ let _ =
   pr "";
   pr " Definition %s := %s_." t t;
   pr "";
-  pr " Typeclasses unfold %s." t;
   pr " Definition w_0 := w0_op.(znz_0).";
   pr "";
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: record.mli 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: record.mli 11809 2009-01-20 11:39:55Z aspiwack $ i*)
 
 (*i*)
 open Names
@@ -15,6 +15,7 @@ open Sign
 open Vernacexpr
 open Topconstr
 open Impargs
+open Libnames
 (*i*)
 
 (* [declare_projections ref name coers params fields] declare projections of
@@ -24,17 +25,17 @@ open Impargs
 val declare_projections :
   inductive -> ?kind:Decl_kinds.definition_object_kind -> ?name:identifier ->
   bool list -> manual_explicitation list list -> rel_context -> 
-  bool list * constant option list
+  (name * bool) list * constant option list
 
-val declare_structure : identifier -> identifier -> 
-  manual_explicitation list -> rel_context -> (* params *)
-  Term.constr -> (* arity *)
+val declare_structure : Decl_kinds.recursivity_kind -> 
+  identifier -> identifier -> 
+  manual_explicitation list -> rel_context -> (* params *) constr -> (* arity *)
   Impargs.manual_explicitation list list -> Sign.rel_context -> (* fields *)
   ?kind:Decl_kinds.definition_object_kind -> ?name:identifier ->
   bool -> (* coercion? *)
   bool list -> (* field coercions *)
-  mutual_inductive
+  inductive
 
 val definition_structure :
-  lident with_coercion * local_binder list *
-  (local_decl_expr with_coercion) list * identifier * sorts -> kernel_name
+  inductive_kind*Decl_kinds.recursivity_kind *lident with_coercion * local_binder list *
+  (local_decl_expr with_coercion with_notation) list * identifier * sorts option -> global_reference

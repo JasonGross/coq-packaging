@@ -99,7 +99,7 @@ let interp_binder sigma env na t =
     SPretyping.pretype_gen sigma env ([], []) IsType (locate_if_isevar (loc_of_rawconstr t) na t)
 
 let interp_context_evars evdref env params = 
-  let bl = Constrintern.intern_context (Evd.evars_of !evdref) env params in
+  let bl = Constrintern.intern_context false (Evd.evars_of !evdref) env params in
   let (env, par, _, impls) =
     List.fold_left
       (fun (env,params,n,impls) (na, k, b, t) ->
@@ -284,7 +284,7 @@ let build_wellfounded (recname, n, bl,arityc,body) r measure notation boxed =
 	  mkApp (constr_of_global (Lazy.force fix_sub_ref), 
 		 [| argtyp ;
 		    wf_rel ;
-		    make_existential dummy_loc ~opaque:false env isevars wf_proof ;
+		    make_existential dummy_loc ~opaque:(Define false) env isevars wf_proof ;
 		    lift lift_cst prop ;
 		    lift lift_cst intern_body_lam |])
       | Some f ->
@@ -385,7 +385,7 @@ let interp_recursive fixkind l boxed =
   let env_rec = push_named_context rec_sign env in
 
   (* Get interpretation metadatas *)
-  let impls = Command.compute_interning_datas env [] fixnames fixtypes fiximps in
+  let impls = Command.compute_interning_datas env Constrintern.Recursive [] fixnames fixtypes fiximps in
   let notations = List.fold_right Option.List.cons ntnl [] in
 
   (* Interp bodies with rollback because temp use of notations/implicit *)

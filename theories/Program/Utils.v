@@ -6,7 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Utils.v 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: Utils.v 11709 2008-12-20 11:42:15Z msozeau $ i*)
+
+(** Various syntaxic shortands that are useful with [Program]. *)
 
 Require Export Coq.Program.Tactics.
 

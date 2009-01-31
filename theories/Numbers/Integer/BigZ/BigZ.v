@@ -8,7 +8,7 @@
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
 
-(*i $Id: BigZ.v 11282 2008-07-28 11:51:53Z msozeau $ i*)
+(*i $Id: BigZ.v 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 Require Export BigN.
 Require Import ZMulOrder.
@@ -103,8 +103,6 @@ exact Zmul_add_distr_r.
 exact sub_opp.
 exact add_opp.
 Qed.
-
-Typeclasses unfold NZadd NZmul NZsub NZeq.
 
 Add Ring BigZr : BigZring.
 

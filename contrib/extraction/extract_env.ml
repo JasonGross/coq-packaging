@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extract_env.ml 10794 2008-04-15 00:12:06Z letouzey $ i*)
+(*i $Id: extract_env.ml 11846 2009-01-22 18:55:10Z letouzey $ i*)
 
 open Term
 open Declarations
@@ -83,8 +83,8 @@ module type VISIT = sig
 end
   
 module Visit : VISIT = struct 
-  (* Thanks to C.S.C, what used to be in a single KNset should now be split 
-     into a KNset (for inductives and modules names) and a Cset for constants 
+  (* What used to be in a single KNset should now be split into a KNset
+     (for inductives and modules names) and a Cset for constants
      (and still the remaining MPset) *)
   type must_visit = 
       { mutable kn : KNset.t; mutable con : Cset.t; mutable mp : MPset.t }
@@ -140,6 +140,30 @@ let factor_fix env l cb msb =
     labels, recd, msb''
   end
 
+let build_mb expr typ_opt =
+  { mod_expr = Some expr;
+    mod_type = typ_opt;
+    mod_constraints = Univ.Constraint.empty;
+    mod_alias = Mod_subst.empty_subst;
+    mod_retroknowledge = [] }
+
+let my_type_of_mb env mb =
+  match mb.mod_type with
+    | Some mtb -> mtb
+    | None -> Modops.eval_struct env (Option.get mb.mod_expr)
+
+(** Ad-hoc update of environment, inspired by [Mod_type.check_with_aux_def].
+    To check with Elie. *)
+
+let env_for_mtb_with env mtb idl =
+  let msid,sig_b = match Modops.eval_struct env mtb with
+    | SEBstruct(msid,sig_b) -> msid,sig_b
+    | _ -> assert false
+  in
+  let l = label_of_id (List.hd idl) in
+  let before = fst (list_split_at (fun (l',_) -> l=l') sig_b) in
+  Modops.add_signature (MPself msid) before env
+
 (* From a [structure_body] (i.e. a list of [structure_field_body])
    to specifications. *)
 
@@ -151,7 +175,7 @@ let rec extract_sfb_spec env mp = function
       let specs = extract_sfb_spec env mp msig in
       if logical_spec s then specs 
       else begin Visit.add_spec_deps s; (l,Spec s) :: specs end
-  | (l,SFBmind cb) :: msig -> 
+  | (l,SFBmind _) :: msig -> 
       let kn = make_kn mp empty_dirpath l in 
       let s = Sind (kn, extract_inductive env kn) in 
       let specs = extract_sfb_spec env mp msig in
@@ -159,45 +183,52 @@ let rec extract_sfb_spec env mp = function
       else begin Visit.add_spec_deps s; (l,Spec s) :: specs end
   | (l,SFBmodule mb) :: msig -> 
       let specs = extract_sfb_spec env mp msig in 
-      let mtb = Modops.type_of_mb env mb in 
-      let spec = extract_seb_spec env (mb.mod_type<>None) mtb in 
+      let spec = extract_seb_spec env (my_type_of_mb env mb) in
       (l,Smodule spec) :: specs
   | (l,SFBmodtype mtb) :: msig -> 
       let specs = extract_sfb_spec env mp msig in
-      (l,Smodtype (extract_seb_spec env true(*?*) mtb.typ_expr)) :: specs
-  | (l,SFBalias(mp1,_))::msig -> 
-      extract_sfb_spec env mp 
-	((l,SFBmodule {mod_expr = Some (SEBident mp1);
-		      mod_type = None;
-		      mod_constraints = Univ.Constraint.empty;
-		      mod_alias = Mod_subst.empty_subst;
-		      mod_retroknowledge = []})::msig)
+      (l,Smodtype (extract_seb_spec env mtb.typ_expr)) :: specs
+  | (l,SFBalias(mp1,typ_opt,_))::msig -> 
+      let mb = build_mb (SEBident mp1) typ_opt in
+      extract_sfb_spec env mp ((l,SFBmodule mb) :: msig)
 
 (* From [struct_expr_body] to specifications *)
 
+(* Invariant: the [seb] given to [extract_seb_spec] should either come:
+   - from a [mod_type] or [type_expr] field
+   - from the output of [Modops.eval_struct].
+   This way, any encountered [SEBident] should be a true module type.
+   For instance, [my_type_of_mb] ensures this invariant.
+*)
 
-and extract_seb_spec env truetype = function
-  | SEBident kn when truetype -> Visit.add_mp kn; MTident kn 
+and extract_seb_spec env = function
+  | SEBident mp -> Visit.add_mp mp; MTident mp
   | SEBwith(mtb',With_definition_body(idl,cb))->
-      let mtb''= extract_seb_spec env truetype mtb' in
-      (match extract_with_type env cb with (* cb peut contenir des kn  *)
+      let env' = env_for_mtb_with env mtb' idl in
+      let mtb''= extract_seb_spec env mtb' in
+      (match extract_with_type env' cb with (* cb peut contenir des kn  *)
 	 | None ->  mtb''
 	 | Some (vl,typ) -> MTwith(mtb'',ML_With_type(idl,vl,typ)))
-  | SEBwith(mtb',With_module_body(idl,mp,_))-> 
+  | SEBwith(mtb',With_module_body(idl,mp,_,_))-> 
       Visit.add_mp mp;
-      MTwith(extract_seb_spec env truetype mtb',
+      MTwith(extract_seb_spec env mtb',
 	     ML_With_module(idl,mp))
+(* TODO: On pourrait peut-etre oter certaines eta-expansion, du genre:
+   | SEBfunctor(mbid,_,SEBapply(m,SEBident (MPbound mbid2),_)) 
+     when mbid = mbid2 -> extract_seb_spec env m 
+   (* faudrait alors ajouter un test de non-apparition de mbid dans mb *)
+*)
   | SEBfunctor (mbid, mtb, mtb') -> 
       let mp = MPbound mbid in 
       let env' = Modops.add_module mp (Modops.module_body_of_type mtb) env in
-	MTfunsig (mbid, extract_seb_spec env true mtb.typ_expr, 
-		  extract_seb_spec env' truetype mtb')
+      MTfunsig (mbid, extract_seb_spec env mtb.typ_expr,
+		extract_seb_spec env' mtb')
   | SEBstruct (msid, msig) -> 
       let mp = MPself msid in 
       let env' = Modops.add_signature mp msig env in 
 	MTsig (msid, extract_sfb_spec env' mp msig) 
-  | (SEBapply _|SEBident _ (*when not truetype*)) as mtb -> 
-      extract_seb_spec env truetype (Modops.eval_struct env mtb)
+  | SEBapply _ as mtb ->
+      extract_seb_spec env (Modops.eval_struct env mtb)
 
 
 (* From a [structure_body] (i.e. a list of [structure_field_body])
@@ -248,19 +279,11 @@ let rec extract_sfb env mp all = function
       let ms = extract_sfb env mp all msb in
       let mp = MPdot (mp,l) in
        if all || Visit.needed_mp mp then 
-	(l,SEmodtype (extract_seb_spec env true(*?*) mtb.typ_expr)) :: ms
+	(l,SEmodtype (extract_seb_spec env mtb.typ_expr)) :: ms
       else ms
-  | (l,SFBalias (mp1,cst)) :: msb -> 
-      let ms = extract_sfb env mp all msb in
-      let mp = MPdot (mp,l) in 
-      if all || Visit.needed_mp mp then 
-	(l,SEmodule (extract_module env mp true 
-		       {mod_expr = Some (SEBident mp1);
-			mod_type = None;
-		        mod_constraints= Univ.Constraint.empty;
-			mod_alias = empty_subst;
-			mod_retroknowledge = []})) :: ms
-      else ms
+  | (l,SFBalias (mp1,typ_opt,_)) :: msb ->
+      let mb = build_mb (SEBident mp1) typ_opt in
+      extract_sfb env mp all ((l,SFBmodule mb) :: msb)
 
 (* From [struct_expr_body] to implementations *)
 
@@ -274,7 +297,7 @@ and extract_seb env mpo all = function
   | SEBfunctor (mbid, mtb, meb) -> 
       let mp = MPbound mbid in 
       let env' = Modops.add_module mp (Modops.module_body_of_type mtb) env in 
-      MEfunctor (mbid, extract_seb_spec env true mtb.typ_expr, 
+      MEfunctor (mbid, extract_seb_spec env mtb.typ_expr,
 		 extract_seb env' None true meb)
   | SEBstruct (msid, msb) -> 
       let mp,msb = match mpo with 
@@ -288,17 +311,8 @@ and extract_seb env mpo all = function
 and extract_module env mp all mb = 
   (* [mb.mod_expr <> None ], since we look at modules from outside. *)
   (* Example of module with empty [mod_expr] is X inside a Module F [X:SIG]. *)
-  let meb = Option.get mb.mod_expr in
-  let mtb = match mb.mod_type with 
-    | None -> Modops.eval_struct env meb 
-    | Some mt -> mt 
-  in
-  (* Because of the "with" construct, the module type can be [MTBsig] with *)
-  (* a msid different from the one of the module. Here is the patch. *)
-  (* PL 26/02/2008: is this still relevant ?
-  let mtb = replicate_msid meb mtb in *)
-  { ml_mod_expr = extract_seb env (Some mp) all meb;
-    ml_mod_type = extract_seb_spec env (mb.mod_type<>None) mtb }
+  { ml_mod_expr = extract_seb env (Some mp) all (Option.get mb.mod_expr);
+    ml_mod_type = extract_seb_spec env (my_type_of_mb env mb) }
 
 
 let unpack = function MEstruct (_,sel) -> sel | _ -> assert false 
@@ -345,28 +359,38 @@ let mono_filename f =
 
 (* Builds a suitable filename from a module id *)
 
-let module_filename m = 
-  let d = descr () in 
-  let f = if d.capital_file then String.capitalize else String.uncapitalize in 
-  let fn = f (string_of_id m) in
-  Some (fn^d.file_suffix), Option.map ((^) fn) d.sig_suffix, m
+let module_filename fc =
+  let d = descr () in
+  let fn = if d.capital_file then fc else String.uncapitalize fc
+  in
+  Some (fn^d.file_suffix), Option.map ((^) fn) d.sig_suffix, id_of_string fc
 
 (*s Extraction of one decl to stdout. *)
 
 let print_one_decl struc mp decl =
-  let d = descr () in 
-  reset_renaming_tables AllButExternal; 
-  ignore (create_renamings struc);
-  push_visible mp; 
-  msgnl (d.pp_decl decl); 
+  let d = descr () in
+  reset_renaming_tables AllButExternal;
+  set_phase Pre;
+  ignore (d.pp_struct struc);
+  set_phase Impl;
+  push_visible mp None;
+  msgnl (d.pp_decl decl);
   pop_visible ()
 
 (*s Extraction of a ml struct to a file. *)
 
-let print_structure_to_file (fn,si,mo) struc =
-  let d = descr () in 
-  reset_renaming_tables AllButExternal; 
-  let used_modules = create_renamings struc in 
+let formatter dry file =
+  if dry then Format.make_formatter (fun _ _ _ -> ()) (fun _ -> ())
+  else match file with
+    | None -> !Pp_control.std_ft
+    | Some cout ->
+	let ft = Pp_control.with_output_to cout in
+	Option.iter (Format.pp_set_margin ft) (Pp_control.get_margin ());
+	ft
+
+let print_structure_to_file (fn,si,mo) dry struc =
+  let d = descr () in
+  reset_renaming_tables AllButExternal;
   let unsafe_needs = {
     mldummy = struct_ast_search ((=) MLdummy) struc; 
     tdummy = struct_type_search Mlutil.isDummy struc; 
@@ -375,40 +399,39 @@ let print_structure_to_file (fn,si,mo) struc =
       if lang () <> Haskell then false 
       else struct_ast_search (function MLmagic _ -> true | _ -> false) struc }
   in
-  (* print the implementation *)
-  let cout = Option.map open_out fn in 
-  let ft = match cout with 
-    | None -> !Pp_control.std_ft
-    | Some cout -> Pp_control.with_output_to cout in 
-  begin try 
-    msg_with ft (d.preamble mo used_modules unsafe_needs);
-    if lang () = Ocaml then begin 
-      (* for computing objects to duplicate *)
-      let devnull = Format.make_formatter (fun _ _ _ -> ()) (fun _ -> ()) in
-      msg_with devnull (d.pp_struct struc);
-      reset_renaming_tables OnlyLocal; 
-    end; 
+  (* First, a dry run, for computing objects to rename or duplicate *)
+  set_phase Pre;
+  let devnull = formatter true None in
+  msg_with devnull (d.pp_struct struc);
+  let opened = opened_libraries () in
+  (* Print the implementation *)
+  let cout = if dry then None else Option.map open_out fn in
+  let ft = formatter dry cout in
+  begin try
+    (* The real printing of the implementation *)
+    set_phase Impl;
+    msg_with ft (d.preamble mo opened unsafe_needs);
     msg_with ft (d.pp_struct struc);
     Option.iter close_out cout; 
   with e -> 
     Option.iter close_out cout; raise e
   end;
-  Option.iter info_file fn;
-  (* print the signature *)
-  Option.iter 
-    (fun si -> 
+  if not dry then Option.iter info_file fn;
+  (* Now, let's print the signature *)
+  Option.iter
+    (fun si ->
        let cout = open_out si in
-       let ft = Pp_control.with_output_to cout in
-       begin try 
-	 msg_with ft (d.sig_preamble mo used_modules unsafe_needs);
-	 reset_renaming_tables OnlyLocal;
+       let ft = formatter false (Some cout) in
+       begin try
+	 set_phase Intf;
+	 msg_with ft (d.sig_preamble mo opened unsafe_needs);
 	 msg_with ft (d.pp_sig (signature_of_structure struc));
 	 close_out cout;
        with e -> 
 	 close_out cout; raise e 
        end; 
        info_file si)
-    si
+    (if dry then None else si)
 
 
 (*********************************************)
@@ -426,51 +449,56 @@ let init modular =
   reset ();
   if modular && lang () = Scheme then error_scheme ()
 
+(* From a list of [reference], let's retrieve whether they correspond
+   to modules or [global_reference]. Warn the user if both is possible. *)
+
+let rec locate_ref = function
+  | [] -> [],[]
+  | r::l ->
+      let q = snd (qualid_of_reference r) in
+      let mpo = try Some (Nametab.locate_module q) with Not_found -> None
+      and ro = try Some (Nametab.locate q) with Not_found -> None in
+      match mpo, ro with
+	| None, None -> Nametab.error_global_not_found q
+	| None, Some r -> let refs,mps = locate_ref l in r::refs,mps
+	| Some mp, None -> let refs,mps = locate_ref l in refs,mp::mps
+	| Some mp, Some r ->
+	    warning_both_mod_and_cst q mp r;
+	    let refs,mps = locate_ref l in refs,mp::mps
 
 (*s Recursive extraction in the Coq toplevel. The vernacular command is
     \verb!Recursive Extraction! [qualid1] ... [qualidn]. Also used when 
     extracting to a file with the command: 
     \verb!Extraction "file"! [qualid1] ... [qualidn]. *)
 
-let full_extraction f qualids = 
-  init false; 
-  let rec find = function 
-    | [] -> [],[]
-    | q::l -> 
-	let refs,mps = find l in 
-	try 
-	  let mp = Nametab.locate_module (snd (qualid_of_reference q)) in 
-	  if is_modfile mp then error_MPfile_as_mod mp true; 
-	  refs,(mp::mps)
-	with Not_found -> (Nametab.global q)::refs, mps 
-  in  
-  let refs,mps = find qualids in
-  let struc = optimize_struct refs (mono_environment refs mps) in 
-  warning_axioms (); 
-  print_structure_to_file (mono_filename f) struc; 
+let full_extr f (refs,mps) =
+  init false;
+  List.iter (fun mp -> if is_modfile mp then error_MPfile_as_mod mp true) mps;
+  let struc = optimize_struct refs (mono_environment refs mps) in
+  warning_axioms ();
+  print_structure_to_file (mono_filename f) false struc;
   reset ()
+
+let full_extraction f lr = full_extr f (locate_ref lr)
 
 
 (*s Simple extraction in the Coq toplevel. The vernacular command 
     is \verb!Extraction! [qualid]. *)
 
-let simple_extraction qid = 
-  init false; 
-  try 
-    let mp = Nametab.locate_module (snd (qualid_of_reference qid)) in 
-    if is_modfile mp then error_MPfile_as_mod mp true; 
-    full_extraction None [qid]
-  with Not_found -> 
-    let r = Nametab.global qid in 
-    if is_custom r then
-      msgnl (str "User defined extraction:" ++ spc () ++ 
-	       str (find_custom r) ++ fnl ()) 
-    else
-      let struc = optimize_struct [r] (mono_environment [r] []) in
-      let d = get_decl_in_structure r struc in 
-      warning_axioms (); 
-      print_one_decl struc (modpath_of_r r) d;
-      reset ()
+let simple_extraction r = match locate_ref [r] with
+  | ([], [mp]) as p -> full_extr None p
+  | [r],[] ->
+      init false;
+      if is_custom r then
+	msgnl (str "User defined extraction:" ++ spc () ++
+		 str (find_custom r) ++ fnl ())
+      else
+	let struc = optimize_struct [r] (mono_environment [r] []) in
+	let d = get_decl_in_structure r struc in
+	warning_axioms ();
+	print_one_decl struc (modpath_of_r r) d;
+	reset ()
+  | _ -> assert false
 
 
 (*s (Recursive) Extraction of a library. The vernacular command is 
@@ -489,19 +517,16 @@ let extraction_library is_rec m =
     if Visit.needed_mp mp 
     then (mp, unpack (extract_seb env (Some mp) true meb)) :: l 
     else l
-  in 
-  let struc = List.fold_left select [] l in 
-  let struc = optimize_struct [] struc in 
-  warning_axioms (); 
-  record_contents_fstlev struc; 
-  let rec print = function 
-    | [] -> () 
-    | (MPfile dir, _) :: l when not is_rec && dir <> dir_m -> print l 
-    | (MPfile dir, sel) as e :: l -> 
-	let short_m = snd (split_dirpath dir) in
-	print_structure_to_file (module_filename short_m) [e]; 
-	print l 
+  in
+  let struc = List.fold_left select [] l in
+  let struc = optimize_struct [] struc in
+  warning_axioms ();
+  let print = function
+    | (MPfile dir as mp, sel) as e ->
+	let dry = not is_rec && dir <> dir_m in
+	let s = string_of_modfile mp in
+	print_structure_to_file (module_filename s) dry [e]
     | _ -> assert false
-  in 
-  print struc; 
+  in
+  List.iter print struc;
   reset ()

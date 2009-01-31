@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inv.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: inv.ml 11784 2009-01-14 11:36:32Z herbelin $ *)
 
 open Pp
 open Util
@@ -109,8 +109,8 @@ let make_inv_predicate env sigma indf realargs id status concl =
             match dflt_concl with
               | Some concl -> concl (*assumed it's some [x1..xn,H:I(x1..xn)]C*)
               | None ->
-		let sort = get_sort_of env sigma concl in
-		let p = make_arity env true indf sort in
+		let sort = get_sort_family_of env sigma concl in
+		let p = make_arity env true indf (new_sort_in_family sort) in
 		Unification.abstract_list_all env (Evd.create_evar_defs sigma)
 		  p concl (realargs@[mkVar id]) in
 	  let hyps,bodypred = decompose_lam_n_assum (nrealargs+1) pred in
@@ -469,7 +469,7 @@ let raw_inversion inv_kind id status names gl =
       case_nodep_then_using 
   in
   (tclTHENS
-     (true_cut Anonymous cut_concl)
+     (assert_tac Anonymous cut_concl)
      [case_tac names 
        (introCaseAssumsThen (rewrite_equations_tac inv_kind id neqns))
        (Some elim_predicate) ([],[]) ind indclause;
@@ -482,32 +482,14 @@ let raw_inversion inv_kind id status names gl =
   gl
 
 (* Error messages of the inversion tactics *)
-let not_found_message ids =
-  if List.length ids = 1 then
-    (str "the variable" ++ spc () ++ str (string_of_id (List.hd ids)) ++ spc () ++
-      str" was not found in the current environment")
-  else 
-    (str "the variables [" ++ 
-      spc () ++ prlist (fun id -> (str (string_of_id id) ++ spc ())) ids ++
-      str" ] were not found in the current environment")
-
-let dep_prop_prop_message id =
-  errorlabstrm "Inv"
-    (str "Inversion on " ++ pr_id id ++
-       str " would need dependent elimination from Prop to Prop.")
- 
-let not_inductive_here id =
-  errorlabstrm "mind_specif_of_mind"
-    (str "Cannot recognize an inductive predicate in " ++ pr_id id ++
-       str ". If there is one, may be the structure of the arity or of the type of constructors is hidden by constant definitions.")
-
-(* Noms d'errreurs obsolètes ?? *)
 let wrap_inv_error id = function
-  | UserError ("Case analysis",s) -> errorlabstrm "Inv needs Nodep Prop Set" s
-  | UserError("mind_specif_of_mind",_)  -> not_inductive_here id
-  | UserError (a,b)  -> errorlabstrm "Inv" b
-  | Invalid_argument "List.fold_left2" -> dep_prop_prop_message id
-  | Not_found  ->  errorlabstrm "Inv" (not_found_message [id]) 
+  | Indrec.RecursionSchemeError
+      (Indrec.NotAllowedCaseAnalysis (_,(Type _ | Prop Pos as k),i)) ->
+      errorlabstrm ""
+	(strbrk "Inversion would require case analysis on sort " ++
+	pr_sort k ++ 
+	strbrk " which is not allowed for inductive definition " ++
+	pr_inductive (Global.env()) i ++ str ".")
   | e -> raise e
 
 (* The most general inversion tactic *)

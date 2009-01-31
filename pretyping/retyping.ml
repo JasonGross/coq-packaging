@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: retyping.ml 11077 2008-06-09 11:26:32Z herbelin $ *)
+(* $Id: retyping.ml 11778 2009-01-13 13:17:39Z msozeau $ *)
 
 open Util
 open Term
@@ -49,7 +49,7 @@ let retype sigma metamap =
     match kind_of_term cstr with
     | Meta n ->
           (try strip_outer_cast (List.assoc n metamap)
-           with Not_found -> anomaly "type_of: this is not a well-typed term")
+           with Not_found -> anomaly ("type_of: unknown meta " ^ string_of_int n))
     | Rel n ->
         let (_,_,ty) = lookup_rel n env in
         lift n ty
@@ -111,9 +111,15 @@ let retype sigma metamap =
     | Cast (c,_, s) when isSort s -> family_of_sort (destSort s)
     | Sort (Prop c) -> InType
     | Sort (Type u) -> InType
-    | Prod (name,t,c2) -> sort_family_of (push_rel (name,None,t) env) c2
+    | Prod (name,t,c2) -> 
+	let s2 = sort_family_of (push_rel (name,None,t) env) c2 in
+	if Environ.engagement env <> Some ImpredicativeSet &&
+	   s2 = InSet & sort_family_of env t = InType then InType else s2
+    | App(f,args) when isGlobalRef f ->
+	let t = type_of_global_reference_knowing_parameters env f args in
+        family_of_sort (sort_of_atomic_type env sigma t args)
     | App(f,args) -> 
-       family_of_sort (sort_of_atomic_type env sigma (type_of env f) args)
+	family_of_sort (sort_of_atomic_type env sigma (type_of env f) args)
     | Lambda _ | Fix _ | Construct _ ->
         anomaly "sort_of: Not a type (1)"
     | _ -> family_of_sort (decomp_sort env sigma (type_of env t))
@@ -138,6 +144,20 @@ let get_sort_of env sigma t = let _,f,_,_ = retype sigma [] in f env t
 let get_sort_family_of env sigma c = let _,_,f,_ = retype sigma [] in f env c
 let type_of_global_reference_knowing_parameters env sigma c args =
   let _,_,_,f = retype sigma [] in f env c args
+
+let type_of_global_reference_knowing_conclusion env sigma c conclty =
+  let conclty = nf_evar sigma conclty in
+  match kind_of_term c with
+    | Ind ind ->
+        let (_,mip) = Inductive.lookup_mind_specif env ind in
+        type_of_inductive_knowing_conclusion env mip conclty
+    | Const cst ->
+        let t = constant_type env cst in
+        (* TODO *)
+        Typeops.type_of_constant_knowing_parameters env t [||]
+    | Var id -> type_of_var env id
+    | Construct cstr -> type_of_constructor env cstr
+    | _ -> assert false
 
 (* We are outside the kernel: we take fresh universes *)
 (* to avoid tactics and co to refresh universes themselves *)

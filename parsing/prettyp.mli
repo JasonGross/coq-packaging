@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: prettyp.mli 10697 2008-03-19 17:58:43Z msozeau $ i*)
+(*i $Id: prettyp.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 (*i*)
 open Pp
@@ -61,7 +61,7 @@ val print_canonical_projections : unit -> std_ppcmds
 (* Pretty-printing functions for type classes and instances *)
 val print_typeclasses : unit -> std_ppcmds
 val print_instances : global_reference -> std_ppcmds
-
+val print_all_instances : unit -> std_ppcmds
 
 val inspect : int -> std_ppcmds
 

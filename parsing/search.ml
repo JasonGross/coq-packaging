@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: search.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: search.ml 11739 2009-01-02 19:33:19Z herbelin $ *)
 
 open Pp
 open Util
@@ -165,15 +165,6 @@ let raw_search_rewrite extra_filter display_function pattern =
         (pattern_filter (mk_rewrite_pattern2 gref_eq pattern) s a c)) 
        && extra_filter s a c)
     display_function gref_eq
-(*
-  ;
-  filtered_search
-    (fun s a c ->
-       ((pattern_filter (mk_rewrite_pattern1 gref_eqT pattern) s a c) ||
-        (pattern_filter (mk_rewrite_pattern2 gref_eqT pattern) s a c)) 
-       && extra_filter s a c)
-    display_function gref_eqT
-*)
 
 let text_pattern_search extra_filter =
   raw_pattern_search extra_filter plain_display
@@ -204,17 +195,17 @@ let gen_filtered_search filter_function display_function =
 let name_of_reference ref = string_of_id (id_of_global ref)
 
 type glob_search_about_item =
-  | GlobSearchRef of global_reference
+  | GlobSearchSubPattern of constr_pattern
   | GlobSearchString of string
 
 let search_about_item (itemref,typ) = function
-  | GlobSearchRef ref -> Termops.occur_term (constr_of_global ref) typ
+  | GlobSearchSubPattern pat -> is_matching_appsubterm ~closed:false pat typ
   | GlobSearchString s -> string_string_contains (name_of_reference itemref) s
 
 let raw_search_about filter_modules display_function l =
   let filter ref' env typ =
     filter_modules ref' env typ &&
-    List.for_all (search_about_item (ref',typ)) l && 
+    List.for_all (fun (b,i) -> b = search_about_item (ref',typ) i) l && 
     not (string_string_contains (name_of_reference ref') "_subproof")
   in
   gen_filtered_search filter display_function

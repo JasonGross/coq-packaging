@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: lexer.ml4 11238 2008-07-19 09:34:03Z herbelin $ i*)
+(*i $Id: lexer.ml4 11786 2009-01-14 13:07:34Z herbelin $ i*)
 
 
 (*i camlp4use: "pr_o.cmo" i*) 
@@ -175,7 +175,7 @@ let add_keyword str =
 (* Adding a new token (keyword or special token). *)
 let add_token (con, str) = match con with
   | "" -> add_keyword str
-  | "METAIDENT" | "PATTERNIDENT" | "IDENT" | "FIELD" | "INT" | "STRING" | "EOI"
+  | "METAIDENT" | "LEFTQMARK" | "IDENT" | "FIELD" | "INT" | "STRING" | "EOI"
       -> ()
   | _ ->
       raise (Token.Error ("\
@@ -237,7 +237,7 @@ let rec string bp len = parser
 let xml_output_comment = ref (fun _ -> ())
 let set_xml_output_comment f = xml_output_comment := f
 
-(* Utilities for comment translation *)
+(* Utilities for comments in beautify *)
 let comment_begin = ref None
 let comm_loc bp = if !comment_begin=None then comment_begin := Some bp
 
@@ -280,7 +280,7 @@ let comment_stop ep =
   if !Flags.xml_export && Buffer.length current > 0 &&
     (!between_com || not(null_comment current_s)) then
       !xml_output_comment current_s;
-  (if Flags.do_translate() && Buffer.length current > 0 &&
+  (if Flags.do_beautify() && Buffer.length current > 0 &&
     (!between_com || not(null_comment current_s)) then
     let bp = match !comment_begin with
         Some bp -> bp
@@ -315,7 +315,7 @@ let rec comment bp = parser bp2
          | [< '')' >] -> push_string "*)";
          | [< s >] -> real_push_char '*'; comment bp s >] -> ()
   | [< ''"'; s >] ->
-      if Flags.do_translate() then (push_string"\"";comm_string bp2 s)
+      if Flags.do_beautify() then (push_string"\"";comm_string bp2 s)
       else ignore (string bp2 0 s);
       comment bp s
   | [< _ = Stream.empty >] ep -> err (bp, ep) Unterminated_comment
@@ -372,31 +372,50 @@ let process_chars bp c cs =
     | Some t -> (("", t), (bp, ep))
     | None -> err (bp, ep) Undefined_token
 
-(* Parse what follows a dot/question mark *)
+let parse_after_dollar bp =
+  parser
+  | [< ' ('a'..'z' | 'A'..'Z' | '_' as c); len = ident_tail (store 0 c) >] -> 
+      ("METAIDENT", get_buff len)
+  | [< s >] ->
+      match lookup_utf8 s with
+      | Utf8Token (UnicodeLetter, n) ->
+	  ("METAIDENT", get_buff (ident_tail (nstore n 0 s) s))
+      | AsciiChar | Utf8Token _ | EmptyStream -> fst (process_chars bp '$' s)
+
+(* Parse what follows a dot *)
 let parse_after_dot bp c =
-  let constructor = if c = '?' then "PATTERNIDENT" else "FIELD" in
   parser
   | [< ' ('a'..'z' | 'A'..'Z' | '_' as c); len = ident_tail (store 0 c) >] ->
-      (constructor, get_buff len)
+      ("FIELD", get_buff len)
   | [< s >] ->
       match lookup_utf8 s with
       | Utf8Token (UnicodeLetter, n) -> 
-	  (constructor, get_buff (ident_tail (nstore n 0 s) s))
+	  ("FIELD", get_buff (ident_tail (nstore n 0 s) s))
       | AsciiChar | Utf8Token _ | EmptyStream -> 
 	  fst (process_chars bp c s)
+
+(* Parse what follows a question mark *)
+let parse_after_qmark bp s =
+  match Stream.peek s with
+    |Some ('a'..'z' | 'A'..'Z' | '_') -> ("LEFTQMARK", "")
+    |None -> ("","?")
+    | _ ->
+	match lookup_utf8 s with
+	  | Utf8Token (UnicodeLetter, _) -> ("LEFTQMARK", "")
+	  | AsciiChar | Utf8Token _ | EmptyStream -> fst (process_chars bp '?' s)
 
 (* Parse a token in a char stream *)
 let rec next_token = parser bp
   | [< '' ' | '\t' | '\n' |'\r' as c; s >] ->
       comm_loc bp; push_char c; next_token s
-  | [< ''$'; ' ('a'..'z' | 'A'..'Z' | '_' as c); 
-      len = ident_tail (store 0 c) >] ep -> 
+  | [< ''$'; t = parse_after_dollar bp >] ep ->
+      comment_stop bp; (t, (ep, bp))
+  | [< ''.' as c; t = parse_after_dot bp c >] ep ->
       comment_stop bp;
-      (("METAIDENT", get_buff len), (bp,ep))
-  | [< ' ('.' | '?') as c; t = parse_after_dot bp c >] ep ->
-      comment_stop bp;
-      if Flags.do_translate() & t=("",".") then between_com := true;
+      if Flags.do_beautify() & t=("",".") then between_com := true;
       (t, (bp,ep))
+  | [< ''?'; s >] ep ->
+      let t = parse_after_qmark bp s in comment_stop bp; (t, (ep, bp))
   | [< ' ('a'..'z' | 'A'..'Z' | '_' as c);
        len = ident_tail (store 0 c) >] ep ->
       let id = get_buff len in 

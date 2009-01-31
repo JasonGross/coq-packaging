@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq.ml 11238 2008-07-19 09:34:03Z herbelin $ *)
+(* $Id: coq.ml 11826 2009-01-22 06:43:35Z notin $ *)
 
 open Vernac
 open Vernacexpr
@@ -58,7 +58,7 @@ let get_version_date () =
     then Coq_config.date
     else "<date not printable>" in
   try
-    let ch = open_in (Coq_config.coqtop^"/revision") in
+    let ch = open_in (Coq_config.coqsrc^"/revision") in
     let ver = input_line ch in
     let rev = input_line ch in
     (ver,rev)
@@ -79,7 +79,7 @@ let version () =
       ver date
       Coq_config.arch Sys.os_type
       (let x,y,z = GMain.Main.version in Printf.sprintf "%d.%d.%d" x y z)
-    (if Mltop.get () = Mltop.Native then "native" else "bytecode") 
+    (if Mltop.is_native then "native" else "bytecode") 
     (if Coq_config.best="opt" then "native" else "bytecode") 
 
 let is_in_coq_lib dir = 
@@ -88,7 +88,7 @@ let is_in_coq_lib dir =
   List.exists 
     (fun s -> 
       let fdir =
-        Filename.concat Coq_config.coqlib (Filename.concat "theories" s) in
+        Filename.concat (Envars.coqlib ()) (Filename.concat "theories" s) in
       prerr_endline (" Comparing to: "^fdir);
       if is_same_file fdir then (prerr_endline " YES";true)
       else (prerr_endline"NO";false))
@@ -230,7 +230,6 @@ let rec attribute_of_vernac_command = function
   (* Gallina extensions *)
   | VernacBeginSection _ -> []
   | VernacEndSegment _ -> []
-  | VernacRecord _ -> []
   | VernacRequire _ -> []
   | VernacImport _ -> []
   | VernacCanonical _ -> []
@@ -238,7 +237,6 @@ let rec attribute_of_vernac_command = function
   | VernacIdentityCoercion _ -> []
 
   (* Type classes *)
-  | VernacClass _ -> []
   | VernacInstance _ -> []
   | VernacContext _ -> []
   | VernacDeclareInstance _ -> []
@@ -273,6 +271,7 @@ let rec attribute_of_vernac_command = function
 
   (* Commands *)
   | VernacDeclareTacticDefinition _ -> []
+  | VernacCreateHintDb _ -> []
   | VernacHints _ -> []
   | VernacSyntacticDefinition _ -> []
   | VernacDeclareImplicits _ -> []
@@ -386,7 +385,7 @@ let compute_reset_info = function
 
   | VernacDefinition (_, (_,id), DefineBody _, _)
   | VernacAssumption (_,_ ,(_,((_,id)::_,_))::_)
-  | VernacInductive (_, (((_,id),_,_,_),_) :: _) ->
+  | VernacInductive (_, (((_,(_,id)),_,_,_,_),_) :: _) ->
       ResetAtRegisteredObject (reset_mark id), undo_info(), ref true
 
   | com when is_vernac_proof_ending_command com -> NoReset, undo_info(), ref true

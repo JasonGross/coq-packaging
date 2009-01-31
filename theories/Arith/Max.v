@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Max.v 9883 2007-06-07 18:44:59Z letouzey $ i*)
+(*i $Id: Max.v 11735 2009-01-02 17:22:31Z herbelin $ i*)
 
 Require Import Le.
 
@@ -74,13 +74,13 @@ Lemma max_dec : forall n m, {max n m = n} + {max n m = m}.
 Proof.
   induction n; induction m; simpl in |- *; auto with arith.
   elim (IHn m); intro H; elim H; auto.
-Qed.
+Defined.
 
 Lemma max_case : forall n m (P:nat -> Type), P n -> P m -> P (max n m).
 Proof.
   induction n; simpl in |- *; auto with arith.
   induction m; intros; simpl in |- *; auto with arith.
   pattern (max n m) in |- *; apply IHn; auto with arith.
-Qed.
+Defined.
 
 Notation max_case2 := max_case (only parsing).

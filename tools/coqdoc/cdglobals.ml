@@ -10,7 +10,7 @@
 
 (*s Output options *)
 
-type target_language = LaTeX | HTML | TeXmacs
+type target_language = LaTeX | HTML | TeXmacs | Raw
 
 let target_language = ref HTML
 
@@ -57,6 +57,7 @@ let externals = ref true
 let coqlib = ref "http://coq.inria.fr/library/"
 let coqlib_path = ref Coq_config.coqlib
 let raw_comments = ref false
+let interpolate = ref false
 
 let charset = ref "iso-8859-1"
 let inputenc = ref ""

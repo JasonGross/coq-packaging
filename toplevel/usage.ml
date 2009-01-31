@@ -6,12 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: usage.ml 11209 2008-07-05 10:17:49Z herbelin $ *)
+(* $Id: usage.ml 11858 2009-01-26 13:27:23Z notin $ *)
 
 let version () =
   Printf.printf "The Coq Proof Assistant, version %s (%s)\n"
     Coq_config.version Coq_config.date;
-  Printf.printf "compiled on %s\n" Coq_config.compile_date;
+  Printf.printf "compiled on %s with OCaml %s\n" Coq_config.compile_date Coq_config.caml_version;
   exit 0
 
 (* print the usage of coqtop (or coqc) on channel co *)
@@ -57,6 +57,7 @@ let print_usage_channel co command =
   -batch                 batch mode (exits just after arguments parsing)
   -boot                  boot mode (implies -q and -batch)
   -emacs                 tells Coq it is executed under Emacs
+  -noglob f              do not dump globalizations
   -dump-glob f           dump globalizations in file f (to be used by coqdoc)
   -with-geoproof (yes|no) to (de)activate special functions for Geoproof within Coqide (default is yes)
   -impredicative-set     set sort Set impredicative
@@ -80,6 +81,18 @@ let print_usage_coqc () =
   print_usage "Usage: coqc <options> <Coq options> file...\n
 options are:
   -verbose  compile verbosely
-  -bindir   override the default directory where coqc looks for coqtop
   -image f  specify an alternative executable for Coq
   -t        keep temporary files\n\n"
+
+(* Print the configuration information *)
+
+let print_config () = 
+  if Coq_config.local then Printf.printf "LOCAL=1\n" else Printf.printf "LOCAL=0\n";
+  Printf.printf "COQLIB=%s/\n" Coq_config.coqlib;
+  Printf.printf "COQSRC=%s/\n" Coq_config.coqsrc;
+  Printf.printf "CAMLBIN=%s/\n" Coq_config.camlbin;
+  Printf.printf "CAMLLIB=%s/\n" Coq_config.camllib;
+  Printf.printf "CAMLP4=%s\n" Coq_config.camlp4;
+  Printf.printf "CAMLP4BIN=%s\n" Coq_config.camlp4bin;
+  Printf.printf "CAMLP4LIB=%s\n" Coq_config.camlp4lib
+

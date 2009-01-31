@@ -8,7 +8,7 @@
 
 (*i camlp4use: "q_MLast.cmo pa_macro.cmo" i*)
 
-(* $Id: q_coqast.ml4 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: q_coqast.ml4 11735 2009-01-02 17:22:31Z herbelin $ *)
 
 open Util
 open Names
@@ -68,7 +68,8 @@ let mlexpr_of_loc loc = <:expr< $dloc$ >>
 
 let mlexpr_of_by_notation f = function
   | Genarg.AN x -> <:expr< Genarg.AN $f x$ >>
-  | Genarg.ByNotation (loc,s) -> <:expr< Genarg.ByNotation $dloc$ $str:s$ >>
+  | Genarg.ByNotation (loc,s,sco) -> 
+      <:expr< Genarg.ByNotation $dloc$ $str:s$ $mlexpr_of_option mlexpr_of_string sco$ >>
 
 let mlexpr_of_intro_pattern = function
   | Genarg.IntroWildcard -> <:expr< Genarg.IntroWildcard >>
@@ -102,12 +103,12 @@ let mlexpr_of_occs =
 let mlexpr_of_occurrences f = mlexpr_of_pair mlexpr_of_occs f
 
 let mlexpr_of_hyp_location = function
-  | occs, Tacexpr.InHyp ->
-      <:expr< ($mlexpr_of_occurrences mlexpr_of_hyp occs$, Tacexpr.InHyp) >>
-  | occs, Tacexpr.InHypTypeOnly ->
-      <:expr< ($mlexpr_of_occurrences mlexpr_of_hyp occs$, Tacexpr.InHypTypeOnly) >>
-  | occs, Tacexpr.InHypValueOnly ->
-      <:expr< ($mlexpr_of_occurrences mlexpr_of_hyp occs$, Tacexpr.InHypValueOnly) >>
+  | occs, Termops.InHyp ->
+      <:expr< ($mlexpr_of_occurrences mlexpr_of_hyp occs$, Termops.InHyp) >>
+  | occs, Termops.InHypTypeOnly ->
+      <:expr< ($mlexpr_of_occurrences mlexpr_of_hyp occs$, Termops.InHypTypeOnly) >>
+  | occs, Termops.InHypValueOnly ->
+      <:expr< ($mlexpr_of_occurrences mlexpr_of_hyp occs$, Termops.InHypValueOnly) >>
 
 let mlexpr_of_clause cl =
   <:expr< {Tacexpr.onhyps=
@@ -139,7 +140,9 @@ let mlexpr_of_binding_kind = function
 
 let mlexpr_of_binder_kind = function
   | Topconstr.Default b -> <:expr< Topconstr.Default $mlexpr_of_binding_kind b$ >>
-  | Topconstr.TypeClass (b,b') -> <:expr< Topconstr.TypeClass $mlexpr_of_pair mlexpr_of_binding_kind mlexpr_of_binding_kind (b,b')$ >>
+  | Topconstr.Generalized (b,b',b'') -> 
+      <:expr< Topconstr.TypeClass $mlexpr_of_binding_kind b$
+	$mlexpr_of_binding_kind b'$ $mlexpr_of_bool b''$ >>
 
 let rec mlexpr_of_constr = function
   | Topconstr.CRef (Libnames.Ident (loc,id)) when is_meta (string_of_id id) ->
@@ -158,9 +161,11 @@ let rec mlexpr_of_constr = function
   | Topconstr.CCases (loc,_,_,_,_) -> failwith "mlexpr_of_constr: TODO"
   | Topconstr.CHole (loc, None) -> <:expr< Topconstr.CHole $dloc$ None >>
   | Topconstr.CHole (loc, Some _) -> failwith "mlexpr_of_constr: TODO CHole (Some _)"
-  | Topconstr.CNotation(_,ntn,l) ->
+  | Topconstr.CNotation(_,ntn,subst) ->
       <:expr< Topconstr.CNotation $dloc$ $mlexpr_of_string ntn$
-                $mlexpr_of_list mlexpr_of_constr l$ >>
+              $mlexpr_of_pair 
+                (mlexpr_of_list mlexpr_of_constr)
+                (mlexpr_of_list (mlexpr_of_list mlexpr_of_constr)) subst$ >>
   | Topconstr.CPatVar (loc,n) -> 
       <:expr< Topconstr.CPatVar $dloc$ $mlexpr_of_pair mlexpr_of_bool mlexpr_of_ident n$ >>
   | _ -> failwith "mlexpr_of_constr: TODO"
@@ -196,7 +201,7 @@ let rec mlexpr_of_argtype loc = function
   | Genarg.RefArgType -> <:expr< Genarg.RefArgType >>
   | Genarg.PreIdentArgType -> <:expr< Genarg.PreIdentArgType >>
   | Genarg.IntroPatternArgType -> <:expr< Genarg.IntroPatternArgType >>
-  | Genarg.IdentArgType -> <:expr< Genarg.IdentArgType >>
+  | Genarg.IdentArgType b -> <:expr< Genarg.IdentArgType $mlexpr_of_bool b$ >>
   | Genarg.VarArgType -> <:expr< Genarg.VarArgType >>
   | Genarg.StringArgType -> <:expr< Genarg.StringArgType >>
   | Genarg.QuantHypArgType -> <:expr< Genarg.QuantHypArgType >>
@@ -264,13 +269,16 @@ let mlexpr_of_entry_type = function
 
 let mlexpr_of_match_pattern = function
   | Tacexpr.Term t -> <:expr< Tacexpr.Term $mlexpr_of_pattern_ast t$ >>
-  | Tacexpr.Subterm (ido,t) ->
-      <:expr< Tacexpr.Subterm $mlexpr_of_option mlexpr_of_ident ido$ $mlexpr_of_pattern_ast t$ >>
+  | Tacexpr.Subterm (b,ido,t) ->
+      <:expr< Tacexpr.Subterm $mlexpr_of_bool b$ $mlexpr_of_option mlexpr_of_ident ido$ $mlexpr_of_pattern_ast t$ >>
 
 let mlexpr_of_match_context_hyps = function
   | Tacexpr.Hyp (id,l) ->
       let f = mlexpr_of_located mlexpr_of_name in
       <:expr< Tacexpr.Hyp $f id$ $mlexpr_of_match_pattern l$ >>
+  | Tacexpr.Def (id,v,l) ->
+      let f = mlexpr_of_located mlexpr_of_name in
+      <:expr< Tacexpr.Def $f id$ $mlexpr_of_match_pattern v$ $mlexpr_of_match_pattern l$ >>
 
 let mlexpr_of_match_rule f = function
   | Tacexpr.Pat (l,mp,t) -> <:expr< Tacexpr.Pat $mlexpr_of_list mlexpr_of_match_context_hyps l$ $mlexpr_of_match_pattern mp$ $f t$ >>
@@ -300,8 +308,8 @@ let rec mlexpr_of_atomic_tactic = function
       <:expr< Tacexpr.TacExactNoCheck $mlexpr_of_constr c$ >>
   | Tacexpr.TacVmCastNoCheck c ->
       <:expr< Tacexpr.TacVmCastNoCheck $mlexpr_of_constr c$ >>
-  | Tacexpr.TacApply (b,false,cb) ->
-      <:expr< Tacexpr.TacApply $mlexpr_of_bool b$ False $mlexpr_of_list mlexpr_of_constr_with_binding cb$ >>
+  | Tacexpr.TacApply (b,false,cb,None) ->
+      <:expr< Tacexpr.TacApply $mlexpr_of_bool b$ False $mlexpr_of_list mlexpr_of_constr_with_binding cb$ None >>
   | Tacexpr.TacElim (false,cb,cbo) ->
       let cb = mlexpr_of_constr_with_binding cb in
       let cbo = mlexpr_of_option mlexpr_of_constr_with_binding cbo in
@@ -337,7 +345,7 @@ let rec mlexpr_of_atomic_tactic = function
   | Tacexpr.TacCut c ->
       <:expr< Tacexpr.TacCut $mlexpr_of_constr c$ >>
   | Tacexpr.TacAssert (t,ipat,c) ->
-      let ipat = mlexpr_of_located mlexpr_of_intro_pattern ipat in
+      let ipat = mlexpr_of_option (mlexpr_of_located mlexpr_of_intro_pattern) ipat in
       <:expr< Tacexpr.TacAssert $mlexpr_of_option mlexpr_of_tactic t$ $ipat$ 
 	      $mlexpr_of_constr c$ >>
   | Tacexpr.TacGeneralize cl ->
@@ -480,6 +488,8 @@ and mlexpr_of_tactic : (Tacexpr.raw_tactic_expr -> MLast.expr) = function
   | Tacexpr.TacArg (Tacexpr.MetaIdArg (_,true,id)) -> anti loc id
   | Tacexpr.TacArg t ->
       <:expr< Tacexpr.TacArg $mlexpr_of_tactic_arg t$ >>
+  | Tacexpr.TacComplete t ->
+      <:expr< Tacexpr.TacComplete $mlexpr_of_tactic t$ >>
   | _ -> failwith "Quotation of tactic expressions: TODO"
 
 and mlexpr_of_tactic_arg = function

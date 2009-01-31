@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: BinNat.v 10806 2008-04-16 23:51:06Z letouzey $ i*)
+(*i $Id: BinNat.v 11735 2009-01-02 17:22:31Z herbelin $ i*)
 
 Require Import BinPos.
 Unset Boxed Definitions.
@@ -393,10 +393,10 @@ Theorem Ncompare_n_Sm :
 Proof.
 intros n m; split; destruct n as [| p]; destruct m as [| q]; simpl; auto.
 destruct p; simpl; intros; discriminate.
-pose proof (proj1 (Pcompare_p_Sq p q));
+pose proof (Pcompare_p_Sq p q) as (?,_).
 assert (p = q <-> Npos p = Npos q); [split; congruence | tauto].
 intros H; destruct H; discriminate.
-pose proof (proj2 (Pcompare_p_Sq p q));
+pose proof (Pcompare_p_Sq p q) as (_,?);
 assert (p = q <-> Npos p = Npos q); [split; congruence | tauto].
 Qed.
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: notation.mli 9804 2007-04-28 13:56:03Z herbelin $ i*)
+(*i $Id: notation.mli 11445 2008-10-11 16:42:46Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -131,7 +131,7 @@ val level_of_notation : notation -> level (* raise [Not_found] if no level *)
 (*s** Miscellaneous *)
 
 val interp_notation_as_global_reference : loc -> (global_reference -> bool) -> 
-      notation -> global_reference
+      notation -> delimiters option -> global_reference
 
 (* Checks for already existing notations *)
 val exists_notation_in_scope : scope_name option -> notation ->

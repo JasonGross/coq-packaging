@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: recordops.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: recordops.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -21,8 +21,14 @@ open Library
 (*s A structure S is a non recursive inductive type with a single
    constructor (the name of which defaults to Build_S) *)
 
+type struc_typ = {
+  s_CONST : constructor; 
+  s_EXPECTEDPARAM : int;
+  s_PROJKIND : (name * bool) list;
+  s_PROJ : constant option list }
+
 val declare_structure : 
-  inductive * identifier * bool list * constant option list -> unit
+  inductive * constructor * (name * bool) list * constant option list -> unit
 
 (* [lookup_projections isp] returns the projections associated to the
    inductive path [isp] if it corresponds to a structure, otherwise
@@ -31,6 +37,9 @@ val lookup_projections : inductive -> constant option list
 
 (* raise [Not_found] if not a projection *)
 val find_projection_nparams : global_reference -> int
+
+(* raise [Not_found] if not a projection *)
+val find_projection : global_reference -> struc_typ
 
 (*s A canonical structure declares "canonical" conversion hints between *)
 (*  the effective components of a structure and the projections of the  *)

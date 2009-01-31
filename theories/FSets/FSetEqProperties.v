@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetEqProperties.v 11064 2008-06-06 17:00:52Z letouzey $ *)
+(* $Id: FSetEqProperties.v 11720 2008-12-28 07:12:15Z letouzey $ *)
 
 (** * Finite sets library *)
 
@@ -19,8 +19,8 @@
 
 Require Import FSetProperties Zerob Sumbool Omega DecidableTypeEx.
 
-Module WEqProperties (Import E:DecidableType)(M:WSfun E). 
-Module Import MP := WProperties E M.
+Module WEqProperties_fun (Import E:DecidableType)(M:WSfun E).
+Module Import MP := WProperties_fun E M.
 Import FM Dec.F.
 Import M.
 
@@ -73,7 +73,7 @@ Qed.
 Lemma is_empty_equal_empty: is_empty s = equal s empty.
 Proof. 
 apply bool_1; split; intros.
-rewrite <- (empty_is_empty_1 (s:=empty)); auto with set.
+auto with set.
 rewrite <- is_empty_iff; auto with set.
 Qed.
   
@@ -281,7 +281,7 @@ Qed.
 Lemma singleton_mem_2: ~E.eq x y -> mem y (singleton x)=false.
 Proof.
 intros; rewrite singleton_b.
-unfold eqb; destruct (eq_dec x y); intuition.
+unfold eqb; destruct (E.eq_dec x y); intuition.
 Qed.
 
 Lemma singleton_mem_3: mem y (singleton x)=true -> E.eq x y.
@@ -494,7 +494,7 @@ destruct (mem x s); destruct (mem x s'); intuition.
 Qed.
 
 Section Fold. 
-Variables (A:Type)(eqA:A->A->Prop)(st:Setoid_Theory _ eqA).
+Variables (A:Type)(eqA:A->A->Prop)(st:Equivalence eqA).
 Variables (f:elt->A->A)(Comp:compat_op E.eq eqA f)(Ass:transpose eqA f).
 Variables (i:A).
 Variables (s s':t)(x:elt).
@@ -852,7 +852,7 @@ assert (gc : compat_opL (fun x:elt => plus (g x))). auto.
 assert (gt : transposeL (fun x:elt =>plus (g x))). red; intros; omega.
 assert (fgc : compat_opL (fun x:elt =>plus ((f x)+(g x)))). auto.
 assert (fgt : transposeL (fun x:elt=>plus ((f x)+(g x)))). red; intros; omega.
-assert (st := gen_st nat).
+assert (st : Equivalence (@Logic.eq nat)) by (split; congruence).
 intros s;pattern s; apply set_rec.
 intros.
 rewrite <- (fold_equal _ _ st _ fc ft 0 _ _ H).
@@ -867,7 +867,7 @@ Lemma sum_filter : forall f, (compat_bool E.eq f) ->
   forall s, (sum (fun x => if f x then 1 else 0) s) = (cardinal (filter f s)).
 Proof.
 unfold sum; intros f Hf.
-assert (st := gen_st nat).
+assert (st : Equivalence (@Logic.eq nat)) by (split; congruence).
 assert (cc : compat_opL (fun x => plus (if f x then 1 else 0))). 
  red; intros.
  rewrite (Hf x x' H); auto.
@@ -892,7 +892,7 @@ rewrite filter_iff; auto; set_iff; tauto.
 Qed.
 
 Lemma fold_compat : 
-  forall (A:Type)(eqA:A->A->Prop)(st:Setoid_Theory _ eqA)
+  forall (A:Type)(eqA:A->A->Prop)(st:Equivalence eqA)
   (f g:elt->A->A),
   (compat_op E.eq eqA f) -> (transpose eqA f) -> 
   (compat_op E.eq eqA g) -> (transpose eqA g) -> 
@@ -901,19 +901,19 @@ Lemma fold_compat :
 Proof.
 intros A eqA st f g fc ft gc gt i.
 intro s; pattern s; apply set_rec; intros.
-trans_st (fold f s0 i).
+transitivity (fold f s0 i).
 apply fold_equal with (eqA:=eqA); auto.
 rewrite equal_sym; auto.
-trans_st (fold g s0 i).
+transitivity (fold g s0 i).
 apply H0; intros; apply H1; auto with set.
 elim  (equal_2 H x); auto with set; intros.
 apply fold_equal with (eqA:=eqA); auto with set.
-trans_st (f x (fold f s0 i)).
+transitivity (f x (fold f s0 i)).
 apply fold_add with (eqA:=eqA); auto with set.
-trans_st (g x (fold f s0 i)); auto with set.
-trans_st (g x (fold g s0 i)); auto with set.
-sym_st; apply fold_add with (eqA:=eqA); auto.
-do 2 rewrite fold_empty; refl_st.
+transitivity (g x (fold f s0 i)); auto with set.
+transitivity (g x (fold g s0 i)); auto with set.
+symmetry; apply fold_add with (eqA:=eqA); auto.
+do 2 rewrite fold_empty; reflexivity.
 Qed.
 
 Lemma sum_compat : 
@@ -927,13 +927,12 @@ Qed.
 
 End Sum.
 
-End WEqProperties.
+End WEqProperties_fun.
 
+(** Now comes variants for self-contained weak sets and for full sets.
+    For these variants, only one argument is necessary. Thanks to
+    the subtyping [WS<=S], the [EqProperties] functor which is meant to be
+    used on modules [(M:S)] can simply be an alias of [WEqProperties]. *)
 
-(** Now comes a special version dedicated to full sets. For this
-    one, only one argument [(M:S)] is necessary. *)
-
-Module EqProperties (M:S).
-  Module D := OT_as_DT M.E.
-  Include WEqProperties D M.
-End EqProperties.
+Module WEqProperties (M:WS) := WEqProperties_fun M.E M.
+Module EqProperties := WEqProperties.

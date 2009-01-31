@@ -855,7 +855,7 @@ let merge_rec_params_and_arity prms1 prms2 shift (concl:constr) =
     [rawlist], named ident.
     FIXME: params et cstr_expr (arity) *)
 let rawterm_list_to_inductive_expr prms1 prms2 mib1 mib2 shift
-    (rawlist:(identifier * rawconstr) list):inductive_expr =
+    (rawlist:(identifier * rawconstr) list) =
   let lident = dummy_loc, shift.ident in
   let bindlist , cstr_expr = (* params , arities *)
     merge_rec_params_and_arity prms1 prms2 shift mkSet in
@@ -863,7 +863,7 @@ let rawterm_list_to_inductive_expr prms1 prms2 mib1 mib2 shift
     List.map (* zeta_normalize t ? *)
       (fun (id,t) -> false, ((dummy_loc,id),rawterm_to_constr_expr t))
       rawlist in  
-  lident , bindlist , cstr_expr , lcstor_expr
+  lident , bindlist , Some cstr_expr , lcstor_expr
 
 
 

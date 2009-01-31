@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: system.mli 11209 2008-07-05 10:17:49Z herbelin $ i*)
+(*i $Id: system.mli 11801 2009-01-18 20:11:41Z herbelin $ i*)
 
 (*s Files and load paths. Load path entries remember the original root
     given by the user. For efficiency, we keep the full path (field
@@ -16,11 +16,13 @@
 type physical_path = string
 type load_path = physical_path list
 
+val canonical_path_name : string -> string
+
 val exclude_search_in_dirname : string -> unit
 
 val all_subdirs : unix_path:string -> (physical_path * string list) list
 val is_in_path : load_path -> string -> bool
-val where_in_path : bool -> load_path -> string -> physical_path * string
+val where_in_path : ?warn:bool -> load_path -> string -> physical_path * string
 
 val physical_path_of_string : string -> physical_path
 val string_of_physical_path : physical_path -> string
@@ -34,7 +36,8 @@ val home : string
 
 val exists_dir : string -> bool
 
-val find_file_in_path : load_path -> string -> physical_path * string
+val find_file_in_path :
+  ?warn:bool -> load_path -> string -> physical_path * string
 
 (*s Generic input and output functions, parameterized by a magic number
   and a suffix. The intern functions raise the exception [Bad_magic_number]
@@ -48,8 +51,8 @@ exception Bad_magic_number of string
 val raw_extern_intern : int -> string -> 
   (string -> string * out_channel) * (string -> in_channel)
 
-val extern_intern : 
-  int -> string -> (string -> 'a -> unit) * (load_path -> string -> 'a)
+val extern_intern : ?warn:bool -> int -> string -> 
+  (string -> 'a -> unit) * (load_path -> string -> 'a)
 
 (*s Sending/receiving once with external executable *)
 

@@ -6,12 +6,51 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id: OmegaLemmas.v 7727 2005-12-25 13:42:20Z herbelin $ i*)
+(*i $Id: OmegaLemmas.v 11739 2009-01-02 19:33:19Z herbelin $ i*)
 
 Require Import ZArith_base.
 Open Local Scope Z_scope.
 
-(** These are specific variants of theorems dedicated for the Omega tactic *)
+(** Factorization lemmas *)
+
+Theorem Zred_factor0 : forall n:Z, n = n * 1.
+  intro x; rewrite (Zmult_1_r x); reflexivity.
+Qed.
+
+Theorem Zred_factor1 : forall n:Z, n + n = n * 2.
+Proof.
+  exact Zplus_diag_eq_mult_2.
+Qed.
+
+Theorem Zred_factor2 : forall n m:Z, n + n * m = n * (1 + m).
+Proof.
+  intros x y; pattern x at 1 in |- *; rewrite <- (Zmult_1_r x);
+    rewrite <- Zmult_plus_distr_r; trivial with arith.
+Qed.
+
+Theorem Zred_factor3 : forall n m:Z, n * m + n = n * (1 + m).
+Proof.
+  intros x y; pattern x at 2 in |- *; rewrite <- (Zmult_1_r x);
+    rewrite <- Zmult_plus_distr_r; rewrite Zplus_comm; 
+      trivial with arith.
+Qed.
+
+Theorem Zred_factor4 : forall n m p:Z, n * m + n * p = n * (m + p).
+Proof.
+  intros x y z; symmetry  in |- *; apply Zmult_plus_distr_r.
+Qed.
+
+Theorem Zred_factor5 : forall n m:Z, n * 0 + m = m.
+Proof.
+  intros x y; rewrite <- Zmult_0_r_reverse; auto with arith.
+Qed.
+
+Theorem Zred_factor6 : forall n:Z, n = n + 0.
+Proof.
+  intro; rewrite Zplus_0_r; trivial with arith.
+Qed.
+
+(** Other specific variants of theorems dedicated for the Omega tactic *)
 
 Lemma new_var : forall x : Z, exists y : Z, x = y.
 intros x; exists x; trivial with arith. 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tactics.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: tactics.mli 11735 2009-01-02 17:22:31Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -42,8 +42,8 @@ val type_clenv_binding : goal sigma ->
   constr * constr -> open_constr bindings  -> constr
 
 val string_of_inductive : constr -> string
-val head_constr       : constr -> constr list
-val head_constr_bound : constr -> constr list -> constr list
+val head_constr       : constr -> constr * constr list
+val head_constr_bound : constr -> constr * constr list
 val is_quantified_hypothesis : identifier -> goal sigma -> bool
 
 exception Bound
@@ -184,19 +184,22 @@ val bring_hyps : named_context -> tactic
 val apply                 : constr      -> tactic
 val apply_without_reduce  : constr      -> tactic
 val apply_list            : constr list -> tactic
-
+  
 val apply_with_ebindings_gen : 
-  advanced_flag -> evars_flag -> constr with_ebindings list -> tactic
+  advanced_flag -> evars_flag -> open_constr with_ebindings list -> tactic
 
 val apply_with_bindings   : constr with_bindings -> tactic
 val eapply_with_bindings  : constr with_bindings -> tactic
 
-val apply_with_ebindings  : constr with_ebindings -> tactic
-val eapply_with_ebindings : constr with_ebindings -> tactic
+val apply_with_ebindings  : open_constr with_ebindings -> tactic
+val eapply_with_ebindings : open_constr with_ebindings -> tactic
 
 val cut_and_apply         : constr -> tactic
 
-val apply_in : evars_flag -> identifier -> constr with_ebindings list -> tactic
+val apply_in : 
+  advanced_flag -> evars_flag -> identifier -> 
+  open_constr with_ebindings list ->
+  intro_pattern_expr located option -> tactic
 
 (*s Elimination tactics. *)
 
@@ -324,19 +327,19 @@ val simplest_split       : tactic
 (*s Logical connective tactics. *)
 
 val register_setoid_reflexivity : tactic -> unit
-val reflexivity_red             : bool -> tactic
+val reflexivity_red             : bool -> goal sigma -> tactic option
 val reflexivity                 : tactic
 val intros_reflexivity          : tactic
 
 val register_setoid_symmetry : tactic -> unit
-val symmetry_red                : bool -> tactic
+val symmetry_red                : bool -> goal sigma -> tactic option
 val symmetry                    : tactic
 val register_setoid_symmetry_in : (identifier -> tactic) -> unit
 val symmetry_in                 : identifier -> tactic
 val intros_symmetry             : clause -> tactic
 
 val register_setoid_transitivity : (constr -> tactic) -> unit
-val transitivity_red            : bool -> constr -> tactic
+val transitivity_red            : bool -> constr -> goal sigma -> tactic option
 val transitivity                : constr -> tactic
 val intros_transitivity         : constr -> tactic
 
@@ -346,17 +349,19 @@ val cut_replacing               :
   identifier -> constr -> (tactic -> tactic) -> tactic
 val cut_in_parallel             : constr list -> tactic
 
-val assert_as : bool -> intro_pattern_expr located -> constr -> tactic
-val forward   : tactic option -> intro_pattern_expr located -> constr -> tactic
+val assert_as : bool -> intro_pattern_expr located option -> constr -> tactic
+val forward   : tactic option -> intro_pattern_expr located option -> constr -> tactic
 val letin_tac : (bool * intro_pattern_expr located) option -> name -> 
-  constr -> clause -> tactic
-val true_cut                    : name -> constr -> tactic
-val assert_tac                  : bool -> name -> constr -> tactic
+  constr -> types option -> clause -> tactic
+val assert_tac : name -> types -> tactic
+val assert_by  : name -> types -> tactic -> tactic
+val pose_proof : name -> constr -> tactic
+
 val generalize      : constr list -> tactic
 val generalize_gen  : ((occurrences * constr) * name) list -> tactic
 val generalize_dep  : constr  -> tactic
 
-val conv            : constr -> constr -> tactic
+val unify           : ?state:Names.transparent_state -> constr -> constr -> tactic
 val resolve_classes : tactic
 
 val tclABSTRACT : identifier option -> tactic -> tactic
@@ -365,5 +370,7 @@ val admit_as_an_axiom : tactic
 
 val abstract_generalize : identifier -> ?generalize_vars:bool -> tactic
 
+val dependent_pattern : constr -> tactic
+
 val register_general_multi_rewrite : 
-  (bool -> evars_flag -> constr with_ebindings -> clause -> tactic) -> unit
+  (bool -> evars_flag -> open_constr with_bindings -> clause -> tactic) -> unit

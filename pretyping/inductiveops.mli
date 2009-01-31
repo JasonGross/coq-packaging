@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: inductiveops.mli 11301 2008-08-04 19:41:18Z herbelin $ i*)
+(*i $Id: inductiveops.mli 11436 2008-10-07 13:56:55Z barras $ i*)
 
 open Names
 open Term
@@ -111,6 +111,11 @@ val make_case_info : env -> inductive -> case_style -> case_info
 (*i Compatibility 
 val make_default_case_info : env -> case_style -> inductive -> case_info
 i*)
+
+(********************)
+
+val type_of_inductive_knowing_conclusion :
+  env -> one_inductive_body -> types -> types
 
 (********************)
 val control_only_guard : env -> types -> unit

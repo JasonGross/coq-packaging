@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: scheme.ml 10233 2007-10-17 23:29:08Z letouzey $ i*)
+(*i $Id: scheme.ml 11559 2008-11-07 22:03:34Z letouzey $ i*)
 
 (*s Production of Scheme syntax. *)
 
@@ -183,7 +183,7 @@ let pp_structure_elem = function
 
 let pp_struct = 
   let pp_sel (mp,sel) = 
-    push_visible mp; 
+    push_visible mp None; 
     let p = prlist_strict pp_structure_elem sel in 
     pop_visible (); p
   in
