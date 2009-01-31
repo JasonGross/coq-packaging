@@ -1,11 +1,12 @@
 coq (8.2~rc2+dfsg-1) UNRELEASED; urgency=low
 
   * New upstream release candidate
-  * [cdce320] Bump debhelper compatibility level to 7
-  * [b6db9f4] Remove obsolete patches
-  * [d8e4082] Use debhelper 7, simplify debian/rules (Closes: #436684)
+  * Bump debhelper compatibility level to 7
+  * Remove obsolete patches
+  * Use debhelper 7, simplify debian/rules (Closes: #436684)
+  * Add binary package libcoq-ocaml-dev
 
- -- Stephane Glondu <steph@glondu.net>  Sat, 31 Jan 2009 17:07:39 +0100
+ -- Stephane Glondu <steph@glondu.net>  Sun, 01 Feb 2009 00:36:46 +0100
 
 coq (8.2~beta4+dfsg-2) experimental; urgency=low
 
