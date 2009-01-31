@@ -8,6 +8,12 @@ usr/bin/coq-tex*
 usr/bin/coqtop*
 usr/bin/coqwc*
 usr/bin/gallina*
+usr/lib/coq/revision
+usr/lib/coq/contrib/micromega/csdpcert
+usr/lib/coq/contrib/interface/vernacrc
+usr/lib/coq/tools/coqdoc/coqdoc.css
+usr/lib/coq/tools/coqdoc/coqdoc.sty
+usr/lib/coq/states/initial.coq
 usr/share/emacs/site-lisp/coq/
 usr/share/man/man1/coqc*
 usr/share/man/man1/coqdep*

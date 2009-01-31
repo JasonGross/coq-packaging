@@ -16,6 +16,8 @@ HTMLDOC := doc/stdlib/html/index.html
 COQPREF := $(CURDIR)/debian/tmp
 ADDPREF := COQINSTALLPREFIX=$(COQPREF)
 
+ARCH_PKGS := coq coqide libcoq-ocaml-dev
+
 OFILES := $(patsubst %.in,%,$(wildcard debian/*.in))
 OCAMLABI := $(shell ocamlc -version)
 
@@ -24,9 +26,10 @@ CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
   --browser "/usr/bin/x-www-browser %s &" \
   --with-doc no --coqrunbyteflags "-dllib -lcoqrun"
 
-OCAMLINITSED := -e 's/@OCamlABI@/$(OCAMLABI)/g'
+OCAMLINITSED := -e 's/@OCamlABI@/$(OCAMLABI)/g' -e '/^\#/d'
+OCAMLOPT := $(wildcard /usr/bin/ocamlopt*)
 
-ifeq ($(shell test -e /usr/bin/ocamlopt && echo yes),yes)
+ifneq ($(OCAMLOPT),)
   CONFIGUREOPTS += -opt
   OCAMLINITSED += -e 's/^OPT: //'
 else
@@ -58,8 +61,12 @@ install: install-stamp
 install-stamp: build-stamp
 	dh install --before dh_auto_install
 	$(MAKE) $(ADDPREF) install
-	dh_install -XFAQ --list-missing
-	mv debian/coq-libs/usr/lib/coq/contrib/micromega/csdpcert debian/coq/usr/lib/coq/contrib/micromega
+	find debian/tmp -regextype posix-awk \
+	  -regex '.*\.(cm[aoxi]|cmxa|[ao])$$' \
+	  >> debian/libcoq-ocaml-dev.install
+	find debian/tmp -name '*.vo' -printf '%P\n' \
+	  >> debian/coq-libs.install
+	dh_install --list-missing
 	cp debian/coq.xpm debian/coq/usr/share/pixmaps
 	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
 	cp debian/coqide.desktop debian/coqide/usr/share/applications
@@ -69,13 +76,13 @@ install-stamp: build-stamp
 
 clean: unpatch
 	dh $@
-	rm -f debian/substvars $(OFILES)
+	rm -f $(OFILES)
 
 binary-indep: install-stamp
 	dh $@
 
 binary-arch: install-stamp
-	for u in coq coqide; do echo 'F:OCamlABI=$(OCAMLABI)' >> debian/$$u.substvars; done
+	for u in $(ARCH_PKGS); do echo 'F:OCamlABI=$(OCAMLABI)' >> debian/$$u.substvars; done
 	dh $@
 
 binary: binary-indep binary-arch
