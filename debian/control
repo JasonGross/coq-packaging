@@ -31,8 +31,7 @@ Recommends: coqide | proofgeneral-coq
 Suggests:
  ocaml-nox,
  proofgeneral-coq,
- ledit,
- cle,
+ ledit | cle,
  libcoq-ocaml-dev,
  coq-doc
 Description: proof assistant for higher-order logic (toplevel and compiler)
