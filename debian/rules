@@ -8,6 +8,9 @@
 export COQTEST_SKIPCOMPLEXITY = true
 export CAML_LD_LIBRARY_PATH = $(shell pwd)/kernel/byterun
 
+# Show full commands when building Coq
+export VERBOSE=1
+
 # We want to use dpatch
 include /usr/share/dpatch/dpatch.make
 
