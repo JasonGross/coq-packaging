@@ -8,7 +8,6 @@ usr/bin/coq-tex*
 usr/bin/coqtop*
 usr/bin/coqwc*
 usr/bin/gallina*
-usr/lib/coq/revision
 usr/lib/coq/contrib/micromega/csdpcert
 usr/lib/coq/contrib/interface/vernacrc
 usr/lib/coq/tools/coqdoc/coqdoc.css
