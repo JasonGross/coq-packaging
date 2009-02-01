@@ -14,7 +14,7 @@ Build-Depends:
  debhelper (>= 7),
  dpkg-dev (>= 1.13.19),
  dpatch,
- ocaml-nox (>= 3.10),
+ ocaml-nox (>= 3.11),
  ocaml-best-compilers,
  camlp5,
  liblablgtk2-ocaml-dev (>= 2.4.0),
@@ -28,7 +28,13 @@ Package: coq
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, ocaml-base-nox-${F:OCamlABI}, coq-libs (= ${source:Version}), emacsen-common
 Recommends: coqide | proofgeneral-coq
-Suggests: ocaml-nox (>= 3.08), proofgeneral-coq, ledit, cle, coq-doc
+Suggests:
+ ocaml-nox,
+ proofgeneral-coq,
+ ledit,
+ cle,
+ libcoq-ocaml-dev,
+ coq-doc
 Description: proof assistant for higher-order logic (toplevel and compiler)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
