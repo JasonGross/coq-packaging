@@ -32,6 +32,7 @@ Depends:
  ocaml-base-nox-${F:OCamlABI},
  coq-theories (= ${source:Version}),
  emacsen-common
+Provides: coq-${F:CoqABI}
 Recommends: coqide | proofgeneral-coq
 Suggests:
  ocaml-nox,
@@ -70,7 +71,7 @@ Description: proof assistant for higher-order logic (gtk interface)
 
 Package: coq-theories
 Architecture: all
-Depends: ${misc:Depends}
+Depends: coq-${F:CoqABI}, ${misc:Depends}
 Recommends: coq (>= 8.0)
 Conflicts: coq-doc (<= 8.0pl1.0-2), coq-libs
 Replaces: coq-libs

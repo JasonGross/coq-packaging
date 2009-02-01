@@ -22,7 +22,8 @@ HTMLDOC := doc/stdlib/html/index.html
 COQPREF := $(CURDIR)/debian/tmp
 ADDPREF := COQINSTALLPREFIX=$(COQPREF)
 
-ARCH_PKGS := coq coqide libcoq-ocaml-dev
+COQABI := 8.2
+PACKAGES := $(shell awk '/Package:/{print $$2}' debian/control)
 
 OFILES := $(patsubst %.in,%,$(wildcard debian/*.in))
 OCAMLABI := $(shell ocamlc -version)
@@ -79,7 +80,12 @@ install-stamp: build-stamp
 	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
 	cp debian/coqide.desktop debian/coqide/usr/share/applications
 	cp -r doc/stdlib/html debian/coq-theories/usr/share/doc/coq-theories/
+	echo "$(COQABI)" > debian/coq/usr/lib/coq/abi
 	dh install --after dh_install
+	for u in $(PACKAGES); do \
+	  echo 'F:OCamlABI=$(OCAMLABI)' >> debian/$$u.substvars; \
+	  echo 'F:CoqABI=$(COQABI)' >> debian/$$u.substvars; \
+	done
 	touch $@
 
 clean: unpatch
@@ -90,7 +96,6 @@ binary-indep: install-stamp
 	dh $@
 
 binary-arch: install-stamp
-	for u in $(ARCH_PKGS); do echo 'F:OCamlABI=$(OCAMLABI)' >> debian/$$u.substvars; done
 	dh $@
 
 binary: binary-indep binary-arch
