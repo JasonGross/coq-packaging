@@ -5,5 +5,5 @@ Abstract: Standard Library documentation of version 8.0 of the Coq proof assista
 Section: Science/Mathematics
 
 Format: HTML
-Index: /usr/share/doc/coq-libs/html/index.html
-Files: /usr/share/doc/coq-libs/html/*.html
+Index: /usr/share/doc/coq-theories/html/index.html
+Files: /usr/share/doc/coq-theories/html/*.html

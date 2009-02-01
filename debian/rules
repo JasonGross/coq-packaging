@@ -73,12 +73,12 @@ install-stamp: build-stamp
 	  -regex '.*\.(cm[aoxi]|cmxa|[ao])$$' \
 	  >> debian/libcoq-ocaml-dev.install
 	find debian/tmp -name '*.vo' -printf '%P\n' \
-	  >> debian/coq-libs.install
+	  >> debian/coq-theories.install
 	dh_install --list-missing
 	cp debian/coq.xpm debian/coq/usr/share/pixmaps
 	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
 	cp debian/coqide.desktop debian/coqide/usr/share/applications
-	cp -r doc/stdlib/html debian/coq-libs/usr/share/doc/coq-libs/
+	cp -r doc/stdlib/html debian/coq-theories/usr/share/doc/coq-theories/
 	dh install --after dh_install
 	touch $@
 

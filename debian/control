@@ -26,7 +26,12 @@ Vcs-Git: git://git.debian.org/git/pkg-ocaml-maint/packages/coq.git
 
 Package: coq
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ocaml-base-nox-${F:OCamlABI}, coq-libs (= ${source:Version}), emacsen-common
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ ocaml-base-nox-${F:OCamlABI},
+ coq-theories (= ${source:Version}),
+ emacsen-common
 Recommends: coqide | proofgeneral-coq
 Suggests:
  ocaml-nox,
@@ -63,11 +68,12 @@ Description: proof assistant for higher-order logic (gtk interface)
  This package provides CoqIde, a graphical user interface for
  developing proofs.
 
-Package: coq-libs
+Package: coq-theories
 Architecture: all
 Depends: ${misc:Depends}
 Recommends: coq (>= 8.0)
-Conflicts: coq (<< 8.0), coq-doc (<= 8.0pl1.0-2)
+Conflicts: coq-doc (<= 8.0pl1.0-2), coq-libs
+Replaces: coq-libs
 Description: proof assistant for higher-order logic (theories)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
