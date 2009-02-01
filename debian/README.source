@@ -38,3 +38,12 @@ option). Debian changelog can be updated based on git changelog using
 git-dch. Please consider reading the documentation of these tools.
 
 It was versioned with subversion until Wed, 23 Jul 2008.
+
+
+Build cache
+-----------
+
+Since Coq takes so much time to compile, there is a build cache to
+speed-up Debian development and debugging. Just copy a previous build
+to ../coq.cache, and debian/rules will detect its presence and rsync
+from there instead of really compiling Coq...

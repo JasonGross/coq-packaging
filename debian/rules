@@ -4,6 +4,9 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
+# Build cache (for accelerating Debian debugging)
+BUILDCACHE := $(wildcard ../coq.cache)
+
 # This has to be exported to make some magic below work.
 export COQTEST_SKIPCOMPLEXITY = true
 export CAML_LD_LIBRARY_PATH = $(shell pwd)/kernel/byterun
@@ -53,10 +56,12 @@ configure-stamp: patch-stamp ocamlinit-stamp
 build: build-stamp
 build-stamp: configure-stamp
 	dh_testdir
+ifeq ($(BUILDCACHE),)
 	$(MAKE) STRIP=true check
-	if [ -f bin/coqtop.opt ]; then touch opt-stamp; fi
-	$(MAKE) COQDOC="bin/coqdoc --coqlib_path `pwd`" \
-	  DOC_TARGETS=$(HTMLDOC) $(HTMLDOC)
+	$(MAKE) DOC_TARGETS=$(HTMLDOC) $(HTMLDOC)
+else
+	rsync -a --exclude=debian --exclude=.git $(BUILDCACHE)/ .
+endif
 	dh build --after dh_auto_test
 	touch $@
 
