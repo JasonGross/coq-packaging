@@ -22,11 +22,11 @@ HTMLDOC := doc/stdlib/html/index.html
 COQPREF := $(CURDIR)/debian/tmp
 ADDPREF := COQINSTALLPREFIX=$(COQPREF)
 
-COQABI := 8.2
 PACKAGES := $(shell awk '/Package:/{print $$2}' debian/control)
 
 OFILES := $(patsubst %.in,%,$(wildcard debian/*.in))
 OCAMLABI := $(shell ocamlc -version)
+COQABI := 8.2+$(OCAMLABI)
 
 CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
   --emacslib /usr/share/emacs/site-lisp/coq --reals all --fsets all \
