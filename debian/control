@@ -15,10 +15,15 @@ Build-Depends:
  dpkg-dev (>= 1.13.19),
  dpatch,
  ocaml-nox (>= 3.11),
- ocaml-best-compilers,
  camlp5 (>= 5.10-2),
  liblablgtk2-ocaml-dev (>= 2.10.1-3),
  texlive-latex-extra,
+ ocaml (>= 3.11),
+ ocaml-base (>= 3.11),
+ ocaml-base-nox (>= 3.11),
+ ocaml-compiler-libs (>= 3.11),
+ liblablgtk2-ocaml (>= 2.10.1-3),
+ ocaml-interp (>= 3.11),
  hevea (>= 1.10-6)
 Homepage: http://coq.inria.fr/
 Vcs-Browser: http://git.debian.org/?p=pkg-ocaml-maint/packages/coq.git

@@ -37,7 +37,7 @@ OCAMLINITSED := -e 's/@OCamlABI@/$(OCAMLABI)/g' -e '/^\#/d'
 OCAMLOPT := $(wildcard /usr/bin/ocamlopt*)
 
 ifneq ($(OCAMLOPT),)
-  CONFIGUREOPTS += -opt
+  # CONFIGUREOPTS += -opt
   OCAMLINITSED += -e 's/^OPT: //'
 else
   OCAMLINITSED += -e '/^OPT: /d'
