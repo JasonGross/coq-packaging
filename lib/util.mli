@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id: util.mli 11769 2009-01-08 17:59:22Z glondu $ i*)
+(*i $Id: util.mli 11897 2009-02-09 19:28:02Z barras $ i*)
 
 (*i*)
 open Pp
@@ -298,6 +298,21 @@ val pr_located : ('a -> std_ppcmds) -> 'a located -> std_ppcmds
 val pr_sequence : ('a -> std_ppcmds) -> 'a list -> std_ppcmds
 val surround : std_ppcmds -> std_ppcmds
 
+(*s Memoization. *)
+
+(* General comments on memoization:
+   - cache is created whenever the function is supplied (because of
+      ML's polymorphic value restriction).
+   - cache is never flushed (unless the memoized fun is GC'd)
+ *)
+(* One cell memory: memorizes only the last call *)
+val memo1_1 : ('a -> 'b) -> ('a -> 'b)
+val memo1_2 : ('a -> 'b -> 'c) -> ('a -> 'b -> 'c)
+(* with custom equality (used to deal with various arities) *)
+val memo1_eq : ('a -> 'a -> bool) -> ('a -> 'b) -> ('a -> 'b)
+
+(* Memorizes the last [n] distinct calls. Efficient only for small [n]. *)
+val memon_eq : ('a -> 'a -> bool) -> int -> ('a -> 'b) -> ('a -> 'b)
 
 (*s Size of an ocaml value (in words, bytes and kilobytes). *)
 

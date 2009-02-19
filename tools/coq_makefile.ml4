@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq_makefile.ml4 11771 2009-01-09 18:00:56Z notin $ *)
+(* $Id: coq_makefile.ml4 11883 2009-02-06 09:54:52Z herbelin $ *)
 
 (* créer un Makefile pour un développement Coq automatiquement *)
 
@@ -248,6 +248,7 @@ let implicit () =
     print "%.cmxs: %.ml\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $(PP) $<\n\n";
     print "%.cmo: %.ml4\n\t$(CAMLC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<\n\n";
     print "%.cmx: %.ml4\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<\n\n";
+    print "%.cmxs: %.ml4\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $(PP) -impl $<\n\n";
     print "%.ml.d: %.ml\n";
     print "\t$(CAMLBIN)ocamldep -slash $(COQSRCLIBS) $(PP) \"$<\" > \"$@\"\n\n"
   and v_rule () =

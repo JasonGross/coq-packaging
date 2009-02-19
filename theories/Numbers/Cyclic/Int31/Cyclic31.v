@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Cyclic31.v 11034 2008-06-02 08:15:34Z thery $ i*)
+(*i $Id: Cyclic31.v 11907 2009-02-10 23:54:28Z letouzey $ i*)
 
 (** * Int31 numbers defines indeed a cyclic structure : Z/(2^31)Z *)
 
@@ -1637,7 +1637,12 @@ Section Int31_Spec.
  apply Zplus_eq_compat.
  ring.
  assert ((2*[|y|]) mod wB = 2*[|y|] - wB).
-  admit.
+  clear - H. symmetry. apply Zmod_unique with 1; [ | ring ].
+  generalize (phi_lowerbound  _ H) (phi_bounded y).
+  set (wB' := 2^Z_of_nat (pred size)).
+  replace wB with (2*wB'); [ omega | ].
+  unfold wB'. rewrite <- Zpower_Zsucc, <- inj_S by (auto with zarith).
+  f_equal.
  rewrite H1.
  replace wB with (2^(Z_of_nat n)*2^(31-Z_of_nat n)) by  
   (rewrite <- Zpower_exp; auto with zarith; f_equal; unfold size; ring).

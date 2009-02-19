@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: libnames.ml 11750 2009-01-05 20:47:34Z herbelin $ i*)
+(*i $Id: libnames.ml 11878 2009-02-03 12:48:18Z soubiran $ i*)
 
 open Pp
 open Util
@@ -199,11 +199,23 @@ let encode_kn dir id = make_kn (MPfile dir) empty_dirpath (label_of_id id)
 let encode_con dir id = make_con (MPfile dir) empty_dirpath (label_of_id id)
 
 let decode_kn kn = 
+  let rec dir_of_mp = function
+    | MPfile dir -> repr_dirpath dir
+    | MPbound mbid -> 
+	let _,_,dp = repr_mbid mbid in
+	let id = id_of_mbid mbid in
+	  id::(repr_dirpath dp)
+    | MPself msid -> 
+	let _,_,dp = repr_msid msid in
+	let id = id_of_msid msid in
+	  id::(repr_dirpath dp) 
+    | MPdot(mp,l) -> (id_of_label l)::(dir_of_mp mp)
+  in
   let mp,sec_dir,l = repr_kn kn in
-    match mp,(repr_dirpath sec_dir) with
-	MPfile dir,[] -> (dir,id_of_label l)
-      | _ , [] -> anomaly "MPfile expected!"
-      | _ -> anomaly "Section part should be empty!"
+    if (repr_dirpath sec_dir) = [] then
+     (make_dirpath (dir_of_mp mp)),id_of_label l
+    else
+      anomaly "Section part should be empty!"
 
 let decode_con kn = 
   let mp,sec_dir,l = repr_con kn in

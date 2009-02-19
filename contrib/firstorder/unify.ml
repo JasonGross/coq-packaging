@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: unify.ml 7639 2005-12-02 10:01:15Z gregoire $ i*)
+(*i $Id: unify.ml 11897 2009-02-09 19:28:02Z barras $ i*)
 
 open Util
 open Formula 
@@ -42,8 +42,8 @@ let unif t1 t2=
     Queue.add (t1,t2) bige;
     try while true do
       let t1,t2=Queue.take bige in
-      let nt1=head_reduce (whd_betaiotazeta t1) 
-      and nt2=head_reduce (whd_betaiotazeta t2) in
+      let nt1=head_reduce (whd_betaiotazeta Evd.empty t1) 
+      and nt2=head_reduce (whd_betaiotazeta Evd.empty t2) in
 	match (kind_of_term nt1),(kind_of_term nt2) with
 	    Meta i,Meta j-> 
 	      if i<>j then 

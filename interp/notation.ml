@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: notation.ml 11512 2008-10-27 12:28:36Z herbelin $ *)
+(* $Id: notation.ml 11897 2009-02-09 19:28:02Z barras $ *)
 
 (*i*)
 open Util
@@ -422,7 +422,7 @@ let find_class_scope cl =
   Gmap.find cl !class_scope_map
 
 let find_class t =
-  let t, _ = decompose_app (Reductionops.whd_betaiotazeta t) in
+  let t, _ = decompose_app (Reductionops.whd_betaiotazeta Evd.empty t) in
   match kind_of_term t with
     | Var id -> CL_SECVAR id
     | Const sp -> CL_CONST sp
@@ -435,7 +435,7 @@ let find_class t =
 (* Special scopes associated to arguments of a global reference *)
 
 let rec compute_arguments_scope t =
-  match kind_of_term (Reductionops.whd_betaiotazeta t) with
+  match kind_of_term (Reductionops.whd_betaiotazeta Evd.empty t) with
     | Prod (_,t,u) ->
 	let sc =
 	  try Some (find_class_scope (find_class t)) with Not_found -> None in
