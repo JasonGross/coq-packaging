@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cbv.mli 8799 2006-05-09 21:15:07Z barras $ i*)
+(*i $Id: cbv.mli 11897 2009-02-09 19:28:02Z barras $ i*)
 
 (*i*)
 open Names
@@ -22,7 +22,7 @@ open Esubst
 (* Entry point for cbv normalization of a constr *)
 type cbv_infos
 
-val create_cbv_infos : RedFlags.reds -> env -> cbv_infos
+val create_cbv_infos : RedFlags.reds -> env -> Evd.evar_map -> cbv_infos
 val cbv_norm         : cbv_infos -> constr -> constr
 
 (************************************************************************)

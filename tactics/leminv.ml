@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: leminv.ml 11309 2008-08-06 10:30:35Z herbelin $ *)
+(* $Id: leminv.ml 11897 2009-02-09 19:28:02Z barras $ *)
 
 open Pp
 open Util
@@ -237,7 +237,8 @@ let inversion_scheme env sigma t sort dep_option inv_op =
       meta_types 
   in
   let invProof = 
-    it_mkNamedLambda_or_LetIn (local_strong (whd_meta mvb) pfterm) ownSign 
+    it_mkNamedLambda_or_LetIn
+      (local_strong (fun _ -> whd_meta mvb) Evd.empty pfterm) ownSign 
   in
   invProof
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacmach.ml 11639 2008-11-27 17:48:32Z barras $ *)
+(* $Id: tacmach.ml 11897 2009-02-09 19:28:02Z barras $ *)
 
 open Pp
 open Util
@@ -99,7 +99,7 @@ let pf_whd_betadeltaiota_stack   = pf_reduce whd_betadeltaiota_stack
 let pf_hnf_constr                = pf_reduce hnf_constr
 let pf_red_product               = pf_reduce red_product
 let pf_nf                        = pf_reduce nf
-let pf_nf_betaiota               = pf_reduce (fun _ _ -> nf_betaiota)
+let pf_nf_betaiota               = pf_reduce (fun _ -> nf_betaiota)
 let pf_compute                   = pf_reduce compute
 let pf_unfoldn ubinds            = pf_reduce (unfoldn ubinds)
 let pf_type_of                   = pf_reduce type_of

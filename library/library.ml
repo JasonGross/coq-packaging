@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: library.ml 11801 2009-01-18 20:11:41Z herbelin $ *)
+(* $Id: library.ml 11897 2009-02-09 19:28:02Z barras $ *)
 
 open Pp
 open Util
@@ -629,6 +629,8 @@ let error_recursively_dependent_library dir =
      strbrk " to save current library because" ++
      strbrk " it already depends on a library of this name.")
 
+(* Security weakness: file might have been changed on disk between
+   writing the content and computing the checksum... *) 
 let save_library_to dir f =
   let cenv, seg = Declaremods.end_library dir in
   let md = { 

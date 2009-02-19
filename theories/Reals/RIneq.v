@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: RIneq.v 10762 2008-04-06 16:57:31Z herbelin $ i*)
+(*i $Id: RIneq.v 11887 2009-02-06 19:57:33Z herbelin $ i*)
 
 (*********************************************************)
 (** * Basic lemmas for the classical real numbers        *)
@@ -1200,7 +1200,7 @@ Hint Resolve Rmult_le_compat: real.
 
 Lemma Rmult_ge_compat :
   forall r1 r2 r3 r4,
-    0 <= r1 -> 0 <= r3 -> r1 <= r2 -> r3 <= r4 -> r1 * r3 <= r2 * r4.
+    r2 >= 0 -> r4 >= 0 -> r1 >= r2 -> r3 >= r4 -> r1 * r3 >= r2 * r4.
 Proof. auto with real rorders. Qed.
 
 Lemma Rmult_gt_0_lt_compat :

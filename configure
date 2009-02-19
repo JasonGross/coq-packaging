@@ -6,9 +6,9 @@
 # 
 ##################################
 
-VERSION=8.2rc2
-VOMAGIC=08193 
-STATEMAGIC=19764
+VERSION=8.2
+VOMAGIC=08200 
+STATEMAGIC=58200
 DATE=`LANG=C date +"%B %Y"`
 
 # Create the bin/ directory if non-existent
@@ -36,7 +36,11 @@ usage () {
     echo "-local"
     printf "\tSet installation directory to the current source tree\n"
     echo "-coqrunbyteflags"
-    printf "\tSet link flags for VM-dependent bytecode\n"
+    printf "\tSet link flags for VM-dependent bytecode (coqtop)\n"
+    echo "-coqtoolsbyteflags"
+    printf "\tSet link flags for VM-independant bytecode (coqdep, coqdoc, ...)\n"
+    echo "-custom"
+    printf "\tGenerate all bytecode executables with -custom (not recommended)\n"
     echo "-src"
     printf "\tSpecifies the source directory\n"
     echo "-bindir"
@@ -111,6 +115,8 @@ ranlib_exec=ranlib
 
 local=false
 coqrunbyteflags_spec=no
+coqtoolsbyteflags_spec=no
+custom_spec=no
 src_spec=no
 prefix_spec=no
 bindir_spec=no
@@ -147,6 +153,11 @@ while : ; do
     -coqrunbyteflags|--coqrunbyteflags) coqrunbyteflags_spec=yes
                                         coqrunbyteflags="$2"
                                         shift;;
+    -coqtoolsbyteflags|--coqtoolsbyteflags) coqtoolsbyteflags_spec=yes
+                                            coqtoolsbyteflags="$2"
+                                            shift;;
+    -custom|--custom) custom_spec=yes
+                      shift;;
     -src|--src) src_spec=yes
                 COQSRC="$2"
 	        shift;;
@@ -388,7 +399,7 @@ fi
 
 # Under Windows, OCaml only understands Windows filenames (C:\...)
 case $ARCH in
-    win32) CAMLBIN=`cygpath -w ${CAMLBIN}`;;
+    win32) CAMLBIN=`cygpath -m ${CAMLBIN}`;;
 esac
 
 # this fixes a camlp4 bug under FreeBSD
@@ -668,7 +679,7 @@ esac
 
 # OCaml only understand Windows filenames (C:\...)
 case $ARCH in
-    win32) COQTOP=`cygpath -w ${COQTOP}`
+    win32) COQTOP=`cygpath -m ${COQTOP}`
 esac
 
 case $ARCH in
@@ -774,12 +785,25 @@ case $coqdocdir_spec/$prefix_spec/$local in
 	esac;;
 esac
 
+# Determine if we enable -custom by default (Windows and MacOS)
+CUSTOM_OS=no
+if [ "$ARCH" = "win32" ] || [ "`uname -s`" = "Darwin" ]; then
+    CUSTOM_OS=yes
+fi
+
 BUILDLDPATH="# you might want to set CAML_LD_LIBRARY_PATH by hand!"
-case $coqrunbyteflags_spec/$local in
-    yes/*) COQRUNBYTEFLAGS="$coqrunbyteflags";;
-    */true) COQRUNBYTEFLAGS="-dllib -lcoqrun -dllpath $COQTOP/kernel/byterun";;
-    *) COQRUNBYTEFLAGS="-dllib -lcoqrun -dllpath $LIBDIR"
-       BUILDLDPATH="export CAML_LD_LIBRARY_PATH=$COQTOP/kernel/byterun";;
+case $coqrunbyteflags_spec/$local/$custom_spec/$CUSTOM_OS in
+    yes/*/*/*) COQRUNBYTEFLAGS="$coqrunbyteflags";;
+    */*/yes/*|*/*/*/yes) COQRUNBYTEFLAGS="-custom";;
+    */true/*/*) COQRUNBYTEFLAGS="-dllib -lcoqrun -dllpath '$COQTOP'/kernel/byterun";;
+    *)
+        COQRUNBYTEFLAGS="-dllib -lcoqrun -dllpath '$LIBDIR'"
+        BUILDLDPATH="export CAML_LD_LIBRARY_PATH='$COQTOP'/kernel/byterun";;
+esac
+case $coqtoolsbyteflags_spec/$custom_spec/$CUSTOM_OS in
+    yes/*/*) COQTOOLSBYTEFLAGS="$coqtoolsbyteflags";;
+    */yes/*|*/*/yes) COQTOOLSBYTEFLAGS="-custom";;
+    *) COQTOOLSBYTEFLAGS="";;
 esac
 
 # case $emacs_spec in
@@ -803,6 +827,7 @@ if test ! -z "$OS" ; then
   echo "  Operating system                  : $OS"
 fi
 echo "  Coq VM bytecode link flags        : $COQRUNBYTEFLAGS"
+echo "  Coq tools bytecode link flags     : $COQTOOLSBYTEFLAGS"
 echo "  OS dependent libraries            : $OSDEPLIBS"
 echo "  Objective-Caml/Camlp4 version     : $CAMLVERSION"
 echo "  Objective-Caml/Camlp4 binaries in : $CAMLBIN"
@@ -858,7 +883,7 @@ case $ARCH in
     win32)
 	ESCCOQTOP=`echo $COQTOP |sed -e 's|\\\|\\\\\\\|g'`
 	ESCBINDIR=`echo $BINDIR |sed -e 's|\\\|\\\\\\\|g'`
-	ESCSRCDIR=`cygpath -d $COQSRC |sed -e 's|\\\|\\\\\\\|g'`
+	ESCSRCDIR=`cygpath -m $COQSRC |sed -e 's|\\\|\\\\\\\|g'`
 	ESCLIBDIR=`echo $LIBDIR |sed -e 's|\\\|\\\\\\\|g'`
 	ESCCAMLDIR=`echo $CAMLBIN |sed -e 's|\\\|\\\\\\\|g'`
 	ESCCAMLLIB=`echo $CAMLLIB |sed -e 's|\\\|\\\\\\\|g'`
@@ -870,6 +895,7 @@ case $ARCH in
 	ESCCAMLP4LIB=`echo $CAMLP4LIB |sed -e 's|\\\|\\\\\\\|g'`
 	ESCLABLGTKINCLUDES=`echo $LABLGTKINCLUDES |sed -e 's|\\\|\\\\\\\|g'`
 	ESCCOQRUNBYTEFLAGS=`echo $COQRUNBYTEFLAGS |sed -e 's|\\\|\\\\\\\|g'`
+	ESCCOQTOOLSBYTEFLAGS=`echo $COQTOOLSBYTEFLAGS |sed -e 's|\\\|\\\\\\\|g'`
 	ESCBUILDLDPATH=`echo $BUILDLDPATH |sed -e 's|\\\|\\\\\\\|g'`
 ;;
     *)
@@ -887,6 +913,7 @@ case $ARCH in
    	ESCCAMLP4LIB="$CAMLP4LIB"
 	ESCLABLGTKINCLUDES="$LABLGTKINCLUDES"
 	ESCCOQRUNBYTEFLAGS="$COQRUNBYTEFLAGS"
+	ESCCOQTOOLSBYTEFLAGS="$COQTOOLSBYTEFLAGS"
 	;;
 esac
 
@@ -947,6 +974,7 @@ rm -f "$COQSRC/config/Makefile"
 
 sed -e "s|LOCALINSTALLATION|$local|" \
     -e "s|XCOQRUNBYTEFLAGS|$ESCCOQRUNBYTEFLAGS|" \
+    -e "s|XCOQTOOLSBYTEFLAGS|$ESCCOQTOOLSBYTEFLAGS|" \
     -e "s|COQSRCDIRECTORY|$COQSRC|" \
     -e "s|COQVERSION|$VERSION|" \
     -e "s|BINDIRDIRECTORY|$ESCBINDIR|" \
@@ -1040,4 +1068,4 @@ echo
 echo "*Warning* To compile the system for a new architecture"
 echo "          don't forget to do a 'make archclean' before './configure'."
 
-# $Id: configure 11858 2009-01-26 13:27:23Z notin $
+# $Id: configure 11934 2009-02-17 15:58:54Z notin $

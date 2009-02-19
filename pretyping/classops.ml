@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: classops.ml 11343 2008-09-01 20:55:13Z herbelin $ *)
+(* $Id: classops.ml 11897 2009-02-09 19:28:02Z barras $ *)
 
 open Util
 open Pp
@@ -143,7 +143,7 @@ let coercion_params coe_info = coe_info.coe_param
 (* find_class_type : env -> evar_map -> constr -> cl_typ * int *)
 
 let find_class_type env sigma t =
-  let t', args = Reductionops.whd_betaiotazetaevar_stack env sigma t in
+  let t', args = Reductionops.whd_betaiotazeta_stack sigma t in
   match kind_of_term t' with
     | Var id -> CL_SECVAR id, args
     | Const sp -> CL_CONST sp, args
