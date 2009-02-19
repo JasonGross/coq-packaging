@@ -84,6 +84,7 @@ install-stamp: build-stamp
 	cp debian/coqide.desktop debian/coqide/usr/share/applications
 	cp -r doc/stdlib/html debian/coq-theories/usr/share/doc/coq-theories/
 	echo "$(COQ_ABI)" > debian/coq/usr/lib/coq/abi
+	cp debian/coqvars.mk debian/coq/usr/share/coq/
 	dh install --after dh_install
 	for u in $(PACKAGES); do \
 	  echo 'F:OCamlABI=$(OCAML_ABI)' >> debian/$$u.substvars; \
