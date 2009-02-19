@@ -1,3 +1,9 @@
+coq (8.2-1+dfsg-1) UNRELEASED; urgency=low
+
+  * New Upstream Version
+
+ -- Stephane Glondu <steph@glondu.net>  Thu, 19 Feb 2009 13:13:31 +0100
+
 coq (8.2~rc2+dfsg-3) experimental; urgency=low
 
   * Explicit more dependencies and drop dependency on

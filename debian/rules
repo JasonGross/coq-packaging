@@ -26,7 +26,11 @@ PACKAGES := $(shell awk '/Package:/{print $$2}' debian/control)
 
 OFILES := $(patsubst %.in,%,$(wildcard debian/*.in))
 OCAMLABI := $(shell ocamlc -version)
-COQABI := 8.2+$(OCAMLABI)
+
+# Beware: -1 is part of upstream version
+COQVERSION := 8.2-1
+
+COQABI := $(COQVERSION)+$(OCAMLABI)
 
 CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
   --emacslib /usr/share/emacs/site-lisp/coq --reals all --fsets all \
