@@ -3,4 +3,4 @@ usr/lib/coq/contrib/micromega
 usr/share/man/man1
 usr/share/pixmaps
 usr/share/texmf/tex/latex/misc
-usr/lib/ocaml/@OCamlABI@/stublibs
+@OCamlDllDir@

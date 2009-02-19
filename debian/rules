@@ -16,6 +16,7 @@ export VERBOSE=1
 
 # We want to use dpatch
 include /usr/share/dpatch/dpatch.make
+include /usr/share/ocaml/ocamlvars.mk
 
 HTMLDOC := doc/stdlib/html/index.html
 
@@ -25,22 +26,20 @@ ADDPREF := COQINSTALLPREFIX=$(COQPREF)
 PACKAGES := $(shell awk '/Package:/{print $$2}' debian/control)
 
 OFILES := $(patsubst %.in,%,$(wildcard debian/*.in))
-OCAMLABI := $(shell ocamlc -version)
 
 # Beware: -1 is part of upstream version
 COQVERSION := 8.2-1
 
-COQABI := $(COQVERSION)+$(OCAMLABI)
+COQ_ABI := $(COQVERSION)+$(OCAML_ABI)
 
 CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
   --emacslib /usr/share/emacs/site-lisp/coq --reals all --fsets all \
   --browser "/usr/bin/x-www-browser %s &" \
   --with-doc no --coqrunbyteflags "-dllib -lcoqrun"
 
-OCAMLINITSED := -e 's/@OCamlABI@/$(OCAMLABI)/g' -e '/^\#/d'
-OCAMLOPT := $(wildcard /usr/bin/ocamlopt*)
+OCAMLINITSED := -e 's%@OCamlDllDir@%$(OCAML_DLL_DIR)%g' -e '/^\#/d'
 
-ifneq ($(OCAMLOPT),)
+ifneq ($(OCAML_OPT_ARCH),)
   # CONFIGUREOPTS += -opt
   OCAMLINITSED += -e 's/^OPT: //'
 else
@@ -84,11 +83,11 @@ install-stamp: build-stamp
 	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
 	cp debian/coqide.desktop debian/coqide/usr/share/applications
 	cp -r doc/stdlib/html debian/coq-theories/usr/share/doc/coq-theories/
-	echo "$(COQABI)" > debian/coq/usr/lib/coq/abi
+	echo "$(COQ_ABI)" > debian/coq/usr/lib/coq/abi
 	dh install --after dh_install
 	for u in $(PACKAGES); do \
-	  echo 'F:OCamlABI=$(OCAMLABI)' >> debian/$$u.substvars; \
-	  echo 'F:CoqABI=$(COQABI)' >> debian/$$u.substvars; \
+	  echo 'F:OCamlABI=$(OCAML_ABI)' >> debian/$$u.substvars; \
+	  echo 'F:CoqABI=$(COQ_ABI)' >> debian/$$u.substvars; \
 	done
 	touch $@
 

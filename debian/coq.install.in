@@ -24,5 +24,5 @@ usr/share/man/man1/coq-tex*
 usr/share/man/man1/coqtop*
 usr/share/man/man1/coqwc*
 usr/share/man/man1/gallina*
-usr/lib/coq/dllcoqrun.so usr/lib/ocaml/@OCamlABI@/stublibs
+usr/lib/coq/dllcoqrun.so @OCamlDllDir@
 usr/share/emacs/site-lisp/coqdoc.sty usr/share/texmf/tex/latex/misc/
