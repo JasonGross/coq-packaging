@@ -14,8 +14,6 @@ export CAML_LD_LIBRARY_PATH = $(shell pwd)/kernel/byterun
 # Show full commands when building Coq
 export VERBOSE=1
 
-# We want to use dpatch
-include /usr/share/dpatch/dpatch.make
 include /usr/share/ocaml/ocamlinit.mk
 
 HTMLDOC := doc/stdlib/html/index.html
@@ -38,7 +36,7 @@ OCAMLINIT_SED += \
   -e 's%@CoqABI@%$(COQ_ABI)%'
 
 configure: configure-stamp
-configure-stamp: patch-stamp ocamlinit-stamp
+configure-stamp: ocamlinit-stamp
 	dh build --before dh_auto_configure
 	./configure $(CONFIGUREOPTS)
 	touch $@
@@ -77,7 +75,7 @@ install-stamp: build-stamp
 	done
 	touch $@
 
-clean: unpatch ocamlinit-clean
+clean: ocamlinit-clean
 	dh $@
 
 binary-indep: install-stamp
