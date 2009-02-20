@@ -1,8 +1,8 @@
 # Current coq version
-COQ_VERSION ?= $(shell /usr/bin/coqc --version | grep version | sed 's/^.*version \(.*\) ([^)]*)$/\1/')
+COQ_VERSION ?= @CoqVersion@
 
 # Current coq ABI
-COQ_ABI ?= $(shell cat /usr/lib/coq/abi)
+COQ_ABI ?= @CoqABI@
 
 # Standard library path
 COQ_STDLIB_DIR ?= $(shell /usr/bin/coqc -where)
