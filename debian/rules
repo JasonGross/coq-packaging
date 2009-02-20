@@ -16,7 +16,7 @@ export VERBOSE=1
 
 # We want to use dpatch
 include /usr/share/dpatch/dpatch.make
-include /usr/share/ocaml/ocamlvars.mk
+include /usr/share/ocaml/ocamlinit.mk
 
 HTMLDOC := doc/stdlib/html/index.html
 
@@ -25,8 +25,6 @@ ADDPREF := COQINSTALLPREFIX=$(COQPREF)
 
 PACKAGES := $(shell awk '/Package:/{print $$2}' debian/control)
 
-OFILES := $(patsubst %.in,%,$(wildcard debian/*.in))
-
 COQ_VERSION := $(shell head -n1 debian/changelog | awk -F'[+() ]' '{print $$3}')
 COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
 
@@ -34,20 +32,6 @@ CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
   --emacslib /usr/share/emacs/site-lisp/coq --reals all --fsets all \
   --browser "/usr/bin/x-www-browser %s &" \
   --with-doc no --coqrunbyteflags "-dllib -lcoqrun"
-
-OCAMLINITSED := -e 's%@OCamlDllDir@%$(OCAML_DLL_DIR)%g' -e '/^\#/d'
-
-ifneq ($(OCAML_OPT_ARCH),)
-  # CONFIGUREOPTS += -opt
-  OCAMLINITSED += -e 's/^OPT: //'
-else
-  OCAMLINITSED += -e '/^OPT: /d'
-endif
-
-ocamlinit: ocamlinit-stamp
-ocamlinit-stamp:
-	for f in $(OFILES); do sed $(OCAMLINITSED) $$f.in > $$f; done
-	touch $@
 
 configure: configure-stamp
 configure-stamp: patch-stamp ocamlinit-stamp
@@ -90,9 +74,8 @@ install-stamp: build-stamp
 	done
 	touch $@
 
-clean: unpatch
+clean: unpatch ocamlinit-clean
 	dh $@
-	rm -f $(OFILES)
 
 binary-indep: install-stamp
 	dh $@
