@@ -27,10 +27,8 @@ PACKAGES := $(shell awk '/Package:/{print $$2}' debian/control)
 
 OFILES := $(patsubst %.in,%,$(wildcard debian/*.in))
 
-# Beware: -1 is part of upstream version
-COQVERSION := 8.2-1
-
-COQ_ABI := $(COQVERSION)+$(OCAML_ABI)
+COQ_VERSION := $(shell head -n1 debian/changelog | awk -F'[+() ]' '{print $$3}')
+COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
 
 CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
   --emacslib /usr/share/emacs/site-lisp/coq --reals all --fsets all \
