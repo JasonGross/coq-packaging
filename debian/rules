@@ -33,6 +33,10 @@ CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
   --browser "/usr/bin/x-www-browser %s &" \
   --with-doc no --coqrunbyteflags "-dllib -lcoqrun"
 
+OCAMLINIT_SED += \
+  -e 's%@CoqVersion@%$(COQ_VERSION)%' \
+  -e 's%@CoqABI@%$(COQ_ABI)%'
+
 configure: configure-stamp
 configure-stamp: patch-stamp ocamlinit-stamp
 	dh build --before dh_auto_configure
@@ -65,7 +69,6 @@ install-stamp: build-stamp
 	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
 	cp debian/coqide.desktop debian/coqide/usr/share/applications
 	cp -r doc/stdlib/html debian/coq-theories/usr/share/doc/coq-theories/
-	echo "$(COQ_ABI)" > debian/coq/usr/lib/coq/abi
 	cp debian/coqvars.mk debian/coq/usr/share/coq/
 	dh install --after dh_install
 	for u in $(PACKAGES); do \
