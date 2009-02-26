@@ -40,6 +40,8 @@ Suggests:
  ledit | cle,
  libcoq-ocaml-dev,
  coq-doc
+Conflicts: coq-libs
+Replaces: coq-libs
 Description: proof assistant for higher-order logic (toplevel and compiler)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
@@ -92,6 +94,8 @@ Depends:
  coq (= ${binary:Version}),
  ocaml-nox-${F:OCamlABI},
  ${misc:Depends}
+Conflicts: coq (<< 8.2-1+dfsg-1), coq-libs
+Replaces: coq (<< 8.2-1+dfsg-1), coq-libs
 Description: development libraries and tools for Coq
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
