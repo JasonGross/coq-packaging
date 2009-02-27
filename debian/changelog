@@ -7,8 +7,10 @@ coq (8.2-1+dfsg-1) UNRELEASED; urgency=low
   * Remove dependency on dpatch
   * Add some missing Conflicts and Replaces in coq and libcoq-ocaml-dev
     (Closes: #517107)
+  * Add missing dependency for coqide.byte (no longer compiled in
+    custom mode): liblablgtk2-ocaml
 
- -- Stephane Glondu <steph@glondu.net>  Thu, 26 Feb 2009 19:09:28 +0100
+ -- Stephane Glondu <steph@glondu.net>  Fri, 27 Feb 2009 13:23:43 +0100
 
 coq (8.2~rc2+dfsg-3) experimental; urgency=low
 

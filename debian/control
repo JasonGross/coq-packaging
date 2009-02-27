@@ -61,6 +61,7 @@ Depends:
  ${shlibs:Depends},
  coq (= ${binary:Version}),
  ocaml-base-nox-${F:OCamlABI},
+ liblablgtk2-ocaml,
  ${misc:Depends}
 Description: proof assistant for higher-order logic (gtk interface)
  Coq is a proof assistant for higher-order logic, which allows the
