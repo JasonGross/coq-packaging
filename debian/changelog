@@ -1,4 +1,4 @@
-coq (8.2-1+dfsg-1) UNRELEASED; urgency=low
+coq (8.2-1+dfsg-1) unstable; urgency=low
 
   * New Upstream Version
   * Use variables and ocamlinit rule from dh-ocaml in rules
@@ -11,7 +11,7 @@ coq (8.2-1+dfsg-1) UNRELEASED; urgency=low
     custom mode): liblablgtk2-ocaml
   * Rebuild with OCaml 3.11
 
- -- Stephane Glondu <steph@glondu.net>  Fri, 27 Feb 2009 13:30:03 +0100
+ -- Stephane Glondu <steph@glondu.net>  Fri, 27 Feb 2009 13:31:30 +0100
 
 coq (8.2~rc2+dfsg-3) experimental; urgency=low
 
