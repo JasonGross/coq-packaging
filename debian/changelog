@@ -1,3 +1,9 @@
+coq (8.2-1+dfsg-2) UNRELEASED; urgency=low
+
+  * Updated watch file.
+
+ -- Samuel Mimram <smimram@debian.org>  Mon, 06 Apr 2009 19:51:50 +0200
+
 coq (8.2-1+dfsg-1) unstable; urgency=low
 
   * New Upstream Version
