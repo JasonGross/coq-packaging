@@ -46,7 +46,6 @@ Description: proof assistant for higher-order logic (toplevel and compiler)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
  specification. It is developed using Objective Caml and Camlp5.
- For more information, see <http://coq.inria.fr/>.
  .
  This packages provides coqtop, a command line interface to Coq.
  .
@@ -67,7 +66,6 @@ Description: proof assistant for higher-order logic (gtk interface)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
  specification. It is developed using Objective Caml and Camlp5.
- For more information, see <http://coq.inria.fr/>.
  .
  This package provides CoqIde, a graphical user interface for
  developing proofs.
@@ -82,7 +80,6 @@ Description: proof assistant for higher-order logic (theories)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
  specification. It is developed using Objective Caml and Camlp5.
- For more information, see <http://coq.inria.fr/>.
  .
  This package provides existing theories that new proofs can be
  based upon, including theories of arithmetic and Boolean values.
@@ -101,7 +98,6 @@ Description: development libraries and tools for Coq
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
  specification. It is developed using Objective Caml and Camlp5.
- For more information, see <http://coq.inria.fr/>.
  .
  This package provides coqmktop, and libraries needed to develop
  OCaml-side extensions to Coq.

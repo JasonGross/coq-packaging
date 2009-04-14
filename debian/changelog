@@ -1,8 +1,10 @@
 coq (8.2-1+dfsg-2) UNRELEASED; urgency=low
 
+  * Remove upstream url from long descriptions since we already use the
+    Homepage field, closes: #524037.
   * Updated watch file.
 
- -- Samuel Mimram <smimram@debian.org>  Mon, 06 Apr 2009 19:51:50 +0200
+ -- Samuel Mimram <smimram@debian.org>  Tue, 14 Apr 2009 13:28:26 +0200
 
 coq (8.2-1+dfsg-1) unstable; urgency=low
 
