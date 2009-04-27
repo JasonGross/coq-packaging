@@ -37,7 +37,7 @@ Recommends: coqide | proofgeneral-coq
 Suggests:
  ocaml-nox,
  proofgeneral-coq,
- ledit | cle,
+ ledit | readline-editor,
  libcoq-ocaml-dev,
  coq-doc
 Conflicts: coq-libs

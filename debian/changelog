@@ -1,10 +1,15 @@
 coq (8.2-1+dfsg-2) UNRELEASED; urgency=low
 
+  [ Samuel Mimram ]
   * Remove upstream url from long descriptions since we already use the
     Homepage field, closes: #524037.
   * Updated watch file.
 
- -- Samuel Mimram <smimram@debian.org>  Tue, 14 Apr 2009 13:28:26 +0200
+  [ Stephane Glondu ]
+  * Remove suggestion on package cle (which has been removed), use
+    readline-editor instead
+
+ -- Stephane Glondu <steph@glondu.net>  Mon, 27 Apr 2009 18:07:12 +0200
 
 coq (8.2-1+dfsg-1) unstable; urgency=low
 
