@@ -1,4 +1,4 @@
-coq (8.2-1+dfsg-2) UNRELEASED; urgency=low
+coq (8.2-1+dfsg-2) unstable; urgency=low
 
   [ Samuel Mimram ]
   * Remove upstream url from long descriptions since we already use the
@@ -8,8 +8,13 @@ coq (8.2-1+dfsg-2) UNRELEASED; urgency=low
   [ Stephane Glondu ]
   * Remove suggestion on package cle (which has been removed), use
     readline-editor instead
+  * Recompile with OCaml 3.11.1 (Closes: #535320)
+  * Add versioned dependencies to camlp5 and liblablgtk2-ocaml-dev to
+    ease OCaml 3.11.1 transition
+  * Move libcoq-ocaml-dev to section ocaml
+  * Update Standards-Version to 3.8.2
 
- -- Stephane Glondu <steph@glondu.net>  Mon, 27 Apr 2009 18:07:12 +0200
+ -- Stephane Glondu <steph@glondu.net>  Wed, 01 Jul 2009 17:41:55 +0200
 
 coq (8.2-1+dfsg-1) unstable; urgency=low
 

@@ -9,15 +9,15 @@ Uploaders:
  Samuel Mimram <smimram@debian.org>,
  Stephane Glondu <steph@glondu.net>
 DM-Upload-Allowed: yes
-Standards-Version: 3.8.0
+Standards-Version: 3.8.2
 Build-Depends:
  debhelper (>= 7),
  dpkg-dev (>= 1.13.19),
  dh-ocaml (>= 0.4.1),
  ocaml-nox (>= 3.11.0-5),
  ocaml-best-compilers,
- camlp5 (>= 5.10-3),
- liblablgtk2-ocaml-dev (>= 2.12.0-2),
+ camlp5 (>= 5.12),
+ liblablgtk2-ocaml-dev (>= 2.12.0-3),
  texlive-latex-extra,
  hevea (>= 1.10-7)
 Homepage: http://coq.inria.fr/
@@ -85,7 +85,7 @@ Description: proof assistant for higher-order logic (theories)
  based upon, including theories of arithmetic and Boolean values.
 
 Package: libcoq-ocaml-dev
-Section: libdevel
+Section: ocaml
 Architecture: any
 Depends:
  ${shlibs:Depends},
