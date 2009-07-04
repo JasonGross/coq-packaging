@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacexpr.ml 11809 2009-01-20 11:39:55Z aspiwack $ i*)
+(*i $Id: vernacexpr.ml 12187 2009-06-13 19:36:59Z msozeau $ i*)
 
 open Util
 open Names
@@ -65,7 +65,7 @@ type printable =
   | PrintVisibility of string option
   | PrintAbout of reference
   | PrintImplicit of reference
-  | PrintAssumptions of reference
+  | PrintAssumptions of bool * reference
 
 type search_about_item =
   | SearchSubPattern of constr_pattern_expr

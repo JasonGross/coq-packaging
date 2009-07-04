@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: auto.mli 11735 2009-01-02 17:22:31Z herbelin $ i*)
+(*i $Id: auto.mli 12187 2009-06-13 19:36:59Z msozeau $ i*)
 
 (*i*)
 open Util
@@ -53,6 +53,7 @@ module Hint_db :
     type t
     val empty : transparent_state -> bool -> t
     val find : global_reference -> t -> search_entry
+    val map_none : t -> pri_auto_tactic list
     val map_all : global_reference -> t -> pri_auto_tactic list
     val map_auto : global_reference * constr -> t -> pri_auto_tactic list
     val add_one : hint_entry -> t -> t

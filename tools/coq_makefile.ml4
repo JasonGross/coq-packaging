@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq_makefile.ml4 11883 2009-02-06 09:54:52Z herbelin $ *)
+(* $Id: coq_makefile.ml4 12176 2009-06-09 09:44:40Z notin $ *)
 
 (* créer un Makefile pour un développement Coq automatiquement *)
 
@@ -212,7 +212,7 @@ let clean sds sps =
   print "\trm -f all.ps all-gal.ps all.pdf all-gal.pdf all.glob $(VFILES:.v=.glob) $(HTMLFILES) \
          $(GHTMLFILES) $(VFILES:.v=.tex) $(VFILES:.v=.g.tex) $(VFILES:.v=.v.d)\n";
   if !some_mlfile then
-    print "\trm -f $(CMOFILES) $(MLFILES:.ml=.cmi) $(MLFILES:.ml=.ml.d)\n";
+    print "\trm -f $(CMOFILES) $(MLFILES:.ml=.cmi) $(MLFILES:.ml=.ml.d) $(MLFILES:.ml=.cmx) $(MLFILES:.ml=.o)\n";
   if Coq_config.has_natdynlink && !some_mlfile then
     print "\trm -f $(CMXSFILES) $(CMXSFILES:.cmxs=.o)\n";
   print "\t- rm -rf html\n";
@@ -243,14 +243,14 @@ let footer_includes () =
 let implicit () =
   let ml_rules () =
     print "%.cmi: %.mli\n\t$(CAMLC) $(ZDEBUG) $(ZFLAGS) $<\n\n";
-    print "%.cmo: %.ml\n\t$(CAMLC) $(ZDEBUG) $(ZFLAGS) -c $(PP) $<\n\n";
-    print "%.cmx: %.ml\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) -c $(PP) $<\n\n";
-    print "%.cmxs: %.ml\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $(PP) $<\n\n";
+    print "%.cmo: %.ml\n\t$(CAMLC) $(ZDEBUG) $(ZFLAGS) $(PP) $<\n\n";
+    print "%.cmx: %.ml\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $(PP) $<\n\n";
+    print "%.cmxs: %.ml\n\t$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $(PP) $<\n\n";
     print "%.cmo: %.ml4\n\t$(CAMLC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<\n\n";
     print "%.cmx: %.ml4\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<\n\n";
-    print "%.cmxs: %.ml4\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $(PP) -impl $<\n\n";
+    print "%.cmxs: %.ml4\n\t$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $(PP) -impl $<\n\n";
     print "%.ml.d: %.ml\n";
-    print "\t$(CAMLBIN)ocamldep -slash $(COQSRCLIBS) $(PP) \"$<\" > \"$@\"\n\n"
+    print "\t$(CAMLBIN)ocamldep -slash $(COQSRCLIBS) $(OCAMLLIBS) $(PP) \"$<\" > \"$@\"\n\n"
   and v_rule () =
     print "%.vo %.glob: %.v\n\t$(COQC) -dump-glob $*.glob $(COQDEBUG) $(COQFLAGS) $*\n\n";
     print "%.vi: %.v\n\t$(COQC) -i $(COQDEBUG) $(COQFLAGS) $*\n\n";
@@ -283,8 +283,8 @@ let variables defs =
     print "COQDOC:=$(COQBIN)coqdoc\n";
     print "COQMKTOP:=$(COQBIN)coqmktop\n";
     (* Caml executables and relative variables *)
-    printf "CAMLC:=$(CAMLBIN)%s -rectypes\n" best_ocamlc;
-    printf "CAMLOPTC:=$(CAMLBIN)%s -rectypes\n" best_ocamlopt;
+    printf "CAMLC:=$(CAMLBIN)%s -c -rectypes\n" best_ocamlc;
+    printf "CAMLOPTC:=$(CAMLBIN)%s -c -rectypes\n" best_ocamlopt;
     printf "CAMLLINK:=$(CAMLBIN)%s -rectypes\n" best_ocamlc;
     printf "CAMLOPTLINK:=$(CAMLBIN)%s -rectypes\n" best_ocamlopt;
     print "GRAMMARS:=grammar.cma\n";
@@ -315,7 +315,7 @@ let include_dirs (inc_i,inc_r) =
   let str_i' = parse_includes inc_i' in
   let str_r = parse_rec_includes inc_r in
     section "Libraries definitions.";
-    print "OCAMLLIBS:=-I $(CAMLP4LIB) "; print_list "\\\n  " str_i; print "\n";
+    print "OCAMLLIBS:="; print_list "\\\n  " str_i; print "\n";
     print "COQSRCLIBS:=-I $(COQLIB)/kernel -I $(COQLIB)/lib \\
   -I $(COQLIB)/library -I $(COQLIB)/parsing \\
   -I $(COQLIB)/pretyping -I $(COQLIB)/interp \\

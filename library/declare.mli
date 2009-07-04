@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declare.mli 10840 2008-04-23 21:29:34Z herbelin $ i*)
+(*i $Id: declare.mli 12187 2009-06-13 19:36:59Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -34,7 +34,7 @@ open Nametab
 
 type section_variable_entry =
   | SectionLocalDef of constr * types option * bool (* opacity *)
-  | SectionLocalAssum of types * bool * bool (* Implicit status, Keep *)
+  | SectionLocalAssum of types * bool * identifier list (* Implicit status, Keep list *)
 
 type variable_declaration = dir_path * section_variable_entry * logical_kind
 

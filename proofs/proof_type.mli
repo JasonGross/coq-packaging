@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: proof_type.mli 11639 2008-11-27 17:48:32Z barras $ i*)
+(*i $Id: proof_type.mli 12168 2009-06-06 21:34:37Z herbelin $ i*)
 
 (*i*)
 open Environ
@@ -29,8 +29,8 @@ open Pattern
 type prim_rule =
   | Intro of identifier
   | Cut of bool * bool * identifier * types
-  | FixRule of identifier * int * (identifier * int * constr) list
-  | Cofix of identifier * (identifier * constr) list
+  | FixRule of identifier * int * (identifier * int * constr) list * int
+  | Cofix of identifier * (identifier * constr) list * int
   | Refine of constr
   | Convert_concl of types * cast_kind 
   | Convert_hyp of named_declaration

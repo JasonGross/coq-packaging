@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile.build 11935 2009-02-17 16:14:07Z notin $ 
+# $Id: Makefile.build 12169 2009-06-06 21:43:23Z herbelin $ 
 
 
 # Makefile for Coq
@@ -717,7 +717,7 @@ ifeq ($(BEST),opt)
 endif
 # csdpcert is not meant to be directly called by the user; we install
 # it with libraries
-	-$(MKDIR) -p $(FULLCOQLIB)/contrib/micromega
+	-$(MKDIR) $(FULLCOQLIB)/contrib/micromega
 	$(INSTALLBIN) $(CSDPCERT) $(FULLCOQLIB)/contrib/micromega
 	-$(INSTALLLIB) revision $(FULLCOQLIB)
 
@@ -960,7 +960,7 @@ else
 endif
 %.ml4.d: $(D_DEPEND_BEFORE_SRC) %.ml4
 	$(SHOW)'CAMLP4DEPS $<'
-	$(HIDE)( /bin/echo -n '$*.cmo $*.cmx $*.ml4.ml.d $*.ml4-preprocessed: $(SEP)' && $(CAMLP4DEPS) "$<" ) > "$@" \
+	$(HIDE)( printf "%s" '$*.cmo $*.cmx $*.ml4.ml.d $*.ml4-preprocessed: $(SEP)' && $(CAMLP4DEPS) "$<" ) > "$@" \
 	  || ( RV=$$?; rm -f "$@"; exit $${RV} )
 
 %.ml4.ml.d: $(D_DEPEND_BEFORE_SRC) %.ml4 $(D_DEPEND_AFTER_SRC) $(GENFILES) $(ML4FILES:.ml4=.ml) %.ml4.d

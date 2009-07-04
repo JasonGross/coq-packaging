@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modops.ml 11514 2008-10-28 13:39:02Z soubiran $ i*)
+(*i $Id: modops.ml 11923 2009-02-13 12:20:27Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -272,9 +272,9 @@ let rec eval_struct env = function
 	      (subst_key (map_msid msid mp) sub_alias)
 	      (map_msid msid mp)
 	| _ -> sub_alias in
-      let sub_alias1 = update_subst sub_alias 
-	(map_mbid farg_id mp (None)) in
-      let resolve = resolver_of_environment farg_id farg_b mp sub_alias env in
+    let resolve = resolver_of_environment farg_id farg_b mp sub_alias env in  
+    let sub_alias1 = update_subst sub_alias 
+	(map_mbid farg_id mp (Some resolve)) in
 	eval_struct env (subst_struct_expr 
 			   (join sub_alias1 
 			      (map_mbid farg_id mp (Some resolve))) fbody_b)

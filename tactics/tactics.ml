@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tactics.ml 11897 2009-02-09 19:28:02Z barras $ *)
+(* $Id: tactics.ml 12187 2009-06-13 19:36:59Z msozeau $ *)
 
 open Pp
 open Util
@@ -155,19 +155,37 @@ let order_hyps      = Tacmach.order_hyps
 (* Renaming hypotheses *)
 let rename_hyp      = Tacmach.rename_hyp
 
+(**************************************************************)
+(*          Fresh names                                       *)
+(**************************************************************)
+
+let fresh_id_avoid avoid id =
+  next_global_ident_away true id avoid
+
+let fresh_id avoid id gl =
+  fresh_id_avoid (avoid@(pf_ids_of_hyps gl)) id
+
+(**************************************************************)
+(*          Fixpoints and CoFixpoints                         *)
+(**************************************************************)
+
 (* Refine as a fixpoint *)
 let mutual_fix = Tacmach.mutual_fix
 
-let fix ido n = match ido with
-  | None -> mutual_fix (Pfedit.get_current_proof_name ()) n []
-  | Some id -> mutual_fix id n []
+let fix ido n gl = match ido with
+  | None -> 
+      mutual_fix (fresh_id [] (Pfedit.get_current_proof_name ()) gl) n [] gl
+  | Some id ->
+      mutual_fix id n [] gl
 
 (* Refine as a cofixpoint *)
 let mutual_cofix = Tacmach.mutual_cofix
 
-let cofix = function
-  | None -> mutual_cofix (Pfedit.get_current_proof_name ()) []
-  | Some id -> mutual_cofix id []
+let cofix ido gl = match ido with
+  | None -> 
+      mutual_cofix (fresh_id [] (Pfedit.get_current_proof_name ()) gl) [] gl
+  | Some id ->
+      mutual_cofix id [] gl
 
 (**************************************************************)
 (*          Reduction and conversion tactics                  *)
@@ -285,12 +303,6 @@ let unfold_constr = function
 (*******************************************)
 (*         Introduction tactics            *)
 (*******************************************)
-
-let fresh_id_avoid avoid id =
-  next_global_ident_away true id avoid
-
-let fresh_id avoid id gl =
-  fresh_id_avoid (avoid@(pf_ids_of_hyps gl)) id
 
 let id_of_name_with_default id = function
   | Anonymous -> id
@@ -565,9 +577,14 @@ let error_uninstantiated_metas t clenv =
   let id = match na with Name id -> id | _ -> anomaly "unnamed dependent meta"
   in errorlabstrm "" (str "Cannot find an instance for " ++ pr_id id ++ str".")
 
-let clenv_refine_in with_evars id clenv gl =
+let clenv_refine_in with_evars ?(with_classes=true) id clenv gl =
   let clenv = clenv_pose_dependent_evars with_evars clenv in
-  let new_hyp_typ  = clenv_type clenv in
+  let clenv = 
+    if with_classes then 
+      { clenv with evd = Typeclasses.resolve_typeclasses ~fail:(not with_evars) clenv.env clenv.evd }
+    else clenv
+  in
+  let new_hyp_typ = clenv_type clenv in
   if not with_evars & occur_meta new_hyp_typ then 
     error_uninstantiated_metas new_hyp_typ clenv;
   let new_hyp_prf  = clenv_value clenv in
@@ -1098,9 +1115,6 @@ let forward_general_multi_rewrite =
 let register_general_multi_rewrite f =
   forward_general_multi_rewrite := f
 
-let clear_last = tclLAST_HYP (fun c -> (clear [destVar c]))
-let case_last  = tclLAST_HYP simplest_case
-
 let error_unexpected_extra_pattern loc nb pat =
   let s1,s2,s3 = match pat with
   | IntroIdentifier _ -> "name", (plural nb " introduction pattern"), "no"
@@ -1111,8 +1125,8 @@ let error_unexpected_extra_pattern loc nb pat =
        str (if nb = 1 then "was" else "were") ++
       strbrk " expected in the branch).")
 
-let intro_or_and_pattern loc b ll l' tac =
-  tclLAST_HYP (fun c gl ->
+let intro_or_and_pattern loc b ll l' tac id gl =
+    let c = mkVar id in
     let ind,_ = pf_reduce_to_quantified_ind gl (pf_type_of gl c) in
     let nv = mis_constr_nargs ind in
     let bracketed = b or not (l'=[]) in
@@ -1126,10 +1140,10 @@ let intro_or_and_pattern loc b ll l' tac =
     let ll = fix_empty_or_and_pattern (Array.length nv) ll in
     check_or_and_pattern_size loc ll (Array.length nv);
     tclTHENLASTn
-      (tclTHEN case_last clear_last)
+      (tclTHEN (simplest_case c) (clear [id]))
       (array_map2 (fun n l -> tac ((adjust_names_length n n l)@l'))
 	nv (Array.of_list ll))
-      gl)
+      gl
 
 let rewrite_hyp l2r id gl =
   let rew_on l2r =
@@ -1194,8 +1208,9 @@ let rec intros_patterns b avoid thin destopt = function
   | (loc, IntroOrAndPattern ll) :: l' ->
       tclTHEN
         introf
-        (intro_or_and_pattern loc b ll l'
-	  (intros_patterns b avoid thin destopt))
+        (onLastHyp
+	  (intro_or_and_pattern loc b ll l'
+	    (intros_patterns b avoid thin destopt)))
   | (loc, IntroRewrite l2r) :: l ->
       tclTHEN 
         (intro_gen loc (IntroAvoid(avoid@explicit_intro_names l)) no_move true)
@@ -1229,8 +1244,10 @@ let prepare_intros s ipat gl = match ipat with
   | IntroRewrite l2r -> 
       let id = make_id s gl in
       id, !forward_general_multi_rewrite l2r false (inj_open (mkVar id),NoBindings) allClauses
-  | IntroOrAndPattern ll -> make_id s gl, 
-      intro_or_and_pattern loc true ll [] (intros_patterns true [] [] no_move)
+  | IntroOrAndPattern ll -> make_id s gl,
+      onLastHyp
+	(intro_or_and_pattern loc true ll [] 
+	  (intros_patterns true [] [] no_move))
 
 let ipat_of_name = function
   | Anonymous -> None
@@ -1261,6 +1278,7 @@ let as_tac id ipat = match ipat with
       !forward_general_multi_rewrite l2r false (inj_open (mkVar id),NoBindings) allClauses
   | Some (loc,IntroOrAndPattern ll) ->
       intro_or_and_pattern loc true ll [] (intros_patterns true [] [] no_move)
+        id
   | Some (loc,
       (IntroIdentifier _ | IntroAnonymous | IntroFresh _ | IntroWildcard)) ->
       user_err_loc (loc,"", str "Disjunctive/conjunctive pattern expected")
@@ -2167,7 +2185,7 @@ let dependent_pattern c gl =
     let conclvar = subst_term_occ all_occurrences c ty in
       mkNamedLambda id cty conclvar
   in
-  let subst = (c, varname c, cty) :: List.map (fun c -> (c, varname c, pf_type_of gl c)) deps in
+  let subst = (c, varname c, cty) :: List.rev_map (fun c -> (c, varname c, pf_type_of gl c)) deps in
   let concllda = List.fold_left mklambda (pf_concl gl) subst in 
   let conclapp = applistc concllda (List.rev_map pi1 subst) in
     convert_concl_no_check conclapp DEFAULTcast gl

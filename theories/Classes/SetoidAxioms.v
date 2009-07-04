@@ -12,7 +12,7 @@
  * Institution: LRI, CNRS UMR 8623 - UniversitÃcopyright Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: SetoidAxioms.v 11709 2008-12-20 11:42:15Z msozeau $ *)
+(* $Id: SetoidAxioms.v 12083 2009-04-14 07:22:18Z herbelin $ *)
 
 Require Import Coq.Program.Program.
 
@@ -22,7 +22,7 @@ Unset Strict Implicit.
 Require Export Coq.Classes.SetoidClass.
 
 (* Application of the extensionality axiom to turn a goal on 
-   Leibinz equality to a setoid equivalence (use with care!). *)
+   Leibniz equality to a setoid equivalence (use with care!). *)
 
 Axiom setoideq_eq : forall `{sa : Setoid a} (x y : a), x == y -> x = y.
 

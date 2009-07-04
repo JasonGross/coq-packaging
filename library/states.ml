@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: states.ml 11313 2008-08-07 11:15:03Z barras $ *)
+(* $Id: states.ml 12080 2009-04-11 16:56:20Z herbelin $ *)
 
 open System
 
@@ -33,5 +33,12 @@ let with_heavy_rollback f x =
   let st = freeze () in
   try 
     f x
+  with reraise ->
+    (unfreeze st; raise reraise)
+
+let with_state_protection f x =
+  let st = freeze () in
+  try 
+    let a = f x in unfreeze st; a
   with reraise ->
     (unfreeze st; raise reraise)

@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile 11826 2009-01-22 06:43:35Z notin $ 
+# $Id: Makefile 12063 2009-04-08 15:38:39Z herbelin $ 
 
 
 # Makefile for Coq
@@ -24,14 +24,17 @@
 # by Emacs' next-error.
 ###########################################################################
 
+export SHELL:=/bin/bash
+
 export FIND_VCS_CLAUSE:='(' \
-  -name '{arch}' -or \
-  -name '.svn' -or \
-  -name '_darcs' -or \
-  -name '.git' -or \
-  -name 'debian' -or \
+  -name '{arch}' -o \
+  -name '.svn' -o \
+  -name '_darcs' -o \
+  -name '.git' -o \
+  -name '.bzr' -o \
+  -name 'debian' -o \
   -name "$${GIT_DIR}" \
-')' -prune -type f -or
+')' -prune -type f -o
 export PRUNE_CHECKER := -wholename ./checker/\* -prune -or
 
 FIND_PRINTF_P:=-print | sed 's|^\./||'
@@ -45,7 +48,7 @@ export GENHFILES:=kernel/byterun/coq_jumptbl.h
 export GENVFILES:=theories/Numbers/Natural/BigN/NMake.v
 export GENFILES:=$(GENMLFILES) $(GENMLIFILES) $(GENHFILES) $(GENVFILES)
 export MLFILES  := $(shell find . $(FIND_VCS_CLAUSE) '(' -name '*.ml'  ')' $(FIND_PRINTF_P) | \
-  while read f; do if ! [ -e "$${f}4" ]; then echo "$$f"; fi; done) \
+  while read f; do if [ ! -e "$${f}4" ]; then echo "$$f"; fi; done) \
   $(GENMLFILES)
 export MLIFILES := $(shell find . $(FIND_VCS_CLAUSE) '(' -name '*.mli' ')' $(FIND_PRINTF_P)) \
   $(GENMLIFILES)
@@ -152,15 +155,15 @@ clean: objclean cruftclean depclean docclean devdocclean
 objclean: archclean indepclean
 
 cruftclean: ml4clean
-	find . -name '*~' -or -name '*.annot' | xargs rm -f
+	find . -name '*~' -o -name '*.annot' | xargs rm -f
 	rm -f gmon.out core
 
 indepclean:
 	rm -f $(GENFILES)
 	rm -f $(COQTOPBYTE) $(COQMKTOPBYTE) $(COQCBYTE) $(CHICKENBYTE)
 	rm -f bin/coq-interface$(EXE) bin/coq-parser$(EXE)
-	find . -name '*~' -or -name '*.cm[ioa]' | xargs rm -f
-	find contrib test-suite -name '*.vo' -or -name '*.glob' | xargs rm -f
+	find . -name '*~' -o -name '*.cm[ioa]' | xargs rm -f
+	find contrib test-suite -name '*.vo' -o -name '*.glob' | xargs rm -f
 	rm -f */*.pp[iox] contrib/*/*.pp[iox]
 	rm -rf $(SOURCEDOCDIR)
 	rm -f toplevel/mltop.byteml toplevel/mltop.optml
@@ -184,12 +187,13 @@ docclean:
 	rm -f doc/common/version.tex
 	rm -f doc/refman/*.eps doc/refman/Reference-Manual.html
 	rm -f doc/coq.tex
+	rm -f doc/refman/styles.hva doc/refman/cover.html 
 
 archclean: clean-ide cleantheories
 	rm -f $(COQTOPEXE) $(COQMKTOP) $(COQC) $(CHICKEN)
 	rm -f $(COQTOPOPT) $(COQMKTOPOPT) $(COQCOPT) $(CHICKENOPT)
 	rm -f bin/coq-parser.opt$(EXE) bin/coq-interface.opt$(EXE)
-	find . -name '*.cmx' -or -name '*.cmxa' -or -name '*.[soa]' -or -name '*.so' | xargs rm -f
+	find . -name '*.cmx' -o -name '*.cmxa' -o -name '*.[soa]' -o -name '*.so' | xargs rm -f
 	rm -f $(TOOLS) $(CSDPCERT)
 
 clean-ide:
@@ -214,7 +218,7 @@ distclean: clean cleanconfig
 
 cleantheories:
 	rm -f states/*.coq
-	find theories -name '*.vo' -or -name '*.glob' | xargs rm -f
+	find theories -name '*.vo' -o -name '*.glob' | xargs rm -f
 
 devdocclean:
 	find . -name '*.dep.ps' -o -name '*.dot' -exec rm -f {} \;

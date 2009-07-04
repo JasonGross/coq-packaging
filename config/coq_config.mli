@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coq_config.mli 11858 2009-01-26 13:27:23Z notin $ i*)
+(*i $Id: coq_config.mli 12104 2009-04-24 18:10:10Z notin $ i*)
 
 val local : bool        (* local use (no installation) *)
 
@@ -44,5 +44,9 @@ val with_geoproof : bool ref (* to (de)activate functions specific to Geoproof w
 val browser : string
 (** default web browser to use, may be overriden by environment
     variable COQREMOTEBROWSER *)
+
+val wwwcoq : string
+val wwwrefman : string
+val wwwstdlib : string
 
 val has_natdynlink : bool

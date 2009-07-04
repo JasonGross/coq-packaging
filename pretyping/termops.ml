@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: termops.ml 11639 2008-11-27 17:48:32Z barras $ *)
+(* $Id: termops.ml 12058 2009-04-08 10:54:59Z herbelin $ *)
 
 open Pp
 open Util
@@ -1016,6 +1016,15 @@ let assums_of_rel_context sign =
           Some _ -> l
         | None -> (na, t)::l)
     sign ~init:[]
+
+let fold_map_rel_context f env sign =
+  let rec aux env acc = function
+    | d::sign ->
+	aux (push_rel d env) (map_rel_declaration (f env) d :: acc) sign
+    | [] ->
+	acc
+  in
+  aux env [] (List.rev sign)
 
 let map_rel_context_with_binders f sign =
   let rec aux k = function

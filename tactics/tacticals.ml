@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacticals.ml 11735 2009-01-02 17:22:31Z herbelin $ *)
+(* $Id: tacticals.ml 12102 2009-04-24 10:48:11Z herbelin $ *)
 
 open Pp
 open Util
@@ -26,7 +26,6 @@ open Clenvtac
 open Rawterm
 open Pattern
 open Matching
-open Evar_refiner
 open Genarg
 open Tacexpr
 

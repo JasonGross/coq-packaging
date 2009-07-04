@@ -9,7 +9,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: class_tactics.ml4 11897 2009-02-09 19:28:02Z barras $ *)
+(* $Id: class_tactics.ml4 12189 2009-06-15 05:08:44Z msozeau $ *)
 
 open Pp
 open Util
@@ -46,18 +46,18 @@ let typeclasses_db = "typeclass_instances"
 let _ = Auto.auto_init := (fun () -> 
   Auto.create_hint_db false typeclasses_db full_transparent_state true)
 
-let check_imported_library d =
+let check_required_library d =
   let d' = List.map id_of_string d in
   let dir = make_dirpath (List.rev d') in
   if not (Library.library_is_loaded dir) then
-    error ("Library "^(list_last d)^" has to be imported first.")
+    error ("Library "^(list_last d)^" has to be required first.")
       
 let classes_dirpath =
   make_dirpath (List.map id_of_string ["Classes";"Coq"])
   
 let init_setoid () =
   if is_dirpath_prefix_of classes_dirpath (Lib.cwd ()) then ()
-  else check_imported_library ["Coq";"Setoids";"Setoid"]
+  else check_required_library ["Coq";"Setoids";"Setoid"]
 
 (** Typeclasses instance search tactic / eauto *)
 
@@ -245,7 +245,6 @@ module SearchProblem = struct
 	    Option.iter (fun r ->
 (*  	      msg (str"do cut:" ++ pr_ev sigma (List.hd gl) ++ str"\n"); *)
 	      r := true) do_cut;
-	  let sigma = Evarutil.nf_evars sigma in
 	  let gl = List.map (Evarutil.nf_evar_info sigma) gl in
 	  let nbgl = List.length gl in
 (* 	  let gl' = { it = gl ; sigma = sigma } in *)
@@ -338,6 +337,7 @@ let is_transparent_gr (ids, csts) = function
   | IndRef _ | ConstructRef _ -> false
 
 let make_resolve_hyp env sigma st flags pri (id, _, cty) =
+  let cty = Evarutil.nf_evar sigma cty in
   let ctx, ar = decompose_prod cty in
   let keep = 
     match kind_of_term (fst (decompose_app ar)) with
@@ -624,9 +624,6 @@ let is_applied_setoid_relation t =
       
 let _ = 
   Equality.register_is_applied_setoid_relation is_applied_setoid_relation
-
-exception Found of (constr * constr * (types * types) list * constr * constr array *
-		       (constr * (constr * constr * constr * constr)) option array)
 
 let split_head = function
     hd :: tl -> hd, tl
@@ -1675,7 +1672,7 @@ let typeclass_app_constrexpr t ?(bindings=NoBindings) gl =
   let bindings = Tacinterp.interp_bindings my_ist gl bl in
     typeclass_app (Evd.evars_of !evars) gl ~bindings:bindings j.uj_val j.uj_type
 
-let typeclass_app_raw t gl =
+let typeclass_app_raw (_,t) gl =
   let env = pf_env gl in
   let evars = ref (create_evar_defs (project gl)) in
   let j = Pretyping.Default.understand_judgment_tcc evars env t in
@@ -1715,7 +1712,7 @@ END
 
 let not_declared env ty rel =
   tclFAIL 0 (str" The relation " ++ Printer.pr_constr_env env rel ++ str" is not a declared " ++ 
-		str ty ++ str" relation. Maybe you need to import the Setoid library")
+		str ty ++ str" relation. Maybe you need to require the Setoid library")
 
 let relation_of_constr env c = 
   match kind_of_term c with

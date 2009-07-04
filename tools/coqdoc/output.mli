@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: output.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
+(*i $Id: output.mli 12187 2009-06-13 19:36:59Z msozeau $ i*)
 
 open Cdglobals
 open Index
@@ -27,6 +27,9 @@ val start_module : unit -> unit
 
 val start_doc : unit -> unit
 val end_doc : unit -> unit
+
+val start_comment : unit -> unit
+val end_comment : unit -> unit
 
 val start_coq : unit -> unit
 val end_coq : unit -> unit

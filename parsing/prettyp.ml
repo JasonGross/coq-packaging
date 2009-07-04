@@ -10,7 +10,7 @@
  * on May-June 2006 for implementation of abstraction of pretty-printing of objects.
  *)
 
-(* $Id: prettyp.ml 11622 2008-11-23 08:45:56Z herbelin $ *)
+(* $Id: prettyp.ml 12187 2009-06-13 19:36:59Z msozeau $ *)
 
 open Pp
 open Util
@@ -107,8 +107,9 @@ let need_expansion impl ref =
   let typ = Global.type_of_global ref in
   let ctx = fst (decompose_prod_assum typ) in
   let nprods = List.length (List.filter (fun (_,b,_) -> b=None) ctx) in
-  impl <> [] & let _,lastimpl = list_chop nprods impl in
-  List.filter is_status_implicit lastimpl <> []
+  impl <> [] & List.length impl >= nprods &
+    let _,lastimpl = list_chop nprods impl in
+      List.filter is_status_implicit lastimpl <> []
 
 type opacity =
   | FullyOpaque

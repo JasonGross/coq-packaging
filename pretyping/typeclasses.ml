@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: typeclasses.ml 11576 2008-11-10 19:13:15Z msozeau $ i*)
+(*i $Id: typeclasses.ml 12189 2009-06-15 05:08:44Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -381,7 +381,7 @@ let solve_instanciation_problem = ref (fun _ _ _ -> assert false)
 let resolve_typeclasses ?(onlyargs=false) ?(split=true) ?(fail=true) env evd =
   if not (has_typeclasses (Evd.evars_of evd)) then evd
   else
-    !solve_instanciations_problem env (Evarutil.nf_evar_defs evd) onlyargs split fail
+    !solve_instanciations_problem env evd onlyargs split fail
 
 let resolve_one_typeclass env evm t =
   !solve_instanciation_problem env evm t

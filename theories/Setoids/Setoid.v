@@ -6,9 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Setoid.v 11720 2008-12-28 07:12:15Z letouzey $: i*)
+(*i $Id: Setoid.v 12187 2009-06-13 19:36:59Z msozeau $: i*)
 
 Require Export Coq.Classes.SetoidTactics.
+
+Export Morphisms.MorphismNotations.
 
 (** For backward compatibility *)
 

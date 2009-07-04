@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FMapFacts.v 11720 2008-12-28 07:12:15Z letouzey $ *)
+(* $Id: FMapFacts.v 12187 2009-06-13 19:36:59Z msozeau $ *)
 
 (** * Finite maps library *)
 
@@ -15,7 +15,7 @@
   different styles: equivalence and boolean equalities. 
 *)
 
-Require Import Bool DecidableType DecidableTypeEx OrderedType.
+Require Import Bool DecidableType DecidableTypeEx OrderedType Morphisms.
 Require Export FMapInterface. 
 Set Implicit Arguments.
 Unset Strict Implicit.

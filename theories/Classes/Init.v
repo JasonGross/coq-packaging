@@ -13,12 +13,7 @@
    Institution: LRI, CNRS UMR 8623 - UniversitÃcopyright Paris Sud
    91405 Orsay, France *)
 
-(* $Id: Init.v 11709 2008-12-20 11:42:15Z msozeau $ *)
-
-(* Ltac typeclass_instantiation := typeclasses eauto || eauto. *)
-
-Tactic Notation "clapply" ident(c) :=
-  eapply @c ; typeclasses eauto.
+(* $Id: Init.v 12187 2009-06-13 19:36:59Z msozeau $ *)
 
 (** Hints for the proof search: these combinators should be considered rigid. *)
 
@@ -29,12 +24,12 @@ Typeclasses Opaque id const flip compose arrow impl iff.
 (** The unconvertible typeclass, to test that two objects of the same type are 
    actually different. *)
 
-Class Unconvertible (A : Type) (a b : A).
+Class Unconvertible (A : Type) (a b : A) := unconvertible : unit.
 
 Ltac unconvertible :=
   match goal with
     | |- @Unconvertible _ ?x ?y => unify x y with typeclass_instances ; fail 1 "Convertible"
-    | |- _ => eapply Build_Unconvertible 
+    | |- _ => exact tt
   end.
 
 Hint Extern 0 (@Unconvertible _ _ _) => unconvertible : typeclass_instances.

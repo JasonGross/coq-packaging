@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: unification.ml 11897 2009-02-09 19:28:02Z barras $ *)
+(* $Id: unification.ml 12163 2009-06-06 17:36:47Z herbelin $ *)
 
 open Pp
 open Util
@@ -492,7 +492,7 @@ let w_coerce env evd mv c =
 let unify_to_type env evd flags c u =
   let sigma = evars_of evd in
   let c = refresh_universes c in
-  let t = get_type_of_with_meta env sigma (metas_of evd) c in
+  let t = get_type_of_with_meta env sigma (List.map (on_snd (nf_meta evd)) (metas_of evd)) (nf_meta evd c) in
   let t = Tacred.hnf_constr env sigma (nf_betaiota sigma (nf_meta evd t)) in
   let u = Tacred.hnf_constr env sigma u in
   try unify_0 env sigma Cumul flags t u
@@ -500,7 +500,7 @@ let unify_to_type env evd flags c u =
 
 let unify_type env evd flags mv c =
   let mvty = Typing.meta_type evd mv in
-  if occur_meta_or_existential mvty then
+  if occur_meta_or_existential mvty or is_arity env (evars_of evd) mvty then
     unify_to_type env evd flags c mvty
   else ([],[])
 

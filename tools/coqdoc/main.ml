@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: main.ml 11828 2009-01-22 06:44:11Z notin $ i*)
+(*i $Id: main.ml 12187 2009-06-13 19:36:59Z msozeau $ i*)
 
 (* Modified by Lionel Elie Mamane <lionel@mamane.lu> on 9 & 10 Mar 2004:
  *  - handling of absolute filenames (function coq_module)
@@ -56,7 +56,7 @@ let usage () =
   prerr_endline "  --verbose            verbose mode";  
   prerr_endline "  --no-externals       no links to Coq standard library";
   prerr_endline "  --coqlib <url>       set URL for Coq standard library";
-  prerr_endline "                       (default is http://coq.inria.fr/library/)";
+  prerr_endline ("                       (default is " ^ Coq_config.wwwstdlib ^ ")");
   prerr_endline "  --boot               run in boot mode";
   prerr_endline "  --coqlib_path <dir>  set the path where Coq files are installed";
   prerr_endline "  -R <dir> <coqdir>    map physical dir to Coq dir";
@@ -65,6 +65,7 @@ let usage () =
   prerr_endline "  --charset <string>   set HTML charset";
   prerr_endline "  --inputenc <string>  set LaTeX input encoding";
   prerr_endline "  --interpolate        try to typeset identifiers in comments using definitions in the same module";
+  prerr_endline "  --parse-comments     parse regular comments";
   prerr_endline "";
   exit 1
 
@@ -273,6 +274,8 @@ let parse () =
 	usage ()
     | ("-raw-comments" | "--raw-comments") :: rem ->
 	Cdglobals.raw_comments := true; parse_rec rem
+    | ("-parse-comments" | "--parse-comments") :: rem ->
+	Cdglobals.parse_comments := true; parse_rec rem
     | ("-interpolate" | "--interpolate") :: rem ->
 	Cdglobals.interpolate := true; parse_rec rem
 

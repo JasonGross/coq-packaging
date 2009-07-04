@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: hiddentac.ml 11671 2008-12-12 12:43:03Z herbelin $ *)
+(* $Id: hiddentac.ml 12102 2009-04-24 10:48:11Z herbelin $ *)
 
 open Term
 open Proof_type
@@ -75,10 +75,6 @@ let h_generalize_dep c =
 let h_let_tac b na c cl =
   let with_eq = if b then None else Some (true,(dummy_loc,IntroAnonymous)) in
   abstract_tactic (TacLetTac (na,inj_open c,cl,b)) (letin_tac with_eq na c None cl)
-let h_instantiate n c ido = 
-(Evar_tactics.instantiate n c ido)
-  (* abstract_tactic (TacInstantiate (n,c,cls))
-    (Evar_refiner.instantiate n c (simple_clause_of cls)) *)
 
 (* Derived basic tactics *)
 let h_simple_induction_destruct isrec h =

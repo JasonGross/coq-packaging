@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evar_refiner.mli 9154 2006-09-20 17:18:18Z corbinea $ i*)
+(*i $Id: evar_refiner.mli 12102 2009-04-24 10:48:11Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -14,11 +14,14 @@ open Term
 open Environ
 open Evd
 open Refiner
+open Pretyping
+open Rawterm
 (*i*)
 
 (* Refinement of existential variables. *)
 
-val w_refine : evar -> Rawterm.rawconstr  -> evar_defs -> evar_defs
+val w_refine : evar -> (var_map * unbound_ltac_var_map) * rawconstr -> 
+  evar_defs -> evar_defs
 
 val instantiate_pf_com :
   int -> Topconstr.constr_expr -> pftreestate -> pftreestate
