@@ -1,3 +1,11 @@
+coq (8.2.pl1+dfsg-1) unstable; urgency=low
+
+  * New Upstream Version
+  * debian/purify_tarball: keep some files from doc/common/styles/html
+    needed for HTML API doc generation
+
+ -- Stephane Glondu <steph@glondu.net>  Sat, 04 Jul 2009 12:13:28 +0200
+
 coq (8.2-1+dfsg-2) unstable; urgency=low
 
   [ Samuel Mimram ]
