@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacmach.mli 11639 2008-11-27 17:48:32Z barras $ i*)
+(*i $Id: tacmach.mli 12168 2009-06-06 21:34:37Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -137,6 +137,10 @@ val order_hyps : identifier list -> tactic
 val mutual_fix      :
   identifier -> int -> (identifier * int * constr) list -> tactic
 val mutual_cofix    : identifier -> (identifier * constr) list -> tactic
+val mutual_fix_with_index :
+  identifier -> int -> (identifier * int * constr) list -> int -> tactic
+val mutual_cofix_with_index : 
+  identifier -> (identifier * constr) list -> int -> tactic
 
 (*s The most primitive tactics with consistency and type checking *)
 

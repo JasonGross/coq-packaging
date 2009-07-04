@@ -12,14 +12,14 @@
    Institution: LRI, CNRS UMR 8623 - Universit√copyright Paris Sud
    91405 Orsay, France *)
 
-(* $Id: SetoidClass.v 11800 2009-01-18 18:34:15Z msozeau $ *)
+(* $Id: SetoidClass.v 12187 2009-06-13 19:36:59Z msozeau $ *)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 
 Require Import Coq.Program.Program.
 
-Require Import Coq.Classes.Init.
+Require Import Relation_Definitions.
 Require Export Coq.Classes.RelationClasses.
 Require Export Coq.Classes.Morphisms.
 Require Import Coq.Classes.Functions.

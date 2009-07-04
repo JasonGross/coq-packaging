@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: clenvtac.ml 11709 2008-12-20 11:42:15Z msozeau $ *)
+(* $Id: clenvtac.ml 12102 2009-04-24 10:48:11Z herbelin $ *)
 
 open Pp
 open Util
@@ -25,7 +25,6 @@ open Logic
 open Reduction
 open Reductionops
 open Tacmach
-open Evar_refiner
 open Rawterm
 open Pattern
 open Tacexpr

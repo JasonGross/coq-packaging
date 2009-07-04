@@ -54,9 +54,10 @@ let toc = ref false
 let page_title = ref ""
 let title = ref ""
 let externals = ref true
-let coqlib = ref "http://coq.inria.fr/library/"
+let coqlib = ref Coq_config.wwwstdlib
 let coqlib_path = ref Coq_config.coqlib
 let raw_comments = ref false
+let parse_comments = ref false
 let interpolate = ref false
 
 let charset = ref "iso-8859-1"

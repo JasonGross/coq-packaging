@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacinterp.ml 11745 2009-01-04 18:43:08Z herbelin $ *)
+(* $Id: tacinterp.ml 12187 2009-06-13 19:36:59Z msozeau $ *)
 
 open Constrintern
 open Closure
@@ -539,7 +539,9 @@ let intern_induction_arg ist = function
   | ElimOnIdent (loc,id) ->
       if !strict_check then
 	(* If in a defined tactic, no intros-until *)
-	ElimOnConstr (intern_constr ist (CRef (Ident (dloc,id))),NoBindings)
+	match intern_constr ist (CRef (Ident (dloc,id))) with
+	| RVar (loc,id),_ -> ElimOnIdent (loc,id)
+	| c -> ElimOnConstr (c,NoBindings)
       else
 	ElimOnIdent (loc,id)
 
@@ -1396,6 +1398,14 @@ let retype_list sigma env lst =
     try (x,Retyping.get_judgment_of env sigma csr)::a with
     | Anomaly _ -> a) lst []
 
+let extract_ltac_vars_data ist sigma env =
+  let (ltacvars,_ as vars) = constr_list ist env in
+  vars, retype_list sigma env ltacvars
+
+let extract_ltac_vars ist sigma env =
+  let (_,unbndltacvars),typs = extract_ltac_vars_data ist sigma env in
+  typs,unbndltacvars
+
 let implicit_tactic = ref None
 
 let declare_implicit_tactic tac = implicit_tactic := Some tac
@@ -1441,8 +1451,8 @@ let solve_remaining_evars env initial_sigma evd c =
   proc_rec (Evarutil.nf_isevar !evdref c)
 
 let interp_gen kind ist sigma env (c,ce) =
-  let (ltacvars,unbndltacvars as vars) = constr_list ist env in
-  let typs = retype_list sigma env ltacvars in
+  let (ltacvars,unbndltacvars as vars),typs =
+    extract_ltac_vars_data ist sigma env in
   let c = match ce with
   | None -> c
     (* If at toplevel (ce<>None), the error can be due to an incorrect
@@ -1717,10 +1727,20 @@ let interp_induction_arg ist gl = function
   | ElimOnConstr c -> ElimOnConstr (interp_constr_with_bindings ist gl c)
   | ElimOnAnonHyp n as x -> x
   | ElimOnIdent (loc,id) ->
-      if Tactics.is_quantified_hypothesis id gl then ElimOnIdent (loc,id)
-      else ElimOnConstr
-	(pf_interp_constr ist gl (RVar (loc,id),Some (CRef (Ident (loc,id)))),
-	 NoBindings)
+      try
+	match List.assoc id ist.lfun with
+	| VInteger n -> ElimOnAnonHyp n
+	| VIntroPattern (IntroIdentifier id) -> ElimOnIdent (loc,id)
+	| VConstr c -> ElimOnConstr (c,NoBindings)
+	| _ -> user_err_loc (loc,"",
+	      strbrk "Cannot coerce " ++ pr_id id ++
+	      strbrk " neither to a quantified hypothesis nor to a term.")
+      with Not_found ->
+	(* Interactive mode *)
+	if Tactics.is_quantified_hypothesis id gl then ElimOnIdent (loc,id)
+	else ElimOnConstr
+	  (pf_interp_constr ist gl (RVar (loc,id),Some (CRef (Ident (loc,id)))),
+	  NoBindings)
 
 let mk_constr_value ist gl c = VConstr (pf_interp_constr ist gl c)
 let mk_hyp_value ist gl c = VConstr (mkVar (interp_hyp ist gl c))
@@ -2735,6 +2755,7 @@ let bad_tactic_args s =
 
 (* Declaration of the TAC-DEFINITION object *)
 let add (kn,td) = mactab := Gmap.add kn td !mactab
+let replace (kn,td) = mactab := Gmap.add kn td (Gmap.remove kn !mactab)
 
 type tacdef_kind = | NewTac of identifier
 		   | UpdateTac of ltac_constant
@@ -2749,9 +2770,7 @@ let load_md i ((sp,kn),defs) =
 	  let kn = Names.make_kn mp dir (label_of_id id) in
 	    Nametab.push_tactic (Until i) sp kn;
 	    add (kn,t)
-      | UpdateTac kn ->
-	  mactab := Gmap.remove kn !mactab;
-	  add (kn,t)) defs
+      | UpdateTac kn -> replace (kn,t)) defs
     
 let open_md i((sp,kn),defs) =
   let dp,_ = repr_path sp in
@@ -2762,10 +2781,7 @@ let open_md i((sp,kn),defs) =
 	  let sp = Libnames.make_path dp id in
 	  let kn = Names.make_kn mp dir (label_of_id id) in
 	    Nametab.push_tactic (Exactly i) sp kn
-      | UpdateTac kn -> 
-	  let (path, id) = decode_kn kn in
-	  let sp = Libnames.make_path path id in
-	  Nametab.push_tactic (Exactly i) sp kn) defs
+      | UpdateTac kn -> ()) defs
 
 let cache_md x = load_md 1 x
 

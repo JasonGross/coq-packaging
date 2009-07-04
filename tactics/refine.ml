@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: refine.ml 11671 2008-12-12 12:43:03Z herbelin $ *)
+(* $Id: refine.ml 12187 2009-06-13 19:36:59Z msozeau $ *)
 
 (* JCF -- 6 janvier 1998  EXPERIMENTAL *)
 
@@ -327,29 +327,31 @@ let rec tcc_aux subst (TH (c,mm,sgp) as _th) gl =
           gl
 
     (* fix => tactique Fix *)
-    | Fix ((ni,_),(fi,ai,_)) , _ ->
+    | Fix ((ni,j),(fi,ai,_)) , _ ->
 	let out_name = function
 	  | Name id -> id
           | _ -> error "Recursive functions must have names."
 	in
 	let fixes = array_map3 (fun f n c -> (out_name f,succ n,c)) fi ni ai in
+	let firsts,lasts = list_chop j (Array.to_list fixes) in
 	tclTHENS
-	  (mutual_fix (out_name fi.(0)) (succ ni.(0))
-	    (List.tl (Array.to_list fixes)))
+	  (mutual_fix_with_index 
+	    (out_name fi.(j)) (succ ni.(j)) (firsts@List.tl lasts) j)
 	  (List.map (function
 		       | None -> tclIDTAC 
 		       | Some th -> tcc_aux subst th) sgp)
 	  gl
 
     (* cofix => tactique CoFix *)
-    | CoFix (_,(fi,ai,_)) , _ ->
+    | CoFix (j,(fi,ai,_)) , _ ->
 	let out_name = function
 	  | Name id -> id
           | _ -> error "Recursive functions must have names."
 	in
 	let cofixes = array_map2 (fun f c -> (out_name f,c)) fi ai in
+	let firsts,lasts = list_chop j (Array.to_list cofixes) in
 	tclTHENS
-	  (mutual_cofix (out_name fi.(0)) (List.tl (Array.to_list cofixes)))
+	  (mutual_cofix_with_index (out_name fi.(j)) (firsts@List.tl lasts) j)
 	  (List.map (function
 		       | None -> tclIDTAC 
 		       | Some th -> tcc_aux subst th) sgp)
@@ -366,10 +368,15 @@ let rec tcc_aux subst (TH (c,mm,sgp) as _th) gl =
 
 (* Et finalement la tactique refine elle-même : *)
 
-let refine oc gl =
+let refine (evd,c) gl =
   let sigma = project gl in
-  let (sigma,c) = Evarutil.evars_to_metas sigma oc in
+  let evd = Evd.evars_of (Typeclasses.resolve_typeclasses
+			     ~onlyargs:true ~fail:false (pf_env gl) 
+			     (Evd.create_evar_defs evd)) 
+  in
+  let c = Evarutil.nf_evar evd c in
+  let (evd,c) = Evarutil.evars_to_metas sigma (evd,c) in
   (* Relies on Cast's put on Meta's by evars_to_metas, because it is otherwise 
      complicated to update meta types when passing through a binder *)
-  let th = compute_metamap (pf_env gl) sigma c in
-  tclTHEN (Refiner.tclEVARS sigma) (tcc_aux [] th) gl
+  let th = compute_metamap (pf_env gl) evd c in
+  tclTHEN (Refiner.tclEVARS evd) (tcc_aux [] th) gl

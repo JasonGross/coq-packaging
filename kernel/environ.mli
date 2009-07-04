@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: environ.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id: environ.mli 12187 2009-06-13 19:36:59Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -244,13 +244,14 @@ val register : env -> field -> Retroknowledge.entry -> env
 type context_object =
   | Variable of identifier (* A section variable or a Let definition *)
   | Axiom of constant      (* An axiom or a constant. *)
+  | Opaque of constant     (* An opaque constant. *)
 
 (* AssumptionSet.t is a set of [assumption] *)
 module OrderedContextObject :  Set.OrderedType with type t = context_object
 module ContextObjectMap : Map.S with type key = context_object
 
-(* collects all the assumptions on which a term relies (together with
-   their type *)
-val assumptions : constr -> env -> Term.types ContextObjectMap.t
+(* collects all the assumptions (optionally including opaque definitions) 
+   on which a term relies (together with their type) *)
+val assumptions : ?add_opaque:bool -> transparent_state -> constr -> env -> Term.types ContextObjectMap.t
 
 

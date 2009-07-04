@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: util.ml 11897 2009-02-09 19:28:02Z barras $ *)
+(* $Id: util.ml 12181 2009-06-10 20:53:09Z glondu $ *)
 
 open Pp
 
@@ -257,7 +257,7 @@ let classify_unicode unicode =
     (* utf-8 arrows and brackets U27E0-U27FF *)
     | x when 0x27E0 <= x & x <= 0x27FF -> UnicodeSymbol
     (* utf-8 brackets, braces and parentheses *)
-    | x when 0x2980 <= x & x <= 0x299F -> UnicodeSymbol
+    | x when 0x2980 <= x & x <= 0x29FF -> UnicodeSymbol
     (* utf-8 miscellaneous including double-plus U29F0-U29FF *)
     | x when 0x29F0 <= x & x <= 0x29FF -> UnicodeSymbol
     | _ -> raise UnsupportedUtf8

@@ -12,15 +12,15 @@
    Institution: LRI, CNRS UMR 8623 - Universit√copyright Paris Sud
    91405 Orsay, France *) 
 
-(* $Id: Equivalence.v 11709 2008-12-20 11:42:15Z msozeau $ *)
+(* $Id: Equivalence.v 12187 2009-06-13 19:36:59Z msozeau $ *)
 
-Require Export Coq.Program.Basics.
+Require Import Coq.Program.Basics.
 Require Import Coq.Program.Tactics.
 
 Require Import Coq.Classes.Init.
 Require Import Relation_Definitions.
-Require Import Coq.Classes.RelationClasses.
-Require Export Coq.Classes.Morphisms.
+Require Export Coq.Classes.RelationClasses.
+Require Import Coq.Classes.Morphisms.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

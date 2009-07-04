@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: equality.ml 11897 2009-02-09 19:28:02Z barras $ *)
+(* $Id: equality.ml 12053 2009-04-06 16:20:42Z msozeau $ *)
 
 open Pp
 open Util
@@ -1215,7 +1215,7 @@ let subst_one x gl =
        tclMAP introtac depdecls]) @
      [tclTRY (clear [x;hyp])]) gl
 
-let subst = tclMAP subst_one
+let subst ids = tclTHEN tclNORMEVAR (tclMAP subst_one ids)
 
 let subst_all gl =
   let test (_,c) =

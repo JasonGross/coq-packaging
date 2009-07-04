@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: command.ml 11745 2009-01-04 18:43:08Z herbelin $ *)
+(* $Id: command.ml 12187 2009-06-13 19:36:59Z msozeau $ *)
 
 open Pp
 open Util
@@ -546,7 +546,7 @@ let interp_mutual paramsl indl notations finite =
   let mldatas = List.map2 (mk_mltype_data evdref env_params params) arities indnames in
 
   let constructors =
-    States.with_heavy_rollback (fun () -> 
+    States.with_state_protection (fun () -> 
      (* Temporary declaration of notations and scopes *)
      List.iter (declare_interning_data impls) notations;
      (* Interpret the constructor types *)
@@ -851,7 +851,7 @@ let interp_recursive fixkind l boxed =
 
   (* Interp bodies with rollback because temp use of notations/implicit *)
   let fixdefs = 
-    States.with_heavy_rollback (fun () -> 
+    States.with_state_protection (fun () -> 
       List.iter (declare_interning_data impls) notations;
       list_map3 (interp_fix_body evdref env_rec impls) fixctxs fixl fixccls)
       () in
@@ -1012,16 +1012,18 @@ let build_combined_scheme name schemes =
     let (ctx, arity) = decompose_prod ty in
     let (_, last) = List.hd ctx in
       match kind_of_term last with
-	| App (ind, args) -> ctx, destInd ind, Array.length args
+	| App (ind, args) -> 
+	    let ind = destInd ind in
+	    let (_,spec) = Inductive.lookup_mind_specif env ind in
+	      ctx, ind, spec.mind_nrealargs
 	| _ -> ctx, destInd last, 0
   in
   let defs =  
     List.map (fun x -> 
 		let refe = Ident x in
 		let qualid = qualid_of_reference refe in
-		let cst = try 
-                    Nametab.locate_constant (snd qualid) 
-                with Not_found -> error ((string_of_qualid (snd qualid))^" is not declared.")
+		let cst = try Nametab.locate_constant (snd qualid) 
+                  with Not_found -> error ((string_of_qualid (snd qualid))^" is not declared.")
                 in
 		let ty = Typeops.type_of_constant env cst in
 		  qualid, cst, ty)
@@ -1087,9 +1089,9 @@ let save_remaining_recthms (local,kind) body opaq i (id,(t_i,imps)) =
   | None ->
       (match local with
       | Local ->
-          let impl=false and keep=false in (* copy values from Vernacentries *)
+          let impl=false in (* copy values from Vernacentries *)
           let k = IsAssumption Conjectural in
-          let c = SectionLocalAssum (t_i,impl,keep) in
+          let c = SectionLocalAssum (t_i,impl,[]) in
 	  let _ = declare_variable id (Lib.cwd(),c,k) in
           (Local,VarRef id,imps)
       | Global ->
@@ -1123,9 +1125,9 @@ let look_for_mutual_statements thms =
     let n = List.length thms in
     let inds = List.map (fun (id,(t,_) as x) -> 
       let (hyps,ccl) = Sign.decompose_prod_assum t in
-      let whnf_hyp_hds = map_rel_context_with_binders
-        (fun i c -> fst (whd_betadeltaiota_stack (Global.env()) Evd.empty (lift i c)))
-        hyps in
+      let whnf_hyp_hds = fold_map_rel_context
+        (fun env c -> fst (whd_betadeltaiota_stack env Evd.empty c))
+	(Global.env()) hyps in
       let ind_hyps =
         List.flatten (list_map_i (fun i (_,b,t) ->
           match kind_of_term t with

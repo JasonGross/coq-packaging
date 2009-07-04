@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: hiddentac.mli 11671 2008-12-12 12:43:03Z herbelin $ i*)
+(*i $Id: hiddentac.mli 12102 2009-04-24 10:48:11Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -62,8 +62,6 @@ val h_generalize_gen  : (constr with_occurrences * name) list -> tactic
 val h_generalize_dep  : constr -> tactic 
 val h_let_tac         : letin_flag -> name -> constr -> 
                         Tacticals.clause -> tactic
-val h_instantiate     : int -> Rawterm.rawconstr ->
-  (identifier * hyp_location_flag, unit) location -> tactic
 
 (* Derived basic tactics *)
 

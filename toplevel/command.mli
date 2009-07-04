@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: command.mli 11745 2009-01-04 18:43:08Z herbelin $ i*)
+(*i $Id: command.mli 12187 2009-06-13 19:36:59Z msozeau $ i*)
 
 (*i*)
 open Util
@@ -45,13 +45,13 @@ val syntax_definition : identifier -> identifier list * constr_expr ->
 
 val declare_one_assumption : coercion_flag -> assumption_kind -> Term.types ->
   Impargs.manual_explicitation list ->
-  bool (* implicit *) -> bool (* keep *) -> bool (* inline *) -> Names.variable located  -> unit
+  bool (* implicit *) -> identifier list (* keep *) -> bool (* inline *) -> Names.variable located  -> unit
   
 val set_declare_assumption_hook : (types -> unit) -> unit
 
 val declare_assumption : identifier located list ->
   coercion_flag -> assumption_kind -> local_binder list -> constr_expr -> 
-  bool -> bool -> bool -> unit
+  bool -> identifier list -> bool -> unit
 
 val declare_interning_data : 'a * Constrintern.implicits_env ->
     string * Topconstr.constr_expr * Topconstr.scope_name option -> unit

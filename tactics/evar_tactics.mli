@@ -6,14 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evar_tactics.mli 11512 2008-10-27 12:28:36Z herbelin $ i*)
+(*i $Id: evar_tactics.mli 12102 2009-04-24 10:48:11Z herbelin $ i*)
 
 open Tacmach
 open Names
 open Tacexpr
 open Termops
 
-val instantiate : int -> Rawterm.rawconstr -> 
+val instantiate : int -> Tacinterp.interp_sign * Rawterm.rawconstr -> 
   (identifier * hyp_location_flag, unit) location -> tactic
 
 (*i

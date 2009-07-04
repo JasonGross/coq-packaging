@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evarconv.ml 11897 2009-02-09 19:28:02Z barras $ *)
+(* $Id: evarconv.ml 12205 2009-06-22 16:10:15Z barras $ *)
 
 open Pp
 open Util
@@ -474,11 +474,11 @@ and conv_record env evd (c,bs,(params,params1),(us,us2),(ts,ts1),c1,(n,t2)) =
   let (evd',ks,_) =
     List.fold_left
       (fun (i,ks,m) b ->
-	 if m=0 then (i,t2::ks, n-1) else
+	 if m=n then (i,t2::ks, m-1) else
 	 let dloc = (dummy_loc,InternalHole) in
          let (i',ev) = new_evar i env ~src:dloc (substl ks b) in
-	 (i', ev :: ks, n - 1))
-      (evd,[],n) bs
+	 (i', ev :: ks, m - 1))
+      (evd,[],List.length bs - 1) bs
   in
   ise_and evd'
     [(fun i ->
@@ -505,7 +505,7 @@ let first_order_unification env evd (ev1,l1) (term2,l2) =
       if is_defined_evar i ev1 then
 	evar_conv_x env i CONV t2 (mkEvar ev1)
       else
-	solve_simple_eqn evar_conv_x env i (CONV,ev1,t2))]
+	solve_simple_eqn ~choose:true evar_conv_x env i (CONV,ev1,t2))]
 
 let choose_less_dependent_instance evk evd term args =
   let evi = Evd.find (evars_of evd) evk in

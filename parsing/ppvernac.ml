@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppvernac.ml 11809 2009-01-20 11:39:55Z aspiwack $ *)  
+(* $Id: ppvernac.ml 12187 2009-06-13 19:36:59Z msozeau $ *)  
 
 open Pp
 open Names
@@ -897,7 +897,8 @@ let rec pr_vernac = function
 	| PrintImplicit qid -> str"Print Implicit" ++ spc()  ++ pr_reference qid
 (* spiwack: command printing all the axioms and section variables used in a 
          term *)
-	| PrintAssumptions qid -> str"Print Assumptions"++spc()++pr_reference qid
+	| PrintAssumptions (b,qid) -> (if b then str"Print Assumptions" else str"Print Opaque Dependencies")
+	    ++spc()++pr_reference qid
       in pr_printable p
   | VernacSearch (sea,sea_r) -> pr_search sea sea_r pr_constr_pattern_expr
   | VernacLocate loc -> 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq.ml 11826 2009-01-22 06:43:35Z notin $ *)
+(* $Id: coq.ml 11948 2009-02-27 16:01:53Z glondu $ *)
 
 open Vernac
 open Vernacexpr
@@ -424,6 +424,8 @@ let interp_with_options verbosely options s =
   prerr_endline s;
   let pa = Pcoq.Gram.parsable (Stream.of_string s) in
   let pe = Pcoq.Gram.Entry.parse Pcoq.main_entry pa in
+  (* Temporary hack to make coqide.byte work (WTF???) *)
+  Pervasives.prerr_endline "";
   match pe with 
     | None -> assert false
     | Some((loc,vernac) as last) ->

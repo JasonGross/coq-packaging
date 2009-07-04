@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: decl_proof_instr.ml 11897 2009-02-09 19:28:02Z barras $ *)
+(* $Id: decl_proof_instr.ml 12135 2009-05-20 14:49:23Z herbelin $ *)
 
 open Util
 open Pp
@@ -174,7 +174,7 @@ let mark_proof_tree_as_done pt =
 let mark_as_done pts = 
   map_pftreestate 
     (fun _ -> mark_proof_tree_as_done) 
-    (traverse 0 pts) 
+    (up_to_matching_rule is_focussing_command pts) 
 
 (* post-instruction focus management *)
 

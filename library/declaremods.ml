@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declaremods.ml 11898 2009-02-10 10:52:45Z soubiran $ i*)
+(*i $Id: declaremods.ml 12204 2009-06-22 16:06:49Z soubiran $ i*)
 open Pp
 open Util
 open Names
@@ -642,29 +642,30 @@ let rec get_modtype_substobjs env = function
 	    (subst_key (map_msid msid mp) sub_alias)
 	      (map_msid msid mp)
 	| _ -> sub_alias in
-    let sub3=
+      let (subst, mbids, msid, objs) = get_modtype_substobjs env mexpr in
+      let mbid,mbids= (match mbids with
+	   | mbid::mbids -> mbid,mbids
+	   | [] -> match mexpr with
+	       | MSEident _  -> error "Application of a non-functor"
+	       | _ -> error "Application of a functor with too few arguments") in
+      let resolve =
+	Modops.resolver_of_environment farg_id farg_b mp sub_alias env in
+      let sub3=
 	if sub1 = empty_subst then
-	  update_subst sub_alias (map_mbid farg_id mp None)
+	  update_subst sub_alias (map_mbid farg_id mp (Some resolve))
 	else
-	  let sub1' = join_alias sub1 (map_mbid farg_id mp None) in
+	  let sub1' = join_alias sub1 (map_mbid farg_id mp (Some resolve)) in
 	  let sub_alias' =  update_subst sub_alias sub1' in
 	    join sub1' sub_alias'
       in
-      let sub3 = join sub3 (update_subst sub_alias (map_mbid farg_id mp None)) in
-       let (subst, mbids, msid, objs) = get_modtype_substobjs env mexpr in
-	(match mbids with
-	   | mbid::mbids ->
-               let resolve =
-		 Modops.resolver_of_environment farg_id farg_b mp sub_alias env in
-		 (* application outside the kernel, only for substitutive
-                    objects (that are all non-logical objects) *)
-		((join 
-		    (join subst sub3)
-		    (map_mbid mbid mp (Some resolve)))
-		       , mbids, msid, objs)
-	   | [] -> match mexpr with
-	       | MSEident _  -> error "Application of a non-functor"
-	       | _ -> error "Application of a functor with too few arguments")
+      let sub3 = join sub3 
+	(update_subst sub_alias (map_mbid farg_id mp (Some resolve))) in
+	(* application outside the kernel, only for substitutive
+           objects (that are all non-logical objects) *)
+	((join 
+	    (join subst sub3)
+	    (map_mbid mbid mp (Some resolve)))
+	   , mbids, msid, objs)
   | MSEapply (_,mexpr) ->
       Modops.error_application_to_not_path mexpr
 
@@ -948,30 +949,32 @@ let rec get_module_substobjs env = function
 	    (subst_key (map_msid msid mp) sub_alias)
 	      (map_msid msid mp)
 	| _ -> sub_alias in
-
-      let sub3=
-	if sub1 = empty_subst then
-	  update_subst sub_alias (map_mbid farg_id mp None)
-	else
-	  let sub1' = join_alias sub1 (map_mbid farg_id mp None) in
-	  let sub_alias' =  update_subst sub_alias sub1' in
-	    join sub1' sub_alias'
-      in
-      let sub3 = join sub3 (update_subst sub_alias (map_mbid farg_id mp None)) in
       let (subst, mbids, msid, objs) = get_module_substobjs env mexpr in
+      let mbid,mbids = 
 	(match mbids with
-	   | mbid::mbids ->
-               let resolve =
-		 Modops.resolver_of_environment farg_id farg_b mp sub_alias env in
-		 (* application outside the kernel, only for substitutive
-                    objects (that are all non-logical objects) *)
-		((join 
-		    (join subst sub3)
-		       (map_mbid mbid mp (Some resolve)))
-		       , mbids, msid, objs)
+	   | mbid::mbids ->mbid,mbids
+	       
 	   | [] -> match mexpr with
 	       | MSEident _  -> error "Application of a non-functor"
-	       | _ -> error "Application of a functor with too few arguments")
+	       | _ -> error "Application of a functor with too few arguments") in
+      let resolve =
+	Modops.resolver_of_environment farg_id farg_b mp sub_alias env in
+      let sub3=
+	if sub1 = empty_subst then
+	  update_subst sub_alias (map_mbid farg_id mp (Some resolve))
+	else
+	  let sub1' = join_alias sub1 (map_mbid farg_id mp (Some resolve)) in
+	  let sub_alias' =  update_subst sub_alias sub1' in
+		     join sub1' sub_alias'
+      in
+      let sub3 = join sub3 (update_subst sub_alias 
+			      (map_mbid farg_id mp (Some resolve))) in
+	(* application outside the kernel, only for substitutive
+           objects (that are all non-logical objects) *)
+	((join 
+	    (join subst sub3)
+	    (map_mbid mbid mp (Some resolve)))
+	   , mbids, msid, objs)
   | MSEapply (_,mexpr) ->
       Modops.error_application_to_not_path mexpr
   | MSEwith (mty, With_Definition _) -> get_module_substobjs env mty
@@ -1061,12 +1064,9 @@ let rec update_include (sub,mbids,msid,objs) =
     | (id,obj)::tail ->
 	if object_tag obj = "INCLUDE" then
 	  let ((me,is_mod),substobjs,substituted) = out_include obj in
-	    if not (is_mod) then
-	      let substobjs' = update_include substobjs in
-                (id, in_include ((me,true),substobjs',substituted))::
-		  (replace_include tail)
-	    else
-		  (id,obj)::(replace_include tail)
+	  let substobjs' = update_include substobjs in
+            (id, in_include ((me,true),substobjs',substituted))::
+	      (replace_include tail)
 	else
 	  (id,obj)::(replace_include tail)
   in
@@ -1142,7 +1142,7 @@ let declare_module interp_modtype interp_modexpr id args mty_o mexpr_o =
       | _ ->
 	  let dir,mp = dir_of_sp (Lib.make_path id), mp_of_kn (Lib.make_kn id) in
 	  let (sub,mbids,msid,objs) = substobjs in
-	  let sub' = subst_key (map_msid msid mp) sub in
+	  let sub' = join_alias (subst_key (map_msid msid mp) sub) (map_msid msid mp) in
 	  let substobjs = (join sub sub',mbids,msid,objs) in
 	  let substituted = subst_substobjs dir mp substobjs in
 	    ignore (add_leaf

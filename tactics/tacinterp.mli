@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tacinterp.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
+(*i $Id: tacinterp.mli 12102 2009-04-24 10:48:11Z herbelin $ i*)
 
 (*i*)
 open Dyn
@@ -43,6 +43,9 @@ and interp_sign =
     avoid_ids : identifier list;
     debug : debug_info;
     trace : ltac_trace }
+
+val extract_ltac_vars : interp_sign -> Evd.evar_map -> Environ.env -> 
+  Pretyping.var_map * Pretyping.unbound_ltac_var_map
 
 (* Transforms an id into a constr if possible *)
 val constr_of_id : Environ.env -> identifier -> constr

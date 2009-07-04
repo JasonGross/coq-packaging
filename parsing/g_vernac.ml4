@@ -9,7 +9,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(* $Id: g_vernac.ml4 11809 2009-01-20 11:39:55Z aspiwack $ *)
+(* $Id: g_vernac.ml4 12187 2009-06-13 19:36:59Z msozeau $ *)
 
 
 open Pp
@@ -447,10 +447,13 @@ GEXTEND Gram
 	  CWith_Module (fqid,qid)
       ] ]
   ;
-  module_type:
+  module_type_atom:
     [ [ qid = qualid -> CMTEident qid
-(* ... *)
-      | mty = module_type; me = module_expr_atom -> CMTEapply (mty,me) 
+      | mty = module_type_atom; me = module_expr_atom -> CMTEapply (mty,me) 
+      ] ]
+  ;
+  module_type:
+    [ [ mty = module_type_atom -> mty
       | mty = module_type; "with"; decl = with_declaration -> CMTEwith (mty,decl)
       ] ]
   ;
@@ -700,7 +703,8 @@ GEXTEND Gram
       | IDENT "Visibility"; s = OPT IDENT -> PrintVisibility s
       | IDENT "Implicit"; qid = global -> PrintImplicit qid
       | IDENT "Universes"; fopt = OPT ne_string -> PrintUniverses fopt
-      | IDENT "Assumptions"; qid = global -> PrintAssumptions qid ] ]
+      | IDENT "Assumptions"; qid = global -> PrintAssumptions (false, qid)
+      | IDENT "Opaque"; IDENT "Dependencies"; qid = global -> PrintAssumptions (true, qid) ] ]
   ;
   class_rawexpr:
     [ [ IDENT "Funclass" -> FunClass

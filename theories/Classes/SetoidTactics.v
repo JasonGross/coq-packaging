@@ -13,13 +13,13 @@
  * Institution: LRI, CNRS UMR 8623 - Universit√copyright Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id: SetoidTactics.v 11709 2008-12-20 11:42:15Z msozeau $ *)
+(* $Id: SetoidTactics.v 12187 2009-06-13 19:36:59Z msozeau $ *)
 
-Require Export Coq.Classes.RelationClasses.
-Require Export Coq.Classes.Morphisms.
-Require Export Coq.Classes.Morphisms_Prop.
-Require Export Coq.Classes.Equivalence.
-Require Export Coq.Relations.Relation_Definitions.
+Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
+Require Export Coq.Classes.RelationClasses Coq.Relations.Relation_Definitions.
+Require Import Coq.Classes.Equivalence Coq.Program.Basics.
+
+Export MorphismNotations.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

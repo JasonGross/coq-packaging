@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extraargs.mli 11800 2009-01-18 18:34:15Z msozeau $ i*)
+(*i $Id: extraargs.mli 12102 2009-04-24 10:48:11Z herbelin $ i*)
 
 open Tacexpr
 open Term
@@ -25,7 +25,7 @@ val rawwit_occurrences : (int list or_var) raw_abstract_argument_type
 val wit_occurrences : (int list) typed_abstract_argument_type
 
 val rawwit_raw : constr_expr raw_abstract_argument_type
-val wit_raw : rawconstr typed_abstract_argument_type
+val wit_raw : (Tacinterp.interp_sign * rawconstr) typed_abstract_argument_type
 val raw : constr_expr Pcoq.Gram.Entry.e
 
 type 'id gen_place= ('id * hyp_location_flag,unit) location

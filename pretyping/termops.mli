@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: termops.mli 11639 2008-11-27 17:48:32Z barras $ i*)
+(*i $Id: termops.mli 12058 2009-04-08 10:54:59Z herbelin $ i*)
 
 open Util
 open Pp
@@ -241,6 +241,8 @@ val process_rel_context : (rel_declaration -> env -> env) -> env -> env
 val assums_of_rel_context : rel_context -> (name * constr) list
 val lift_rel_context : int -> rel_context -> rel_context
 val substl_rel_context : constr list -> rel_context -> rel_context
+val fold_map_rel_context :
+  (env -> constr -> constr) -> env -> rel_context -> rel_context
 val map_rel_context_with_binders : 
   (int -> constr -> constr) -> rel_context -> rel_context
 val fold_named_context_both_sides :

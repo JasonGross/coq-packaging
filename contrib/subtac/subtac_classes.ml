@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: subtac_classes.ml 11800 2009-01-18 18:34:15Z msozeau $ i*)
+(*i $Id: subtac_classes.ml 12187 2009-06-13 19:36:59Z msozeau $ i*)
 
 open Pretyping
 open Evd
@@ -182,7 +182,7 @@ let new_instance ?(global=false) ctx (instid, bk, cl) props ?(generalize=true) p
   in
     isevars := undefined_evars !isevars;
     Evarutil.check_evars env Evd.empty !isevars termtype;
-    let hook gr = 
+    let hook vis gr = 
       let cst = match gr with ConstRef kn -> kn | _ -> assert false in
       let inst = Typeclasses.new_instance k pri global cst in
 	Impargs.declare_manual_implicits false gr ~enriching:false imps;

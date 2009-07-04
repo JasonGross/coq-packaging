@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extraargs.ml4 11800 2009-01-18 18:34:15Z msozeau $ *)
+(* $Id: extraargs.ml4 12102 2009-04-24 10:48:11Z herbelin $ *)
 
 open Pp
 open Pcoq
@@ -100,9 +100,9 @@ END
 
 let pr_gen prc _prlc _prtac c = prc c
 
-let pr_rawc _prc _prlc _prtac raw = Printer.pr_rawconstr raw
+let pr_rawc _prc _prlc _prtac (_,raw) = Printer.pr_rawconstr raw
 
-let interp_raw _ _ (t,_) = t
+let interp_raw ist gl (t,_) = (ist,t)
 
 let glob_raw = Tacinterp.intern_constr
 

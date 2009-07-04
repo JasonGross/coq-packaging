@@ -1,4 +1,3 @@
-(* -*- coq-prog-name: "~/research/coq/trunk/bin/coqtop.byte"; coq-prog-args: ("-emacs-U" "-top" "Coq.Classes.Morphisms"); compile-command: "make -C ../.. TIME='time'" -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -13,9 +12,7 @@
    Institution: LRI, CNRS UMR 8623 - UniversitÃcopyright Paris Sud
    91405 Orsay, France *)
 
-(* $Id: Morphisms.v 11709 2008-12-20 11:42:15Z msozeau $ *)
-
-Set Manual Implicit Arguments.
+(* $Id: Morphisms.v 12189 2009-06-15 05:08:44Z msozeau $ *)
 
 Require Import Coq.Program.Basics.
 Require Import Coq.Program.Tactics.
@@ -55,18 +52,24 @@ Definition respectful {A B : Type}
 (** Notations reminiscent of the old syntax for declaring morphisms. *)
 
 Delimit Scope signature_scope with signature.
+
 Arguments Scope Morphism [type_scope signature_scope].
-
-Notation " R ++> R' " := (@respectful _ _ (R%signature) (R'%signature)) 
-  (right associativity, at level 55) : signature_scope.
-
-Notation " R ==> R' " := (@respectful _ _ (R%signature) (R'%signature))
-  (right associativity, at level 55) : signature_scope.
-
-Notation " R --> R' " := (@respectful _ _ (inverse (R%signature)) (R'%signature))
-  (right associativity, at level 55) : signature_scope.
-
 Arguments Scope respectful [type_scope type_scope signature_scope signature_scope].
+
+Module MorphismNotations.
+
+  Notation " R ++> R' " := (@respectful _ _ (R%signature) (R'%signature)) 
+    (right associativity, at level 55) : signature_scope.
+  
+  Notation " R ==> R' " := (@respectful _ _ (R%signature) (R'%signature))
+    (right associativity, at level 55) : signature_scope.
+  
+  Notation " R --> R' " := (@respectful _ _ (inverse (R%signature)) (R'%signature))
+    (right associativity, at level 55) : signature_scope.
+
+End MorphismNotations.
+
+Export MorphismNotations.
 
 Open Local Scope signature_scope.
 
@@ -118,7 +121,7 @@ Proof. simpl_relation. apply subr. apply H. apply subl. apply H0. Qed.
 
 (** And of course it is reflexive. *)
 
-Instance morphisms_subrelation_refl : ! subrelation A R R | 10.
+Instance morphisms_subrelation_refl : ! subrelation A R R.
 Proof. simpl_relation. Qed.
 
 (** [Morphism] is itself a covariant morphism for [subrelation]. *)
@@ -151,10 +154,10 @@ Hint Extern 5 (@Morphism _ _ _) => subrelation_tac : typeclass_instances.
 
 (** Essential subrelation instances for [iff], [impl] and [pointwise_relation]. *)
 
-Instance iff_impl_subrelation : subrelation iff impl.
+Instance iff_impl_subrelation : subrelation iff impl | 2.
 Proof. firstorder. Qed.
 
-Instance iff_inverse_impl_subrelation : subrelation iff (inverse impl).
+Instance iff_inverse_impl_subrelation : subrelation iff (inverse impl) | 2.
 Proof. firstorder. Qed.
 
 Instance pointwise_subrelation {A} `(sub : subrelation B R R') :
@@ -371,25 +374,6 @@ Ltac partial_application_tactic :=
               [ pose Build_PartialApplication | idtac ])
       end
   end.
-
-Section PartialAppTest.
-  Instance and_ar : Params and 0.
-
-  Goal Morphism (iff) (and True True).
-    partial_application_tactic.
-  Admitted.
-
-  Goal Morphism (iff) (or True True).
-    partial_application_tactic.
-    partial_application_tactic. 
-  Admitted.
-
-  Goal Morphism (iff ==> iff) (iff True).
-    partial_application_tactic.
-    (*partial_application_tactic. *)
-   Admitted.
-
-End PartialAppTest.
 
 Hint Extern 4 (@Morphism _ _ _) => partial_application_tactic : typeclass_instances.
 

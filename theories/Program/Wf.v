@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: Wf.v 11709 2008-12-20 11:42:15Z msozeau $ *)
+(* $Id: Wf.v 12187 2009-06-13 19:36:59Z msozeau $ *)
 
 (** Reformulation of the Wf module using subsets where possible, providing
    the support for [Program]'s treatment of well-founded definitions. *)
@@ -165,7 +165,7 @@ Section Measure_well_founded.
 
   (* Measure relations are well-founded if the underlying relation is well-founded. *)
 
-  Variables T M: Set.
+  Variables T M: Type.
   Variable R: M -> M -> Prop.
   Hypothesis wf: well_founded R.
   Variable m: T -> M.
@@ -191,7 +191,7 @@ End Measure_well_founded.
 
 Section Fix_measure_rects.
 
-  Variable A: Set.
+  Variable A: Type.
   Variable m: A -> nat.
   Variable P: A -> Type.
   Variable f: forall (x : A), (forall y: { y: A | m y < m x }, P (proj1_sig y)) -> P x.
@@ -287,7 +287,7 @@ Section Fix_measure_rects.
 
 End Fix_measure_rects.
 
-(** Tactic to fold a definitions based on [Fix_measure_sub]. *)
+(** Tactic to fold a definition based on [Fix_measure_sub]. *)
 
 Ltac fold_sub f :=
   match goal with
@@ -312,8 +312,8 @@ Module WfExtensionality.
   (** For a function defined with Program using a well-founded order. *)
 
   Program Lemma fix_sub_eq_ext :
-    forall (A : Set) (R : A -> A -> Prop) (Rwf : well_founded R)
-      (P : A -> Set)
+    forall (A : Type) (R : A -> A -> Prop) (Rwf : well_founded R)
+      (P : A -> Type)
       (F_sub : forall x : A, (forall (y : A | R y x), P y) -> P x),
       forall x : A,
         Fix_sub A R Rwf P F_sub x =
