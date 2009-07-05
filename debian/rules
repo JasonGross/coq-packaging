@@ -44,8 +44,14 @@ configure-stamp: ocamlinit-stamp
 build: build-stamp
 build-stamp: configure-stamp
 	dh_testdir
+
 ifeq ($(BUILDCACHE),)
-	$(MAKE) STRIP=true check
+
+# VALIDOPTS are the options given to coqchk; the value given here is
+# the default one without -silent (-silent maybe cause buildd to
+# timeout because of lack of output)
+
+	$(MAKE) STRIP=true VALIDOPTS="-o -m" check
 	$(MAKE) DOC_TARGETS=$(HTMLDOC) $(HTMLDOC)
 else
 	rsync -a --exclude=debian --exclude=.git $(BUILDCACHE)/ .

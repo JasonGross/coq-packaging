@@ -1,3 +1,10 @@
+coq (8.2.pl1+dfsg-2) unstable; urgency=low
+
+  * During validation of stdlib, call coqchk without -silent to avoid
+    timeout on buildds because of lack of output
+
+ -- Stephane Glondu <steph@glondu.net>  Sun, 05 Jul 2009 12:51:15 +0200
+
 coq (8.2.pl1+dfsg-1) unstable; urgency=low
 
   * New Upstream Version
