@@ -1,3 +1,9 @@
+coq (8.2.pl1+dfsg-3) UNRELEASED; urgency=low
+
+  * Update README.Debian (Closes: #538398)
+
+ -- Stephane Glondu <steph@glondu.net>  Sat, 25 Jul 2009 16:31:48 +0200
+
 coq (8.2.pl1+dfsg-2) unstable; urgency=low
 
   * During validation of stdlib, call coqchk without -silent to avoid
