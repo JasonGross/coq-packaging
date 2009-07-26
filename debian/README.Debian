@@ -12,7 +12,9 @@ upstream release, your Coq files should be recompiled.
 Coq frontends
 -------------
 For interactive use of coqtop, we suggest
-- either the Debian cle package
-- or the Proof-General (x)emacs mode
+ - a readline editor, such as ledit or rlwrap (or anything that provides the
+   readline-editor virtual packages);
+ - or the Proof-General (x)emacs mode, available in the proofgeneral-coq
+   package.
 
 However, we recommend you to use the CoqIde GTK+ interface provided in coqide.
