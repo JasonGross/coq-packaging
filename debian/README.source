@@ -25,8 +25,14 @@ version (the script will do it for you).
 Patch system
 ------------
 
-This package uses dpatch for patching the source. Please consider
-reading dpatch manpage to patch the source.
+This source package uses quilt to apply and remove its patches. Please
+refer to `/usr/share/doc/quilt/README.source' for information about
+how to use quilt for source packages.
+
+The quilt series is generated from the Git repository, using
+dom-{apply,save}-patches, from the dh-ocaml (>= 0.5) package. Please
+refer to the appendix about Git in the Debian OCaml Packaging Policy
+(from the same package).
 
 
 Version Control System
@@ -47,3 +53,6 @@ Since Coq takes so much time to compile, there is a build cache to
 speed-up Debian development and debugging. Just copy a previous build
 to ../coq.cache, and debian/rules will detect its presence and rsync
 from there instead of really compiling Coq...
+
+
+ -- Stéphane Glondu <glondu@debian.org>, Sat, 29 Aug 2009 16:49:52 +0200

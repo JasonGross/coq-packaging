@@ -35,9 +35,11 @@ OCAMLINIT_SED += \
   -e 's%@CoqVersion@%$(COQ_VERSION)%' \
   -e 's%@CoqABI@%$(COQ_ABI)%'
 
+DH := dh --with quilt
+
 configure: configure-stamp
 configure-stamp: ocamlinit-stamp
-	dh build --before dh_auto_configure
+	$(DH) build --before dh_auto_configure
 	./configure $(CONFIGUREOPTS)
 	touch $@
 
@@ -56,12 +58,12 @@ ifeq ($(BUILDCACHE),)
 else
 	rsync -a --exclude=debian --exclude=.git $(BUILDCACHE)/ .
 endif
-	dh build --after dh_auto_test
+	$(DH) build --after dh_auto_test
 	touch $@
 
 install: install-stamp
 install-stamp: build-stamp
-	dh install --before dh_auto_install
+	$(DH) install --before dh_auto_install
 	$(MAKE) $(ADDPREF) install
 	find debian/tmp -regextype posix-awk \
 	  -regex '.*\.(cm[aoxi]|cmxa|[ao])$$' \
@@ -74,7 +76,7 @@ install-stamp: build-stamp
 	cp debian/coqide.desktop debian/coqide/usr/share/applications
 	cp -r doc/stdlib/html debian/coq-theories/usr/share/doc/coq-theories/
 	cp debian/coqvars.mk debian/coq/usr/share/coq/
-	dh install --after dh_install
+	$(DH) install --after dh_install
 	for u in $(PACKAGES); do \
 	  echo 'F:OCamlABI=$(OCAML_ABI)' >> debian/$$u.substvars; \
 	  echo 'F:CoqABI=$(COQ_ABI)' >> debian/$$u.substvars; \
@@ -82,13 +84,13 @@ install-stamp: build-stamp
 	touch $@
 
 clean: ocamlinit-clean
-	dh $@
+	$(DH) $@
 
 binary-indep: install-stamp
-	dh $@
+	$(DH) $@
 
 binary-arch: install-stamp
-	dh $@
+	$(DH) $@
 
 binary: binary-indep binary-arch
 .PHONY: build clean binary-indep binary-arch binary install configure ocamlinit

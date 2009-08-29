@@ -1,8 +1,15 @@
-coq (8.2.pl1+dfsg-3) UNRELEASED; urgency=low
+coq (8.2.pl1+dfsg-3) unstable; urgency=low
 
   * Update README.Debian (Closes: #538398)
+  * Add 0001-Update-for-why-2.19.patch
+  * debian/control:
+    - update my e-mail address and remove DMUA
+    - add why to Suggests
+    - add quilt to Build-Depends
+    - update Standards-Version to 3.8.3 (no changes)
+  * Update README.source to reflect use of quilt
 
- -- Stephane Glondu <steph@glondu.net>  Sat, 25 Jul 2009 16:31:48 +0200
+ -- Stéphane Glondu <glondu@debian.org>  Sat, 29 Aug 2009 16:58:45 +0200
 
 coq (8.2.pl1+dfsg-2) unstable; urgency=low
 
