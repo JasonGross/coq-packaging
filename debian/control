@@ -48,7 +48,7 @@ Description: proof assistant for higher-order logic (toplevel and compiler)
  development of computer programs consistent with their formal
  specification. It is developed using Objective Caml and Camlp5.
  .
- This packages provides coqtop, a command line interface to Coq.
+ This package provides coqtop, a command line interface to Coq.
  .
  A graphical interface for Coq is provided in the coqide package.
  Coq can also be used with ProofGeneral, which allows proofs to be

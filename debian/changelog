@@ -1,3 +1,9 @@
+coq (8.2.pl1+dfsg-4) UNRELEASED; urgency=low
+
+  * debian/control: fix typo in long description (Closes: #557458)
+
+ -- Stefano Zacchiroli <zack@debian.org>  Sun, 22 Nov 2009 16:26:20 +0100
+
 coq (8.2.pl1+dfsg-3) unstable; urgency=low
 
   * Update README.Debian (Closes: #538398)
