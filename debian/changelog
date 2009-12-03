@@ -1,8 +1,12 @@
 coq (8.2.pl1+dfsg-4) UNRELEASED; urgency=low
 
+  [ Stefano Zacchiroli ]
   * debian/control: fix typo in long description (Closes: #557458)
 
- -- Stefano Zacchiroli <zack@debian.org>  Sun, 22 Nov 2009 16:26:20 +0100
+  [ Stéphane Glondu ]
+  * Switch to dh-ocaml 0.9
+
+ -- Stéphane Glondu <glondu@debian.org>  Thu, 03 Dec 2009 11:21:27 +0100
 
 coq (8.2.pl1+dfsg-3) unstable; urgency=low
 

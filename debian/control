@@ -12,12 +12,11 @@ Standards-Version: 3.8.3
 Build-Depends:
  debhelper (>= 7),
  quilt (>= 0.46-7~),
- dpkg-dev (>= 1.13.19),
- dh-ocaml (>= 0.4.1),
- ocaml-nox (>= 3.11.0-5),
+ dh-ocaml (>= 0.9~),
+ ocaml-nox (>= 3.11.1-3~),
  ocaml-best-compilers,
- camlp5 (>= 5.12),
- liblablgtk2-ocaml-dev (>= 2.12.0-3),
+ camlp5 (>= 5.12-2~),
+ liblablgtk2-ocaml-dev (>= 2.14),
  texlive-latex-extra,
  hevea (>= 1.10-7)
 Homepage: http://coq.inria.fr/
@@ -27,11 +26,11 @@ Vcs-Git: git://git.debian.org/git/pkg-ocaml-maint/packages/coq.git
 Package: coq
 Architecture: any
 Depends:
- ${shlibs:Depends},
- ${misc:Depends},
- ocaml-base-nox-${F:OCamlABI},
  coq-theories (= ${source:Version}),
- emacsen-common
+ emacsen-common,
+ ${ocaml:Depends},
+ ${shlibs:Depends},
+ ${misc:Depends}
 Provides: coq-${F:CoqABI}
 Recommends: coqide | proofgeneral-coq
 Suggests:
@@ -58,10 +57,9 @@ Description: proof assistant for higher-order logic (toplevel and compiler)
 Package: coqide
 Architecture: any
 Depends:
- ${shlibs:Depends},
  coq (= ${binary:Version}),
- ocaml-base-nox-${F:OCamlABI},
- liblablgtk2-ocaml,
+ ${ocaml:Depends},
+ ${shlibs:Depends},
  ${misc:Depends}
 Description: proof assistant for higher-order logic (gtk interface)
  Coq is a proof assistant for higher-order logic, which allows the
@@ -89,10 +87,11 @@ Package: libcoq-ocaml-dev
 Section: ocaml
 Architecture: any
 Depends:
- ${shlibs:Depends},
  coq (= ${binary:Version}),
- ocaml-nox-${F:OCamlABI},
+ ${ocaml:Depends},
+ ${shlibs:Depends},
  ${misc:Depends}
+Provides: ${ocaml:Provides}
 Conflicts: coq (<< 8.2-1+dfsg-1), coq-libs
 Replaces: coq (<< 8.2-1+dfsg-1), coq-libs
 Description: development libraries and tools for Coq

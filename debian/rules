@@ -14,7 +14,7 @@ export CAML_LD_LIBRARY_PATH = $(shell pwd)/kernel/byterun
 # Show full commands when building Coq
 export VERBOSE=1
 
-include /usr/share/ocaml/ocamlinit.mk
+include /usr/share/ocaml/ocamlvars.mk
 
 HTMLDOC := doc/stdlib/html/index.html
 
@@ -31,14 +31,14 @@ CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
   --browser "/usr/bin/x-www-browser %s &" \
   --with-doc no --coqrunbyteflags "-dllib -lcoqrun"
 
-OCAMLINIT_SED += \
+export OCAMLINIT_SED += \
   -e 's%@CoqVersion@%$(COQ_VERSION)%' \
   -e 's%@CoqABI@%$(COQ_ABI)%'
 
-DH := dh --with quilt
+DH := dh --with quilt,ocaml
 
 configure: configure-stamp
-configure-stamp: ocamlinit-stamp
+configure-stamp:
 	$(DH) build --before dh_auto_configure
 	./configure $(CONFIGUREOPTS)
 	touch $@
@@ -83,7 +83,7 @@ install-stamp: build-stamp
 	done
 	touch $@
 
-clean: ocamlinit-clean
+clean:
 	$(DH) $@
 
 binary-indep: install-stamp
@@ -93,4 +93,4 @@ binary-arch: install-stamp
 	$(DH) $@
 
 binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install configure ocamlinit
+.PHONY: build clean binary-indep binary-arch binary install configure
