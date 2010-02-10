@@ -1,8 +1,9 @@
-coq (8.2.pl1+dfsg-5) UNRELEASED; urgency=low
+coq (8.2.pl1+dfsg-5) unstable; urgency=low
 
-  * NOT RELEASED YET
+  * Rebuild with OCaml 3.11.2
+  * Bump Standards-Version to 3.8.4 (no changes)
 
- -- Stéphane Glondu <glondu@debian.org>  Wed, 10 Feb 2010 09:21:38 +0100
+ -- Stéphane Glondu <glondu@debian.org>  Wed, 10 Feb 2010 09:24:03 +0100
 
 coq (8.2.pl1+dfsg-4) unstable; urgency=low
 
