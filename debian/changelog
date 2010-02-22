@@ -1,3 +1,9 @@
+coq (8.2.pl1+dfsg-6) unstable; urgency=low
+
+  * Add Disable-micromega-tests.patch (workaround for bug #570920)
+
+ -- Stéphane Glondu <glondu@debian.org>  Mon, 22 Feb 2010 10:41:15 +0100
+
 coq (8.2.pl1+dfsg-5) unstable; urgency=low
 
   * Rebuild with OCaml 3.11.2
