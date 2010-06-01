@@ -35,7 +35,7 @@ export OCAMLINIT_SED += \
   -e 's%@CoqVersion@%$(COQ_VERSION)%' \
   -e 's%@CoqABI@%$(COQ_ABI)%'
 
-DH := dh --with quilt,ocaml
+DH := dh --with ocaml
 
 configure: configure-stamp
 configure-stamp:
