@@ -1,3 +1,10 @@
+coq (8.3~beta0+13298-1) UNRELEASED; urgency=low
+
+  * New upstream snapshot
+    - remove all patches
+
+ -- Stéphane Glondu <glondu@debian.org>  Wed, 21 Jul 2010 09:51:18 +0200
+
 coq (8.2.pl2+dfsg-1) unstable; urgency=low
 
   * New upstream release
