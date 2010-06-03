@@ -35,18 +35,15 @@ export OCAMLINIT_SED += \
   -e 's%@CoqVersion@%$(COQ_VERSION)%' \
   -e 's%@CoqABI@%$(COQ_ABI)%'
 
-DH := dh --with ocaml
+%:
+	+dh --with ocaml $@
 
-configure: configure-stamp
-configure-stamp:
-	$(DH) build --before dh_auto_configure
+.PHONY: override_dh_auto_configure
+override_dh_auto_configure:
 	./configure $(CONFIGUREOPTS)
-	touch $@
 
-build: build-stamp
-build-stamp: configure-stamp
-	dh_testdir
-
+.PHONY: override_dh_auto_build
+override_dh_auto_build:
 ifeq ($(BUILDCACHE),)
 
 # VALIDOPTS are the options given to coqchk; the value given here is
@@ -58,35 +55,29 @@ ifeq ($(BUILDCACHE),)
 else
 	rsync -a --exclude=debian --exclude=.git $(BUILDCACHE)/ .
 endif
-	$(DH) build --after dh_auto_test
-	touch $@
 
-install: install-stamp
-install-stamp: build-stamp
-	$(DH) install --before dh_auto_install
+.PHONY: override_dh_auto_test
+override_dh_auto_test:
+# TODO: run make check here instead of in override_dh_auto_build (?)
+
+.PHONY: override_dh_auto_install
+override_dh_auto_install:
 	$(MAKE) $(ADDPREF) install
 	find debian/tmp -regextype posix-awk \
 	  -regex '.*\.(cm[aoxi]|cmxa|[ao])$$' \
 	  >> debian/libcoq-ocaml-dev.install
 	find debian/tmp -name '*.vo' -printf '%P\n' \
 	  >> debian/coq-theories.install
+
+.PHONY: override_dh_install
+override_dh_install:
 	dh_install --list-missing
 	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
-	$(DH) install --after dh_install
+
+.PHONY: override_dh_gencontrol
+override_dh_gencontrol:
 	for u in $(PACKAGES); do \
 	  echo 'F:OCamlABI=$(OCAML_ABI)' >> debian/$$u.substvars; \
 	  echo 'F:CoqABI=$(COQ_ABI)' >> debian/$$u.substvars; \
 	done
-	touch $@
-
-clean:
-	$(DH) $@
-
-binary-indep: install-stamp
-	$(DH) $@
-
-binary-arch: install-stamp
-	$(DH) $@
-
-binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install configure
+	dh_gencontrol
