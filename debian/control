@@ -9,7 +9,7 @@ Uploaders:
 Standards-Version: 3.9.0
 Build-Depends:
  debhelper (>= 7.2.11~),
- dh-ocaml (>= 0.9~),
+ dh-ocaml (>= 0.9.5~),
  ocaml-nox (>= 3.11.1-3~),
  ocaml-best-compilers,
  camlp5 (>= 5.12-2~),
@@ -79,6 +79,23 @@ Description: proof assistant for higher-order logic (theories)
  .
  This package provides existing theories that new proofs can be
  based upon, including theories of arithmetic and Boolean values.
+
+Package: libcoq-ocaml
+Section: ocaml
+Architecture: any
+Depends:
+ ${ocaml:Depends},
+ ${shlibs:Depends},
+ ${misc:Depends}
+Provides: ${ocaml:Provides}
+Breaks: coq (<< 8.3~), libcoq-ocaml-dev (<< 8.3~), coq-libs
+Replaces: coq (<< 8.3~), libcoq-ocaml-dev (<< 8.3~), coq-libs
+Description: runtime libraries for Coq
+ Coq is a proof assistant for higher-order logic, which allows the
+ development of computer programs consistent with their formal
+ specification. It is developed using Objective Caml and Camlp5.
+ .
+ This package provides runtime libraries for Coq.
 
 Package: libcoq-ocaml-dev
 Section: ocaml
