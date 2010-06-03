@@ -21,7 +21,7 @@ HTMLDOC := doc/stdlib/html/index.html
 COQPREF := $(CURDIR)/debian/tmp
 ADDPREF := COQINSTALLPREFIX=$(COQPREF)
 
-PACKAGES := $(shell awk '/Package:/{print $$2}' debian/control)
+PACKAGES := $(shell dh_listpackages)
 
 COQ_VERSION := $(shell head -n1 debian/changelog | awk -F'[+() ]' '{print $$3}')
 COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
@@ -71,11 +71,7 @@ install-stamp: build-stamp
 	find debian/tmp -name '*.vo' -printf '%P\n' \
 	  >> debian/coq-theories.install
 	dh_install --list-missing
-	cp debian/coq.xpm debian/coq/usr/share/pixmaps
 	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
-	cp debian/coqide.desktop debian/coqide/usr/share/applications
-	cp -r doc/stdlib/html debian/coq-theories/usr/share/doc/coq-theories/
-	cp debian/coqvars.mk debian/coq/usr/share/coq/
 	$(DH) install --after dh_install
 	for u in $(PACKAGES); do \
 	  echo 'F:OCamlABI=$(OCAML_ABI)' >> debian/$$u.substvars; \

@@ -25,4 +25,6 @@ usr/share/man/man1/coqtop*
 usr/share/man/man1/coqwc*
 usr/share/man/man1/gallina*
 usr/lib/coq/dllcoqrun.so @OCamlDllDir@
-usr/share/emacs/site-lisp/coqdoc.sty usr/share/texmf/tex/latex/misc/
+usr/share/emacs/site-lisp/coqdoc.sty    usr/share/texmf/tex/latex/misc/
+debian/coq.xpm                          usr/share/pixmaps
+debian/coqvars.mk                       usr/share/coq
