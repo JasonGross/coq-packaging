@@ -2,14 +2,11 @@ usr/bin/coqc*
 usr/bin/coqdep*
 usr/bin/coqdoc*
 usr/bin/coq_makefile*
-usr/bin/coq-interface*
-usr/bin/coq-parser*
 usr/bin/coq-tex*
 usr/bin/coqtop*
 usr/bin/coqwc*
 usr/bin/gallina*
-usr/lib/coq/contrib/micromega/csdpcert
-usr/lib/coq/contrib/interface/vernacrc
+usr/lib/coq/plugins/micromega/csdpcert
 usr/lib/coq/tools/coqdoc/coqdoc.css
 usr/lib/coq/tools/coqdoc/coqdoc.sty
 usr/lib/coq/states/initial.coq
@@ -18,8 +15,6 @@ usr/share/man/man1/coqc*
 usr/share/man/man1/coqdep*
 usr/share/man/man1/coqdoc*
 usr/share/man/man1/coq_makefile*
-usr/share/man/man1/coq-interface*
-usr/share/man/man1/coq-parser*
 usr/share/man/man1/coq-tex*
 usr/share/man/man1/coqtop*
 usr/share/man/man1/coqwc*
