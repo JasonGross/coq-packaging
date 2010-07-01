@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pretty.mll 12187 2009-06-13 19:36:59Z msozeau $ i*)
+(*i $Id: pretty.mll 12908 2010-04-09 08:54:04Z herbelin $ i*)
 
 (*s Utility functions for the scanners *)
 
@@ -126,7 +126,7 @@
     Str.regexp "[ \t]*(\\*\\*[ \t]+printing[ \t]+\\([^ \t]+\\)"
   let printing_token_re =
     Str.regexp
-      "[ \t]*\\(\\(%\\([^%]*\\)%\\)\\|\\(\\$[^$]*\\$\\)\\)?[ \t]*\\(#\\(\\([^#]\\|&#\\)*\\)#\\)?"
+      "[ \t]*\\(\\(%\\([^%]*\\)%\\)\\|\\(\\$[^$]*\\$\\)\\)?[ \t]*\\(#\\(\\(&#\\|[^#]\\)*\\)#\\)?"
 
   let add_printing_token toks pps =
     try
@@ -731,6 +731,9 @@ and body = parse
   | token_no_brackets
       { let s = lexeme lexbuf in
 	  symbol lexbuf s; body lexbuf }
+  | ".."
+      { Output.char '.'; Output.char '.';
+        body lexbuf }
   | _ { let c = lexeme_char lexbuf 0 in 
 	  Output.char c; 
           body lexbuf }

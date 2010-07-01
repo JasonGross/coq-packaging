@@ -8,7 +8,7 @@
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
 
-(*i $Id: BigQ.v 11208 2008-07-04 16:57:46Z letouzey $ i*)
+(*i $Id: BigQ.v 12509 2009-11-12 15:52:50Z letouzey $ i*)
 
 Require Import Field Qfield BigN BigZ QSig QMake.
 
@@ -44,6 +44,11 @@ Delimit Scope bigQ_scope with bigQ.
 Bind Scope bigQ_scope with bigQ.
 Bind Scope bigQ_scope with BigQ.t.
 
+(* Allow nice printing of rational numerals, either as (Qz 1234)
+   or as (Qq 1234 5678) *)
+Arguments Scope BigQ.Qz [bigZ_scope].
+Arguments Scope BigQ.Qq [bigZ_scope bigN_scope].			     
+			     
 Infix "+" := BigQ.add : bigQ_scope.
 Infix "-" := BigQ.sub : bigQ_scope.
 Notation "- x" := (BigQ.opp x) : bigQ_scope.

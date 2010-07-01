@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqc.ml 11749 2009-01-05 14:01:04Z notin $ *)
+(* $Id: coqc.ml 12911 2010-04-09 10:08:37Z herbelin $ *)
 
 (* Afin de rendre Coq plus portable, ce programme Caml remplace le script
    coqc. 
@@ -126,8 +126,8 @@ let parse_args () =
         parse (cfiles,args) rem
 
     | ("-?"|"-h"|"-H"|"-help"|"--help") :: _ -> usage ()
-    | ("-I"|"-include"|"-outputstate"
-      |"-inputstate"|"-is"|"-load-vernac-source"|"-l"|"-load-vernac-object"
+    | ("-outputstate"|"-inputstate"|"-is"
+      |"-load-vernac-source"|"-l"|"-load-vernac-object"
       |"-load-ml-source"|"-require"|"-load-ml-object"|"-user"
       |"-init-file" | "-dump-glob" | "-coqlib" as o) :: rem ->
 	begin
@@ -135,7 +135,17 @@ let parse_args () =
 	    | s :: rem' -> parse (cfiles,s::o::args) rem'
 	    | []        -> usage ()
 	end
-    | "-R" as o :: s :: t :: rem -> parse (cfiles,t::s::o::args) rem
+    | ("-I"|"-include" as o) :: rem ->
+	begin
+	  match rem with
+	  | s :: "-as" :: t :: rem' -> parse (cfiles,t::"-as"::s::o::args) rem'
+	  | s :: "-as" :: [] -> usage ()
+	  | s :: rem' -> parse (cfiles,s::o::args) rem'
+	  | []        -> usage ()
+	end
+    | "-R" :: s :: "-as" :: t :: rem ->	parse (cfiles,t::"-as"::s::"-R"::args) rem
+    | "-R" :: s :: "-as" :: [] -> usage ()
+    | "-R" :: s :: t :: rem -> parse (cfiles,t::s::"-R"::args) rem
 
     | ("-notactics"|"-debug"|"-nolib"
       |"-debugVM"|"-alltransp"|"-VMno"

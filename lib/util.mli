@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id: util.mli 11897 2009-02-09 19:28:02Z barras $ i*)
+(*i $Id: util.mli 13200 2010-06-25 22:36:25Z letouzey $ i*)
 
 (*i*)
 open Pp
@@ -94,6 +94,7 @@ val classify_unicode : int -> utf8_status
 val check_ident : string -> unit
 val check_ident_soft : string -> unit
 val lowercase_first_char_utf8 : string -> string
+val ascii_of_ident : string -> string
 
 (*s Lists. *)
 

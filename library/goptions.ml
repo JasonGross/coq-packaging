@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: goptions.ml 10348 2007-12-06 17:36:14Z aspiwack $ *)
+(* $Id: goptions.ml 13196 2010-06-25 18:01:50Z herbelin $ *)
 
 (* This module manages customization parameters at the vernacular level     *)
 
@@ -297,10 +297,11 @@ let set_int_option_value = set_option_value
   (fun v -> function 
      | (IntValue _) -> IntValue v
      | _ -> bad_type_error ())
-let set_bool_option_value = set_option_value
-  (fun v -> function 
+let set_bool_option_value key v =
+  try set_option_value (fun v -> function
      | (BoolValue _) -> BoolValue v
-     | _ -> bad_type_error ())
+     | _ -> bad_type_error ()) key v
+  with UserError (_,s) -> Flags.if_verbose msg_warning s
 let set_string_option_value = set_option_value
  (fun v -> function 
     | (StringValue _) -> StringValue v

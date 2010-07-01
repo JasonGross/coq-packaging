@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: declaremods.ml 12204 2009-06-22 16:06:49Z soubiran $ i*)
+(*i $Id: declaremods.ml 12295 2009-08-27 11:01:49Z soubiran $ i*)
 open Pp
 open Util
 open Names
@@ -851,8 +851,7 @@ let classify_import (_,(export,_ as obj)) =
   if export then Substitute obj else Dispose
 
 let subst_import (_,subst,(export,mp as obj)) =
-  let subst' = remove_alias subst in
-  let mp' = subst_mp subst' mp in
+  let mp' = subst_mp subst mp in
     if mp'==mp then obj else
       (export,mp')
 	

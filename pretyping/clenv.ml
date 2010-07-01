@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: clenv.ml 11897 2009-02-09 19:28:02Z barras $ *)
+(* $Id: clenv.ml 13126 2010-06-13 11:09:51Z herbelin $ *)
 
 open Pp
 open Util
@@ -410,8 +410,9 @@ let clenv_unify_binding_type clenv c t u =
     try
       let evd,c = w_coerce_to_type (cl_env clenv) clenv.evd c t u in
       TypeProcessed, { clenv with evd = evd }, c
-    with e when precatchable_exception e ->
-      TypeNotProcessed, clenv, c
+    with
+      | PretypeError (_,NotClean _) as e -> raise e
+      | e when precatchable_exception e -> TypeNotProcessed, clenv, c
 
 let clenv_assign_binding clenv k (sigma,c) =
   let k_typ = clenv_hnf_constr clenv (clenv_meta_type clenv k) in
@@ -436,11 +437,11 @@ let clenv_match_args bl clenv =
 	  clenv_assign_binding clenv k sc)
       clenv bl
 
+exception NoSuchBinding
+
 let clenv_constrain_last_binding c clenv =
   let all_mvs = collect_metas clenv.templval.rebus in
-  let k =
-    try list_last all_mvs 
-    with Failure _ -> anomaly "clenv_constrain_with_bindings" in
+  let k = try list_last all_mvs with Failure _ -> raise NoSuchBinding in
   clenv_assign_binding clenv k (Evd.empty,c)
 
 let clenv_constrain_dep_args hyps_only bl clenv =

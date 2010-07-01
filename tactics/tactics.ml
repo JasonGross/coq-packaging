@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tactics.ml 12187 2009-06-13 19:36:59Z msozeau $ *)
+(* $Id: tactics.ml 12956 2010-04-20 08:49:15Z herbelin $ *)
 
 open Pp
 open Util
@@ -249,14 +249,51 @@ let change_option occl t = function
     Some id -> change_in_hyp occl t id
   | None -> change_in_concl occl t
 
-let change occl c cls =
+let out_arg = function
+  | ArgVar _ -> anomaly "Unevaluated or_var variable"
+  | ArgArg x -> x
+
+let adjust_clause occl cls =
+  (* warn as much as possible on loss of occurrence information *)
   (match cls, occl with
       ({onhyps=(Some(_::_::_)|None)}
       |{onhyps=Some(_::_);concl_occs=((false,_)|(true,_::_))}),
       Some _ ->
 	error "No occurrences expected when changing several hypotheses."
     | _ -> ());
-  onClauses (change_option occl c) cls
+  (* get at clause from cls if only goal or one hyp specified *)
+  let occl,cls = match occl with
+    | None -> None,cls
+    | Some (occs,c) ->
+	if cls.onhyps=Some[] && occs=all_occurrences then
+	  Some (on_snd (List.map out_arg) cls.concl_occs,c),
+	  {cls with concl_occs=all_occurrences_expr}
+	else
+	  match cls.onhyps with
+	  | Some[(occs',id),l] when 
+	      cls.concl_occs=no_occurrences_expr && occs=all_occurrences -> 
+	      Some (on_snd (List.map out_arg) occs',c),
+	      {cls with onhyps=Some[(all_occurrences_expr,id),l]}
+	  | _ ->
+	      occl,cls in
+  (* check if cls has still specified occs *)
+  if cls.onhyps <> None && 
+    List.exists (fun ((occs,_),_) -> occs <> all_occurrences_expr)
+    (Option.get cls.onhyps)
+    || cls.concl_occs <> all_occurrences_expr && 
+       cls.concl_occs <> no_occurrences_expr
+  then
+    Flags.if_verbose Pp.msg_warning
+      (if cls.onhyps=Some[] then
+	str "Trailing \"at\" modifier not taken into account."
+      else
+	str "\"at\" modifier in clause \"in\" not taken into account.");
+  (* Anticipate on onClauses which removes concl if not at all occs *)
+  if cls.concl_occs=no_occurrences_expr then cls
+  else {cls with concl_occs=all_occurrences_expr}
+
+let change occl c cls =
+  onClauses (change_option occl c) (adjust_clause occl cls)
 
 (* Pour usage interne (le niveau User est pris en compte par reduce) *)
 let red_in_concl        = reduct_in_concl (red_product,DEFAULTcast)
@@ -1396,10 +1433,6 @@ let quantify lconstr =
    used to remember the place of x1, x2, ...: it is the list of hypotheses on
    the left of each x1, ...).
 *)
-
-let out_arg = function
-  | ArgVar _ -> anomaly "Unevaluated or_var variable"
-  | ArgArg x -> x
 
 let occurrences_of_hyp id cls =
   let rec hyp_occ = function
@@ -2546,6 +2579,7 @@ let induction_tac_felim with_evars indvars scheme gl =
 let apply_induction_in_context isrec hyp0 indsign indvars names induct_tac gl =
   let env = pf_env gl in
   let statlists,lhyp0,indhyps,deps = cook_sign hyp0 indvars env in
+  let deps = List.map (fun (id,c,t)-> (id,c,refresh_universes_strict t)) deps in
   let tmpcl = it_mkNamedProd_or_LetIn (pf_concl gl) deps in
   let names = compute_induction_names (Array.length indsign) names in
   let dephyps = List.map (fun (id,_,_) -> id) deps in

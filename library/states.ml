@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: states.ml 12080 2009-04-11 16:56:20Z herbelin $ *)
+(* $Id: states.ml 13175 2010-06-22 06:28:37Z herbelin $ *)
 
 open System
 
@@ -24,7 +24,8 @@ let (extern_state,intern_state) =
     extern_intern Coq_config.state_magic_number ".coq" in
   (fun s -> raw_extern s (freeze())),
   (fun s ->
-    unfreeze (raw_intern (Library.get_load_paths ()) s);
+    unfreeze
+      (with_magic_number_check (raw_intern (Library.get_load_paths ())) s);
     Library.overwrite_library_filenames s)
 
 (* Rollback. *)

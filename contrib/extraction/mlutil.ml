@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mlutil.ml 10329 2007-11-21 21:21:36Z letouzey $ i*)
+(*i $Id: mlutil.ml 13202 2010-06-25 22:36:30Z letouzey $ i*)
 
 (*i*)
 open Pp
@@ -578,7 +578,7 @@ let eta_red e =
 	  if m = n then 
 	    [], f, a
 	  else if m < n then 
-	    snd (list_chop (n-m) ids), f, a 
+	    list_skipn m ids, f, a
 	  else (* m > n *)
 	    let a1,a2 = list_chop (m-n) a in 
 	    [], MLapp (f,a1), a2

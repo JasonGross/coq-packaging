@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Notations.v 11073 2008-06-08 20:24:51Z herbelin $ i*)
+(*i $Id: Notations.v 12271 2009-08-11 10:29:45Z herbelin $ i*)
 
 (** These are the notations whose level and associativity are imposed by Coq *)
 
@@ -68,13 +68,13 @@ Reserved Notation "{ x }" (at level 0, x at level 99).
 (** Notations for sigma-types or subsets *)
 
 Reserved Notation "{ x  |  P }" (at level 0, x at level 99).
-Reserved Notation "{ x  |  P  &  Q }" (at level 0, x at level 99).
+Reserved Notation "{ x  |  P  & Q }" (at level 0, x at level 99).
 
 Reserved Notation "{ x : A  |  P }" (at level 0, x at level 99).
-Reserved Notation "{ x : A  |  P  &  Q }" (at level 0, x at level 99).
+Reserved Notation "{ x : A  |  P  & Q }" (at level 0, x at level 99).
 
-Reserved Notation "{ x : A  &  P }" (at level 0, x at level 99).
-Reserved Notation "{ x : A  &  P  &  Q }" (at level 0, x at level 99).
+Reserved Notation "{ x : A  & P }" (at level 0, x at level 99).
+Reserved Notation "{ x : A  & P  & Q }" (at level 0, x at level 99).
 
 Delimit Scope type_scope with type.
 Delimit Scope core_scope with core.

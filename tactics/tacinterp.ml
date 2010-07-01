@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tacinterp.ml 12187 2009-06-13 19:36:59Z msozeau $ *)
+(* $Id: tacinterp.ml 13130 2010-06-13 18:45:09Z herbelin $ *)
 
 open Constrintern
 open Closure
@@ -1096,7 +1096,9 @@ let apply_one_mhyp_context ist env gl lmatch (hypname,patv,pat) lhyps =
                  match_next_pattern find_next')
               with
                 | PatternMatchingFailure -> apply_one_mhyp_context_rec tl in
-            match_next_pattern (fun () -> match_pat lmatch hyp pat) ()
+            match_next_pattern (fun () ->
+	      let hyp = if b<>None then refresh_universes_strict hyp else hyp in
+	      match_pat lmatch hyp pat) ()
 	| Some patv -> 
 	    match b with
 	    | Some body -> 
@@ -1112,7 +1114,9 @@ let apply_one_mhyp_context ist env gl lmatch (hypname,patv,pat) lhyps =
                         | PatternMatchingFailure ->
                             match_next_pattern_in_body next_in_body' () in
                     match_next_pattern_in_typ 
-                      (fun () -> match_pat lmeta hyp pat) ()
+                      (fun () ->
+			let hyp = refresh_universes_strict hyp in
+			match_pat lmeta hyp pat) ()
                   with PatternMatchingFailure -> apply_one_mhyp_context_rec tl
                 in
                 match_next_pattern_in_body 
@@ -2872,7 +2876,8 @@ let add_tacdef isrec tacl =
 (***************************************************************************)
 (* Other entry points *)
 
-let glob_tactic x = intern_tactic (make_empty_glob_sign ()) x
+let glob_tactic x =
+  Flags.with_option strict_check (intern_tactic (make_empty_glob_sign ())) x
 
 let glob_tactic_env l env x = 
   Flags.with_option strict_check

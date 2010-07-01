@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: decl_mode.mli 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id: decl_mode.mli 12422 2009-10-27 08:42:49Z corbinea $ *)
 
 open Names
 open Term
@@ -33,7 +33,7 @@ type split_tree=
   | Split_patt of Idset.t * inductive *
 		(bool array * (Idset.t * split_tree) option) array
   | Close_patt of split_tree
-  | End_patt of (identifier * int)
+  | End_patt of (identifier * (int * int))
 
 type elim_kind =
     EK_dep of split_tree

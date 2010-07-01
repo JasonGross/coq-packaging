@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pptactic.ml 11784 2009-01-14 11:36:32Z herbelin $ *)
+(* $Id: pptactic.ml 12581 2009-12-13 15:02:33Z herbelin $ *)
 
 open Pp
 open Names
@@ -378,7 +378,7 @@ let pr_as_ipat = function
 
 let pr_as_name = function
   | Anonymous -> mt ()
-  | Name id -> str "as " ++ pr_lident (dummy_loc,id)
+  | Name id -> str " as " ++ pr_lident (dummy_loc,id)
 
 let pr_pose_as_style prc na c =
   spc() ++ prc c ++ pr_as_name na

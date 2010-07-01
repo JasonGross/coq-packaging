@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: hiddentac.ml 12102 2009-04-24 10:48:11Z herbelin $ *)
+(* $Id: hiddentac.ml 13124 2010-06-13 11:09:38Z herbelin $ *)
 
 open Term
 open Proof_type
@@ -83,10 +83,10 @@ let h_simple_induction_destruct isrec h =
 let h_simple_induction = h_simple_induction_destruct true
 let h_simple_destruct = h_simple_induction_destruct false
 
-let h_induction_destruct isrec ev l =
+let h_induction_destruct ev isrec l =
   abstract_tactic (TacInductionDestruct (isrec,ev,List.map (fun (c,e,idl,cl) -> 
     List.map inj_ia c,Option.map inj_open_wb e,idl,cl) l))
-    (induction_destruct ev isrec l)
+    (induction_destruct isrec ev l)
 let h_new_induction ev c e idl cl = h_induction_destruct ev true [c,e,idl,cl]
 let h_new_destruct ev c e idl cl = h_induction_destruct ev false [c,e,idl,cl]
 
@@ -105,7 +105,7 @@ let h_revert l = abstract_tactic (TacRevert l) (revert l)
 
 (* Constructors *)
 let h_left ev l  = abstract_tactic (TacLeft (ev,l)) (left_with_ebindings ev l)
-let h_right ev l = abstract_tactic (TacLeft (ev,l)) (right_with_ebindings ev l)
+let h_right ev l = abstract_tactic (TacRight (ev,l)) (right_with_ebindings ev l)
 let h_split ev l = abstract_tactic (TacSplit (ev,false,l)) (split_with_ebindings ev l)
 (* Moved to tacinterp because of dependencies in Tacinterp.interp
 let h_any_constructor t =

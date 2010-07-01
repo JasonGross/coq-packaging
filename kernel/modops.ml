@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: modops.ml 11923 2009-02-13 12:20:27Z soubiran $ i*)
+(*i $Id: modops.ml 12234 2009-07-09 09:14:09Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -143,11 +143,13 @@ let rec subst_with_body sub = function
 
 and subst_modtype sub mtb =
   let typ_expr' = subst_struct_expr sub mtb.typ_expr in
-    if typ_expr'==mtb.typ_expr then
+  let sub_mtb = join_alias mtb.typ_alias sub in
+    if typ_expr'==mtb.typ_expr && sub_mtb==mtb.typ_alias then
       mtb
     else
       { mtb with 
-	  typ_expr = typ_expr'}
+	  typ_expr = typ_expr';
+	  typ_alias = sub_mtb}
 	
 and subst_structure sub sign = 
   let subst_body  = function

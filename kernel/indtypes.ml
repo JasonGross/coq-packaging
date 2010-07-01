@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: indtypes.ml 11784 2009-01-14 11:36:32Z herbelin $ *)
+(* $Id: indtypes.ml 12616 2009-12-30 15:02:26Z herbelin $ *)
 
 open Util
 open Names
@@ -494,7 +494,7 @@ let check_positivity_one (env, _,ntypes,_ as ienv) hyps i nargs lcnames indlc =
 		  raise (IllFormedInd LocalNotConstructor)
 	      else
 		if not (List.for_all (noccur_between n ntypes) largs)
-              then raise (IllFormedInd (LocalNonPos n));
+		then failwith_non_pos_list n ntypes largs;
 	      (nmr,List.rev lrec)
     in check_constr_rec ienv nmr [] c
   in

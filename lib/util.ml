@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: util.ml 12181 2009-06-10 20:53:09Z glondu $ *)
+(* $Id: util.ml 13200 2010-06-25 22:36:25Z letouzey $ *)
 
 open Pp
 
@@ -485,6 +485,26 @@ let lowercase_first_char_utf8 s =
   assert (s <> "");
   let j, n = next_utf8 s 0 in
   utf8_of_unicode (lowercase_unicode (String.sub s 0 j) n)
+
+(* For extraction, we need to encode unicode character into ascii ones *)
+
+let ascii_of_ident s =
+  let check_ascii s =
+    let ok = ref true in
+    String.iter (fun c -> if Char.code c >= 128 then ok := false) s;
+    !ok
+  in
+  if check_ascii s then s else
+    let i = ref 0 and out = ref "" in
+    begin try while true do
+      let j, n = next_utf8 s !i in
+      out :=
+       if n >= 128
+       then Printf.sprintf "%s__U%04x_" !out n
+       else Printf.sprintf "%s%c" !out s.[!i];
+      i := !i + j
+    done with End_of_input -> () end;
+    !out
 
 (* Lists *)
 

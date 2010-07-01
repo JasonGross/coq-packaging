@@ -9,7 +9,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(* $Id: g_vernac.ml4 12187 2009-06-13 19:36:59Z msozeau $ *)
+(* $Id: g_vernac.ml4 13197 2010-06-25 22:36:17Z letouzey $ *)
 
 
 open Pp
@@ -663,6 +663,8 @@ GEXTEND Gram
   check_command: (* TODO: rapprocher Eval et Check *)
     [ [ IDENT "Eval"; r = Tactic.red_expr; "in"; c = lconstr ->
           fun g -> VernacCheckMayEval (Some r, g, c)
+      | IDENT "Compute"; c = lconstr ->
+	  fun g -> VernacCheckMayEval (Some Rawterm.CbvVm, g, c)
       | IDENT "Check"; c = lconstr ->
 	  fun g -> VernacCheckMayEval (None, g, c) ] ]
   ;
