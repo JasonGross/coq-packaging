@@ -1,9 +1,17 @@
-coq (8.2.pl2+dfsg-1) UNRELEASED; urgency=low
+coq (8.2.pl2+dfsg-1) unstable; urgency=low
 
-  * New upstream release (Closes: #585452)
+  * New upstream release
+    - compiles with OCaml 3.12 (Closes: #585452)
     - remove 0001-Update-for-why-2.19.patch (applied upstream)
+    - add 0002-Remove-dependency-to-Unix-from-module-Profile.patch
+  * Use dh with overrides
+  * debian/control:
+    - remove Stefano and Remi from Uploaders
+    - replace Conflicts with Breaks
+    - bump Standards-Version to 3.9.0
+  * Switch source package format to 3.0 (quilt)
 
- -- Stéphane Glondu <glondu@debian.org>  Thu, 01 Jul 2010 17:25:52 +0200
+ -- Stéphane Glondu <glondu@debian.org>  Fri, 02 Jul 2010 15:25:15 +0200
 
 coq (8.2.pl1+dfsg-6) unstable; urgency=low
 
