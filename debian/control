@@ -8,7 +8,7 @@ Uploaders:
  Stefano Zacchiroli <zack@debian.org>,
  Samuel Mimram <smimram@debian.org>,
  Stéphane Glondu <glondu@debian.org>
-Standards-Version: 3.8.4
+Standards-Version: 3.9.0
 Build-Depends:
  debhelper (>= 7.2.11~),
  dh-ocaml (>= 0.9~),
@@ -39,7 +39,7 @@ Suggests:
  libcoq-ocaml-dev,
  why (>= 2.19),
  coq-doc
-Conflicts: coq-libs
+Breaks: coq-libs
 Replaces: coq-libs
 Description: proof assistant for higher-order logic (toplevel and compiler)
  Coq is a proof assistant for higher-order logic, which allows the
@@ -72,7 +72,7 @@ Package: coq-theories
 Architecture: all
 Depends: coq-${F:CoqABI}, ${misc:Depends}
 Recommends: coq (>= 8.0)
-Conflicts: coq-doc (<= 8.0pl1.0-2), coq-libs
+Breaks: coq-doc (<= 8.0pl1.0-2), coq-libs
 Replaces: coq-libs
 Description: proof assistant for higher-order logic (theories)
  Coq is a proof assistant for higher-order logic, which allows the
@@ -91,7 +91,7 @@ Depends:
  ${shlibs:Depends},
  ${misc:Depends}
 Provides: ${ocaml:Provides}
-Conflicts: coq (<< 8.2-1+dfsg-1), coq-libs
+Breaks: coq (<< 8.2-1+dfsg-1), coq-libs
 Replaces: coq (<< 8.2-1+dfsg-1), coq-libs
 Description: development libraries and tools for Coq
  Coq is a proof assistant for higher-order logic, which allows the
