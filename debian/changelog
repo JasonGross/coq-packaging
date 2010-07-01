@@ -1,8 +1,9 @@
-coq (8.2.pl1+dfsg-7) UNRELEASED; urgency=low
+coq (8.2.pl2+dfsg-1) UNRELEASED; urgency=low
 
-  * Add 0003-Fix-build-with-OCaml-3.12.patch (Closes: #585452)
+  * New upstream release (Closes: #585452)
+    - remove 0001-Update-for-why-2.19.patch (applied upstream)
 
- -- Stéphane Glondu <glondu@debian.org>  Mon, 28 Jun 2010 15:32:29 +0200
+ -- Stéphane Glondu <glondu@debian.org>  Thu, 01 Jul 2010 17:25:52 +0200
 
 coq (8.2.pl1+dfsg-6) unstable; urgency=low
 
