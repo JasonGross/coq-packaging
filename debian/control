@@ -4,8 +4,6 @@ Priority: optional
 Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
 Uploaders:
  Ralf Treinen <treinen@debian.org>,
- Remi Vanicat <vanicat@debian.org>,
- Stefano Zacchiroli <zack@debian.org>,
  Samuel Mimram <smimram@debian.org>,
  Stéphane Glondu <glondu@debian.org>
 Standards-Version: 3.9.0
