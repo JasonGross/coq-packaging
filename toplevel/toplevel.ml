@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: toplevel.ml 11784 2009-01-14 11:36:32Z herbelin $ *)
+(* $Id: toplevel.ml 12891 2010-03-30 11:40:02Z herbelin $ *)
 
 open Pp
 open Util
@@ -163,11 +163,10 @@ let print_location_in_file s inlibrary fname loc =
     try
       let (line, bol) = line_of_pos 1 0 0 in
       close_in ic;
-      hov 0
-        (errstrm ++ str"File " ++ str ("\""^fname^"\"") ++ str"," ++ spc() ++
-         hov 0 (str"line " ++ int line ++ str"," ++ spc() ++
-                str"characters " ++
-                Cerrors.print_loc (make_loc (bp-bol,ep-bol))) ++ str":") ++
+      hov 0 (* No line break so as to follow emacs error message format *)
+        (errstrm ++ str"File " ++ str ("\""^fname^"\"") ++
+         str", line " ++ int line ++ str", characters " ++
+         Cerrors.print_loc (make_loc (bp-bol,ep-bol))) ++ str":" ++
       fnl ()
     with e ->
       (close_in ic;
@@ -316,7 +315,7 @@ let parse_to_dot =
 let rec discard_to_dot () =
   try 
     Gram.Entry.parse parse_to_dot top_buffer.tokens
-  with Stdpp.Exc_located(_,Token.Error _) -> 
+  with Stdpp.Exc_located(_,(Token.Error _|Lexer.Error _)) -> 
     discard_to_dot()
 
 

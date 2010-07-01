@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: cases.ml 12167 2009-06-06 20:07:22Z herbelin $ *)
+(* $Id: cases.ml 13112 2010-06-10 19:58:23Z herbelin $ *)
 
 open Util
 open Names
@@ -851,7 +851,7 @@ let rec map_predicate f k ccl = function
   | Abstract _ :: rest ->
       map_predicate f (k+1) ccl rest
 
-let noccurn_predicate = map_predicate noccurn
+let noccur_predicate_between n = map_predicate (noccur_between n)
 
 let liftn_predicate n = map_predicate (liftn n)
 
@@ -1122,13 +1122,16 @@ let build_branch current deps (realnames,dep) pb eqns const_info =
   (* into  "Gamma; typs; curalias |- tms" *)
   let tomatch = lift_tomatch_stack const_info.cs_nargs pb.tomatch in
 
+  let pred_is_not_dep =
+    noccur_predicate_between 1 (List.length realnames + 1) pb.pred tomatch in
+
   let typs'' = 
     list_map2_i
       (fun i (na,t) deps ->
 	let dep = match dep with
 	  | Name _ as na',k -> (if na <> Anonymous then na else na'),k
 	  | Anonymous,KnownNotDep ->
-	      if deps = [] && noccurn_predicate 1 pb.pred tomatch then
+	      if deps = [] && pred_is_not_dep then
 		(Anonymous,KnownNotDep)
 	      else
 		(force_name na,KnownDep)
@@ -1801,7 +1804,8 @@ let prepare_predicate loc typing_fun evdref env tomatchs sign tycon pred =
 	   let t2 = mkExistential env ~src:(loc, CasesType) evdref2 in
            let arsign = extract_arity_signature env tomatchs sign in
            let names2 = List.rev (List.map (List.map pi1) arsign) in
-	   let nal2,pred2 = build_initial_predicate KnownNotDep names2 t2 in
+           let pred2 = lift (List.length names2) t2 in
+	   let nal2,pred2 = build_initial_predicate KnownNotDep names2 pred2 in
 	   [evdref, nal1, pred1; evdref2, nal2, pred2])
 
   (* Some type annotation *)

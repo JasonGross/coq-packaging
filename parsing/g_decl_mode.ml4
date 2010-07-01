@@ -9,7 +9,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
 
-(* $Id: g_decl_mode.ml4 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id: g_decl_mode.ml4 12414 2009-10-25 18:50:41Z corbinea $ *)
 
 
 open Decl_expr
@@ -220,7 +220,7 @@ GLOBAL: proof_instr;
   intro_step:
     [[ IDENT "suppose" ; h=assume_clause -> Psuppose h
      | IDENT "suppose" ; IDENT "it"; IDENT "is" ; c=pattern LEVEL "0" ;
-       po=OPT[ IDENT "with"; p=LIST1 hyp -> p ] ; 
+       po=OPT[ "with"; p=LIST1 hyp SEP ","-> p  ] ; 
        ho=OPT[ IDENT "and" ; h=suppose_clause -> h ] -> 
 	 Pcase (none_is_empty po,c,none_is_empty ho)
      | "let" ; v=let_vars -> Plet v	 

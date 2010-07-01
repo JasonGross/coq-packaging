@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: clenv.mli 10856 2008-04-27 16:15:34Z herbelin $ i*)
+(*i $Id: clenv.mli 13126 2010-06-13 11:09:51Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -94,6 +94,8 @@ type arg_bindings = open_constr explicit_bindings
 val clenv_independent : clausenv -> metavariable list
 val clenv_missing : clausenv -> metavariable list
 
+(** for the purpose of inversion tactics *)
+exception NoSuchBinding
 val clenv_constrain_last_binding : constr -> clausenv -> clausenv
 
 (* defines metas corresponding to the name of the bindings *)

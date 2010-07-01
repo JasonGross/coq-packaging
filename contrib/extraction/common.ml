@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: common.ml 11559 2008-11-07 22:03:34Z letouzey $ i*)
+(*i $Id: common.ml 13200 2010-06-25 22:36:25Z letouzey $ i*)
 
 open Pp
 open Util
@@ -20,6 +20,8 @@ open Miniml
 open Mlutil
 open Modutil
 open Mod_subst
+
+let string_of_id id = ascii_of_ident (Names.string_of_id id)
 
 (*s Some pretty-print utility functions. *)
 
@@ -73,7 +75,11 @@ let is_upper s = match s.[0] with 'A' .. 'Z' -> true | _ -> false
 let is_lower s = match s.[0] with 'a' .. 'z' | '_' -> true | _ -> false
 
 let lowercase_id id = id_of_string (String.uncapitalize (string_of_id id))
-let uppercase_id id = id_of_string (String.capitalize (string_of_id id))
+let uppercase_id id =
+  let s = string_of_id id in
+  assert (s<>"");
+  if s.[0] = '_' then id_of_string ("Coq_"^s)
+  else id_of_string (String.capitalize s)
 
 type kind = Term | Type | Cons | Mod
 

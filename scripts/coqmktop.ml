@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqmktop.ml 11784 2009-01-14 11:36:32Z herbelin $ *)
+(* $Id: coqmktop.ml 12874 2010-03-19 23:15:52Z herbelin $ *)
 
 (* coqmktop is a script to link Coq, analogous to ocamlmktop.
    The command line contains options specific to coqmktop, options for the
@@ -277,7 +277,7 @@ let main () =
   (*file for dynlink *)
   let dynlink=
     if not (!opt || !top) then
-      [(print_int 2; tmp_dynlink())]
+      [tmp_dynlink()]
     else
       []
   in

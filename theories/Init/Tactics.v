@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Tactics.v 11741 2009-01-03 14:34:39Z herbelin $ i*)
+(*i $Id: Tactics.v 13198 2010-06-25 22:36:20Z letouzey $ i*)
 
 Require Import Notations.
 Require Import Logic.
@@ -174,3 +174,20 @@ Tactic Notation "now" tactic(t) := t; easy.
 
 (** A tactic to document or check what is proved at some point of a script *)
 Ltac now_show c := change c.
+
+(** Clear an hypothesis and its dependencies *)
+
+Tactic Notation "clear" "dependent" hyp(h) :=
+ let rec depclear h :=
+  clear h ||
+  match goal with
+   | H : context [ h ] |- _ => depclear H; depclear h
+  end ||
+  fail "hypothesis to clear is used in the conclusion (maybe indirectly)"
+ in depclear h.
+
+(** Revert an hypothesis and its dependencies :
+    this is actually generalize dependent... *)
+
+Tactic Notation "revert" "dependent" hyp(h) :=
+ generalize dependent h.

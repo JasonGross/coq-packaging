@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacentries.ml 12187 2009-06-13 19:36:59Z msozeau $ i*)
+(*i $Id: vernacentries.ml 12343 2009-09-17 17:02:03Z glondu $ i*)
 
 (* Concrete syntax of the mathematical vernacular MV V2.6 *)
 
@@ -234,12 +234,8 @@ let dump_universes s =
 (* "Locate" commands *)
 
 let locate_file f =
-  try
-    let _,file = System.where_in_path ~warn:false (Library.get_load_paths ()) f in
-    msgnl (str file)
-  with Not_found -> 
-    msgnl (hov 0 (str"Can't find file" ++ spc () ++ str f ++ spc () ++
-		  str"on loadpath"))
+  let _,file = System.find_file_in_path ~warn:false (Library.get_load_paths ()) f in
+  msgnl (str file)
 
 let msg_found_library = function
   | Library.LibLoaded, fulldir, file ->

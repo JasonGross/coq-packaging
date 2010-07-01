@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Zbool.v 11208 2008-07-04 16:57:46Z letouzey $ *)
+(* $Id: Zbool.v 12271 2009-08-11 10:29:45Z herbelin $ *)
 
 Require Import BinInt.
 Require Import Zeven.
@@ -18,9 +18,9 @@ Require Import Sumbool.
 Unset Boxed Definitions.
 Open Local Scope Z_scope.
 
-(** * Boolean operations from decidabilty of order *)
+(** * Boolean operations from decidability of order *)
 (** The decidability of equality and order relations over
-    type [Z] give some boolean functions with the adequate specification. *)
+    type [Z] gives some boolean functions with the adequate specification. *)
 
 Definition Z_lt_ge_bool (x y:Z) := bool_of_sumbool (Z_lt_ge_dec x y).
 Definition Z_ge_lt_bool (x y:Z) := bool_of_sumbool (Z_ge_lt_dec x y).

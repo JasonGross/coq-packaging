@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: refine.ml 12187 2009-06-13 19:36:59Z msozeau $ *)
+(* $Id: refine.ml 13129 2010-06-13 14:23:55Z herbelin $ *)
 
 (* JCF -- 6 janvier 1998  EXPERIMENTAL *)
 
@@ -108,6 +108,8 @@ let replace_by_meta env sigma = function
 	| _ -> invalid_arg "Tcc.replace_by_meta (TO DO)" 
         *)
       in
+      if occur_meta ty then
+	error "Unable to manage a dependent metavariable of higher-order type.";
       mkCast (m,DEFAULTcast, ty),[n,ty],[Some th]
 
 exception NoMeta
@@ -189,6 +191,8 @@ let rec compute_metamap env sigma c = match kind_of_term c with
       end
 
   | Case (ci,p,cc,v) ->
+      if occur_meta p then
+       error "Unable to manage a metavariable in the return clause of a match.";
       (* bof... *)
       let nbr = Array.length v in
       let v = Array.append [|p;cc|] v in
@@ -380,3 +384,5 @@ let refine (evd,c) gl =
      complicated to update meta types when passing through a binder *)
   let th = compute_metamap (pf_env gl) evd c in
   tclTHEN (Refiner.tclEVARS evd) (tcc_aux [] th) gl
+
+let _ = Decl_proof_instr.set_refine refine (* dirty trick to solve circular dependency *)

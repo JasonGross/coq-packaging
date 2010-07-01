@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: system.mli 11801 2009-01-18 20:11:41Z herbelin $ i*)
+(*i $Id: system.mli 13175 2010-06-22 06:28:37Z herbelin $ i*)
 
 (*s Files and load paths. Load path entries remember the original root
     given by the user. For efficiency, we keep the full path (field
@@ -53,6 +53,8 @@ val raw_extern_intern : int -> string ->
 
 val extern_intern : ?warn:bool -> int -> string -> 
   (string -> 'a -> unit) * (load_path -> string -> 'a)
+
+val with_magic_number_check : ('a -> 'b) -> 'a -> 'b
 
 (*s Sending/receiving once with external executable *)
 

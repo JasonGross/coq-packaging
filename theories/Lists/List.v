@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: List.v 10999 2008-05-27 15:55:22Z letouzey $ i*)
+(*i $Id: List.v 12446 2009-10-29 21:43:06Z glondu $ i*)
 
 Require Import Le Gt Minus Min Bool.
 
@@ -1081,11 +1081,11 @@ Section Map.
 
   (** [flat_map] *)
 
-  Fixpoint flat_map (f:A -> list B) (l:list A) {struct l} : 
-    list B :=
+  Definition flat_map (f:A -> list B) :=
+    fix flat_map (l:list A) {struct l} : list B :=
     match l with
       | nil => nil
-      | cons x t => (f x)++(flat_map f t)
+      | cons x t => (f x)++(flat_map t)
     end.
   
   Lemma in_flat_map : forall (f:A->list B)(l:list A)(y:B),

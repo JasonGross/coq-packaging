@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i $Id: Zorder.v 10291 2007-11-06 02:18:53Z letouzey $ i*)
+(*i $Id: Zorder.v 12888 2010-03-28 19:35:03Z herbelin $ i*)
 
 (** Binary Integers (Pierre Crégut (CNET, Lannion, France) *)
 
@@ -1025,3 +1025,5 @@ Qed.
 
 (** For compatibility *)
 Notation Zlt_O_minus_lt := Zlt_0_minus_lt (only parsing).
+Notation Zle_gt_succ := Zlt_gt_succ (only parsing).
+Notation Zle_succ_gt := Zlt_succ_gt (only parsing).

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: inv.ml 11784 2009-01-14 11:36:32Z herbelin $ *)
+(* $Id: inv.ml 12410 2009-10-24 17:23:39Z herbelin $ *)
 
 open Pp
 open Util
@@ -291,7 +291,7 @@ let generalizeRewriteIntros tac depids id gls =
 let rec tclMAP_i n tacfun = function
   | [] -> tclDO n (tacfun None)
   | a::l -> 
-      if n=0 then error "Too much names."
+      if n=0 then error "Too many names."
       else tclTHEN (tacfun (Some a)) (tclMAP_i (n-1) tacfun l)
 
 let remember_first_eq id x = if !x = no_move then x := MoveAfter id

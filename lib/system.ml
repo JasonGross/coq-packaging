@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: system.ml 11801 2009-01-18 20:11:41Z herbelin $ *)
+(* $Id: system.ml 13175 2010-06-22 06:28:37Z herbelin $ *)
 
 open Pp
 open Util
@@ -153,8 +153,12 @@ let where_in_path ?(warn=true) path filename =
 
 let find_file_in_path ?(warn=true) paths filename =
   if not (Filename.is_implicit filename) then
-    let root = Filename.dirname filename in
-    root, filename
+    if Sys.file_exists filename then
+      let root = Filename.dirname filename in
+      root, filename
+    else
+      errorlabstrm "System.find_file_in_path"
+	(hov 0 (str "Can't find file" ++ spc () ++ str filename))
   else 
     try where_in_path ~warn paths filename
     with Not_found ->
@@ -223,6 +227,13 @@ let extern_intern ?(warn=true) magic suffix =
       error("System error: " ^ s)
   in 
   (extern_state,intern_state)
+
+let with_magic_number_check f a =
+  try f a
+  with Bad_magic_number fname ->
+    errorlabstrm "with_magic_number_check"
+    (str"File " ++ str fname ++ strbrk" has bad magic number." ++ spc () ++ 
+    strbrk "It is corrupted or was compiled with another version of Coq.")
 
 (* Communication through files with another executable *)
 

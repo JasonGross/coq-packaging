@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: constrextern.ml 11576 2008-11-10 19:13:15Z msozeau $ *)
+(* $Id: constrextern.ml 12495 2009-11-11 12:10:44Z herbelin $ *)
 
 (*i*)
 open Pp
@@ -363,7 +363,6 @@ let bind_env (sigma,sigmalist as fullsigma) var v =
 let rec match_cases_pattern metas sigma a1 a2 = match (a1,a2) with
   | r1, AVar id2 when List.mem id2 metas -> bind_env sigma id2 r1
   | PatVar (_,Anonymous), AHole _ -> sigma
-  | a, AHole _ -> sigma
   | PatCstr (loc,(ind,_ as r1),args1,_), _ ->
       let nparams =
 	(fst (Global.lookup_inductive ind)).Declarations.mind_nparams in

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: QArith_base.v 11301 2008-08-04 19:41:18Z herbelin $ i*)
+(*i $Id: QArith_base.v 13215 2010-06-29 09:31:45Z letouzey $ i*)
 
 Require Export ZArith.
 Require Export ZArithRing.
@@ -157,16 +157,15 @@ Qed.
 
 (** We now consider [Q] seen as a setoid. *)
 
-Definition Q_Setoid : Setoid_Theory Q Qeq.
-Proof.
- split; red; unfold Qeq in |- *; auto; apply Qeq_trans.
-Qed.
+Add Relation Q Qeq
+  reflexivity proved by Qeq_refl
+  symmetry proved by Qeq_sym
+  transitivity proved by Qeq_trans
+as Q_Setoid.
 
-Add Setoid Q Qeq Q_Setoid as Qsetoid.
-
-Hint Resolve (Seq_refl Q Qeq Q_Setoid): qarith.
-Hint Resolve (Seq_sym Q Qeq Q_Setoid): qarith.
-Hint Resolve (Seq_trans Q Qeq Q_Setoid): qarith.
+Hint Resolve Qeq_refl : qarith.
+Hint Resolve Qeq_sym : qarith.
+Hint Resolve Qeq_trans : qarith.
 
 Theorem Qnot_eq_sym : forall x y, ~x == y -> ~y == x.
 Proof.
@@ -633,8 +632,15 @@ Proof.
   unfold Qle, Qlt, Qeq; intros; apply Zle_lt_or_eq; auto.
 Qed.
 
+(** These hints were meant to be added to the qarith database,
+    but a typo prevented that. This will be fixed in 8.3.
+    Concerning 8.2, for maximal compatibility , we
+    leave them in a separate database, in order to preserve
+    the strength of both [auto with qarith] and [auto with *].
+    (see bug #2346). *)
+
 Hint Resolve Qle_not_lt Qlt_not_le Qnot_le_lt Qnot_lt_le
- Qlt_le_weak Qlt_not_eq Qle_antisym Qle_refl: qartih.
+ Qlt_le_weak Qlt_not_eq Qle_antisym Qle_refl: qarith_extra.
 
 (** Some decidability results about orders. *)
 
