@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: printer.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Pp
@@ -41,6 +41,12 @@ val pr_open_constr         : open_constr -> std_ppcmds
 
 val pr_open_lconstr_env    : env -> open_constr -> std_ppcmds
 val pr_open_lconstr        : open_constr -> std_ppcmds
+
+val pr_constr_under_binders_env  : env -> constr_under_binders -> std_ppcmds
+val pr_constr_under_binders      : constr_under_binders -> std_ppcmds
+
+val pr_lconstr_under_binders_env : env -> constr_under_binders -> std_ppcmds
+val pr_lconstr_under_binders     : constr_under_binders -> std_ppcmds
 
 val pr_ltype_env_at_top    : env -> types -> std_ppcmds
 val pr_ltype_env           : env -> types -> std_ppcmds
@@ -112,8 +118,8 @@ val pr_evars_int           : int -> (evar * evar_info) list -> std_ppcmds
 val pr_prim_rule           : prim_rule -> std_ppcmds
 
 (* Emacs/proof general support *)
-(* (emacs_str s alts) outputs 
-   - s if emacs mode & unicode allowed, 
+(* (emacs_str s alts) outputs
+   - s if emacs mode & unicode allowed,
    - alts if emacs mode and & unicode not allowed
    - nothing otherwise *)
 val emacs_str              : string -> string -> string

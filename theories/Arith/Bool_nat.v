@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Bool_nat.v 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id$ *)
 
 Require Export Compare_dec.
 Require Export Peano_dec.

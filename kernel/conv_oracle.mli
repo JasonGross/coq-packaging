@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: conv_oracle.mli 10961 2008-05-21 23:26:23Z barras $ i*)
+(*i $Id$ i*)
 
 open Names
 

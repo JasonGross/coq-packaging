@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: contradiction.mli 9842 2007-05-20 17:44:23Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Names
@@ -17,4 +17,4 @@ open Genarg
 (*i*)
 
 val absurd                      : constr -> tactic
-val contradiction               : constr with_ebindings option -> tactic
+val contradiction               : constr with_bindings option -> tactic

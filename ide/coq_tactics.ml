@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq_tactics.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id$ *)
 
 let tactics = [
   "Abstract";

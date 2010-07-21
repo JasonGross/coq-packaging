@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: indtypes.mli 11784 2009-01-14 11:36:32Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Names

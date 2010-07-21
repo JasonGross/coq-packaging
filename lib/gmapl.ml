@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: gmapl.ml 7780 2006-01-03 20:33:53Z herbelin $ *)
+(* $Id$ *)
 
 open Util
 
@@ -32,4 +32,4 @@ let remove x y m =
   let l = Gmap.find x m in
   Gmap.add x (if List.mem y l then list_subtract l [y] else l) m
 
-  
+

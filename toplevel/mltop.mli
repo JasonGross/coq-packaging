@@ -6,11 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mltop.mli 11528 2008-10-31 08:40:42Z glondu $ i*)
+(*i $Id$ i*)
 
-(* If there is a toplevel under Coq, it is described by the following 
+(* If there is a toplevel under Coq, it is described by the following
    record. *)
-type toplevel = { 
+type toplevel = {
   load_obj : string -> unit;
   use_file : string -> unit;
   add_dir  : string -> unit;
@@ -48,9 +48,6 @@ val add_rec_ml_dir : string -> unit
 val add_path : unix_path:string -> coq_root:Names.dir_path -> unit
 val add_rec_path : unix_path:string -> coq_root:Names.dir_path -> unit
 
-val add_init_with_state : (unit -> unit) -> unit
-val init_with_state : unit -> unit
-
 (* List of modules linked to the toplevel *)
 val add_known_module : string -> unit
 val module_is_known : string -> bool
@@ -62,11 +59,15 @@ val add_loaded_module : string -> unit
 val init_ml_modules : unit -> unit
 val unfreeze_ml_modules : string list -> unit
 
-type ml_module_object = { mnames: string list }
+type ml_module_object = {
+  mlocal: Vernacexpr.locality_flag;
+  mnames: string list;
+}
 val inMLModule : ml_module_object -> Libobject.obj
 val outMLModule : Libobject.obj -> ml_module_object
 
-val declare_ml_modules : string list -> unit
+val declare_ml_modules : Vernacexpr.locality_flag -> string list -> unit
+
 val print_ml_path : unit -> unit
 
 val print_ml_modules : unit -> unit

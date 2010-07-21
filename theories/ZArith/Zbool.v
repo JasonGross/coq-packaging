@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Zbool.v 12271 2009-08-11 10:29:45Z herbelin $ *)
+(* $Id$ *)
 
 Require Import BinInt.
 Require Import Zeven.
@@ -228,3 +228,8 @@ Proof.
   discriminate.
 Qed.
 
+Lemma Zeq_bool_if : forall x y, if Zeq_bool x y then x=y else x<>y.
+Proof.
+  intros. generalize (Zeq_bool_eq x y)(Zeq_bool_neq x y).
+  destruct Zeq_bool; auto.
+Qed.

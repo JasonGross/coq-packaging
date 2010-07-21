@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: bigint.mli 9821 2007-05-11 17:00:58Z aspiwack $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Pp

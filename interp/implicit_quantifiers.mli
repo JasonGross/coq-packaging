@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: implicit_quantifiers.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Names
@@ -24,6 +24,8 @@ open Libnames
 open Typeclasses
 (*i*)
 
+val declare_generalizable : Vernacexpr.locality_flag -> (identifier located) list option -> unit
+
 val ids_of_list : identifier list -> Idset.t
 val destClassApp : constr_expr -> loc * reference * constr_expr list
 val destClassAppExpl : constr_expr -> loc * reference * (constr_expr * explicitation located option) list
@@ -36,13 +38,15 @@ val free_vars_of_constr_expr : constr_expr -> ?bound:Idset.t ->
 val free_vars_of_binders :
   ?bound:Idset.t -> Names.identifier list -> local_binder list -> Idset.t * Names.identifier list
 
-(* Returns the free ids in left-to-right order with the location of their first occurence *)
+(* Returns the generalizable free ids in left-to-right
+   order with the location of their first occurence *)
 
-val free_vars_of_rawconstr : ?bound:Idset.t -> rawconstr -> (Names.identifier * loc) list
+val generalizable_vars_of_rawconstr : ?bound:Idset.t -> ?allowed:Idset.t ->
+  rawconstr -> (Names.identifier * loc) list
 
 val make_fresh : Names.Idset.t -> Environ.env -> identifier -> identifier
 
-val implicits_of_rawterm : Rawterm.rawconstr -> (Topconstr.explicitation * (bool * bool)) list
+val implicits_of_rawterm : Rawterm.rawconstr -> (Topconstr.explicitation * (bool * bool * bool)) list
 
 val combine_params_freevar :
   Names.Idset.t -> (global_reference * bool) option * (Names.name * Term.constr option * Term.types) ->
@@ -51,4 +55,4 @@ val combine_params_freevar :
 val implicit_application : Idset.t -> ?allow_partial:bool ->
   (Names.Idset.t -> (global_reference * bool) option * (Names.name * Term.constr option * Term.types) ->
     Topconstr.constr_expr * Names.Idset.t) ->
-  constr_expr -> constr_expr
+  constr_expr -> constr_expr * Idset.t

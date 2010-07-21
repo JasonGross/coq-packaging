@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rsigma.v 9454 2006-12-15 15:30:59Z bgregoir $ i*)
+(*i $Id$ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.

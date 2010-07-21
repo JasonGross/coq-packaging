@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: detyping.mli 10410 2007-12-31 13:11:55Z msozeau $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Util
@@ -30,9 +30,9 @@ val subst_rawconstr : substitution -> rawconstr -> rawconstr
 
 val detype : bool -> identifier list -> names_context -> constr -> rawconstr
 
-val detype_case : 
+val detype_case :
   bool -> ('a -> rawconstr) ->
-  (constructor array -> int array -> 'a array -> 
+  (constructor array -> int array -> 'a array ->
     (loc * identifier list * cases_pattern list * rawconstr) list) ->
   ('a -> int -> bool) ->
   identifier list -> inductive * case_style * int * int array * int ->
@@ -44,7 +44,7 @@ val detype_rel_context : constr option -> identifier list -> names_context ->
   rel_context -> rawdecl list
 
 (* look for the index of a named var or a nondep var as it is renamed *)
-val lookup_name_as_renamed  : env -> constr -> identifier -> int option
+val lookup_name_as_displayed  : env -> constr -> identifier -> int option
 val lookup_index_as_renamed : env -> constr -> int -> int option
 
 val set_detype_anonymous : (loc -> int -> rawconstr) -> unit
@@ -54,7 +54,7 @@ val synthetize_type : unit -> bool
 (* Utilities to transform kernel cases to simple pattern-matching problem *)
 
 val it_destRLambda_or_LetIn_names : int -> rawconstr -> name list * rawconstr
-val simple_cases_matrix_of_branches : 
+val simple_cases_matrix_of_branches :
   inductive -> int list -> rawconstr list -> cases_clauses
 val return_type_of_predicate :
   inductive -> int -> int -> rawconstr -> predicate_pattern * rawconstr option

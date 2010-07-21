@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Field.v 9197 2006-10-02 15:55:52Z barras $ *)
+(* $Id$ *)
 
 (**** Tests of Field with real numbers ****)
 
@@ -31,7 +31,7 @@ Proof.
   intros.
    field.
 Abort.
- 
+
 (* Example 3 *)
 Goal forall a b : R, 1 / (a * b) * (1 / (1 / b)) = 1 / a.
 Proof.
@@ -44,7 +44,7 @@ Proof.
   intros.
    field_simplify_eq.
 Abort.
- 
+
 Goal forall a b : R, 1 / (a * b) * (1 / 1 / b) = 1 / a.
 Proof.
   intros.
@@ -58,21 +58,21 @@ Proof.
   intros.
    field; auto.
 Qed.
- 
+
 (* Example 5 *)
 Goal forall a : R, 1 = 1 * (1 / a) * a.
 Proof.
   intros.
    field.
 Abort.
- 
+
 (* Example 6 *)
 Goal forall a b : R, b = b * / a * a.
 Proof.
   intros.
    field.
 Abort.
- 
+
 (* Example 7 *)
 Goal forall a b : R, b = b * (1 / a) * a.
 Proof.
@@ -81,11 +81,17 @@ Proof.
 Abort.
 
 (* Example 8 *)
-Goal
-forall x y : R,
-x * (1 / x + x / (x + y)) =
-- (1 / y) * y * (- (x * (x / (x + y))) - 1).
+Goal forall x y : R,
+  x * (1 / x + x / (x + y)) =
+  - (1 / y) * y * (- (x * (x / (x + y))) - 1).
 Proof.
   intros.
    field.
+Abort.
+
+(* Example 9 *)
+Goal forall a b : R, 1 / (a * b) * (1 / 1 / b) = 1 / a -> False.
+Proof.
+intros.
+field_simplify_eq in H.
 Abort.

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FMaps.v 10699 2008-03-19 20:56:43Z letouzey $ *)
+(* $Id$ *)
 
 
 Require Export OrderedType OrderedTypeEx OrderedTypeAlt.

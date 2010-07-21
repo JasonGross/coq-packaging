@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: gmap.mli 10250 2007-10-23 15:02:23Z aspiwack $ i*)
+(*i $Id$ i*)
 
 (* Maps using the generic comparison function of ocaml. Same interface as
    the module [Map] from the ocaml standard library. *)

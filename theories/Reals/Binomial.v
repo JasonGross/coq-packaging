@@ -6,7 +6,7 @@
   (*         *       GNU Lesser General Public License Version 2.1        *)
   (************************************************************************)
 
-  (*i $Id: Binomial.v 9245 2006-10-17 12:53:34Z notin $ i*)
+  (*i $Id$ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -194,7 +194,7 @@ Proof.
   apply minus_Sn_m; assumption.
   rewrite <- (Rmult_comm x); rewrite scal_sum; apply sum_eq.
   intros; replace (S i) with (i + 1)%nat; [ idtac | ring ]; rewrite pow_add;
-    replace (x ^ 1) with x; [ idtac | simpl in |- *; ring ]; 
+    replace (x ^ 1) with x; [ idtac | simpl in |- *; ring ];
       ring.
   intro; unfold C in |- *.
   replace (INR (fact 0)) with 1; [ idtac | reflexivity ].

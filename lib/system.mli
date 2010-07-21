@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: system.mli 13175 2010-06-22 06:28:37Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*s Files and load paths. Load path entries remember the original root
     given by the user. For efficiency, we keep the full path (field
@@ -48,25 +48,27 @@ val marshal_in : in_channel -> 'a
 
 exception Bad_magic_number of string
 
-val raw_extern_intern : int -> string -> 
+val raw_extern_intern : int -> string ->
   (string -> string * out_channel) * (string -> in_channel)
 
-val extern_intern : ?warn:bool -> int -> string -> 
+val extern_intern : ?warn:bool -> int -> string ->
   (string -> 'a -> unit) * (load_path -> string -> 'a)
 
 val with_magic_number_check : ('a -> 'b) -> 'a -> 'b
 
 (*s Sending/receiving once with external executable *)
 
-val connect : (out_channel -> unit) -> (in_channel -> 'a) -> string -> 'a 
+val connect : (out_channel -> unit) -> (in_channel -> 'a) -> string -> 'a
 
 (*s [run_command converter f com] launches command [com], and returns
     the contents of stdout and stderr that have been processed with
     [converter]; the processed contents of stdout and stderr is also
     passed to [f] *)
 
-val run_command : (string -> string) -> (string -> unit) -> string -> 
+val run_command : (string -> string) -> (string -> unit) -> string ->
   Unix.process_status * string
+
+val search_exe_in_path : string -> string option
 
 (*s Time stamps. *)
 

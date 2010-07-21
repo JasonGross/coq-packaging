@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: states.ml 13175 2010-06-22 06:28:37Z herbelin $ *)
+(* $Id$ *)
 
 open System
 
@@ -32,14 +32,14 @@ let (extern_state,intern_state) =
 
 let with_heavy_rollback f x =
   let st = freeze () in
-  try 
+  try
     f x
   with reraise ->
     (unfreeze st; raise reraise)
 
 let with_state_protection f x =
   let st = freeze () in
-  try 
+  try
     let a = f x in unfreeze st; a
   with reraise ->
     (unfreeze st; raise reraise)

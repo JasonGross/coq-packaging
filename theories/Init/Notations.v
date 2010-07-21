@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Notations.v 12271 2009-08-11 10:29:45Z herbelin $ i*)
+(*i $Id$ i*)
 
 (** These are the notations whose level and associativity are imposed by Coq *)
 

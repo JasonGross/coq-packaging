@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: tactic_printer.mli 11313 2008-08-07 11:15:03Z barras $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Pp

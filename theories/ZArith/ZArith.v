@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ZArith.v 9210 2006-10-05 10:12:15Z barras $ i*)
+(*i $Id$ i*)
 
 (** Library for manipulating integers based on binary encoding *)
 

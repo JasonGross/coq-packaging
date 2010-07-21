@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: QArith.v 10739 2008-04-01 14:45:20Z herbelin $ i*)
+(*i $Id$ i*)
 
 Require Export QArith_base.
 Require Export Qring.

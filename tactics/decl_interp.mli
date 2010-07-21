@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: decl_interp.mli 10739 2008-04-01 14:45:20Z herbelin $ *)
+(* $Id$ *)
 
 open Tacinterp
 open Decl_expr

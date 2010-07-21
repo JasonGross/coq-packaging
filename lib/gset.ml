@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: gset.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id$ *)
 
 (* Sets using the generic comparison function of ocaml. Code borrowed from
    the ocaml standard library. *)

@@ -24,7 +24,7 @@
 (* in Summer 1995. Several developments by E. Ledinot were an inspiration.  *)
 (****************************************************************************)
 
-(*i $Id: Relations_2.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id$ i*)
 
 Require Export Relations_1.
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Peano_dec.v 9698 2007-03-12 17:11:32Z letouzey $ i*)
+(*i $Id$ i*)
 
 Require Import Decidable.
 

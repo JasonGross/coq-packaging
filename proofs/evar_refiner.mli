@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: evar_refiner.mli 12102 2009-04-24 10:48:11Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Names
@@ -20,10 +20,10 @@ open Rawterm
 
 (* Refinement of existential variables. *)
 
-val w_refine : evar -> (var_map * unbound_ltac_var_map) * rawconstr -> 
-  evar_defs -> evar_defs
+val w_refine : evar * evar_info ->
+  rawconstr_ltac_closure -> evar_map -> evar_map
 
 val instantiate_pf_com :
   int -> Topconstr.constr_expr -> pftreestate -> pftreestate
 
-(* the instantiate tactic was moved to [tactics/evar_tactics.ml] *) 
+(* the instantiate tactic was moved to [tactics/evar_tactics.ml] *)

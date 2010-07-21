@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pattern.mli 8963 2006-06-19 18:54:49Z barras $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Pp
@@ -20,10 +20,11 @@ open Rawterm
 open Mod_subst
 (*i*)
 
-(* Pattern variables *)
+(* Types of substitutions with or w/o bound variables *)
 
+type constr_under_binders = identifier list * constr
 type patvar_map = (patvar * constr) list
-val pr_patvar : patvar -> std_ppcmds
+type extended_patvar_map = (patvar * constr_under_binders) list
 
 (* Patterns *)
 
@@ -44,6 +45,8 @@ type constr_pattern =
       * constr_pattern * constr_pattern * constr_pattern array
   | PFix of fixpoint
   | PCoFix of cofixpoint
+
+(** {5 Functions on patterns} *)
 
 val occur_meta_pattern : constr_pattern -> bool
 
@@ -66,16 +69,17 @@ val head_of_constr_reference : Term.constr -> global_reference
    a pattern; currently, no destructor (Cases, Fix, Cofix) and no
    existential variable are allowed in [c] *)
 
-val pattern_of_constr : constr -> constr_pattern
+val pattern_of_constr : Evd.evar_map -> constr -> named_context * constr_pattern
 
 (* [pattern_of_rawconstr l c] translates a term [c] with metavariables into
    a pattern; variables bound in [l] are replaced by the pattern to which they
     are bound *)
 
-val pattern_of_rawconstr : rawconstr -> 
+val pattern_of_rawconstr : rawconstr ->
       patvar list * constr_pattern
 
 val instantiate_pattern :
-  (identifier * constr_pattern Lazy.t) list -> constr_pattern -> constr_pattern
+  Evd.evar_map -> (identifier * (identifier list * constr)) list ->
+  constr_pattern -> constr_pattern
 
 val lift_pattern : int -> constr_pattern -> constr_pattern

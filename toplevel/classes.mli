@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: classes.mli 11709 2008-12-20 11:42:15Z msozeau $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Names
@@ -21,6 +21,7 @@ open Topconstr
 open Util
 open Typeclasses
 open Implicit_quantifiers
+open Libnames
 (*i*)
 
 (* Errors *)
@@ -29,39 +30,48 @@ val mismatched_params : env -> constr_expr list -> rel_context -> 'a
 
 val mismatched_props : env -> constr_expr list -> rel_context -> 'a
 
+(* Post-hoc class declaration. *)
+
+val declare_class : reference -> unit
+
 (* Instance declaration *)
 
-val declare_instance : bool -> identifier located -> unit
+val declare_instance : bool -> reference -> unit
 
 val declare_instance_constant :
   typeclass ->
   int option -> (* priority *)
   bool -> (* globality *)
   Impargs.manual_explicitation list -> (* implicits *)
-  ?hook:(Names.constant -> unit) ->
+  ?hook:(Libnames.global_reference -> unit) ->
   identifier -> (* name *)
   Term.constr -> (* body *)
   Term.types -> (* type *)
   Names.identifier
-    
-val new_instance : 
+
+val new_instance :
+  ?abstract:bool -> (* Not abstract by default. *)
   ?global:bool -> (* Not global by default. *)
   local_binder list ->
   typeclass_constraint ->
   constr_expr ->
   ?generalize:bool ->
   ?tac:Proof_type.tactic  ->
-  ?hook:(constant -> unit) ->
+  ?hook:(Libnames.global_reference -> unit) ->
   int option ->
   identifier
+
+(* Setting opacity *)
+
+val set_typeclass_transparency : evaluable_global_reference -> bool -> unit
 
 (* For generation on names based on classes only *)
 
 val id_of_class : typeclass -> identifier
 
-(* Context command *)    
+(* Context command *)
 
-val context : ?hook:(Libnames.global_reference -> unit) -> 
+val context : ?hook:(Libnames.global_reference -> unit) ->
   local_binder list -> unit
 
 (* Forward ref for refine *)

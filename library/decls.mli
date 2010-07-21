@@ -6,19 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: decls.mli 10841 2008-04-24 07:19:57Z herbelin $ i*)
+(*i $Id$ i*)
 
 open Names
 open Sign
-(*
 open Libnames
-open Term
-open Declarations
-open Entries
-open Indtypes
-open Safe_typing
-open Nametab
-*)
 open Decl_kinds
 
 (** This module manages non-kernel informations about declarations. It
@@ -27,10 +19,12 @@ open Decl_kinds
 
 (** Registration and access to the table of variable *)
 
-type variable_data = 
+type variable_data =
     dir_path * bool (* opacity *) * Univ.constraints * logical_kind
 
 val add_variable_data : variable -> variable_data -> unit
+val variable_path : variable -> dir_path
+val variable_secpath : variable -> qualid
 val variable_kind : variable -> logical_kind
 val variable_opacity : variable -> bool
 val variable_constraints : variable -> Univ.constraints

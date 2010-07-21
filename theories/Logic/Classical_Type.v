@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Classical_Type.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id$ i*)
 
 (** This file is obsolete, use Classical.v instead *)
 

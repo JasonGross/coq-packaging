@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Between.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id$ i*)
 
 Require Import Le.
 Require Import Lt.
@@ -17,11 +17,11 @@ Implicit Types k l p q r : nat.
 
 Section Between.
   Variables P Q : nat -> Prop.
-  
+
   Inductive between k : nat -> Prop :=
     | bet_emp : between k k
     | bet_S : forall l, between k l -> P l -> between k (S l).
-  
+
   Hint Constructors between: arith v62.
 
   Lemma bet_eq : forall k l, l = k -> between k l.
@@ -185,5 +185,5 @@ Section Between.
 End Between.
 
 Hint Resolve nth_O bet_S bet_emp bet_eq between_Sk_l exists_S exists_le
-  in_int_S in_int_intro: arith v62. 
+  in_int_S in_int_intro: arith v62.
 Hint Immediate in_int_Sp_q exists_le_S exists_S_le: arith v62.

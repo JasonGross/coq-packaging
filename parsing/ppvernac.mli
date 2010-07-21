@@ -5,8 +5,8 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
- 
-(*i $Id: ppvernac.mli 7744 2005-12-27 09:16:06Z herbelin $ i*)
+
+(*i $Id$ i*)
 
 open Pp
 open Genarg

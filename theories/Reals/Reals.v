@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Reals.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id$ i*)
 
 (** The library REALS is divided in 6 parts :
    - Rbase: basic lemmas on R
@@ -23,7 +23,7 @@
   - Sup: for goals like ``?1<?2``
   - RCompute: for equalities with constants like ``10*10==100``
   - Reg: for goals like (continuity_pt ?1 ?2) or (derivable_pt ?1 ?2) *)
-  
+
 Require Export Rbase.
 Require Export Rfunctions.
 Require Export SeqSeries.

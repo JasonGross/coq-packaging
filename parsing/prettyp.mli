@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: prettyp.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Pp
@@ -18,6 +18,7 @@ open Environ
 open Reductionops
 open Libnames
 open Nametab
+open Genarg
 (*i*)
 
 (* A Pretty-Printer for the Calculus of Inductive Constructions. *)
@@ -40,10 +41,10 @@ val print_eval :
 (* This function is exported for the graphical user-interface pcoq *)
 val build_inductive : mutual_inductive -> int ->
   global_reference * rel_context * types * identifier array * types array
-val print_name : reference -> std_ppcmds
+val print_name : reference or_by_notation -> std_ppcmds
 val print_opaque_name : reference -> std_ppcmds
-val print_about : reference -> std_ppcmds
-val print_impargs : reference -> std_ppcmds
+val print_about : reference or_by_notation -> std_ppcmds
+val print_impargs : reference or_by_notation -> std_ppcmds
 
 (*i
 val print_extracted_name : identifier -> std_ppcmds

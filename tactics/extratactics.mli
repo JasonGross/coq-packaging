@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extratactics.mli 11166 2008-06-22 13:23:35Z herbelin $ i*)
+(*i $Id$ i*)
 
 open Proof_type
 
@@ -15,3 +15,4 @@ val h_injHyp : Names.identifier -> tactic
 
 val refine_tac : Evd.open_constr -> tactic
 
+val onSomeWithHoles : ('a option -> tactic) -> 'a Evd.sigma option -> tactic

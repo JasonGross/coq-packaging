@@ -6,10 +6,10 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqc.ml 12911 2010-04-09 10:08:37Z herbelin $ *)
+(* $Id$ *)
 
 (* Afin de rendre Coq plus portable, ce programme Caml remplace le script
-   coqc. 
+   coqc.
 
    Ici, on trie la ligne de commande pour en extraire les fichiers à compiler,
    puis on les compile un par un en passant le reste de la ligne de commande
@@ -24,7 +24,8 @@
 
 let environment = Unix.environment ()
 
-let binary = ref ("coqtop." ^ Coq_config.best)
+let best = if Coq_config.arch = "win32" then "" else ("."^Coq_config.best)
+let binary = ref ("coqtop" ^ best)
 let image = ref ""
 
 (* coqc options *)
@@ -46,12 +47,12 @@ let check_module_name s =
     else
       (output_string stderr"'"; output_char stderr c; output_string stderr"'");
     output_string stderr " is not allowed in module names\n";
-    exit 1 
+    exit 1
   in
-  match String.get s 0 with 
-    | 'a' .. 'z' | 'A' .. 'Z' -> 
+  match String.get s 0 with
+    | 'a' .. 'z' | 'A' .. 'Z' ->
 	for i = 1 to (String.length s)-1 do
-	  match String.get s i with 
+	  match String.get s i with
 	    | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_'  -> ()
 	    | c -> err c
 	done
@@ -59,7 +60,7 @@ let check_module_name s =
 
 let rec make_compilation_args = function
   | [] -> []
-  | file :: fl -> 
+  | file :: fl ->
       let dirname = Filename.dirname file in
       let basename = Filename.basename file in
       let modulename =
@@ -78,14 +79,14 @@ let rec make_compilation_args = function
 let compile command args files =
   let args' = command :: args @ (make_compilation_args files) in
   match Sys.os_type with
-  | "Win32" -> 
-     let pid = 
+  | "Win32" ->
+     let pid =
         Unix.create_process_env command (Array.of_list args') environment
-        Unix.stdin Unix.stdout Unix.stderr 
+        Unix.stdin Unix.stdout Unix.stderr
      in
      ignore (Unix.waitpid [] pid)
   | _ ->
-     Unix.execvpe command (Array.of_list args') environment 
+     Unix.execvpe command (Array.of_list args') environment
 
 (* parsing of the command line
  *
@@ -99,13 +100,13 @@ let usage () =
 
 let parse_args () =
   let rec parse (cfiles,args) = function
-    | [] -> 
+    | [] ->
 	List.rev cfiles, List.rev args
-    | "-i" :: rem -> 
+    | "-i" :: rem ->
 	specification := true ; parse (cfiles,args) rem
-    | "-t" :: rem -> 
+    | "-t" :: rem ->
 	keep := true ; parse (cfiles,args) rem
-    | ("-verbose" | "--verbose") :: rem -> 
+    | ("-verbose" | "--verbose") :: rem ->
 	verbose := true ; parse (cfiles,args) rem
     | "-boot" :: rem ->
 	Flags.boot := true;
@@ -129,7 +130,7 @@ let parse_args () =
     | ("-outputstate"|"-inputstate"|"-is"
       |"-load-vernac-source"|"-l"|"-load-vernac-object"
       |"-load-ml-source"|"-require"|"-load-ml-object"|"-user"
-      |"-init-file" | "-dump-glob" | "-coqlib" as o) :: rem ->
+      |"-init-file"|"-dump-glob"|"-compat"|"-coqlib" as o) :: rem ->
 	begin
 	  match rem with
 	    | s :: rem' -> parse (cfiles,s::o::args) rem'
@@ -149,15 +150,14 @@ let parse_args () =
 
     | ("-notactics"|"-debug"|"-nolib"
       |"-debugVM"|"-alltransp"|"-VMno"
-      |"-batch"|"-nois"
+      |"-batch"|"-nois"|"-noglob"|"-no-glob"
       |"-q"|"-full"|"-profile"|"-just-parsing"|"-echo" |"-unsafe"|"-quiet"
       |"-silent"|"-m"|"-xml"|"-v7"|"-v8"|"-beautify"|"-strict-implicit"
       |"-dont-load-proofs"|"-impredicative-set"|"-vm"
-      |"-unboxed-values"|"-unboxed-definitions"|"-draw-vm-instr"
-      |"-no-glob"|"-noglob" as o) :: rem ->
+      |"-unboxed-values"|"-unboxed-definitions"|"-draw-vm-instr" as o) :: rem ->
 	parse (cfiles,o::args) rem
-	    
-    | ("-where") :: _ -> 
+
+    | ("-where") :: _ ->
 	(try print_endline (Envars.coqlib ())
 	 with Util.UserError(_,pps) -> Pp.msgerrnl (Pp.hov 0 pps));
 	exit 0
@@ -166,10 +166,10 @@ let parse_args () =
 
     | ("-v"|"--version") :: _ ->
         Usage.version ()
-    | f :: rem -> 
+    | f :: rem ->
 	if Sys.file_exists f then
 	  parse (f::cfiles,args) rem
-	else 
+	else
 	  let fv = f ^ ".v" in
 	  if Sys.file_exists fv then
 	    parse (fv::cfiles,args) rem
@@ -189,11 +189,11 @@ let main () =
       prerr_endline "coqc: too few arguments" ;
       usage ()
     end;
-    let coqtopname = 
-      if !image <> "" then !image 
+    let coqtopname =
+      if !image <> "" then !image
       else Filename.concat (Envars.coqbin ()) (!binary ^ Coq_config.exec_extension)
     in
       (*  List.iter (compile coqtopname args) cfiles*)
       Unix.handle_unix_error (compile coqtopname args) cfiles
-    
+
 let _ = Printexc.print main (); exit 0

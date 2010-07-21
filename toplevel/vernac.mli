@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernac.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id$ i*)
 
 (* Parsing of vernacular. *)
 
@@ -41,6 +41,6 @@ val compile : bool -> string -> unit
 
 (* Interpret a vernac AST *)
 
-val vernac_com : 
+val vernac_com :
   (Vernacexpr.vernac_expr -> unit) ->
   Util.loc * Vernacexpr.vernac_expr -> unit

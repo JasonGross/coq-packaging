@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Description.v 10170 2007-10-03 14:41:25Z herbelin $ i*)
+(*i $Id$ i*)
 
 (** This file provides a constructive form of definite description; it
     allows to build functions from the proof of their existence in any
@@ -17,5 +17,5 @@ Require Import ChoiceFacts.
 Set Implicit Arguments.
 
 Axiom constructive_definite_description :
-  forall (A : Type) (P : A->Prop), 
+  forall (A : Type) (P : A->Prop),
     (exists! x, P x) -> { x : A | P x }.

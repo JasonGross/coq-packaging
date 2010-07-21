@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Arith_base.v 11072 2008-06-08 16:13:37Z herbelin $ i*)
+(*i $Id$ i*)
 
 Require Export Le.
 Require Export Lt.

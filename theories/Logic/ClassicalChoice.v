@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ClassicalChoice.v 10170 2007-10-03 14:41:25Z herbelin $ i*)
+(*i $Id$ i*)
 
 (** This file provides classical logic and functional choice; this
     especially provides both indefinite descriptions and choice functions

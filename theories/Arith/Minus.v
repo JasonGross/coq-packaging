@@ -6,11 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Minus.v 11072 2008-06-08 16:13:37Z herbelin $ i*)
+(*i $Id$ i*)
 
 (** [minus] (difference between two natural numbers) is defined in [Init/Peano.v] as:
 <<
-Fixpoint minus (n m:nat) {struct n} : nat :=
+Fixpoint minus (n m:nat) : nat :=
   match n, m with
   | O, _ => n
   | S k, O => S k
@@ -120,10 +120,10 @@ Proof.
 
     intros n m Hnm; apply le_elim_rel with (n:=n) (m:=m); trivial.
       intros q; destruct q; auto with arith.
-        simpl. 
+        simpl.
         apply le_trans with (m := p - 0); [apply HI | rewrite <- minus_n_O];
           auto with arith.
-        
+
       intros q r Hqr _. simpl. auto using HI.
 Qed.
 

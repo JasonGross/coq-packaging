@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Well_Ordering.v 9598 2007-02-06 19:45:52Z herbelin $ i*)
+(*i $Id$ i*)
 
 (** Author: Cristina Cornes.
     From: Constructing Recursion Operators in Type Theory
@@ -16,15 +16,15 @@ Require Import Eqdep.
 
 Section WellOrdering.
   Variable A : Type.
-  Variable B : A -> Type. 
-  
+  Variable B : A -> Type.
+
   Inductive WO : Type :=
     sup : forall (a:A) (f:B a -> WO), WO.
 
 
   Inductive le_WO : WO -> WO -> Prop :=
     le_sup : forall (a:A) (f:B a -> WO) (v:B a), le_WO (f v) (sup a f).
- 
+
   Theorem wf_WO : well_founded le_WO.
   Proof.
     unfold well_founded in |- *; intro.

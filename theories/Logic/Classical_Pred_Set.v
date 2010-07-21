@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Classical_Pred_Set.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id$ i*)
 
 (** This file is obsolete, use Classical_Pred_Type.v via Classical.v
 instead *)

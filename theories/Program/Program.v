@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: Program.v 11709 2008-12-20 11:42:15Z msozeau $ *)
+(* $Id$ *)
 
 Require Export Coq.Program.Utils.
 Require Export Coq.Program.Wf.

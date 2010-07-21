@@ -6,9 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: whelp.mli 7837 2006-01-11 09:47:32Z herbelin $ i*)
+(*i $Id$ i*)
 
-(* Coq interface to the Whelp query engine developed at 
+(* Coq interface to the Whelp query engine developed at
    the University of Bologna *)
 
 open Names

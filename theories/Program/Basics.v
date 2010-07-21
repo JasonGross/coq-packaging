@@ -1,3 +1,4 @@
+(* -*- coding: utf-8 -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -5,15 +6,16 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: Basics.v 11709 2008-12-20 11:42:15Z msozeau $ *)
+(* $Id$ *)
 
 (** Standard functions and combinators.
-   
-   Proofs about them require functional extensionality and can be found in [Combinators].
+
+   Proofs about them require functional extensionality and can be found
+   in [Combinators].
 
    Author: Matthieu Sozeau
-   Institution: LRI, CNRS UMR 8623 - Université Paris Sud
-   91405 Orsay, France *)
+   Institution: LRI, CNRS UMR 8623 - University Paris Sud
+*)
 
 (** The polymorphic identity function is defined in [Datatypes]. *)
 
@@ -21,12 +23,12 @@ Implicit Arguments id [[A]].
 
 (** Function composition. *)
 
-Definition compose {A B C} (g : B -> C) (f : A -> B) := 
+Definition compose {A B C} (g : B -> C) (f : A -> B) :=
   fun x : A => g (f x).
 
 Hint Unfold compose.
 
-Notation " g ∘ f " := (compose g f)  
+Notation " g ∘ f " := (compose g f)
   (at level 40, left associativity) : program_scope.
 
 Open Local Scope program_scope.

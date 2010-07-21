@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: conv_oracle.ml 10961 2008-05-21 23:26:23Z barras $ *)
+(* $Id$ *)
 
 open Names
 
@@ -44,14 +44,6 @@ let set_strategy k l =
       if l=default then Cmap.remove c !cst_opacity
       else Cmap.add c l !cst_opacity
   | RelKey _ -> Util.error "set_strategy: RelKey"
-
-let set_transparent_const kn =
-  cst_opacity := Cmap.remove kn !cst_opacity
-let set_transparent_var id =
-  var_opacity := Idmap.remove id !var_opacity
-
-let set_opaque_const kn = set_strategy (ConstKey kn) Opaque
-let set_opaque_var id = set_strategy (VarKey id) Opaque
 
 let get_transp_state () =
   (Idmap.fold

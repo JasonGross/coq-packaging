@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Classical_Pred_Type.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id$ i*)
 
 (** Classical Predicate Logic on Type *)
 
@@ -44,7 +44,7 @@ Proof. (* Intuitionistic *)
 unfold not in |- *; intros P notex n abs.
 apply notex.
 exists n; trivial.
-Qed. 
+Qed.
 
 Lemma not_ex_not_all :
  forall P:U -> Prop, ~ (exists n : U, ~ P n) -> forall n:U, P n.

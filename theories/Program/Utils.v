@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Utils.v 11709 2008-12-20 11:42:15Z msozeau $ i*)
+(*i $Id$ i*)
 
 (** Various syntaxic shortands that are useful with [Program]. *)
 

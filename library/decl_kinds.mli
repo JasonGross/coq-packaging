@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: decl_kinds.mli 11809 2009-01-20 11:39:55Z aspiwack $ *)
+(* $Id$ *)
 
 open Util
 open Libnames
@@ -44,7 +44,7 @@ type definition_object_kind =
 
 type assumption_object_kind = Definitional | Logical | Conjectural
 
-(* [assumption_kind] 
+(* [assumption_kind]
 
                 |  Local      | Global
    ------------------------------------

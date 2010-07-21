@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: edit.mli 6947 2005-04-20 16:18:41Z coq $ i*)
+(*i $Id$ i*)
 
 (* The type of editors.
  * An editor is a finite map, ['a -> 'b], which knows how to apply

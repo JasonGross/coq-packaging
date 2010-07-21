@@ -1,6 +1,6 @@
 
-            		THE COQ V8.2 SYSTEM
-            		===================
+               	         THE COQ V8 SYSTEM
+            	         =================
 
 INSTALLATION.
 =============
@@ -11,8 +11,9 @@ INSTALLATION.
 DOCUMENTATION.
 ==============
 
-   The documentation of Coq V8.2 is available online from the Coq web
-   site (see http://coq.inria.fr)
+   The documentation is part of the archive in directory doc. The
+   documentation of the last released version is available on the Coq
+   web site at http://coq.inria.fr/doc.
 
 
 CHANGES.
@@ -26,9 +27,8 @@ CHANGES.
 AVAILABILITY.
 =============
 
-   Coq is available as a precompiled package from the major linux
-   distributions. It is also available for Windows and Mac OS systems
-   from the Coq web site (see http://coq.inria.fr).
+   Coq is available at http://coq.inria.fr, or, for older versions at
+   ftp://ftp.inria.fr/INRIA/LogiCal/coq.
 
 
 THE COQ CLUB.

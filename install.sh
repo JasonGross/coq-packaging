@@ -9,5 +9,3 @@ for f; do
   install -d "$dest/$dn"
   install -m 644 $f "$dest/$dn/$bn"
 done
-
-

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: logic.mli 11576 2008-11-10 19:13:15Z msozeau $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Names
@@ -26,9 +26,9 @@ val with_check    : tactic -> tactic
   [Intro]: no check that the name does not exist\\
   [Intro_after]: no check that the name does not exist and that variables in
      its type does not escape their scope\\
-  [Intro_replacing]: no check that the name does not exist and that 
+  [Intro_replacing]: no check that the name does not exist and that
      variables in its type does not escape their scope\\
-  [Convert_hyp]: 
+  [Convert_hyp]:
   no check that the name exist and that its type is convertible\\
 *)
 
