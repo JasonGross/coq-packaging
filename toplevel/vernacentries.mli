@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacentries.mli 10580 2008-02-22 13:39:13Z lmamane $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Names
@@ -38,7 +38,7 @@ type pcoq_hook = {
   solve : int -> unit;
   abort : string -> unit;
   search : searchable -> dir_path list * bool -> unit;
-  print_name : Libnames.reference -> unit;
+  print_name : Libnames.reference Genarg.or_by_notation -> unit;
   print_check : Environ.env -> Environ.unsafe_judgment -> unit;
   print_eval : Reductionops.reduction_function -> Environ.env -> Evd.evar_map -> constr_expr ->
     Environ.unsafe_judgment -> unit;
@@ -54,4 +54,4 @@ val abort_refine : ('a -> unit) -> 'a -> unit;;
 
 val interp : Vernacexpr.vernac_expr -> unit
 
-val vernac_reset_name : identifier Util.located -> unit 
+val vernac_reset_name : identifier Util.located -> unit

@@ -6,12 +6,12 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: RelationalChoice.v 8892 2006-06-04 17:59:53Z herbelin $ i*)
+(*i $Id$ i*)
 
 (** This file axiomatizes the relational form of the axiom of choice *)
 
 Axiom relational_choice :
   forall (A B : Type) (R : A->B->Prop),
    (forall x : A, exists y : B, R x y) ->
-     exists R' : A->B->Prop, 
+     exists R' : A->B->Prop,
        subrelation R' R /\ forall x : A, exists! y : B, R' x y.

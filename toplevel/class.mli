@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: class.mli 10840 2008-04-23 21:29:34Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Names
@@ -22,7 +22,7 @@ open Nametab
 
 (* [try_add_new_coercion_with_target ref s src tg] declares [ref] as a coercion
    from [src] to [tg] *)
-val try_add_new_coercion_with_target : global_reference -> locality -> 
+val try_add_new_coercion_with_target : global_reference -> locality ->
   source:cl_typ -> target:cl_typ ->  unit
 
 (* [try_add_new_coercion ref s] declares [ref], assumed to be of type

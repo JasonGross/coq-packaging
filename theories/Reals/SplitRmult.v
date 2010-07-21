@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: SplitRmult.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id$ i*)
 
 (*i Lemma mult_non_zero :(r1,r2:R)``r1<>0`` /\ ``r2<>0`` -> ``r1*r2<>0``. i*)
 

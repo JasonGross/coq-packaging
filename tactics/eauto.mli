@@ -25,9 +25,9 @@ val e_assumption : tactic
 
 val registered_e_assumption : tactic
 
-val e_give_exact_constr : constr -> tactic
+val e_give_exact : ?flags:Unification.unify_flags -> constr -> tactic
 
-val gen_eauto : bool -> bool * int -> constr list -> 
+val gen_eauto : bool -> bool * int -> constr list ->
   hint_db_name list option -> tactic
 
 
@@ -35,3 +35,5 @@ val eauto_with_bases :
   bool ->
   bool * int ->
   Term.constr list -> Auto.hint_db list -> Proof_type.tactic
+
+val autounfold : hint_db_name list -> Tacticals.goal_location -> tactic

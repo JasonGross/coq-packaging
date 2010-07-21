@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: hashcons.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id$ i*)
 
 (* Generic hash-consing. *)
 

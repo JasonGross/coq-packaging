@@ -1,3 +1,4 @@
+(* -*- coding: utf-8 -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
 (* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
@@ -6,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Eqdep.v 8642 2006-03-17 10:09:02Z notin $ i*)
+(*i $Id$ i*)
 
 (** This file axiomatizes the invariance by substitution of reflexive
     equality proofs [[Streicher93]] and exports its consequences, such

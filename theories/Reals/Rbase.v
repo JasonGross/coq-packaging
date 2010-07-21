@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Rbase.v 9178 2006-09-26 11:18:22Z barras $ i*)
+(*i $Id$ i*)
 
 Require Export Rdefinitions.
 Require Export Raxioms.

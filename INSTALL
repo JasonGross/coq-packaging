@@ -1,5 +1,5 @@
 
-            INSTALLATION PROCEDURES FOR THE COQ V8.2 SYSTEM
+            INSTALLATION PROCEDURES FOR THE COQ V8.3 SYSTEM
             -----------------------------------------------
 
 
@@ -39,13 +39,13 @@ WHAT DO YOU NEED ?
 
      urpmi coq
 
-   Should you need or prefer to compile Coq V8.2 yourself, you need:
+   Should you need or prefer to compile Coq V8.3 yourself, you need:
 
-     - Objective Caml version 3.07 or later
+     - Objective Caml version 3.09.3 or later
        (available at http://caml.inria.fr/)
 
        For Ocaml version >= 3.10.0, you also need to install camlp5
-       (version <= 4.08, or >= 5.01 transitional)
+       (version <= 4.08, or 5.01 transitional)
   
 
      - GNU Make version 3.81 or later
@@ -71,12 +71,10 @@ WHAT DO YOU NEED ?
 
      - a C compiler
 
-     - for Coqide, the Lablgtk development files, and the GTK
-       libraries, see INSTALL.ide for more details
+     - for Coqide, the Lablgtk development files, and the GTK libraries, see INSTALL.ide for more details
 
-   Coq sources distribution comes as a single compressed tar-file. You
-   have probably already decompressed it if you are reading this
-   document.
+   By FTP, Coq comes as a single compressed tar-file. You have
+   probably already decompressed it if you are reading this document.
 
 
 QUICK INSTALLATION PROCEDURE.
@@ -91,7 +89,7 @@ QUICK INSTALLATION PROCEDURE.
 INSTALLATION PROCEDURE IN DETAILS (NORMAL USERS).
 =================================================
 
-1- Check that you have the Objective Caml compiler version 3.07 (or later)
+1- Check that you have the Objective Caml compiler version 3.09.3 (or later)
    installed on your computer and that "ocamlmktop" and "ocamlc" (or
    its native code version "ocamlc.opt") lie in a directory which is present
    in your $PATH environment variable. 
@@ -101,18 +99,21 @@ INSTALLATION PROCEDURE IN DETAILS (NORMAL USERS).
    bigger), you will also need the "ocamlopt" (or its native code version
    "ocamlopt.opt") command.
 
-2- If you are using OCaml version >= 3.10.0, check that you have
-   Camlp5 installed on your computer and that the command "camlp5"
-   lies in a directory which is present in your $PATH environment
-   variable path.  (You need Camlp5 in both bytecode and native
-   versions if your platform supports it).
+2- Check that you have Camlp4 installed on your 
+   computer and that the command "camlp4" lies in a directory which
+   is present in your $PATH environment variable path.
+   (You need Camlp4 in both bytecode and native versions if
+   your platform supports it).
+
+   Note: in the latest ocaml distributions, camlp4 comes with ocaml so
+   you do not have to check this point anymore.
 
 3- The uncompression and un-tarring of the distribution file gave birth 
    to a directory named "coq-8.xx". You can rename this directory and put 
    it wherever you want. Just keep in mind that you will need some spare
-   space during the compilation (reckon on about 250 Mb of disk space
+   space during the compilation (reckon on about 50 Mb of disk space
    for the whole system in native-code compilation). Once installed, the
-   binaries take about 65 Mb, and the library about 60 Mb.
+   binaries take about 14 Mb, and the library about 9 Mb.
 
 4- First you need to configure the system. It is done automatically with
    the command:
@@ -312,9 +313,12 @@ MOVING BINARIES OR LIBRARY.
 	Error: Can't find file initial.coq on loadpath
 
    If you really have (or want) to move the binaries or the library, then
-   you have to indicate where Coq will find the libraries:
+   you have to indicate their new places to Coq, using the options -bindir (for
+   the binaries directory) and -libdir (for the standard library directory) :
 
-	coqtop -coqlib <directory>
+	coqtop -bindir <new directory> -libdir <new directory>
+
+   See also next section.
 
 
 DYNAMICALLY LOADED LIBRARIES FOR BYTECODE EXECUTABLES.

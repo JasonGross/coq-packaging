@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Tauto.v 7693 2005-12-21 23:50:17Z herbelin $ *)
+(* $Id$ *)
 
 (**** Tactics Tauto and Intuition ****)
 

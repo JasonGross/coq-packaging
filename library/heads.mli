@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: heads.mli 10841 2008-04-24 07:19:57Z herbelin $ *)
+(* $Id$ *)
 
 open Names
 open Term

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: summary.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id$ i*)
 
 (* This module registers the declaration of global tables, which will be kept
    in synchronization during the various backtracks of the system. *)
@@ -14,9 +14,7 @@
 type 'a summary_declaration = {
   freeze_function : unit -> 'a;
   unfreeze_function : 'a -> unit;
-  init_function : unit -> unit;
-  survive_module : bool;    (* should be false is most cases *)
-  survive_section : bool }
+  init_function : unit -> unit }
 
 val declare_summary : string -> 'a summary_declaration -> unit
 
@@ -24,9 +22,11 @@ type frozen
 
 val freeze_summaries : unit -> frozen
 val unfreeze_summaries : frozen -> unit
-val section_unfreeze_summaries : frozen -> unit
-val module_unfreeze_summaries : frozen -> unit
 val init_summaries : unit -> unit
 
-
+(** Beware: if some code is dynamically loaded via dynlink after the
+    initialization of Coq, the init functions of any summary declared
+    by this code may not be run. It is hence the responsability of
+    plugins to initialize themselves properly.
+*)
 

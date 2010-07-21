@@ -6,11 +6,11 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Rpow_def.v 10923 2008-05-12 18:25:06Z herbelin $ *)
+(* $Id$ *)
 
 Require Import Rdefinitions.
 
-Fixpoint pow (r:R) (n:nat) {struct n} : R :=
+Fixpoint pow (r:R) (n:nat) : R :=
   match n with
     | O => R1
     | S n => Rmult r (pow r n)

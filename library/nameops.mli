@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: nameops.mli 9433 2006-12-12 09:38:53Z herbelin $ i*)
+(*i $Id$ i*)
 
 open Names
 
@@ -23,17 +23,14 @@ val root_of_id : identifier -> identifier (* remove trailing digits, $'$ and $\_
 val add_suffix : identifier -> string -> identifier
 val add_prefix : string -> identifier -> identifier
 
-val lift_ident           : identifier -> identifier
-val next_ident_away      : identifier -> identifier list -> identifier
-val next_ident_away_from : identifier -> identifier list -> identifier
-
-val next_name_away : name -> identifier list -> identifier
-val next_name_away_with_default :
-  string -> name -> identifier list -> identifier
+val has_subscript    : identifier -> bool
+val lift_subscript   : identifier -> identifier
+val forget_subscript : identifier -> identifier
 
 val out_name : name -> identifier
 
 val name_fold : (identifier -> 'a -> 'a) -> name -> 'a -> 'a
+val name_iter : (identifier -> unit) -> name -> unit
 val name_cons : name -> identifier list -> identifier list
 val name_app : (identifier -> identifier) -> name -> name
 val name_fold_map : ('a -> identifier -> 'a * identifier) -> 'a -> name -> 'a * name

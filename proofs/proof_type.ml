@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: proof_type.ml 12168 2009-06-06 21:34:37Z herbelin $ *)
+(*i $Id$ *)
 
 (*i*)
 open Environ
@@ -48,11 +48,11 @@ type proof_tree = {
 
 and rule =
   | Prim of prim_rule
-  | Nested of compound_rule * proof_tree 
+  | Nested of compound_rule * proof_tree
   | Decl_proof of bool
   | Daimon
 
-and compound_rule=  
+and compound_rule=
   | Tactic of tactic_expr * bool
   | Proof_instr of bool*proof_instr (* the boolean is for focus restrictions *)
 
@@ -63,47 +63,48 @@ and tactic = goal sigma -> (goal list sigma * validation)
 and validation = (proof_tree list -> proof_tree)
 
 and tactic_expr =
-  (open_constr,
+  (constr,
    constr_pattern,
    evaluable_global_reference,
    inductive,
    ltac_constant,
    identifier,
-   glob_tactic_expr)
+   glob_tactic_expr,
+   tlevel)
      Tacexpr.gen_tactic_expr
 
 and atomic_tactic_expr =
-  (open_constr,
+  (constr,
    constr_pattern,
    evaluable_global_reference,
    inductive,
    ltac_constant,
    identifier,
-   glob_tactic_expr)
+   glob_tactic_expr,
+   tlevel)
      Tacexpr.gen_atomic_tactic_expr
 
 and tactic_arg =
-  (open_constr,
+  (constr,
    constr_pattern,
    evaluable_global_reference,
    inductive,
    ltac_constant,
    identifier,
-   glob_tactic_expr)
+   glob_tactic_expr,
+   tlevel)
      Tacexpr.gen_tactic_arg
 
-type hyp_location = identifier Tacexpr.raw_hyp_location
-
-type ltac_call_kind = 
+type ltac_call_kind =
   | LtacNotationCall of string
   | LtacNameCall of ltac_constant
   | LtacAtomCall of glob_atomic_tactic_expr * atomic_tactic_expr option ref
   | LtacVarCall of identifier * glob_tactic_expr
   | LtacConstrInterp of rawconstr *
-      ((identifier * constr) list * (identifier * identifier option) list)
+      (extended_patvar_map * (identifier * identifier option) list)
 
-type ltac_trace = (loc * ltac_call_kind) list
+type ltac_trace = (int * loc * ltac_call_kind) list
 
-exception LtacLocated of (ltac_call_kind * ltac_trace * loc) * exn
+exception LtacLocated of (int * ltac_call_kind * ltac_trace * loc) * exn
 
 let abstract_tactic_box = ref (ref None)

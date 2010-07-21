@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: bstack.mli 10441 2008-01-15 16:37:46Z lmamane $ i*)
+(*i $Id$ i*)
 
 (* Bounded stacks. If the depth is [None], then there is no depth limit. *)
 

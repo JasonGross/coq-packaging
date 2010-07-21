@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: inv.mli 11309 2008-08-06 10:30:35Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Util
@@ -24,7 +24,7 @@ val inv_gen :
   bool -> inversion_kind -> inversion_status ->
     intro_pattern_expr located option -> quantified_hypothesis -> tactic
 val invIn_gen :
-  inversion_kind -> intro_pattern_expr located option -> identifier list -> 
+  inversion_kind -> intro_pattern_expr located option -> identifier list ->
     quantified_hypothesis -> tactic
 
 val inv_clause :

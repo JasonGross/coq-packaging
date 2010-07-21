@@ -24,7 +24,7 @@
 (* in Summer 1995. Several developments by E. Ledinot were an inspiration.  *)
 (****************************************************************************)
 
-(*i $Id: Finite_sets.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id$ i*)
 
 Require Import Ensembles.
 
@@ -52,7 +52,7 @@ Require Import Constructive_sets.
 
 Section Ensembles_finis_facts.
   Variable U : Type.
-  
+
   Lemma cardinal_invert :
     forall (X:Ensemble U) (p:nat),
       cardinal U X p ->

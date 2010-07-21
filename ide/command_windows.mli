@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: command_windows.mli 11011 2008-05-28 16:22:11Z jnarboux $ i*)
+(*i $Id$ i*)
 
 class command_window :
   unit ->

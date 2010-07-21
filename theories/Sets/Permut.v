@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Permut.v 10616 2008-03-04 17:33:35Z letouzey $ i*)
+(*i $Id$ i*)
 
 (* G. Huet 1-9-95 *)
 
@@ -36,23 +36,23 @@ Section Axiomatisation.
     apply cong_left; trivial.
     apply cong_right; trivial.
   Qed.
-  
+
   Lemma comm_right : forall x y z:U, cong (op x (op y z)) (op x (op z y)).
   Proof.
     intros; apply cong_right; apply op_comm.
   Qed.
-  
+
   Lemma comm_left : forall x y z:U, cong (op (op x y) z) (op (op y x) z).
   Proof.
     intros; apply cong_left; apply op_comm.
   Qed.
-  
+
   Lemma perm_right : forall x y z:U, cong (op (op x y) z) (op (op x z) y).
   Proof.
     intros.
     apply cong_trans with (op x (op y z)).
     apply op_ass.
-    apply cong_trans with (op x (op z y)). 
+    apply cong_trans with (op x (op z y)).
     apply cong_right; apply op_comm.
     apply cong_sym; apply op_ass.
   Qed.
@@ -66,7 +66,7 @@ Section Axiomatisation.
     apply cong_left; apply op_comm.
     apply op_ass.
   Qed.
-  
+
   Lemma op_rotate : forall x y z t:U, cong (op x (op y z)) (op z (op x y)).
   Proof.
     intros; apply cong_trans with (op (op x y) z).

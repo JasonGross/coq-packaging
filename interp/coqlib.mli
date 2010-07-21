@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: coqlib.mli 10180 2007-10-05 13:02:23Z vsiles $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Names
@@ -58,8 +58,11 @@ val check_required_library : string list -> unit
 val logic_module : dir_path
 val logic_type_module : dir_path
 
+val datatypes_module_name : string list
+val logic_module_name : string list
+
 (* Natural numbers *)
-val nat_path : section_path
+val nat_path : full_path
 val glob_nat : global_reference
 val path_of_O : constructor
 val path_of_S : constructor
@@ -76,6 +79,8 @@ val glob_false : global_reference
 
 (* Equality *)
 val glob_eq : global_reference
+val glob_identity : global_reference
+val glob_jmeq : global_reference
 
 (*s Constructions and patterns related to Coq initial state are unknown
    at compile time. Therefore, we can only provide methods to build
@@ -104,21 +109,35 @@ val build_sigma_type : coq_sigma_data delayed
 (* Non-dependent pairs in Set from Datatypes *)
 val build_prod : coq_sigma_data delayed
 
-type coq_leibniz_eq_data = {
+type coq_eq_data = {
   eq   : constr;
-  refl : constr;
   ind  : constr;
-  rrec : constr option;
-  rect : constr option;
-  congr: constr;
-  sym  : constr }
+  refl : constr;
+  sym  : constr;
+  trans: constr;
+  congr: constr }
 
-val build_coq_eq_data : coq_leibniz_eq_data delayed
-val build_coq_identity_data : coq_leibniz_eq_data delayed
+val build_coq_eq_data : coq_eq_data delayed
+val build_coq_identity_data : coq_eq_data delayed
+val build_coq_jmeq_data : coq_eq_data delayed
 
 val build_coq_eq       : constr delayed (* = [(build_coq_eq_data()).eq] *)
-val build_coq_sym_eq   : constr delayed (* = [(build_coq_eq_data()).sym] *)
+val build_coq_eq_refl  : constr delayed (* = [(build_coq_eq_data()).refl] *)
+val build_coq_eq_sym   : constr delayed (* = [(build_coq_eq_data()).sym] *)
 val build_coq_f_equal2 : constr delayed
+
+(* Data needed for discriminate and injection *)
+
+type coq_inversion_data = {
+  inv_eq   : constr; (* : forall params, t -> Prop *)
+  inv_ind  : constr; (* : forall params P y, eq params y -> P y *)
+  inv_congr: constr  (* : forall params B (f:t->B) y, eq params y -> f c=f y *)
+}
+
+val build_coq_inversion_eq_data : coq_inversion_data delayed
+val build_coq_inversion_identity_data : coq_inversion_data delayed
+val build_coq_inversion_jmeq_data : coq_inversion_data delayed
+val build_coq_inversion_eq_true_data : coq_inversion_data delayed
 
 (* Specif *)
 val build_coq_sumbool : constr delayed
@@ -137,6 +156,10 @@ val build_coq_not : constr delayed
 (* Conjunction *)
 val build_coq_and : constr delayed
 val build_coq_conj : constr delayed
+val build_coq_iff : constr delayed
+
+val build_coq_iff_left_proj : constr delayed
+val build_coq_iff_right_proj : constr delayed
 
 (* Disjunction *)
 val build_coq_or : constr delayed
@@ -146,6 +169,8 @@ val build_coq_ex : constr delayed
 
 val coq_eq_ref : global_reference lazy_t
 val coq_identity_ref : global_reference lazy_t
+val coq_jmeq_ref : global_reference lazy_t
+val coq_eq_true_ref : global_reference lazy_t
 val coq_existS_ref : global_reference lazy_t
 val coq_existT_ref : global_reference lazy_t
 val coq_not_ref : global_reference lazy_t
@@ -154,3 +179,4 @@ val coq_sumbool_ref : global_reference lazy_t
 val coq_sig_ref : global_reference lazy_t
 
 val coq_or_ref : global_reference lazy_t
+val coq_iff_ref : global_reference lazy_t

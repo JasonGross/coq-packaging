@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: decl_proof_instr.mli 12422 2009-10-27 08:42:49Z corbinea $ *)
+(* $Id$ *)
 
 open Refiner
 open Names
@@ -23,7 +23,8 @@ val automation_tac : tactic
 
 val daimon_subtree: pftreestate -> pftreestate
 
-val concl_refiner: Termops.metamap -> constr -> Proof_type.goal sigma -> constr
+val concl_refiner:
+  Termops.meta_type_map -> constr -> Proof_type.goal sigma -> constr
 
 val do_instr: Decl_expr.raw_proof_instr -> pftreestate -> pftreestate
 val proof_instr: Decl_expr.raw_proof_instr -> unit
@@ -76,27 +77,27 @@ val thesis_for :     Term.constr ->
 val close_previous_case : pftreestate -> pftreestate
 
 val pop_stacks :
-  (Names.identifier * 
-     (Term.constr option * Term.constr list) list) list -> 
-  (Names.identifier * 
+  (Names.identifier *
+     (Term.constr option * Term.constr list) list) list ->
+  (Names.identifier *
      (Term.constr option * Term.constr list) list) list
 
 val push_head :   Term.constr ->
   Names.Idset.t ->
-  (Names.identifier * 
+  (Names.identifier *
      (Term.constr option * Term.constr list) list) list ->
-  (Names.identifier * 
+  (Names.identifier *
      (Term.constr option * Term.constr list) list) list
 
 val push_arg : Term.constr ->
-  (Names.identifier * 
+  (Names.identifier *
      (Term.constr option * Term.constr list) list) list ->
-  (Names.identifier * 
+  (Names.identifier *
      (Term.constr option * Term.constr list) list) list
 
-val hrec_for: 
+val hrec_for:
     Names.identifier ->
-    Decl_mode.per_info -> Proof_type.goal Tacmach.sigma -> 
+    Decl_mode.per_info -> Proof_type.goal Tacmach.sigma ->
     Names.identifier -> Term.constr
 
 val consider_match :

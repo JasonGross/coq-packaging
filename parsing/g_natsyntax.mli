@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: g_natsyntax.mli 11087 2008-06-10 13:29:52Z letouzey $ i*)
+(*i $Id$ i*)
 
 (* Nice syntax for naturals. *)
 

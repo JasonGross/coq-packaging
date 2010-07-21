@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: dhyp.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Names
@@ -17,7 +17,6 @@ open Tacexpr
 (* Programmable destruction of hypotheses and conclusions. *)
 
 val set_extern_interp : (glob_tactic_expr -> tactic) -> unit
-val set_extern_intern_tac : (raw_tactic_expr -> glob_tactic_expr) -> unit
 
 (*
 val dHyp : identifier -> tactic
@@ -29,4 +28,5 @@ val h_auto_tdb : int option -> tactic
 
 val add_destructor_hint :
   Vernacexpr.locality_flag -> identifier -> (bool,unit) Tacexpr.location ->
-    Topconstr.constr_expr -> int -> raw_tactic_expr -> unit
+    Rawterm.patvar list * Pattern.constr_pattern -> int ->
+      glob_tactic_expr -> unit

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Zwf.v 9245 2006-10-17 12:53:34Z notin $ *)
+(* $Id$ *)
 
 Require Import ZArith_base.
 Require Export Wf_nat.
@@ -15,7 +15,7 @@ Open Local Scope Z_scope.
 
 (** Well-founded relations on Z. *)
 
-(** We define the following family of relations on [Z x Z]: 
+(** We define the following family of relations on [Z x Z]:
 
     [x (Zwf c) y]   iff   [x < y & c <= y]
  *)

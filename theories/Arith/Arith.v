@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Arith.v 9302 2006-10-27 21:21:17Z barras $ i*)
+(*i $Id$ i*)
 
 Require Export Arith_base.
 Require Export ArithRing.

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Inverse_Image.v 9642 2007-02-12 10:31:53Z herbelin $ i*)
+(*i $Id$ i*)
 
 (** Author: Bruno Barras *)
 
@@ -47,8 +47,8 @@ Section Inverse_Image.
     destruct H3.
     apply (IHAcc x1); auto.
   Qed.
-  
-  
+
+
   Theorem wf_inverse_rel : well_founded R -> well_founded RoF.
   Proof.
     red in |- *; constructor; intros.

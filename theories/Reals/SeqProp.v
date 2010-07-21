@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: SeqProp.v 10710 2008-03-23 09:24:09Z herbelin $ i*)
+(*i $Id$ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.

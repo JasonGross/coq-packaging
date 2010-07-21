@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cerrors.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Pp
@@ -18,6 +18,12 @@ open Util
 val print_loc : loc -> std_ppcmds
 
 val explain_exn : exn -> std_ppcmds
+
+(** Same, but will re-raise all anomalies instead of explaining them *)
+
+val explain_exn_no_anomaly : exn -> std_ppcmds
+
+(** For debugging purpose (?), the explain function can be twicked *)
 
 val explain_exn_function : (exn -> std_ppcmds) ref
 val explain_exn_default : exn -> std_ppcmds

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: dyn.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id$ *)
 
 open Util
 
@@ -17,7 +17,7 @@ type t = string * Obj.t
 let dyntab = ref ([] : string list)
 
 let create s =
-  if List.mem s !dyntab then 
+  if List.mem s !dyntab then
     anomaly ("Dyn.create: already declared dynamic " ^ s);
   dyntab := s :: !dyntab;
   ((fun v -> (s,Obj.repr v)),

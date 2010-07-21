@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: esubst.ml 8799 2006-05-09 21:15:07Z barras $ *)
+(* $Id$ *)
 
 open Util
 
@@ -110,7 +110,7 @@ let rec is_subs_id = function
  * the result is (Inr (k+lams,p)) when the variable is just relocated
  * where p is None if the variable points inside subs and Some(k) if the
  * variable points k bindings beyond subs.
- *) 
+ *)
 let rec exp_rel lams k subs =
   match subs with
     | CONS (def,_) when k <= Array.length def

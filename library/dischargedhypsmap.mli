@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: dischargedhypsmap.mli 5920 2004-07-16 20:01:26Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Libnames
@@ -15,10 +15,10 @@ open Environ
 open Nametab
 (*i*)
 
-type discharged_hyps = section_path list
+type discharged_hyps = full_path list
 
 (*s Discharged hypothesis. Here we store the discharged hypothesis of each *)
 (*  constant or inductive type declaration.                                *)
 
-val set_discharged_hyps : section_path -> discharged_hyps -> unit
-val get_discharged_hyps : section_path -> discharged_hyps
+val set_discharged_hyps : full_path -> discharged_hyps -> unit
+val get_discharged_hyps : full_path -> discharged_hyps

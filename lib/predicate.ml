@@ -10,7 +10,7 @@
 (*                                                                     *)
 (************************************************************************)
 
-(* $Id: predicate.ml 5920 2004-07-16 20:01:26Z herbelin $ *)
+(* $Id$ *)
 
 (* Sets over ordered types *)
 
@@ -44,7 +44,7 @@ module type S =
 module Make(Ord: OrderedType) =
   struct
     module EltSet = Set.Make(Ord)
- 
+
     (* when bool is false, the denoted set is the complement of
        the given set *)
     type elt = Ord.t

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: preferences.mli 11009 2008-05-28 13:58:33Z jnarboux $ i*)
+(*i $Id$ i*)
 
 type pref =
     {
@@ -70,3 +70,5 @@ val change_font : ( Pango.font_description -> unit) ref
 val show_toolbar : (bool -> unit) ref
 val auto_complete : (bool -> unit) ref
 val resize_window : (unit -> unit) ref
+
+val use_default_doc_url : string

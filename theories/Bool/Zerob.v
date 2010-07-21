@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Zerob.v 9245 2006-10-17 12:53:34Z notin $ i*)
+(*i $Id$ i*)
 
 Require Import Arith.
 Require Import Bool.

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: type_errors.ml 10533 2008-02-08 16:54:47Z msozeau $ *)
+(* $Id$ *)
 
 open Names
 open Term
@@ -80,10 +80,10 @@ let error_assumption env j =
 let error_reference_variables env id =
   raise (TypeError (env, ReferenceVariables id))
 
-let error_elim_arity env ind aritylst c pj okinds = 
+let error_elim_arity env ind aritylst c pj okinds =
   raise (TypeError (env, ElimArity (ind,aritylst,c,pj,okinds)))
 
-let error_case_not_inductive env j = 
+let error_case_not_inductive env j =
   raise (TypeError (env, CaseNotInductive j))
 
 let error_number_branches env cj expn =

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: flags.mli 11801 2009-01-18 20:11:41Z herbelin $ i*)
+(*i $Id$ i*)
 
 (* Global options of the system. *)
 
@@ -29,6 +29,11 @@ val raw_print : bool ref
 
 val unicode_syntax : bool ref
 
+type compat_version = V8_2
+val compat_version : compat_version option ref
+val version_strictly_greater : compat_version -> bool
+val version_less_or_equal : compat_version -> bool
+
 val beautify : bool ref
 val make_beautify : bool -> unit
 val do_beautify : unit -> bool
@@ -41,6 +46,9 @@ val silently : ('a -> 'b) -> 'a -> 'b
 val verbosely : ('a -> 'b) -> 'a -> 'b
 val if_silent : ('a -> unit) -> 'a -> unit
 val if_verbose : ('a -> unit) -> 'a -> unit
+
+val make_auto_intros : bool -> unit
+val is_auto_intros : unit -> bool
 
 val make_warn : bool -> unit
 val if_warn : ('a -> unit) -> 'a -> unit
@@ -70,7 +78,9 @@ val boxed_definitions : unit -> bool
 
 (* Returns string format for default browser to use from Coq or CoqIDE *)
 val browser_cmd_fmt : string
- 
+
+val is_standard_doc_url : string -> bool
+
 (* Substitute %s in the first chain by the second chain *)
 val subst_command_placeholder : string -> string -> string
 

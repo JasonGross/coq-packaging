@@ -6,13 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: syntax_def.mli 11512 2008-10-27 12:28:36Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Util
 open Names
 open Topconstr
 open Rawterm
+open Nametab
 open Libnames
 (*i*)
 
@@ -20,21 +21,7 @@ open Libnames
 
 type syndef_interpretation = (identifier * subscopes) list * aconstr
 
-val declare_syntactic_definition : bool -> identifier -> bool -> 
+val declare_syntactic_definition : bool -> identifier -> bool ->
   syndef_interpretation -> unit
 
-val search_syntactic_definition : loc -> kernel_name -> syndef_interpretation
-
-(* [locate_global_with_alias] locates global reference possibly following
-   a notation if this notation has a role of aliasing; raise Not_found
-   if not bound in the global env; raise an error if bound to a
-   syntactic def that does not denote a reference *)
-
-val locate_global_with_alias : qualid located -> global_reference
-
-(* Locate a reference taking into account possible "alias" notations *)
-val global_with_alias : reference -> global_reference
-
-(* The same for inductive types *)
-val inductive_of_reference_with_alias : reference -> inductive
-
+val search_syntactic_definition : kernel_name -> syndef_interpretation

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: library.mli 11750 2009-01-05 20:47:34Z herbelin $ i*)
+(*i $Id$ i*)
 
 (*i*)
 open Util
@@ -26,6 +26,7 @@ open Libobject
 (*s Require = load in the environment + open (if the optional boolean
     is not [None]); mark also for export if the boolean is [Some true] *)
 val require_library : qualid located list -> bool option -> unit
+val require_library_from_dirpath : (dir_path * string) list -> bool option -> unit
 val require_library_from_file :
   identifier option -> System.physical_path -> bool option -> unit
 
@@ -77,9 +78,6 @@ type library_location = LibLoaded | LibInPath
 val locate_qualified_library :
   bool -> qualid -> library_location * dir_path * System.physical_path
 val try_locate_qualified_library : qualid located -> dir_path * string
-
-(* Reserve Coq prefix for the standard library *)
-val check_coq_overwriting : dir_path -> unit
 
 (*s Statistics: display the memory use of a library. *)
 val mem : dir_path -> Pp.std_ppcmds

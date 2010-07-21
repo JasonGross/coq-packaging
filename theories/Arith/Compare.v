@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Compare.v 9302 2006-10-27 21:21:17Z barras $ i*)
+(*i $Id$ i*)
 
 (** Equality is decidable on [nat] *)
 
@@ -52,4 +52,4 @@ Qed.
 
 Require Export Wf_nat.
 
-Require Export Min.
+Require Export Min Max.

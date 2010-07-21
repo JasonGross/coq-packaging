@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq_commands.ml 10994 2008-05-26 16:21:31Z jnarboux $ *)
+(* $Id$ *)
 
 let commands = [
   [(* "Abort"; *)
@@ -43,7 +43,7 @@ let commands = [
   ];
   ["End";
    "End Silent.";
-   "Eval"; 
+   "Eval";
    "Extract Constant";
    "Extract Inductive";
    "Extraction Inline";
@@ -84,7 +84,7 @@ let commands = [
   ["Parameter";
    "Proof.";
    "Program Definition";
-   "Program Fixpoint";     
+   "Program Fixpoint";
    "Program Lemma";
    "Program Theorem";
   ];
@@ -100,7 +100,7 @@ let commands = [
    "Require Export";
    "Require Import";
    "Reset Extraction Inline";
-   "Restore State"; 
+   "Restore State";
    ];
   [  "Save.";
      "Scheme";
@@ -155,6 +155,7 @@ let commands = [
 ]
 
 let state_preserving = [
+  "About";
   "Check";
   "Eval";
   "Eval lazy in";
@@ -165,7 +166,7 @@ let state_preserving = [
   "Extraction Module";
   "Inspect";
   "Locate";
-  
+
   "Obligations";
   "Print";
   "Print All.";
@@ -191,7 +192,7 @@ let state_preserving = [
   "Print Scope";
   "Print Scopes.";
   "Print Section";
-  
+
   "Print Table Printing If.";
   "Print Table Printing Let.";
   "Print Tables.";
@@ -229,7 +230,7 @@ let state_preserving = [
 ]
 
 
-let tactics = 
+let tactics =
   [
     [
       "abstract";
@@ -316,7 +317,7 @@ let tactics =
      "generalize";
      "generalize dependent";
    ];
-   
+
    [
      "hnf";
    ];
@@ -415,7 +416,7 @@ let tactics =
      "trivial";
      "try";
    ];
-   
+
    [
      "unfold";
      "unfold __ in";

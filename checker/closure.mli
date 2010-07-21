@@ -24,7 +24,7 @@ val with_stats: 'a Lazy.t -> 'a
 
 (*s Delta implies all consts (both global (= by
   [kernel_name]) and local (= by [Rel] or [Var])), all evars, and letin's.
-  Rem: reduction of a Rel/Var bound to a term is Delta, but reduction of 
+  Rem: reduction of a Rel/Var bound to a term is Delta, but reduction of
   a LetIn expression is Letin reduction *)
 
 type transparent_state = Idpred.t * Cpred.t
@@ -102,7 +102,7 @@ type fconstr
 type fterm =
   | FRel of int
   | FAtom of constr (* Metas and Sorts *)
-  | FCast of fconstr * cast_kind * fconstr 
+  | FCast of fconstr * cast_kind * fconstr
   | FFlex of table_key
   | FInd of inductive
   | FConstruct of constructor
@@ -177,6 +177,7 @@ val unfold_reference : clos_infos -> table_key -> fconstr option
 (* [mind_equiv] checks whether two inductive types are intentionally equal *)
 val mind_equiv_infos : clos_infos -> inductive -> inductive -> bool
 
+val eq_table_key : table_key -> table_key -> bool
 (************************************************************************)
 (*i This is for lazy debug *)
 
