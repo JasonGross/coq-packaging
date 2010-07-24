@@ -1,8 +1,10 @@
-coq (8.3~beta0+13323-1) UNRELEASED; urgency=low
+coq (8.3~beta0+13323-1) experimental; urgency=low
 
   * New upstream snapshot
+  * Update copyright file
+  * Fix installation of emacs files
 
- -- Stéphane Glondu <glondu@debian.org>  Sat, 24 Jul 2010 20:02:46 +0200
+ -- Stéphane Glondu <glondu@debian.org>  Sat, 24 Jul 2010 20:17:44 +0200
 
 coq (8.3~beta0+13298-1) experimental; urgency=low
 
