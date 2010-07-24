@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, * CNRS-Ecole Polytechnique-INRIA Futurs-Universite Paris Sud *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -195,7 +195,9 @@ let print_loadpath dir =
 let print_modules () =
   let opened = Library.opened_libraries ()
   and loaded = Library.loaded_libraries () in
-  let loaded_opened = list_intersect loaded opened
+  (* we intersect over opened to preserve the order of opened since *)
+  (* non-commutative operations (e.g. visibility) are done at import time *)
+  let loaded_opened = list_intersect opened loaded
   and only_loaded = list_subtract loaded opened in
   str"Loaded and imported library files: " ++
   pr_vertical_list pr_dirpath loaded_opened ++ fnl () ++
