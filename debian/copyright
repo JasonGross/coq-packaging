@@ -3,45 +3,27 @@ Packaged-Date: Fri, 03 Dec 1999 22:06:04 +0100
 Original-Source-Location: http://coq.inria.fr/
 
 Files: *
-Copyright: © 1999-2004 The Coq development team,
-                       INRIA-CNRS, University Paris Sud
+Copyright: © 1999-2010 The Coq development team,
+                       INRIA, CNRS, University Paris Sud,
+                       University Paris 7, Ecole Polytechnique.
 License: LGPL-2.1
 
-  The Coq proof assistant V7 and V8 includes software developed by the
-  Coq development team inside the LogiCal project, at INRIA, CNRS and
-  University Paris Sud.
-
-  Copyright 1999-2004 The Coq development team, INRIA-CNRS, University
-  Paris Sud, All rights reserved.
-
-  This version contains modifications by Lionel Elie Mamane
-  <lionel@mamane.lu> done while under employment of the Radboud
-  University Nijmegen. However, no copyright-assignment-to-employer
-  agreement was signed, and copyright of articles and books written on
-  work time rest with the employee. By analogy, it is Lionel's opinion
-  that copyright on these changes rests with him.
-
   This product includes also software developed by
-    Yves Bertot, Lemme, INRIA Sophia-Antipolis (plugins/interface,
-      parsing/search.ml)
     Pierre Crégut, France Telecom R & D (plugins/omega and plugins/romega)
-    Pierre Courtieu, Lemme (plugins/funind)
-    Loïc Pottier, Lemme, INRIA Sophia-Antipolis (plugins/fourier)
+    Pierre Courtieu and Julien Forest, CNAM (plugins/funind)
     Claudio Sacerdoti Coen, HELM, University of Bologna, (plugins/xml)
+    Pierre Corbineau, Radbout University, Nijmegen (declarative mode)
+    John Harrison, University of Cambridge (csdp wrapper)
 
-  The file /usr/share/doc/coq/CREDITS.gz contains a list of
-  developpers and contributors.
-
-  The Coq development Team (march 2004):
-    Bruno Barras (INRIA)
-    Pierre Corbineau (Université Paris Sud)
-    Jean-Christophe Filliâtre (CNRS)
-    Hugo Herbelin (INRIA)
-    Pierre Letouzey (Université Paris Sud)
-    Claude Marché (Université Paris Sud-INRIA)
-    Christine Paulin (Université Paris Sud)
-    Clément Renard (INRIA)
+  The file /usr/share/doc/coq/CREDITS.gz contains a list of contributors.
 
   The Coq Proof Assistant is distributed under the terms of the GNU
   Lesser General Public Licence, version 2.1, see
   /usr/share/common-licenses/LGPL-2.1.
+
+Files: debian/*
+Copyright: © 1999-2000 Fernando Sanchez <fer@debian.org>
+           © 2001-2002 Judicael Courant <Judicael.Courant@lri.fr>
+           © 2004-2009 Samuel Mimram <smimram@debian.org>
+           © 2008-2010 Stéphane Glondu <glondu@debian.org>
+License: LGPL-2.1
