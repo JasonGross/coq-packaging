@@ -1,0 +1,22 @@
+From: Stephane Glondu <steph@glondu.net>
+Date: Sat, 24 Jul 2010 20:14:50 +0200
+Subject: [PATCH] Fix installation of emacs files
+
+---
+ Makefile.build |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/Makefile.build b/Makefile.build
+index a7ae1e2..e86baec 100644
+--- a/Makefile.build
++++ b/Makefile.build
+@@ -623,7 +623,7 @@ install-coq-manpages:
+ 
+ install-emacs:
+ 	$(MKDIR) $(FULLEMACSLIB)
+-	$(INSTALLLIB) tools/coq.el tools/coq-inferior.el $(FULLEMACSLIB)
++	$(INSTALLLIB) tools/coq-db.el tools/coq-font-lock.el tools/coq-syntax.el tools/coq.el tools/coq-inferior.el $(FULLEMACSLIB)
+ 
+ # command to update TeX' kpathsea database
+ #UPDATETEX = $(MKTEXLSR) /usr/share/texmf /var/spool/texmf $(BASETEXDIR) > /dev/null
+-- 
