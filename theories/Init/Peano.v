@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Peano.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** The type [nat] of Peano natural numbers (built from [O] and [S])
     is defined in [Datatypes.v] *)

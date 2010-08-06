@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: ppvernac.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
 
 open Pp
 open Names
@@ -113,7 +113,9 @@ let pr_set_entry_type = function
   | ETConstr _ -> str"constr"
   | ETOther (_,e) -> str e
   | ETBigint -> str "bigint"
-  | ETConstrList _ -> failwith "Internal entry type"
+  | ETBinder true -> str "binder"
+  | ETBinder false -> str "closed binder"
+  | ETBinderList _ | ETConstrList _ -> failwith "Internal entry type"
 
 let strip_meta id =
   let s = string_of_id id in
@@ -328,6 +330,14 @@ let pr_onescheme (idop,schem) =
       | None -> spc ()
     ) ++
     hov 0 ((if dep then str"Induction for" else str"Minimality for")
+    ++ spc() ++ pr_smart_global ind) ++ spc() ++
+    hov 0 (str"Sort" ++ spc() ++ pr_rawsort s)
+  | CaseScheme (dep,ind,s) ->
+    (match idop with
+      | Some id -> hov 0 (pr_lident id ++ str" :=") ++ spc()
+      | None -> spc ()
+    ) ++
+    hov 0 ((if dep then str"Elimination for" else str"Case for")
     ++ spc() ++ pr_smart_global ind) ++ spc() ++
     hov 0 (str"Sort" ++ spc() ++ pr_rawsort s)
   | EqualityScheme ind ->

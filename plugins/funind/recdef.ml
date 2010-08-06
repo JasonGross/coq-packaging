@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id$ *)
+(* $Id: recdef.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
 
 open Term
 open Termops
@@ -280,8 +280,6 @@ let find_reference sl s =
     (locate (make_qualid(Names.make_dirpath
 			   (List.map id_of_string (List.rev sl)))
 	       (id_of_string s)));;
-
-let delayed_force f = f ()
 
 let le_lt_SS = function () -> (constant ["Recdef"] "le_lt_SS")
 let le_lt_n_Sm = function () -> (coq_base_constant "le_lt_n_Sm")

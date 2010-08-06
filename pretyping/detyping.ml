@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: detyping.ml 13329 2010-07-26 11:05:39Z herbelin $ *)
 
 open Pp
 open Util
@@ -363,6 +363,8 @@ let detype_case computable detype detype_eqns testdep avoid data p c bl =
 let detype_sort = function
   | Prop c -> RProp c
   | Type u -> RType (Some u)
+
+type binder_kind = BProd | BLambda | BLetIn
 
 (**********************************************************************)
 (* Main detyping function                                             *)

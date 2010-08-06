@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: OrderedType.v 12732 2010-02-10 22:46:59Z letouzey $ *)
 
 Require Export SetoidList Morphisms OrdersTac.
 Set Implicit Arguments.

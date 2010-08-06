@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: flags.ml 13358 2010-07-29 23:10:17Z herbelin $ i*)
 
 let with_option o f x =
   let old = !o in o:=true;
@@ -34,8 +34,6 @@ let xml_export = ref false
 let dont_load_proofs = ref false
 
 let raw_print = ref false
-
-let unicode_syntax = ref false
 
 (* Compatibility mode *)
 

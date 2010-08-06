@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: implicit_quantifiers.mli 13332 2010-07-26 22:12:43Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -46,7 +46,7 @@ val generalizable_vars_of_rawconstr : ?bound:Idset.t -> ?allowed:Idset.t ->
 
 val make_fresh : Names.Idset.t -> Environ.env -> identifier -> identifier
 
-val implicits_of_rawterm : Rawterm.rawconstr -> (Topconstr.explicitation * (bool * bool * bool)) list
+val implicits_of_rawterm : ?with_products:bool -> Rawterm.rawconstr -> (Topconstr.explicitation * (bool * bool * bool)) list
 
 val combine_params_freevar :
   Names.Idset.t -> (global_reference * bool) option * (Names.name * Term.constr option * Term.types) ->

@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: ClassicalEpsilon.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** This file provides classical logic and indefinite description under
     the form of Hilbert's epsilon operator *)

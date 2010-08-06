@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: coqtop.ml 13358 2010-07-29 23:10:17Z herbelin $ *)
 
 open Pp
 open Util
@@ -281,7 +281,7 @@ let parse_args is_ide =
     | "-emacs-U" :: rem -> Flags.print_emacs := true;
 	Flags.print_emacs_safechar := true; Pp.make_pp_emacs(); parse rem
 
-    | "-unicode" :: rem -> Flags.unicode_syntax := true; parse rem
+    | "-unicode" :: rem -> add_require "Utf8_core"; parse rem
 
     | "-coqlib" :: d :: rem -> Flags.coqlib_spec:=true; Flags.coqlib:=d; parse rem
     | "-coqlib" :: [] -> usage ()

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: cases.ml 13329 2010-07-26 11:05:39Z herbelin $ *)
 
 open Util
 open Names
@@ -1054,7 +1054,7 @@ let rec generalize_problem names pb = function
 	  tomatch = Abstract d :: tomatch;
           pred = generalize_predicate names i d pb.tomatch pb'.pred  }
 
-(* No more patterns: typing the right-hand-side of equations *)
+(* No more patterns: typing the right-hand side of equations *)
 let build_leaf pb =
   let rhs = extract_rhs pb in
   let j = pb.typing_function (mk_tycon pb.pred) rhs.rhs_env pb.evdref rhs.it in
@@ -1690,7 +1690,7 @@ let prepare_predicate loc typing_fun evdref env tomatchs sign tycon pred =
 
 let compile_cases loc style (typing_fun, evdref) tycon env (predopt, tomatchl, eqns) =
 
-  (* We build the matrix of patterns and right-hand-side *)
+  (* We build the matrix of patterns and right-hand side *)
   let matx = matx_of_eqns env tomatchl eqns in
 
   (* We build the vector of terms to match consistently with the *)

@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma"  i*)
 
-(* $Id$ *)
+(* $Id: g_ground.ml4 13344 2010-07-28 15:04:36Z msozeau $ *)
 
 open Formula
 open Sequent
@@ -54,7 +54,21 @@ let _=
   in
     declare_int_option gdopt
 
-let default_solver=(Tacinterp.interp <:tactic<auto with *>>)
+let (set_default_solver, default_solver, print_default_solver) = 
+  Tactic_option.declare_tactic_option ~default:(<:tactic<auto with *>>) "Firstorder default solver"
+
+VERNAC COMMAND EXTEND Firstorder_Set_Solver
+| [ "Set" "Firstorder" "Solver" tactic(t) ] -> [
+    set_default_solver 
+      (Vernacexpr.use_section_locality ())
+      (Tacinterp.glob_tactic t) ]
+END
+
+VERNAC COMMAND EXTEND Firstorder_Print_Solver
+| [ "Print" "Firstorder" "Solver" ] -> [
+    Pp.msgnl
+      (Pp.(++) (Pp.str"Firstorder solver tactic is ") (print_default_solver ())) ]
+END
 
 let fail_solver=tclFAIL 0 (Pp.str "GTauto failed")
 
@@ -65,7 +79,7 @@ let gen_ground_tac flag taco ids bases gl=
       let solver=
 	match taco with
 	    Some tac-> tac
-	  | None-> default_solver in
+	  | None-> snd (default_solver ()) in
       let startseq gl=
 	let seq=empty_seq !ground_depth in
 	extend_with_auto_hints bases (extend_with_ref_list ids seq gl) gl in
@@ -137,7 +151,7 @@ let default_declarative_automation gls =
     (Cctac.congruence_tac !congruence_depth []))
     (gen_ground_tac true
        (Some (tclTHEN
-		default_solver
+		(snd (default_solver ()))
 		(Cctac.congruence_tac !congruence_depth [])))
        [] []) gls
 

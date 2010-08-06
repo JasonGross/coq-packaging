@@ -12,7 +12,7 @@
    Institution: LRI, CNRS UMR 8623 - University Paris Sud
 *)
 
-(* $Id$ *)
+(* $Id: SetoidClass.v 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 Set Implicit Arguments.
 Unset Strict Implicit.

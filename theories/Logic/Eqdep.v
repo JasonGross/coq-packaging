@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Eqdep.v 13332 2010-07-26 22:12:43Z msozeau $ i*)
 
 (** This file axiomatizes the invariance by substitution of reflexive
     equality proofs [[Streicher93]] and exports its consequences, such
@@ -31,5 +31,5 @@ Export EqdepTheory.
 
 (** Exported hints *)
 
-Hint Resolve eq_dep_eq: core v62.
-Hint Resolve inj_pair2 inj_pairT2: core.
+Hint Resolve eq_dep_eq: eqdep v62.
+Hint Resolve inj_pair2 inj_pairT2: eqdep.

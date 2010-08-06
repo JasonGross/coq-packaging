@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: Orders.v 13276 2010-07-10 14:34:44Z letouzey $ *)
 
 Require Export Relations Morphisms Setoid Equalities.
 Set Implicit Arguments.

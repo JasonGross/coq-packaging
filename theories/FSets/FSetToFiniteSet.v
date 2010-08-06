@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: FSetToFiniteSet.v 12363 2009-09-28 15:04:07Z letouzey $ *)
 
 (** * Finite sets library : conversion to old [Finite_sets] *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Mergesort.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** A modular implementation of mergesort (the complexity is O(n.log n) in
    the length of the list) *)

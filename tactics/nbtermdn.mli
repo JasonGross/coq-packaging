@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: nbtermdn.mli 13332 2010-07-26 22:12:43Z msozeau $ i*)
 
 (*i*)
 open Term
@@ -24,7 +24,7 @@ sig
       | GRLabel of global_reference
       | ProdLabel 
       | LambdaLabel
-      | SortLabel of sorts option
+      | SortLabel
   end 
     
   type 'na t

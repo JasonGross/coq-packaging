@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: metasyntax.mli 13328 2010-07-26 11:05:30Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -47,7 +47,7 @@ val add_notation_interpretation :
 
 (* Add a notation interpretation for supporting the "where" clause *)
 
-val set_notation_for_interpretation : Constrintern.full_internalization_env ->
+val set_notation_for_interpretation : Constrintern.internalization_env ->
   (lstring * constr_expr * scope_name option) -> unit
 
 (* Add only the parsing/printing rule of a notation *)

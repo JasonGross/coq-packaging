@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: util.ml 13357 2010-07-29 22:59:55Z herbelin $ *)
 
 open Pp
 
@@ -43,6 +43,7 @@ let invalid_arg_loc (loc,s) = Stdpp.raise_with_loc loc (Invalid_argument s)
 
 let located_fold_left f x (_,a) = f x a
 let located_iter2 f (_,a) (_,b) = f a b
+let down_located f (_,a) = f a
 
 (* Like Exc_located, but specifies the outermost file read, the filename
    associated to the location of the error, and the error itself. *)
@@ -65,6 +66,11 @@ let on_pi3 f (a,b,c) = (a,b,f c)
 let pi1 (a,_,_) = a
 let pi2 (_,a,_) = a
 let pi3 (_,_,a) = a
+
+(* Projection operator *)
+
+let down_fst f x = f (fst x)
+let down_snd f x = f (snd x)
 
 (* Characters *)
 
@@ -700,6 +706,16 @@ let list_split_when p =
   in
   split_when_loop []
 
+(* [list_split_by p l] splits [l] into two lists [(l1,l2)] such that elements of
+   [l1] satisfy [p] and elements of [l2] do not *)
+let list_split_by p =
+  let rec split_by_loop = function
+  | []   -> ([],[])
+  | a::l ->
+      let (l1,l2) = split_by_loop l in if p a then (a::l1,l2) else (l1,a::l2)
+  in
+  split_by_loop
+
 let rec list_split3 = function
   | [] -> ([], [], [])
   | (x,y,z)::l ->
@@ -828,6 +844,13 @@ let list_cartesians op init ll =
 
 let list_combinations l = list_cartesians (fun x l -> x::l) [] l
 
+let rec list_combine3 x y z = 
+  match x, y, z with
+  | [], [], [] -> []
+  | (x :: xs), (y :: ys), (z :: zs) ->
+      (x, y, z) :: list_combine3 xs ys zs
+  | _, _, _ -> raise (Invalid_argument "list_combine3")
+  
 (* Keep only those products that do not return None *)
 
 let rec list_cartesian_filter op l1 l2 =
@@ -1170,6 +1193,12 @@ let repeat n f x =
 let iterate_for a b f x =
   let rec iterate i v = if i > b then v else iterate (succ i) (f i v) in
   iterate a x
+
+(* Delayed computations *)
+
+type 'a delayed = unit -> 'a
+
+let delayed_force f = f ()
 
 (* Misc *)
 

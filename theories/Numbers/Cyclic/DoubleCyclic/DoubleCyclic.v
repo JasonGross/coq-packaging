@@ -8,7 +8,7 @@
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: DoubleCyclic.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 Set Implicit Arguments.
 

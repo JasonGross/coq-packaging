@@ -8,7 +8,7 @@
 
 (*i camlp4use: "q_MLast.cmo" i*)
 
-(* $Id$ *)
+(* $Id: q_util.ml4 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 (* This file defines standard combinators to build ml expressions *)
 

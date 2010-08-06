@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: IndefiniteDescription.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** This file provides a constructive form of indefinite description that
     allows to build choice functions; this is weaker than Hilbert's

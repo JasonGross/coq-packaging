@@ -11,7 +11,7 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id$ *)
+(* $Id: OrdersEx.v 12641 2010-01-07 15:32:52Z letouzey $ *)
 
 Require Import Orders NatOrderedType POrderedType NOrderedType
  ZOrderedType RelationPairs EqualitiesFacts.

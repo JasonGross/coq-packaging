@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: FSetEqProperties.v 12400 2009-10-19 13:14:18Z letouzey $ *)
 
 (** * Finite sets library *)
 

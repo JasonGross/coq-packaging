@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: evarconv.mli 13332 2010-07-26 22:12:43Z msozeau $ i*)
 
 (*i*)
 open Term
@@ -34,7 +34,7 @@ val evar_eqappr_x :
       evar_map * bool
 (*i*)
 
-val consider_remaining_unif_problems : env -> evar_map -> evar_map * bool
+val consider_remaining_unif_problems : env -> evar_map -> evar_map
 
 val check_conv_record : constr * types list -> constr * types list ->
   constr * constr list * (constr list * constr list) *

@@ -6,6 +6,6 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: OmegaPlugin.v 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 Declare ML Module "omega_plugin".

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: nbtermdn.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
 
 open Util
 open Names
@@ -117,7 +117,7 @@ let constr_val_discr_st (idpred,cpred) t =
     | Var id when not (Idpred.mem id idpred) -> Dn.Label(Term_dn.GRLabel (VarRef id),l)
     | Prod (n, d, c) -> Dn.Label(Term_dn.ProdLabel, [d; c])
     | Lambda (n, d, c) -> Dn.Label(Term_dn.LambdaLabel, [d; c] @ l)
-    | Sort s -> Dn.Label(Term_dn.SortLabel (Some s), [])
+    | Sort _ -> Dn.Label(Term_dn.SortLabel, [])
     | Evar _ -> Dn.Everything
     | _ -> Dn.Nothing
 

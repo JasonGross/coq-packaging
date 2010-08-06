@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(* $Id$ *)
+(* $Id: g_proofs.ml4 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 
 open Pcoq

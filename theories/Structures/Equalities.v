@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: Equalities.v 12662 2010-01-13 16:53:01Z letouzey $ *)
 
 Require Export RelationClasses.
 

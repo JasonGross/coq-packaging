@@ -11,7 +11,8 @@ Rewriting tactics
   proofs that are dependent (use "simple subst" for preserving compatibility).
 - Added support for Leibniz-rewriting of dependent hypotheses.
 - Renamed "Morphism" into "Proper" and "respect" into "proper_prf"
-  (possible source of incompatibility).
+  (possible source of incompatibility). A partial fix is to define
+  "Notation Morphism R f := (Proper (R%signature) f)."
 - New tactic variants "rewrite* by" and "autorewrite*" that rewrite
   respectively the first and all matches whose side-conditions are
   solved.
@@ -126,7 +127,8 @@ Module system
 - A functor application can be prefixed by a "!" to make it ignore any
   "Inline" annotation in the type of its argument(s) (for examples of
   use of the new features, see libraries Structures and Numbers).
-- Coercions are now active only when modules are imported.
+- Coercions are now active only when modules are imported (use "Set Automatic
+  Coercions Import" to get the behavior of the previous versions of Coq).
 
 Extraction
 

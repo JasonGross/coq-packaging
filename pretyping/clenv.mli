@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: clenv.mli 13332 2010-07-26 22:12:43Z msozeau $ i*)
 
 (*i*)
 open Util
@@ -110,6 +110,9 @@ val clenv_unify_meta_types : ?flags:unify_flags -> clausenv -> clausenv
 (* use all of them if None *)
 val make_clenv_binding_apply :
   evar_info sigma -> int option -> constr * constr -> constr bindings ->
+   clausenv
+val make_clenv_binding_env_apply :
+  env -> evar_map -> int option -> constr * constr -> constr bindings ->
    clausenv
 val make_clenv_binding :
   evar_info sigma -> constr * constr -> constr bindings -> clausenv

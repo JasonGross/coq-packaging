@@ -10,7 +10,7 @@
  * on May-June 2006 for implementation of abstraction of pretty-printing of objects.
  *)
 
-(* $Id$ *)
+(* $Id: prettyp.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 open Pp
 open Util

@@ -10,7 +10,7 @@
 (* Add pr_o.cmo to circumvent a useless-warning bug when preprocessed with
  * ast-based camlp4 *)
 
-(*i $Id$ i*)
+(*i $Id: lexer.ml4 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 open Pp
 open Util

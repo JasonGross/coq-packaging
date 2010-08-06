@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: syntax_def.ml 13329 2010-07-26 11:05:39Z herbelin $ *)
 
 open Util
 open Pp
@@ -76,8 +76,8 @@ type syndef_interpretation = (identifier * subscopes) list * aconstr
 
 (* Coercions to the general format of notation that also supports
    variables bound to list of expressions *)
-let in_pat (ids,ac) = ((ids,[]),ac)
-let out_pat ((ids,idsl),ac) = assert (idsl=[]); (ids,ac)
+let in_pat (ids,ac) = (List.map (fun (id,sc) -> (id,(sc,NtnTypeConstr))) ids,ac)
+let out_pat (ids,ac) = (List.map (fun (id,(sc,typ)) -> (id,sc)) ids,ac)
 
 let declare_syntactic_definition local id onlyparse pat =
   let _ = add_leaf id (in_syntax_constant (local,in_pat pat,onlyparse)) in ()

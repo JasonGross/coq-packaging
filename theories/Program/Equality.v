@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Equality.v 13359 2010-07-30 08:46:55Z herbelin $ i*)
 
 (** Tactics related to (dependent) equality and proof irrelevance. *)
 
@@ -14,6 +14,9 @@ Require Export ProofIrrelevance.
 Require Export JMeq.
 
 Require Import Coq.Program.Tactics.
+
+Local Notation "'Π'  x .. y , P" := (forall x, .. (forall y, P) ..)
+  (at level 200, x binder, y binder, right associativity) : type_scope.
 
 Ltac is_ground_goal := 
   match goal with

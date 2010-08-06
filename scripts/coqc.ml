@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: coqc.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 (* Afin de rendre Coq plus portable, ce programme Caml remplace le script
    coqc.

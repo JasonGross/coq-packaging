@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: flags.mli 13358 2010-07-29 23:10:17Z herbelin $ i*)
 
 (* Global options of the system. *)
 
@@ -26,8 +26,6 @@ val xml_export : bool ref
 val dont_load_proofs : bool ref
 
 val raw_print : bool ref
-
-val unicode_syntax : bool ref
 
 type compat_version = V8_2
 val compat_version : compat_version option ref

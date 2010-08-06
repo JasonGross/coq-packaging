@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: ground.mli 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 val ground_tac:     Tacmach.tactic ->
   (Proof_type.goal Tacmach.sigma -> Sequent.t) -> Tacmach.tactic

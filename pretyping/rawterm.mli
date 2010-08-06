@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: rawterm.mli 13329 2010-07-26 11:05:39Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -37,8 +37,6 @@ val cases_pattern_loc : cases_pattern -> loc
 type patvar = identifier
 
 type rawsort = RProp of Term.contents | RType of Univ.universe option
-
-type binder_kind = BProd | BLambda | BLetIn
 
 type binding_kind = Lib.binding_kind = Explicit | Implicit
 
@@ -110,6 +108,8 @@ val map_rawconstr_with_binders_loc : loc ->
   ('a -> rawconstr -> rawconstr) -> 'a -> rawconstr -> rawconstr
 i*)
 
+val fold_rawconstr : ('a -> rawconstr -> 'a) -> 'a -> rawconstr -> 'a
+val iter_rawconstr : (rawconstr -> unit) -> rawconstr -> unit
 val occur_rawconstr : identifier -> rawconstr -> bool
 val free_rawvars : rawconstr -> identifier list
 val loc_of_rawconstr : rawconstr -> loc

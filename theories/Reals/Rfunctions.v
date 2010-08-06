@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Rfunctions.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (*i Some properties about pow and sum have been made with John Harrison i*)
 (*i Some Lemmas (about pow and powerRZ) have been done by Laurent Thery i*)

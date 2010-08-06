@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: FSetAVL.v 12641 2010-01-07 15:32:52Z letouzey $ *)
 
 (** * FSetAVL : Implementation of FSetInterface via AVL trees *)
 

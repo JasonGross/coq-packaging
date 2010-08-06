@@ -8,7 +8,7 @@
 (*          Pierre Letouzey, Jerome Vouillon, PPS, Paris 7, 2008        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: NaryFunctions.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 Local Open Scope type_scope.
 

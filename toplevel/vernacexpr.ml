@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: vernacexpr.ml 13332 2010-07-26 22:12:43Z msozeau $ i*)
 
 open Util
 open Names
@@ -197,6 +197,7 @@ type proof_end =
 
 type scheme =
   | InductionScheme of bool * reference or_by_notation * sort_expr
+  | CaseScheme of bool * reference or_by_notation * sort_expr
   | EqualityScheme of reference or_by_notation
 
 type vernac_expr =

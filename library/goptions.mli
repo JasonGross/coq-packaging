@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: goptions.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (* This module manages customization parameters at the vernacular level     *)
 

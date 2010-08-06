@@ -13,7 +13,7 @@
    Institution: LRI, CNRS UMR 8623 - University Paris Sud
 *)
 
-(* $Id$ *)
+(* $Id: Morphisms.v 13359 2010-07-30 08:46:55Z herbelin $ *)
 
 Require Import Coq.Program.Basics.
 Require Import Coq.Program.Tactics.
@@ -22,6 +22,12 @@ Require Export Coq.Classes.RelationClasses.
 
 Generalizable All Variables.
 Local Obligation Tactic := simpl_relation.
+
+Local Notation "'λ'  x .. y , t" := (fun x => .. (fun y => t) ..)
+  (at level 200, x binder, y binder, right associativity).
+
+Local Notation "'Π'  x .. y , P" := (forall x, .. (forall y, P) ..)
+  (at level 200, x binder, y binder, right associativity) : type_scope.
 
 (** * Morphisms.
 

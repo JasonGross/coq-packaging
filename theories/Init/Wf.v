@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Wf.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** * This module proves the validity of
     - well-founded recursion (also known as course of values)

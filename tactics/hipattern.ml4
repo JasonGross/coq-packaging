@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma parsing/q_constr.cmo" i*)
 
-(* $Id$ *)
+(* $Id: hipattern.ml4 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 open Pp
 open Util

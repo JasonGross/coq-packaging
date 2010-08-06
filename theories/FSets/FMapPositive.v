@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: FMapPositive.v 13297 2010-07-19 23:32:42Z letouzey $ *)
 
 (** * FMapPositive : an implementation of FMapInterface for [positive] keys. *)
 

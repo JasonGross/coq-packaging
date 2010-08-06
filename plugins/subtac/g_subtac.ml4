@@ -14,7 +14,7 @@
   Syntax for the subtac terms and types.
   Elaborated from correctness/psyntax.ml4 by Jean-Christophe Filliâtre *)
 
-(* $Id$ *)
+(* $Id: g_subtac.ml4 13332 2010-07-26 22:12:43Z msozeau $ *)
 
 
 open Flags
@@ -53,7 +53,7 @@ open Constr
 let sigref = mkRefC (Qualid (dummy_loc, Libnames.qualid_of_string "Coq.Init.Specif.sig"))
 
 GEXTEND Gram
-  GLOBAL: subtac_gallina_loc typeclass_constraint Constr.binder subtac_withtac;
+  GLOBAL: subtac_gallina_loc typeclass_constraint subtac_withtac;
 
   subtac_gallina_loc:
     [ [ g = Vernac.gallina -> loc, g
@@ -65,19 +65,10 @@ GEXTEND Gram
       | -> None ] ]
   ;
 
-  Constr.binder_let:
+  Constr.closed_binder:
     [[ "("; id=Prim.name; ":"; t=Constr.lconstr; "|"; c=Constr.lconstr; ")" ->
 	  let typ = mkAppC (sigref, [mkLambdaC ([id], default_binder_kind, t, c)]) in
           [LocalRawAssum ([id], default_binder_kind, typ)]
-    ] ];
-
-  Constr.binder:
-    [ [ "("; id=Prim.name; ":"; c=Constr.lconstr; "|"; p=Constr.lconstr; ")" ->
-          ([id],default_binder_kind, mkAppC (sigref, [mkLambdaC ([id], default_binder_kind, c, p)]))
-      | "("; id=Prim.name; ":"; c=Constr.lconstr; ")" ->
-          ([id],default_binder_kind, c)
-      | "("; id=Prim.name; lid=LIST1 Prim.name; ":"; c=Constr.lconstr; ")" ->
-          (id::lid,default_binder_kind, c)
     ] ];
 
   END
@@ -161,9 +152,11 @@ VERNAC COMMAND EXTEND Subtac_Set_Solver
       (Tacinterp.glob_tactic t) ]
 END
 
+open Pp
+
 VERNAC COMMAND EXTEND Subtac_Show_Solver
 | [ "Show" "Obligation" "Tactic" ] -> [
-    Pp.msgnl (Pptactic.pr_glob_tactic (Global.env ()) (Subtac_obligations.default_tactic_expr ())) ]
+    msgnl (str"Program obligation tactic is " ++ Subtac_obligations.print_default_tactic ()) ]
 END
 
 VERNAC COMMAND EXTEND Subtac_Show_Obligations

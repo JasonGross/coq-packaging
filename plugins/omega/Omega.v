@@ -13,7 +13,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* $Id$ *)
+(* $Id: Omega.v 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 (* We do not require [ZArith] anymore, but only what's necessary for Omega *)
 Require Export ZArith_base.

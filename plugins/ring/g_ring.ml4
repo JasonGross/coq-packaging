@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id$ *)
+(* $Id: g_ring.ml4 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 open Quote
 open Ring

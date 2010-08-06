@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo pa_macro.cmo" i*)
 
-(*i $Id$ i*)
+(*i $Id: pcoq.ml4 13329 2010-07-26 11:05:39Z herbelin $ i*)
 
 open Pp
 open Util
@@ -313,10 +313,11 @@ module Constr =
     let pattern = Gram.Entry.create "constr:pattern"
     let constr_pattern = gec_constr "constr_pattern"
     let lconstr_pattern = gec_constr "lconstr_pattern"
+    let closed_binder = Gram.Entry.create "constr:closed_binder"
     let binder = Gram.Entry.create "constr:binder"
-    let binder_let = Gram.Entry.create "constr:binder_let"
-    let binders_let = Gram.Entry.create "constr:binders_let"
-    let binders_let_fixannot = Gram.Entry.create "constr:binders_let_fixannot"
+    let binders = Gram.Entry.create "constr:binders"
+    let open_binders = Gram.Entry.create "constr:open_binders"
+    let binders_fixannot = Gram.Entry.create "constr:binders_fixannot"
     let typeclass_constraint = Gram.Entry.create "constr:typeclass_constraint"
     let record_declaration = Gram.Entry.create "constr:record_declaration"
     let appl_arg = Gram.Entry.create "constr:appl_arg"
@@ -563,10 +564,15 @@ let compute_entry allow_create adjust forpat = function
        else weaken_entry Constr.operconstr),
       adjust (n,q), false
   | ETName -> weaken_entry Prim.name, None, false
+  | ETBinder true -> anomaly "Should occur only as part of BinderList"
+  | ETBinder false -> weaken_entry Constr.binder, None, false
+  | ETBinderList (true,tkl) ->
+      assert (tkl=[]); weaken_entry Constr.open_binders, None, false
+  | ETBinderList (false,_) -> anomaly "List of entries cannot be registered."
   | ETBigint -> weaken_entry Prim.bigint, None, false
   | ETReference -> weaken_entry Constr.global, None, false
   | ETPattern -> weaken_entry Constr.pattern, None, false
-  | ETConstrList _ -> error "List of entries cannot be registered."
+  | ETConstrList _ -> anomaly "List of entries cannot be registered."
   | ETOther (u,n) ->
       let u = get_univ u in
       let e =
@@ -606,6 +612,12 @@ let is_binder_level from e =
       ETConstr(NumLevel 200,(BorderProd(Right,_)|InternalProd)) -> true
     | _ -> false
 
+let make_sep_rules tkl =
+  Gramext.srules
+    [List.map (fun x -> Gramext.Stoken x) tkl,
+     List.fold_right (fun _ v -> Gramext.action (fun _ -> v)) tkl
+       (Gramext.action (fun loc -> ()))]
+
 let rec symbol_of_constr_prod_entry_key assoc from forpat typ =
   if is_binder_level from typ then
     if forpat then
@@ -621,10 +633,14 @@ let rec symbol_of_constr_prod_entry_key assoc from forpat typ =
     | ETConstrList (typ',tkl) ->
         Gramext.Slist1sep
           (symbol_of_constr_prod_entry_key assoc from forpat (ETConstr typ'),
-           Gramext.srules
-             [List.map (fun x -> Gramext.Stoken x) tkl,
-              List.fold_right (fun _ v -> Gramext.action (fun _ -> v)) tkl
-                (Gramext.action (fun loc -> ()))])
+	   make_sep_rules tkl)
+    | ETBinderList (false,[]) ->
+        Gramext.Slist1
+	  (symbol_of_constr_prod_entry_key assoc from forpat (ETBinder false))
+    | ETBinderList (false,tkl) ->
+        Gramext.Slist1sep
+	  (symbol_of_constr_prod_entry_key assoc from forpat (ETBinder false),
+	   make_sep_rules tkl)
     | _ ->
     match interp_constr_prod_entry_key assoc from forpat typ with
       | (eobj,None,_) -> Gramext.Snterm (Gram.Entry.obj eobj)

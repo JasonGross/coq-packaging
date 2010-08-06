@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id$ *)
+(* $Id: g_fourier.ml4 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 open FourierR
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: Int.v 12363 2009-09-28 15:04:07Z letouzey $ *)
 
 (** * An light axiomatization of integers (used in FSetAVL). *)
 

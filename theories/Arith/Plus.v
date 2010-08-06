@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Plus.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** Properties of addition. [add] is defined in [Init/Peano.v] as:
 <<

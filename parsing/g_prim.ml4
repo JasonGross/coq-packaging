@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(*i $Id$ i*)
+(*i $Id: g_prim.ml4 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 open Pcoq
 open Names

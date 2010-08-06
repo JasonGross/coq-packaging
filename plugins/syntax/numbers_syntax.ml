@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: numbers_syntax.ml 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (* digit-based syntax for int31, bigN bigZ and bigQ *)
 

@@ -9,7 +9,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
 
-(* $Id$ *)
+(* $Id: g_decl_mode.ml4 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 
 open Decl_expr

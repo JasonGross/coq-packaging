@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Tactics.v 13332 2010-07-26 22:12:43Z msozeau $ i*)
 
 (** This module implements various tactics used to simplify the goals produced by Program,
    which are also generally useful. *)
@@ -101,7 +101,7 @@ Ltac revert_last :=
     [ H : _ |- _ ] => revert H
   end.
 
-(** Reapeateadly reverse the last hypothesis, putting everything in the goal. *)
+(** Repeatedly reverse the last hypothesis, putting everything in the goal. *)
 
 Ltac reverse := repeat revert_last.
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Logic_Type.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** This module defines type constructors for types in [Type]
     ([Datatypes.v] and [Logic.v] defined them for types in [Set]) *)

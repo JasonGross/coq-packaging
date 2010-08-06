@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: lemmas.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 (* Created by Hugo Herbelin from contents related to lemma proofs in
    file command.ml, Aug 2009 *)

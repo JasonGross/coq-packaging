@@ -11,7 +11,7 @@
  * Institution: LRI, CNRS UMR 8623 - Université Paris Sud
  *              91405 Orsay, France *)
 
-(* $Id$ *)
+(* $Id: OrdersAlt.v 12754 2010-02-12 16:21:48Z letouzey $ *)
 
 Require Import OrderedType Orders.
 Set Implicit Arguments.
