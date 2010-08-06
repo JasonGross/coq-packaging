@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: usage.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (*s Prints the version number on the standard output and exits (with 0). *)
 

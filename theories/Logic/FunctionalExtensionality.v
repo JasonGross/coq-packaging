@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: FunctionalExtensionality.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** This module states the axiom of (dependent) functional extensionality and (dependent) eta-expansion.
    It introduces a tactic [extensionality] to apply the axiom of extensionality to an equality goal. *)

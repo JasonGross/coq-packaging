@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: string_syntax.ml 12337 2009-09-17 15:58:14Z glondu $ i*)
 
 open Pp
 open Util

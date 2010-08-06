@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: vernacentries.ml 13329 2010-07-26 11:05:39Z herbelin $ i*)
 
 (* Concrete syntax of the mathematical vernacular MV V2.6 *)
 
@@ -626,7 +626,6 @@ let vernac_instance abst glob sup inst props pri =
   ignore(Classes.new_instance ~abstract:abst ~global:glob sup inst props pri)
 
 let vernac_context l =
-  List.iter (fun x -> Dumpglob.dump_local_binder x true "var") l;
   Classes.context l
 
 let vernac_declare_instance glob id =
@@ -1079,7 +1078,7 @@ let vernac_global_check c =
 
 let vernac_print = function
   | PrintTables -> print_tables ()
-  | PrintFullContext -> msg (print_full_context_typ ())
+  | PrintFullContext-> msg (print_full_context_typ ())
   | PrintSectionContext qid -> msg (print_sec_context_typ qid)
   | PrintInspect n -> msg (inspect n)
   | PrintGrammar ent -> Metasyntax.print_grammar ent

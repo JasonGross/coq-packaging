@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: output.ml 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 open Cdglobals
 open Index

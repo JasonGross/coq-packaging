@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id$ *)
+(* $Id: cctac.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 (* This file is the interface between the c-c algorithm and Coq *)
 

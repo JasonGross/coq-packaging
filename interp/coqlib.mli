@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: coqlib.mli 13332 2010-07-26 22:12:43Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -14,6 +14,7 @@ open Libnames
 open Nametab
 open Term
 open Pattern
+open Util
 (*i*)
 
 (*s This module collects the global references, constructions and
@@ -86,9 +87,8 @@ val glob_jmeq : global_reference
    at compile time. Therefore, we can only provide methods to build
    them at runtime. This is the purpose of the [constr delayed] and
    [constr_pattern delayed] types. Objects of this time needs to be
-   applied to [()] to get the actual constr or pattern at runtime *)
-
-type 'a delayed = unit -> 'a
+   forced with [delayed_force] to get the actual constr or pattern 
+   at runtime. *)
 
 type coq_bool_data = {
   andb : constr;

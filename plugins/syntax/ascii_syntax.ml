@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: ascii_syntax.ml 12406 2009-10-21 15:12:52Z soubiran $ i*)
 
 open Pp
 open Util

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Minus.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** [minus] (difference between two natural numbers) is defined in [Init/Peano.v] as:
 <<

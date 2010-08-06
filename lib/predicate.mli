@@ -1,5 +1,5 @@
 
-(*i $Id$ i*)
+(*i $Id: predicate.mli 6621 2005-01-21 17:24:37Z herbelin $ i*)
 
 (* Module [Pred]: sets over infinite ordered types with complement. *)
 

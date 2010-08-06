@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: Rpow_def.v 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 Require Import Rdefinitions.
 

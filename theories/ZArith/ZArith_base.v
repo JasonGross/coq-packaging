@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: ZArith_base.v 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 (** Library for manipulating integers based on binary encoding.
     These are the basic modules, required by [Omega] and [Ring] for instance.

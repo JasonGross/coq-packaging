@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: FMapFacts.v 12459 2009-11-02 18:51:43Z letouzey $ *)
 
 (** * Finite maps library *)
 

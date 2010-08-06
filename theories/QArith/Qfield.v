@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Qfield.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 Require Export Field.
 Require Export QArith_base.

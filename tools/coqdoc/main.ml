@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: main.ml 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (* Modified by Lionel Elie Mamane <lionel@mamane.lu> on 9 & 10 Mar 2004:
  *  - handling of absolute filenames (function coq_module)

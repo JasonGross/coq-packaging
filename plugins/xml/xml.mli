@@ -12,7 +12,7 @@
 (*                       http://helm.cs.unibo.it                        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: xml.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (* Tokens for XML cdata, empty elements and not-empty elements           *)
 (* Usage:                                                                *)

@@ -15,7 +15,7 @@
    Institution: LRI, CNRS UMR 8623 - University Paris Sud
 *)
 
-(* $Id$ *)
+(* $Id: RelationClasses.v 13344 2010-07-28 15:04:36Z msozeau $ *)
 
 Require Export Coq.Classes.Init.
 Require Import Coq.Program.Basics.
@@ -76,7 +76,7 @@ Hint Extern 4 => solve_relation : relations.
 
 Generalizable Variables A B C D R S T U l eqA eqB eqC eqD.
 
-Program Lemma flip_Reflexive `(Reflexive A R) : Reflexive (flip R).
+Lemma flip_Reflexive `{Reflexive A R} : Reflexive (flip R).
 Proof. tauto. Qed.
 
 Hint Extern 3 (Reflexive (flip _)) => apply flip_Reflexive : typeclass_instances.

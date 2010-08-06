@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: rtree.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (* Type of regular tree with nodes labelled by values of type 'a *)
 (* The implementation uses de Bruijn indices, so binding capture

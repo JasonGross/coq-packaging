@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: summary.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (* This module registers the declaration of global tables, which will be kept
    in synchronization during the various backtracks of the system. *)

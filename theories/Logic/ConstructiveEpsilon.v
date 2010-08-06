@@ -6,9 +6,9 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: ConstructiveEpsilon.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
-(*i $Id: ConstructiveEpsilon.v 12112 2009-04-28 15:47:34Z herbelin $ i*)
+(*i $Id: ConstructiveEpsilon.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** This module proves the constructive description schema, which
 infers the sigma-existence (i.e., [Set]-existence) of a witness to a

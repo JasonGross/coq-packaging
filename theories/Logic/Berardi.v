@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Berardi.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** This file formalizes Berardi's paradox which says that in
    the calculus of constructions, excluded middle (EM) and axiom of

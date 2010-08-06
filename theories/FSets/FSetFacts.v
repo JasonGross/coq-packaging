@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: FSetFacts.v 12461 2009-11-03 08:24:06Z letouzey $ *)
 
 (** * Finite sets library *)
 

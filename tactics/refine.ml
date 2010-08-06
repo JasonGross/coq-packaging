@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: refine.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 (* JCF -- 6 janvier 1998  EXPERIMENTAL *)
 

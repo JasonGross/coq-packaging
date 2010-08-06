@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: ppextend.mli 13329 2010-07-26 11:05:39Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -43,6 +43,7 @@ val ppcmd_of_cut : ppcut -> std_ppcmds
 type unparsing =
   | UnpMetaVar of int * parenRelation
   | UnpListMetaVar of int * parenRelation * unparsing list
+  | UnpBinderListMetaVar of int * bool * unparsing list
   | UnpTerminal of string
   | UnpBox of ppbox * unparsing list
   | UnpCut of ppcut

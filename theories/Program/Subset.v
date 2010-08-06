@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id$ *)
+(* $Id: Subset.v 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 (** Tactics related to subsets and proof irrelevance. *)
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: ppconstr.ml 13358 2010-07-29 23:10:17Z herbelin $ *)
 
 (*i*)
 open Util
@@ -64,8 +64,8 @@ let prec_of_prim_token = function
 
 open Notation
 
-let print_hunks n pr (env,envlist) unp =
-  let env = ref env and envlist = ref envlist in
+let print_hunks n pr pr_binders (terms,termlists,binders) unp =
+  let env = ref terms and envlist = ref termlists and bll = ref binders in
   let pop r = let a = List.hd !r in r := List.tl !r; a in
   let rec aux = function
   | [] -> mt ()
@@ -76,6 +76,8 @@ let print_hunks n pr (env,envlist) unp =
       let pp1 = prlist_with_sep (fun () -> aux sl) (pr (n,prec)) cl in
       let pp2 = aux l in
       pp1 ++ pp2
+  | UnpBinderListMetaVar (_,isopen,sl) :: l ->
+      let cl = pop bll in pr_binders (fun () -> aux sl) isopen cl ++ aux l
   | UnpTerminal s :: l -> str s ++ aux l
   | UnpBox (b,sub) :: l ->
       (* Keep order: side-effects *)
@@ -85,9 +87,9 @@ let print_hunks n pr (env,envlist) unp =
   | UnpCut cut :: l -> ppcmd_of_cut cut ++ aux l in
   aux unp
 
-let pr_notation pr s env =
+let pr_notation pr pr_binders s env =
   let unpl, level = find_notation_printing_rule s in
-  print_hunks level pr env unpl, level
+  print_hunks level pr pr_binders env unpl, level
 
 let pr_delimiters key strm =
   strm ++ str ("%"^key)
@@ -191,7 +193,8 @@ let rec pr_patt sep inh p =
       hov 0 (prlist_with_sep pr_bar (pr_patt spc (lpator,L)) pl), lpator
   | CPatNotation (_,"( _ )",([p],[])) ->
       pr_patt (fun()->str"(") (max_int,E) p ++ str")", latom
-  | CPatNotation (_,s,env) -> pr_notation (pr_patt mt) s env
+  | CPatNotation (_,s,(l,ll)) ->
+      pr_notation (pr_patt mt) (fun _ _ _ -> mt()) s (l,ll,[])
   | CPatPrim (_,p) -> pr_prim_token p, latom
   | CPatDelimiters (_,k,p) -> pr_delimiters k (pr_patt mt lsimple p), 1
   in
@@ -254,17 +257,21 @@ let pr_binder_among_many pr_c = function
       hov 1 (pr_lname na ++ pr_opt_type pr_c topt ++
          str":=" ++ cut() ++ pr_c c)
 
-let pr_undelimited_binders pr_c =
-  prlist_with_sep spc (pr_binder_among_many pr_c)
+let pr_undelimited_binders sep pr_c =
+  prlist_with_sep sep (pr_binder_among_many pr_c)
 
-let pr_delimited_binders kw pr_c bl =
+let pr_delimited_binders kw sep pr_c bl =
   let n = begin_of_binders bl in
   match bl with
   | [LocalRawAssum (nal,k,t)] ->
       pr_com_at n ++ kw() ++ pr_binder false pr_c (nal,k,t)
   | LocalRawAssum _ :: _ as bdl ->
-      pr_com_at n ++ kw() ++ pr_undelimited_binders pr_c bdl
+      pr_com_at n ++ kw() ++ pr_undelimited_binders sep pr_c bdl
   | _ -> assert false
+
+let pr_binders_gen pr_c sep is_open =
+  if is_open then pr_delimited_binders mt sep pr_c
+  else pr_undelimited_binders sep pr_c
 
 let rec extract_prod_binders = function
 (*  | CLetIn (loc,na,b,c) as x ->
@@ -399,7 +406,7 @@ let pr_recursive_decl pr pr_dangling dangling_with_for id bl annot t c =
   let pr_body =
     if dangling_with_for then pr_dangling else pr in
   pr_id id ++ str" " ++
-  hov 0 (pr_undelimited_binders (pr ltop) bl ++ annot) ++
+  hov 0 (pr_undelimited_binders spc (pr ltop) bl ++ annot) ++
   pr_opt_type_spc pr t ++ str " :=" ++
   pr_sep_com (fun () -> brk(1,2)) (pr_body ltop) c
 
@@ -446,7 +453,7 @@ let tm_clash = function
 
 let pr_asin pr (na,indnalopt) =
   (match na with (* Decision of printing "_" or not moved to constrextern.ml *)
-    | Some na -> spc () ++ str "as " ++  pr_name na
+    | Some na -> spc () ++ str "as " ++  pr_lname na
     | None -> mt ()) ++
   (match indnalopt with
     | None -> mt ()
@@ -465,7 +472,7 @@ let pr_return_type pr po = pr_case_type pr po
 
 let pr_simple_return_type pr na po =
   (match na with
-    | Some (Name id) ->
+    | Some (_,Name id) ->
         spc () ++ str "as " ++  pr_id id
     | _ -> mt ()) ++
   pr_case_type pr po
@@ -483,15 +490,11 @@ let pr_app pr a l =
     pr (lapp,L) a  ++
     prlist (fun a -> spc () ++ pr_expl_args pr a) l)
 
-let pr_forall () =
-  if !Flags.unicode_syntax then str"Π" ++ spc ()
-  else str"forall" ++ spc ()
+let pr_forall () = str"forall" ++ spc ()
 
-let pr_fun () =
-  if !Flags.unicode_syntax then str"λ" ++ spc ()
-  else str"fun" ++ spc ()
+let pr_fun () = str"fun" ++ spc ()
 
-let pr_fun_sep = lazy (if !Flags.unicode_syntax then str "," else str " =>")
+let pr_fun_sep = str " =>"
 
 
 let pr_dangling_with_for sep pr inherited a =
@@ -519,16 +522,16 @@ let pr pr sep inherited a =
   | CProdN _ ->
       let (bl,a) = extract_prod_binders a in
       hov 0 (
-	hov 2 (pr_delimited_binders pr_forall
+	hov 2 (pr_delimited_binders pr_forall spc
                  (pr mt ltop) bl) ++
         str "," ++ pr spc ltop a),
       lprod
   | CLambdaN _ ->
       let (bl,a) = extract_lam_binders a in
       hov 0 (
-        hov 2 (pr_delimited_binders pr_fun
+        hov 2 (pr_delimited_binders pr_fun spc
                 (pr mt ltop) bl) ++
-	  Lazy.force pr_fun_sep ++ pr spc ltop a),
+	       pr_fun_sep ++ pr spc ltop a),
       llambda
   | CLetIn (_,(_,Name x),(CFix(_,(_,x'),[_])|CCoFix(_,(_,x'),[_]) as fx), b)
       when x=x' ->
@@ -599,7 +602,7 @@ let pr pr sep inherited a =
       hv 0 (
         str "let " ++
 	hov 0 (str "(" ++
-               prlist_with_sep sep_v pr_name nal ++
+               prlist_with_sep sep_v pr_lname nal ++
                str ")" ++
 	       pr_simple_return_type (pr mt) na po ++ str " :=" ++
                pr spc ltop c ++ str " in") ++
@@ -626,9 +629,10 @@ let pr pr sep inherited a =
   | CCast (_,a,CastCoerce) ->
       hv 0 (pr mt (lcast,L) a ++ cut () ++ str ":>"),
       lcast
-  | CNotation (_,"( _ )",([t],[])) ->
+  | CNotation (_,"( _ )",([t],[],[])) ->
       pr (fun()->str"(") (max_int,L) t ++ str")", latom
-  | CNotation (_,s,env) -> pr_notation (pr mt) s env
+  | CNotation (_,s,env) ->
+      pr_notation (pr mt) (pr_binders_gen (pr mt ltop)) s env
   | CGeneralization (_,bk,ak,c) -> pr_generalization bk ak (pr mt lsimple c), latom
   | CPrim (_,p) -> pr_prim_token p, prec_of_prim_token p
   | CDelimiters (_,sc,a) -> pr_delimiters sc (pr mt lsimple a), 1
@@ -700,7 +704,7 @@ let pr_lconstr_pattern_expr c = !term_pr.pr_lconstr_pattern_expr c
 
 let pr_cases_pattern_expr = pr_patt ltop
 
-let pr_binders = pr_undelimited_binders (pr ltop)
+let pr_binders = pr_undelimited_binders spc (pr ltop)
 
 let pr_with_occurrences pr occs =
   match occs with

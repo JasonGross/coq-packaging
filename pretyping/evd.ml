@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: evd.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
 
 open Pp
 open Util
@@ -498,7 +498,8 @@ let create_evar_defs sigma = { sigma with
   conv_pbs=[]; last_mods=ExistentialSet.empty; metas=Metamap.empty }
 (* spiwack: tentatively deprecated *)
 let create_goal_evar_defs sigma = { sigma with
-   conv_pbs=[]; last_mods=ExistentialSet.empty; metas=Metamap.empty }
+   (* conv_pbs=[]; last_mods=ExistentialSet.empty; metas=Metamap.empty } *)
+  metas=Metamap.empty } 
 let empty =  {
   evars=EvarMap.empty;
   conv_pbs=[];

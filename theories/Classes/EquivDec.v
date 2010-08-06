@@ -12,7 +12,7 @@
    Institution: LRI, CNRS UMR 8623 - University Paris Sud
 *)
 
-(* $Id$ *)
+(* $Id: EquivDec.v 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 (** Export notations. *)
 

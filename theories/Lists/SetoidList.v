@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: SetoidList.v 12919 2010-04-10 16:30:44Z herbelin $ *)
 
 Require Export List.
 Require Export Sorting.

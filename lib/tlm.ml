@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: tlm.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 type ('a,'b) t = Node of 'b Gset.t * ('a, ('a,'b) t) Gmap.t
 

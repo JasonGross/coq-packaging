@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: util.mli 13357 2010-07-29 22:59:55Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -52,6 +52,7 @@ val invalid_arg_loc : loc * string -> 'a
 val join_loc : loc -> loc -> loc
 val located_fold_left : ('a -> 'b -> 'a) -> 'a -> 'b located -> 'a
 val located_iter2 : ('a -> 'b -> unit) -> 'a located -> 'b located -> unit
+val down_located : ('a -> 'b) -> 'a located -> 'b
 
 (* Like [Exc_located], but specifies the outermost file read, the
    input buffer associated to the location of the error (or the module name
@@ -63,6 +64,11 @@ exception Error_in_file of string * (bool * string * loc) * exn
 
 val on_fst : ('a -> 'b) -> 'a * 'c -> 'b * 'c
 val on_snd : ('a -> 'b) -> 'c * 'a -> 'c * 'b
+
+(* Going down pairs *)
+
+val down_fst : ('a -> 'b) -> 'a * 'c -> 'b
+val down_snd : ('a -> 'b) -> 'c * 'a -> 'b
 
 (* Mapping under triple *)
 
@@ -170,6 +176,7 @@ val list_merge_uniq : ('a -> 'a -> int) -> 'a list -> 'a list -> 'a list
 val list_subset : 'a list -> 'a list -> bool
 val list_split_at : int -> 'a list -> 'a list*'a list
 val list_split_when : ('a -> bool) -> 'a list -> 'a list * 'a list
+val list_split_by : ('a -> bool) -> 'a list -> 'a list * 'a list
 val list_split3 : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
 val list_partition_by : ('a -> 'a -> bool) -> 'a list -> 'a list list
 val list_firstn : int -> 'a list -> 'a list
@@ -202,7 +209,9 @@ val list_cartesian : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 val list_cartesians : ('a -> 'b -> 'b) -> 'b -> 'a list list -> 'b list
 (* list_combinations [[a;b];[c;d]] returns [[a;c];[a;d];[b;c];[b;d]] *)
 val list_combinations : 'a list list -> 'a list list
-(* Keep only those products that do not return None *)
+val list_combine3 : 'a list -> 'b list -> 'c list -> ('a * 'b * 'c) list
+
+(** Keep only those products that do not return None *)
 val list_cartesian_filter :
   ('a -> 'b -> 'c option) -> 'a list -> 'b list -> 'c list
 val list_cartesians_filter :
@@ -272,7 +281,13 @@ val iterate : ('a -> 'a) -> int -> 'a -> 'a
 val repeat : int -> ('a -> unit) -> 'a -> unit
 val iterate_for : int -> int -> (int -> 'a -> 'a) -> 'a -> 'a
 
-(*s Misc. *)
+(** {6 Delayed computations. } *)
+
+type 'a delayed = unit -> 'a
+
+val delayed_force : 'a delayed -> 'a
+
+(** {6 Misc. } *)
 
 type ('a,'b) union = Inl of 'a | Inr of 'b
 

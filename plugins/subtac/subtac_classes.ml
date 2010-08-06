@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: subtac_classes.ml 13328 2010-07-26 11:05:30Z herbelin $ i*)
 
 open Pretyping
 open Evd
@@ -30,11 +30,11 @@ open Util
 
 module SPretyping = Subtac_pretyping.Pretyping
 
-let interp_constr_evars_gen evdref env ?(impls=([],[])) kind c =
+let interp_constr_evars_gen evdref env ?(impls=[]) kind c =
   SPretyping.understand_tcc_evars evdref env kind
     (intern_gen (kind=IsType) ~impls ( !evdref) env c)
 
-let interp_casted_constr_evars evdref env ?(impls=([],[])) c typ =
+let interp_casted_constr_evars evdref env ?(impls=[]) c typ =
   interp_constr_evars_gen evdref env ~impls (OfType (Some typ)) c
 
 let interp_context_evars evdref env params =

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: option.ml 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** Module implementing basic combinators for OCaml option type.
    It tries follow closely the style of OCaml standard library.

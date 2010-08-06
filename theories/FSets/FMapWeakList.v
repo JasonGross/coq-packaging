@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: FMapWeakList.v 12458 2009-11-02 18:50:33Z letouzey $ *)
 
 (** * Finite map library *)
 

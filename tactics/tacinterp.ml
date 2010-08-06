@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: tacinterp.ml 13360 2010-07-30 08:47:08Z herbelin $ *)
 
 open Constrintern
 open Closure
@@ -2415,7 +2415,9 @@ and interp_atomic ist gl tac =
   | TacChange (Some op,c,cl) ->
       let sign,op = interp_typed_pattern ist env sigma op in
       h_change (Some op)
-        (pf_interp_constr ist (extend_gl_hyps gl sign) c)
+        (try pf_interp_constr ist (extend_gl_hyps gl sign) c
+	 with Not_found | Anomaly _ (* Hack *) ->
+	   errorlabstrm "" (strbrk "Failed to get enough information from the left-hand side to type the right-hand side."))
         (interp_clause ist gl cl)
 
   (* Equivalence relations *)

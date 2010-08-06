@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Classical_Pred_Set.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** This file is obsolete, use Classical_Pred_Type.v via Classical.v
 instead *)

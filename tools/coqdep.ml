@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: coqdep.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 open Printf
 open Coqdep_lexer

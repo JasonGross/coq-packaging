@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Diaconescu.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** Diaconescu showed that the Axiom of Choice entails Excluded-Middle
    in topoi [Diaconescu75]. Lacas and Werner adapted the proof to show

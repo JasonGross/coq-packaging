@@ -13,12 +13,15 @@
    Institution: LRI, CNRS UMR 8623 - University Paris Sud
 *)
 
-(* $Id$ *)
+(* $Id: SetoidDec.v 13359 2010-07-30 08:46:55Z herbelin $ *)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 
 Generalizable Variables A B .
+
+Local Notation "'λ'  x .. y , t" := (fun x => .. (fun y => t) ..)
+  (at level 200, x binder, y binder, right associativity).
 
 (** Export notations. *)
 

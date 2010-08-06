@@ -6,7 +6,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i $Id$ i*)
+(*i $Id: Zorder.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** Binary Integers (Pierre Crégut, CNET, Lannion, France) *)
 

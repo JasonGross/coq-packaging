@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id$ 
+# $Id: Makefile 13184 2010-06-23 09:19:15Z notin $ 
 
 
 # Makefile for Coq

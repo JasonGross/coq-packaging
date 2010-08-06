@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(* $Id$ *)
+(* $Id: g_tactic.ml4 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 open Pp
 open Pcoq

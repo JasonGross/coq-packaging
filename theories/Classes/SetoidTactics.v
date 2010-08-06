@@ -12,7 +12,7 @@
    Institution: LRI, CNRS UMR 8623 - University Paris Sud
 *)
 
-(* $Id$ *)
+(* $Id: SetoidTactics.v 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Export Coq.Classes.RelationClasses Coq.Relations.Relation_Definitions.

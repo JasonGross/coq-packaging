@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: RIneq.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (*********************************************************)
 (** * Basic lemmas for the classical real numbers        *)

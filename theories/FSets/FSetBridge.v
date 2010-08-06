@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
+(* $Id: FSetBridge.v 13253 2010-07-07 08:39:30Z letouzey $ *)
 
 (** * Finite sets library *)
 

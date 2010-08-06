@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Description.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** This file provides a constructive form of definite description; it
     allows to build functions from the proof of their existence in any

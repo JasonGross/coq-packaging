@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: coqmktop.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 (* coqmktop is a script to link Coq, analogous to ocamlmktop.
    The command line contains options specific to coqmktop, options for the

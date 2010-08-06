@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
 
-(* $Id$ *)
+(* $Id: argextend.ml4 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 open Genarg
 open Q_util

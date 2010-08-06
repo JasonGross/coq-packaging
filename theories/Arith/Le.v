@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: Le.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 (** Order on natural numbers. [le] is defined in [Init/Peano.v] as:
 <<

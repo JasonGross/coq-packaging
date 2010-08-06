@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$*)
+(* $Id: g_rtauto.ml4 13323 2010-07-24 15:57:30Z herbelin $*)
 
 (*i camlp4deps: "parsing/grammar.cma"  i*)
 

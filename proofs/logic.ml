@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: logic.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
 
 open Pp
 open Util
@@ -58,7 +58,7 @@ let rec catchable_exception = function
   (* unification errors *)
   | PretypeError(_,(CannotUnify _|CannotUnifyLocal _|CannotGeneralize _
 		   |NoOccurrenceFound _|CannotUnifyBindingType _|NotClean _
-		   |CannotFindWellTypedAbstraction _
+		   |CannotFindWellTypedAbstraction _|OccurCheck _
 		   |UnsolvableImplicit _)) -> true
   | Typeclasses_errors.TypeClassError
       (_, Typeclasses_errors.UnsatisfiableConstraints _) -> true

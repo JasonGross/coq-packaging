@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: OmegaLemmas.v 12337 2009-09-17 15:58:14Z glondu $ i*)
 
 Require Import ZArith_base.
 Open Local Scope Z_scope.

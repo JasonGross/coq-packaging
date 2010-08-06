@@ -8,7 +8,7 @@
 (*                      Evgeny Makarov, INRIA, 2007                     *)
 (************************************************************************)
 
-(*i $Id$ i*)
+(*i $Id: ZNatPairs.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
 
 Require Import NProperties. (* The most complete file for N *)
 Require Export ZProperties. (* The most complete file for Z *)

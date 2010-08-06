@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id$ *)
+(* $Id: ccproof.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 (* This file uses the (non-compressed) union-find structure to generate *)
 (* proof-trees that will be transformed into proof-terms in cctac.ml4   *)

@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id$ *)
+(* $Id: Program.v 13323 2010-07-24 15:57:30Z herbelin $ *)
 
 Require Export Coq.Program.Utils.
 Require Export Coq.Program.Wf.
