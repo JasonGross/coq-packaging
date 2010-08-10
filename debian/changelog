@@ -1,8 +1,8 @@
-coq (8.3~rc1+dfsg-1) UNRELEASED; urgency=low
+coq (8.3~rc1+dfsg-1) experimental; urgency=low
 
   * New upstream release candidate
 
- -- Stéphane Glondu <glondu@debian.org>  Fri, 06 Aug 2010 16:19:30 -0400
+ -- Stéphane Glondu <glondu@debian.org>  Tue, 10 Aug 2010 19:22:15 +0200
 
 coq (8.3~beta0+13323-1) experimental; urgency=low
 
