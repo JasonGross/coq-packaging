@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: printer.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: printer.ml 13390 2010-09-02 08:03:01Z herbelin $ *)
 
 open Pp
 open Util
@@ -263,7 +263,7 @@ let pr_predicate pr_elt (b, elts) =
     else
       if elts = [] then str"none" else pr_elts
 
-let pr_cpred p = pr_predicate pr_con (Cpred.elements p)
+let pr_cpred p = pr_predicate (pr_constant (Global.env())) (Cpred.elements p)
 let pr_idpred p = pr_predicate Nameops.pr_id (Idpred.elements p)
 
 let pr_transparent_state (ids, csts) =

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(*i $Id: util.mli 13357 2010-07-29 22:59:55Z herbelin $ i*)
+(*i $Id: util.mli 13492 2010-10-04 21:20:01Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -330,7 +330,9 @@ val prlist_with_sep :
 val prvect : ('a -> std_ppcmds) -> 'a array -> std_ppcmds
 val prvecti : (int -> 'a -> std_ppcmds) -> 'a array -> std_ppcmds
 val prvect_with_sep :
-   (unit -> std_ppcmds) -> ('b -> std_ppcmds) -> 'b array -> std_ppcmds
+   (unit -> std_ppcmds) -> ('a -> std_ppcmds) -> 'a array -> std_ppcmds
+val prvecti_with_sep :
+   (unit -> std_ppcmds) -> (int -> 'a -> std_ppcmds) -> 'a array -> std_ppcmds
 val pr_vertical_list : ('b -> std_ppcmds) -> 'b list -> std_ppcmds
 val pr_enum : ('a -> std_ppcmds) -> 'a list -> std_ppcmds
 val pr_located : ('a -> std_ppcmds) -> 'a located -> std_ppcmds

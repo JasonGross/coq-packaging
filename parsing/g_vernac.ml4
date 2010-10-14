@@ -9,7 +9,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(* $Id: g_vernac.ml4 13332 2010-07-26 22:12:43Z msozeau $ *)
+(* $Id: g_vernac.ml4 13492 2010-10-04 21:20:01Z herbelin $ *)
 
 
 open Pp
@@ -549,7 +549,7 @@ GEXTEND Gram
 
       (* Implicit *)
       | IDENT "Implicit"; IDENT "Arguments"; qid = smart_global;
-	   pos = OPT [ "["; l = LIST0 implicit_name; "]" ->
+	   pos = LIST0 [ "["; l = LIST0 implicit_name; "]" ->
 	     List.map (fun (id,b,f) -> (ExplByName id,b,f)) l ] ->
 	   VernacDeclareImplicits (use_section_locality (),qid,pos)
 

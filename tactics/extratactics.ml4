@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extratactics.ml4 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: extratactics.ml4 13434 2010-09-18 20:11:37Z msozeau $ *)
 
 open Pp
 open Pcoq
@@ -624,3 +624,8 @@ TACTIC EXTEND hget_evar
 END
 
 (**********************************************************************)
+
+TACTIC EXTEND constr_eq
+| [ "constr_eq" constr(x) constr(y) ] -> [ 
+    if eq_constr x y then tclIDTAC else tclFAIL 0 (str "Not equal") ]
+END

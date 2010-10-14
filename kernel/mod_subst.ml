@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: mod_subst.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: mod_subst.ml 13414 2010-09-14 13:28:15Z glondu $ *)
 
 open Pp
 open Util
@@ -638,7 +638,7 @@ let update_delta_resolver resolver1 resolver2 =
 		   Change_equiv_to_inline c ->
 		     Deltamap.add key (Inline (Some c)) res)
 	  | _ -> Deltamap.add key hint res
-      with not_found -> 
+      with Not_found ->
 	Deltamap.add key hint res
     in
       Deltamap.fold apply_res resolver1 empty_delta_resolver

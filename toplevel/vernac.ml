@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernac.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: vernac.ml 13488 2010-10-03 22:27:05Z herbelin $ *)
 
 (* Parsing of vernacular. *)
 
@@ -44,7 +44,7 @@ let raise_with_file file exc =
           ((b, f, loc), e)
       | Stdpp.Exc_located (loc, e) when loc <> dummy_loc ->
           ((false,file, loc), e)
-      | _ -> ((false,file,cmdloc), re)
+      | Stdpp.Exc_located (_, e) | e -> ((false,file,cmdloc), e)
   in
   raise (Error_in_file (file, inner, disable_drop inex))
 
@@ -198,7 +198,10 @@ let rec vernac_com interpfun (loc,com) =
 	  with e -> stop(); raise e
 	end
 
-    | v -> if not !just_parsing then interpfun v
+    | v ->
+        if not !just_parsing then
+          States.with_heavy_rollback interpfun
+            Cerrors.process_vernac_interp_error v
 
   in
     try
@@ -239,7 +242,7 @@ and read_vernac_file verbosely s =
  * backtracking. *)
 
 let raw_do_vernac po =
-  vernac (States.with_heavy_rollback Vernacentries.interp) (po,None);
+  vernac Vernacentries.interp (po,None);
   Lib.add_frozen_state();
   Lib.mark_end_of_command()
 

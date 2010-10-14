@@ -294,7 +294,7 @@ let warning_error names e =
 	  (str "Cannot define principle(s) for "++
 	     h 1 (prlist_with_sep (fun _ -> str","++spc ()) Ppconstr.pr_id names) ++
 	     e_explain e)
-    | _ -> anomaly ""
+    | _ -> raise e
 
 let error_error names e =
   let e_explain e =
@@ -308,7 +308,7 @@ let error_error names e =
 	  (str "Cannot define graph(s) for " ++
 	     h 1 (prlist_with_sep (fun _ -> str","++spc ()) Ppconstr.pr_id names) ++
 	     e_explain e)
-    | _ -> anomaly ""
+    | _ -> raise e
 
 let generate_principle  on_error
     is_general do_built fix_rec_l recdefs  interactive_proof

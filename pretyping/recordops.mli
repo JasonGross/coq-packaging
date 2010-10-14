@@ -6,14 +6,13 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: recordops.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: recordops.mli 13447 2010-09-21 13:23:45Z letouzey $ i*)
 
 (*i*)
 open Names
 open Nametab
 open Term
 open Libnames
-open Classops
 open Libobject
 open Library
 (*i*)

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: names.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: names.ml 13486 2010-10-03 17:01:43Z herbelin $ *)
 
 open Pp
 open Util
@@ -108,7 +108,7 @@ let rec check_bound_mp = function
   | _ -> false
 
 let rec string_of_mp = function
-  | MPfile sl -> "MPfile (" ^ string_of_dirpath sl ^ ")"
+  | MPfile sl -> string_of_dirpath sl
   | MPbound uid -> string_of_uid uid
  (* | MPapp (mp1,mp2) -> 
       "("^string_of_mp mp ^ " " ^ 

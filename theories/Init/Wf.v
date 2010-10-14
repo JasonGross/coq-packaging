@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Wf.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: Wf.v 13492 2010-10-04 21:20:01Z herbelin $ i*)
 
 (** * This module proves the validity of
     - well-founded recursion (also known as course of values)
@@ -35,6 +35,8 @@ Section Well_founded.
  Lemma Acc_inv : forall x:A, Acc x -> forall y:A, R y x -> Acc y.
   destruct 1; trivial.
  Defined.
+
+ Global Implicit Arguments Acc_inv [x y] [x].
 
  (** A relation is well-founded if every element is accessible *)
 

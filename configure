@@ -6,7 +6,7 @@
 # 
 ##################################
 
-VERSION=8.3-rc1
+VERSION=8.3
 VOMAGIC=08300
 STATEMAGIC=58300
 DATE=`LANG=C date +"%B %Y"`
@@ -67,8 +67,6 @@ usage () {
     printf "\tSpecifies whether or not to use dynamic loading of native code\n"
     echo "-coqide (opt|byte|no)"
     printf "\tSpecifies whether or not to compile Coqide\n"
-    echo "-uim-script-path"
-    printf "\tSpecifies where uim's .scm files are installed\n"
     echo "-browser <command>"
     printf "\tUse <command> to open URL %%s\n"
     echo "-with-doc (yes|no)"
@@ -248,9 +246,6 @@ while : ; do
     -force-caml-version|--force-caml-version|-force-ocaml-version|--force-ocaml-version) 
           force_caml_version_spec=yes
 	  force_caml_version=yes;;
-    -uim-script-path)
-          uim_script_path=$2
-          shift;;
     *) echo "Unknown option \"$1\"." 1>&2; usage; exit 2;;
   esac
   shift
@@ -328,8 +323,8 @@ MAKE=`which make`
 if [ "$MAKE" != "" ]; then
   MAKEVERSION=`$MAKE -v | head -1`
   case $MAKEVERSION in
-    "GNU Make 3.81") 
-      echo "You have GNU Make 3.81. Good!";;
+    "GNU Make 3.8"[12])
+      echo "You have GNU Make >= 3.81. Good!";;
     *)
       OK="no"
       if [ -x ./make ]; then
@@ -416,12 +411,12 @@ esac
 CAMLVERSION=`"$bytecamlc" -version`
 
 case $CAMLVERSION in
-    1.*|2.*|3.00|3.01|3.02|3.03|3.03alpha|3.04|3.05beta|3.05|3.06|3.07*|3.08*|3.09.[012])
+    1.*|2.*|3.00|3.01|3.02|3.03|3.03alpha|3.04|3.05beta|3.05|3.06|3.07*|3.08*|3.09*)
 	echo "Your version of Objective-Caml is $CAMLVERSION."
 	if [ "$force_caml_version" = "yes" ]; then
 	    echo "*Warning* You are compiling Coq with an outdated version of Objective-Caml."
 	else
-	    echo "          You need Objective-Caml 3.09.3 or later."
+	    echo "          You need Objective-Caml 3.10.2 or later."
 	    echo "          Configuration script failed!"
 	    exit 1
 	fi;;
@@ -444,12 +439,6 @@ case $ARCH in
       CAMLLIB=`"$CAMLC" -where | sed -e 's/^\(.*\)$/\1/'` ;;
     *)
       CAMLLIB=`"$CAMLC" -where`
-esac
-
-# We need to set a special flag for OCaml 3.07
-case  $CAMLVERSION in 
-	3.07*)
-	  cflags="$cflags -DOCAML_307";;
 esac
 
 if [ "$coq_debug_flag" = "-g" ]; then
@@ -535,7 +524,8 @@ else
 fi
 
 if [ "$CAMLP4" = "camlp5" ] && `$camlp4oexec -v 2>&1 | grep -q 5.00`; then
-    echo "Camlp5 version 5.00 not supported: versions 4.0x or >= 5.01 are OK."
+    echo "Camlp5 version 5.00 not supported: versions 4.0x or >= 5.01 are OK"
+    echo "(depending also on your ocaml version)."
     echo "Configuration script failed!"
     exit 1
 fi
@@ -651,15 +641,6 @@ case $COQIDE in
         esac;;
     no) LABLGTKINCLUDES="";;
 esac
-
-if which uim-fep; then
-    for cand in i"$uim_script_path" /usr/local/share/uim/ /usr/share/uim/; do
-        if [ -f "$cand/loader.scm" ]; then
-            UIMSCRIPTDIR=$cand
-            break
-        fi
-    done
-fi
 
 # strip command
 
@@ -1100,7 +1081,6 @@ sed -e "s|LOCALINSTALLATION|$local|" \
     -e "s|CHECKEDOUTSOURCETREE|$checkedout|" \
     -e "s|WITHDOCOPT|$with_doc|" \
     -e "s|HASNATIVEDYNLINK|$NATDYNLINKFLAG|" \
-    -e "s|UIMSCRIPTPATH|$UIMSCRIPTDIR|" \
       "$config_template" > "$config_file"
 
 chmod a-w "$config_file"
@@ -1114,4 +1094,4 @@ echo
 echo "*Warning* To compile the system for a new architecture"
 echo "          don't forget to do a 'make archclean' before './configure'."
 
-# $Id: configure 13372 2010-08-06 08:36:16Z notin $
+# $Id: configure 13552 2010-10-14 14:02:46Z notin $

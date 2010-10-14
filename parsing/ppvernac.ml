@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppvernac.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
+(* $Id: ppvernac.ml 13492 2010-10-04 21:20:01Z herbelin $ *)
 
 open Pp
 open Names
@@ -847,13 +847,15 @@ let rec pr_vernac = function
         (pr_locality local ++ str"Notation " ++ pr_lident id ++
 	 prlist_with_sep spc pr_id ids ++ str" :=" ++ pr_constrarg c ++
          pr_syntax_modifiers (if onlyparsing then [SetOnlyParsing] else []))
-  | VernacDeclareImplicits (local,q,None) ->
+  | VernacDeclareImplicits (local,q,[]) ->
       hov 2 (pr_section_locality local ++ str"Implicit Arguments" ++ spc() ++ 
 	pr_smart_global q)
-  | VernacDeclareImplicits (local,q,Some imps) ->
+  | VernacDeclareImplicits (local,q,impls) ->
       hov 1 (pr_section_locality local ++ str"Implicit Arguments " ++ 
 	spc() ++ pr_smart_global q ++ spc() ++
-	str"[" ++ prlist_with_sep sep pr_explanation imps ++ str"]")
+	prlist_with_sep spc (fun imps ->
+	  str"[" ++ prlist_with_sep sep pr_explanation imps ++ str"]")
+	  impls)
   | VernacReserve bl ->
       let n = List.length (List.flatten (List.map fst bl)) in
       hov 2 (str"Implicit Type" ++

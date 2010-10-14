@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: flags.ml 13358 2010-07-29 23:10:17Z herbelin $ i*)
+(*i $Id: flags.ml 13436 2010-09-19 10:18:18Z herbelin $ i*)
 
 let with_option o f x =
   let old = !o in o:=true;
@@ -114,8 +114,7 @@ let browser_cmd_fmt =
 
 let is_standard_doc_url url =
   let wwwcompatprefix = "http://www.lix.polytechnique.fr/coq/" in
-  let wwwprefix = "http://coq.inria.fr/" in
-  let n = String.length wwwprefix in
+  let n = String.length Coq_config.wwwcoq in
   let n' = String.length Coq_config.wwwrefman in
   url = Coq_config.localwwwrefman ||
   url = Coq_config.wwwrefman ||

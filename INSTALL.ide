@@ -23,10 +23,10 @@ On Gentoo GNU/Linux, do:
 Else, read the rest of this document to compile your own CoqIde.
 
 REQUIREMENT:
-	- OCaml >= 3.09.3 with native threads support.
+	- OCaml >= 3.10.2 with native threads support.
 	- make world must succeed.
 	- The graphical toolkit GTK+ 2.x. See http://www.gtk.org.
-	  The official supported version is at least 2.8.x.
+	  The official supported version is at least 2.10.x.
 	  You may still compile CoqIde with older versions and 
           use all features.
 	  Run 

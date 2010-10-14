@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacexpr.ml 13332 2010-07-26 22:12:43Z msozeau $ i*)
+(*i $Id: vernacexpr.ml 13492 2010-10-04 21:20:01Z herbelin $ i*)
 
 open Util
 open Names
@@ -313,7 +313,7 @@ type vernac_expr =
   | VernacSyntacticDefinition of identifier located * (identifier list * constr_expr) *
       locality_flag * onlyparsing_flag
   | VernacDeclareImplicits of locality_flag * reference or_by_notation *
-      (explicitation * bool * bool) list option
+      (explicitation * bool * bool) list list
   | VernacReserve of simple_binder list
   | VernacGeneralizable of locality_flag * (lident list) option
   | VernacSetOpacity of

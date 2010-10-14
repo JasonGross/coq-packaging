@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: constrintern.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
+(* $Id: constrintern.ml 13492 2010-10-04 21:20:01Z herbelin $ *)
 
 open Pp
 open Util
@@ -41,7 +41,7 @@ type var_internalization_data =
        in implicit mode, this is [A;B] and this adds (A:=A) and (B:=B) *)
     identifier list *
     (* signature of impargs of the variable *)
-    Impargs.implicits_list *
+    Impargs.implicit_status list *
     (* subscopes of the args of the variable *)
     scope_name option list
 
@@ -557,7 +557,7 @@ let intern_var (ids,_,_,_ as genv) (ltacvars,namedctxvars,ntnvars,impls) loc id 
       (fun id -> CRef (Ident (loc,id)), Some (loc,ExplByName id)) expl_impls in
     let tys = string_of_ty ty in
     Dumpglob.dump_reference loc "<>" (string_of_id id) tys;
-    RVar (loc,id), impls, argsc, expl_impls
+    RVar (loc,id), make_implicits_list impls, argsc, expl_impls
   with Not_found ->
   (* Is [id] bound in current term or is an ltac var bound to constr *)
   if Idset.mem id ids or List.mem id ltacvars
@@ -598,7 +598,7 @@ let find_appl_head_data = function
   | RApp (_,RRef (_,ref),l) as x
       when l <> [] & Flags.version_strictly_greater Flags.V8_2 ->
       let n = List.length l in
-      x,list_skipn_at_least n (implicits_of_global ref),
+      x,List.map (drop_first_implicits n) (implicits_of_global ref),
       list_skipn_at_least n (find_arguments_scope ref),[]
   | x -> x,[],[],[]
 
@@ -815,6 +815,7 @@ let subst_cases_pattern loc alias intern fullsubst scopes a =
 	  match pl with PatCstr (loc, c, pl, Anonymous) -> (asubst, PatCstr (loc, c, pl, alias)) | _ -> x) v
       with Not_found ->
           anomaly "Inconsistent substitution of recursive notation")
+  | AHole _ -> ([],[[], PatVar (loc,Anonymous)])
   | t -> error_invalid_pattern_notation loc
   in aux alias fullsubst a
 
@@ -1372,6 +1373,7 @@ let internalize sigma globalenv env allow_patvar lvar c =
 	    it_mkRLambda ibind body
 
   and intern_impargs c env l subscopes args =
+    let l = select_impargs_size (List.length args) l in
     let eargs, rargs = extract_explicit_arg l args in
     let rec aux n impl subscopes eargs rargs =
       let (enva,subscopes') = apply_scope_env env subscopes in

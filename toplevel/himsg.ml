@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: himsg.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
+(* $Id: himsg.ml 13465 2010-09-24 22:23:07Z herbelin $ *)
 
 open Pp
 open Util
@@ -290,6 +290,7 @@ let explain_ill_formed_rec_body env err names i fixenv vdefj =
   pr_ne_context_of (str "In environment") env ++
   st ++ str "." ++ fnl () ++
   (try (* May fail with unresolved globals. *)
+      let fixenv = make_all_name_different fixenv in
       let pvd = pr_lconstr_env fixenv vdefj.(i).uj_val in
 	str"Recursive definition is:" ++ spc () ++ pvd ++ str "."
     with _ -> mt ())

@@ -8,7 +8,7 @@
 
 (* Finite map library.  *)
 
-(* $Id: FMapAVL.v 13090 2010-06-08 13:56:14Z herbelin $ *)
+(* $Id: FMapAVL.v 13427 2010-09-17 17:37:52Z letouzey $ *)
 
 (** * FMapAVL *)
 
