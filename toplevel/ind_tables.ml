@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ind_tables.ml 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: ind_tables.ml 13392 2010-09-02 12:11:15Z vsiles $ i*)
 
 (* File created by Vincent Siles, Oct 2007, extended into a generic
    support for generation of inductive schemes by Hugo Herbelin, Nov 2009 *)
@@ -125,7 +125,7 @@ let define internal id c =
 	const_entry_boxed = Flags.boxed_definitions() },
       Decl_kinds.IsDefinition Scheme) in
   (match internal with
-  | KernelSilent -> ()
+  | KernelSilent -> () 
   | _-> definition_message id);
   kn
 

@@ -6,13 +6,14 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mlutil.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: mlutil.mli 13420 2010-09-16 15:47:08Z letouzey $ i*)
 
 open Util
 open Names
 open Term
 open Libnames
 open Miniml
+open Table
 
 (*s Utility functions over ML types with meta. *)
 
@@ -108,7 +109,7 @@ val ast_lift : int -> ml_ast -> ml_ast
 val ast_pop : ml_ast -> ml_ast
 val ast_subst : ml_ast -> ml_ast -> ml_ast
 
-val ast_glob_subst : ml_ast Refmap.t -> ml_ast -> ml_ast
+val ast_glob_subst : ml_ast Refmap'.t -> ml_ast -> ml_ast
 
 val normalize : ml_ast -> ml_ast
 val optimize_fix : ml_ast -> ml_ast

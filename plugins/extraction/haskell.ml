@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: haskell.ml 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: haskell.ml 13414 2010-09-14 13:28:15Z glondu $ i*)
 
 (*s Production of Haskell syntax. *)
 
@@ -297,7 +297,7 @@ let pp_decl = function
 	  try
 	    let ids,s = find_type_custom r in
 	    prlist (fun id -> str (id^" ")) ids ++ str "=" ++ spc () ++ str s
-	  with not_found ->
+	  with Not_found ->
 	    prlist (fun id -> pr_id id ++ str " ") l ++
 	    if t = Taxiom then str "= () -- AXIOM TO BE REALIZED\n"
 	    else str "=" ++ spc () ++ pp_type false l t

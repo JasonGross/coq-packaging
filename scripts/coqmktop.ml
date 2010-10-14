@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqmktop.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: coqmktop.ml 13430 2010-09-18 08:15:25Z herbelin $ *)
 
 (* coqmktop is a script to link Coq, analogous to ocamlmktop.
    The command line contains options specific to coqmktop, options for the
@@ -233,7 +233,7 @@ let declare_loading_string () =
      let ppf = Format.std_formatter;;
      Mltop.set_top
        {Mltop.load_obj=
-         (fun f -> if not (Topdirs.load_file ppf f) then failwith \"error\");
+         (fun f -> if not (Topdirs.load_file ppf f) then Util.error (\"Could not load plugin \"^f));\
         Mltop.use_file=Topdirs.dir_use ppf;
         Mltop.add_dir=Topdirs.dir_directory;
         Mltop.ml_loop=(fun () -> Toploop.loop ppf) };;\n"

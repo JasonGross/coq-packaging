@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cpretty.mll 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: cpretty.mll 13440 2010-09-19 20:21:12Z herbelin $ i*)
 
 (*s Utility functions for the scanners *)
 
@@ -326,6 +326,7 @@ let def_token =
   | "CoInductive"
   | "Equations"
   | "Instance"
+  | "Declare" space+ "Instance"
   | "Global" space+ "Instance"
 
 let decl_token =

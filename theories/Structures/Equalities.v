@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: Equalities.v 12662 2010-01-13 16:53:01Z letouzey $ *)
+(* $Id: Equalities.v 13475 2010-09-29 14:33:13Z letouzey $ *)
 
 Require Export RelationClasses.
 
@@ -176,8 +176,7 @@ Module Type UsualEq <: Eq := Typ <+ HasUsualEq.
 
 Module Type UsualIsEq (E:UsualEq) <: IsEq E.
  (* No Instance syntax to avoid saturating the Equivalence tables *)
- Lemma eq_equiv : Equivalence E.eq.
- Proof. exact eq_equivalence. Qed.
+ Definition eq_equiv : Equivalence E.eq := eq_equivalence.
 End UsualIsEq.
 
 Module Type UsualIsEqOrig (E:UsualEq) <: IsEqOrig E.

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: states.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: states.mli 13431 2010-09-18 08:15:29Z herbelin $ i*)
 
 (*s States of the system. In that module, we provide functions to get
   and set the state of the whole system. Internally, it is done by
@@ -24,7 +24,7 @@ val unfreeze : state -> unit
   state of the whole system as it was before the evaluation if an exception
   is raised. *)
 
-val with_heavy_rollback : ('a -> 'b) -> 'a -> 'b
+val with_heavy_rollback : ('a -> 'b) -> (exn -> exn) -> 'a -> 'b
 
 (*s [with_state_protection f x] applies [f] to [x] and restores the
   state of the whole system as it was before the evaluation of f *)

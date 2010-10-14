@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: coq.ml 13431 2010-09-18 08:15:29Z herbelin $ *)
 
 open Vernac
 open Vernacexpr
@@ -479,7 +479,7 @@ let process_exn e = let s,loc= print_toplevel_error e in (msgnl s,loc)
 let interp_last last =
   prerr_string "*";
   try
-    vernac_com (States.with_heavy_rollback Vernacentries.interp) last;
+    vernac_com Vernacentries.interp last;
     Lib.add_frozen_state()
   with e ->
     let s,_ = process_exn e in prerr_endline ("Replay during undo failed because: "^s);

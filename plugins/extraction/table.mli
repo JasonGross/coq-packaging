@@ -6,12 +6,15 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: table.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: table.mli 13420 2010-09-16 15:47:08Z letouzey $ i*)
 
 open Names
 open Libnames
 open Miniml
 open Declarations
+
+module Refset' : Set.S with type elt = global_reference
+module Refmap' : Map.S with type key = global_reference
 
 val safe_basename_of_global : global_reference -> identifier
 

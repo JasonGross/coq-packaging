@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: classes.ml 13332 2010-07-26 22:12:43Z msozeau $ i*)
+(*i $Id: classes.ml 13516 2010-10-07 19:09:38Z msozeau $ i*)
 
 (*i*)
 open Names
@@ -233,7 +233,7 @@ let new_instance ?(abstract=false) ?(global=false) ctx (instid, bk, cl) props
 		if rest <> [] then
 		  unbound_method env' k.cl_impl (get_id (fst (List.hd rest)))
 		else
-		  Inl (type_ctx_instance evars env' k.cl_props props subst)
+		  Inl (type_ctx_instance evars (push_rel_context ctx' env') k.cl_props props subst)
 	in	  
 	evars := Evarutil.nf_evar_map !evars;
 	let term, termtype =

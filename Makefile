@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile 13184 2010-06-23 09:19:15Z notin $ 
+# $Id: Makefile 13540 2010-10-13 19:53:28Z notin $ 
 
 
 # Makefile for Coq
@@ -220,6 +220,7 @@ docclean:
 	rm -f doc/common/version.tex
 	rm -f doc/refman/styles.hva doc/refman/cover.html doc/refman/*.eps doc/refman/Reference-Manual.html
 	rm -f doc/coq.tex
+	rm -f doc/refman/styles.hva doc/refman/cover.html 
 
 archclean: clean-ide cleantheories
 	rm -f $(COQTOPEXE) $(COQMKTOP) $(COQC) $(CHICKEN) $(COQDEPBOOT)

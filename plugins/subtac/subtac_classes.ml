@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: subtac_classes.ml 13328 2010-07-26 11:05:30Z herbelin $ i*)
+(*i $Id: subtac_classes.ml 13516 2010-10-07 19:09:38Z msozeau $ i*)
 
 open Pretyping
 open Evd
@@ -123,7 +123,7 @@ let new_instance ?(global=false) ctx (instid, bk, cl) props ?(generalize=true) p
     match props with
     | Inr term ->
 	let c = interp_casted_constr_evars evars env' term cty in
-	  Inr (c, subst)
+	  Inr c
     | Inl props ->
 	let get_id =
 	  function
@@ -162,7 +162,7 @@ let new_instance ?(global=false) ctx (instid, bk, cl) props ?(generalize=true) p
 	let termtype = it_mkProd_or_LetIn ty_constr (ctx' @ ctx) in
 	let term = Termops.it_mkLambda_or_LetIn app (ctx' @ ctx) in
 	  term, termtype
-    | Inr (def, subst) ->
+    | Inr def ->
 	let termtype = it_mkProd_or_LetIn cty ctx in
 	let term = Termops.it_mkLambda_or_LetIn def ctx in
 	  term, termtype
@@ -174,7 +174,7 @@ let new_instance ?(global=false) ctx (instid, bk, cl) props ?(generalize=true) p
   let hook vis gr =
     let cst = match gr with ConstRef kn -> kn | _ -> assert false in
     let inst = Typeclasses.new_instance k pri global (ConstRef cst) in
-      Impargs.declare_manual_implicits false gr ~enriching:false imps;
+      Impargs.declare_manual_implicits false gr ~enriching:false [imps];
       Typeclasses.add_instance inst
   in
   let evm = Subtac_utils.evars_of_term !evars Evd.empty term in

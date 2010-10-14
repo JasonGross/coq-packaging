@@ -10,7 +10,7 @@
 (* Add pr_o.cmo to circumvent a useless-warning bug when preprocessed with
  * ast-based camlp4 *)
 
-(*i $Id: lexer.ml4 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: lexer.ml4 13521 2010-10-10 21:59:00Z herbelin $ i*)
 
 open Pp
 open Util
@@ -147,7 +147,7 @@ let lookup_utf8_tail c cs =
       | _ -> error_utf8 cs
     in
     try classify_unicode unicode, n
-    with UnsupportedUtf8 -> error_unsupported_unicode_character n cs
+    with UnsupportedUtf8 -> njunk n cs; error_unsupported_unicode_character n cs
 
 let lookup_utf8 cs =
   match Stream.peek cs with

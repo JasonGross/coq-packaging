@@ -5,7 +5,7 @@
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: Wf.v 13332 2010-07-26 22:12:43Z msozeau $ *)
+(* $Id: Wf.v 13492 2010-10-04 21:20:01Z herbelin $ *)
 
 (** Reformulation of the Wf module using subsets where possible, providing
    the support for [Program]'s treatment of well-founded definitions. *)
@@ -15,8 +15,6 @@ Require Import Coq.Program.Utils.
 Require Import ProofIrrelevance.
 
 Open Local Scope program_scope.
-
-Implicit Arguments Acc_inv [A R x y].
 
 Section Well_founded.
   Variable A : Type.

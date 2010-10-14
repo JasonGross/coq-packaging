@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: auto.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: auto.ml 13390 2010-09-02 08:03:01Z herbelin $ *)
 
 open Pp
 open Util
@@ -706,12 +706,11 @@ let print_applicable_hint () =
 (* displays the whole hint database db *)
 let print_hint_db db =
   let (ids, csts) = Hint_db.transparent_state db in
-  msg (hov 0
+  msgnl (hov 0
 	  ((if Hint_db.use_dn db then str"Discriminated database"
-	    else str"Non-discriminated database") ++ fnl ()));
-  msg (hov 0
-	  (str"Unfoldable variable definitions: " ++ pr_idpred ids ++ fnl () ++
-	   str"Unfoldable constant definitions: " ++ pr_cpred csts ++ fnl ()));
+	    else str"Non-discriminated database")));
+  msgnl (hov 2 (str"Unfoldable variable definitions: " ++ pr_idpred ids));
+  msgnl (hov 2 (str"Unfoldable constant definitions: " ++ pr_cpred csts));
   Hint_db.iter
     (fun head hintlist ->
       match head with

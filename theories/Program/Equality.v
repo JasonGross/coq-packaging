@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Equality.v 13359 2010-07-30 08:46:55Z herbelin $ i*)
+(*i $Id: Equality.v 13492 2010-10-04 21:20:01Z herbelin $ i*)
 
 (** Tactics related to (dependent) equality and proof irrelevance. *)
 
@@ -33,7 +33,8 @@ Hint Extern 10 => is_ground_goal ; progress exfalso : exfalso.
 Definition block {A : Type} (a : A) := a.
 
 Ltac block_goal := match goal with [ |- ?T ] => change (block T) end.
-Ltac unblock_goal := unfold block in *.
+Ltac unblock_goal := unfold block at 1.
+Ltac unblock_all := unfold block in *.
 
 (** Notation for heterogenous equality. *)
 
@@ -41,8 +42,8 @@ Notation " x ~= y " := (@JMeq _ x _ y) (at level 70, no associativity).
 
 (** Notation for the single element of [x = x] and [x ~= x]. *)
 
-Implicit Arguments eq_refl [[A] [x]].
-Implicit Arguments JMeq_refl [[A] [x]].
+Implicit Arguments eq_refl [[A] [x]] [A].
+Implicit Arguments JMeq_refl [[A] [x]] [A].
 
 (** Do something on an heterogeneous equality appearing in the context. *)
 
@@ -224,7 +225,7 @@ Ltac simplify_eqs :=
 
 Ltac simplify_IH_hyps := repeat
   match goal with
-    | [ hyp : _ |- _ ] => specialize_eqs hyp
+    | [ hyp : context [ block _ ] |- _ ] => specialize_eqs hyp ; unfold block in hyp
   end.
 
 (** We split substitution tactics in the two directions depending on which 
@@ -389,18 +390,18 @@ Tactic Notation "intro_block_id" ident(H) :=
   (is_introduced H ; block_goal ; revert_until H) ||
     (let H' := fresh H in intros until H' ; block_goal) || (intros ; block_goal).
 
-Ltac simpl_dep_elim := simplify_dep_elim ; simplify_IH_hyps ; unblock_goal.
+Ltac simpl_dep_elim := simplify_dep_elim ; simplify_IH_hyps ; unblock_all.
 
 Ltac do_intros H :=
   (try intros until H) ; (intro_block_id H || intro_block H).
 
-Ltac do_depelim_nosimpl tac H := do_intros H ; generalize_eqs H ; tac H.
+Ltac do_depelim_nosimpl tac H := do_intros H ; generalize_eqs H ; block_goal ; tac H ; unblock_goal.
 
 Ltac do_depelim tac H := do_depelim_nosimpl tac H ; simpl_dep_elim.
 
 Ltac do_depind tac H := 
-  (try intros until H) ; intro_block H ;
-  generalize_eqs_vars H ; tac H ; simplify_dep_elim ; simplify_IH_hyps ; unblock_goal.
+  do_intros H ; generalize_eqs_vars H ; block_goal ; tac H ; 
+  unblock_goal ; simplify_dep_elim ; simplify_IH_hyps ; unblock_all.
 
 (** To dependent elimination on some hyp. *)
 
@@ -417,8 +418,8 @@ Ltac depind id := do_depind ltac:(fun hyp => do_ind hyp) id.
 (** A variant where generalized variables should be given by the user. *)
 
 Ltac do_depelim' tac H :=
-  (try intros until H) ; block_goal ; generalize_eqs H ; tac H ; simplify_dep_elim ; 
-    simplify_IH_hyps ; unblock_goal.
+  (try intros until H) ; block_goal ; generalize_eqs H ; block_goal ; tac H ; unblock_goal ;
+    simplify_dep_elim ; simplify_IH_hyps ; unblock_all.
 
 (** Calls [destruct] on the generalized hypothesis, results should be similar to inversion.
    By default, we don't try to generalize the hyp by its variable indices.  *)

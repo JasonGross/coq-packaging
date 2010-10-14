@@ -15,7 +15,7 @@
    Institution: LRI, CNRS UMR 8623 - University Paris Sud
 *)
 
-(* $Id: RelationClasses.v 13344 2010-07-28 15:04:36Z msozeau $ *)
+(* $Id: RelationClasses.v 13476 2010-09-30 11:42:11Z letouzey $ *)
 
 Require Export Coq.Classes.Init.
 Require Import Coq.Program.Basics.
@@ -149,9 +149,9 @@ Program Instance iff_Transitive : Transitive iff.
 
 (** Leibniz equality. *)
 
-Program Instance eq_Reflexive : Reflexive (@eq A).
-Program Instance eq_Symmetric : Symmetric (@eq A).
-Program Instance eq_Transitive : Transitive (@eq A).
+Instance eq_Reflexive {A} : Reflexive (@eq A) := @eq_refl A.
+Instance eq_Symmetric {A} : Symmetric (@eq A) := @eq_sym A.
+Instance eq_Transitive {A} : Transitive (@eq A) := @eq_trans A.
 
 (** Various combinations of reflexivity, symmetry and transitivity. *)
 

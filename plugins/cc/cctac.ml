@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: cctac.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: cctac.ml 13409 2010-09-13 07:53:13Z soubiran $ *)
 
 (* This file is the interface between the c-c algorithm and Coq *)
 
@@ -74,11 +74,21 @@ let rec decompose_term env sigma t=
 		    decompose_term env sigma a),
 	      decompose_term env sigma b)
     | Construct c->
-	let (oib,_)=Global.lookup_inductive (fst c) in
-	let nargs=mis_constructor_nargs_env env c in
-	  Constructor {ci_constr=c;
+	let (mind,i_ind),i_con = c in 
+	let canon_mind = mind_of_kn (canonical_mind mind) in
+	let canon_ind = canon_mind,i_ind in
+	let (oib,_)=Global.lookup_inductive (canon_ind) in
+	let nargs=mis_constructor_nargs_env env (canon_ind,i_con) in
+	  Constructor {ci_constr= (canon_ind,i_con);
 		       ci_arity=nargs;
 		       ci_nhyps=nargs-oib.mind_nparams}
+    | Ind c -> 
+	let mind,i_ind = c in 
+	let canon_mind = mind_of_kn (canonical_mind mind) in
+	let canon_ind = canon_mind,i_ind in  (Symb (mkInd canon_ind))
+    | Const c -> 
+	let canon_const = constant_of_kn (canonical_con c) in 
+	  (Symb (mkConst canon_const))
     | _ ->if closed0 t then (Symb t) else raise Not_found
 
 (* decompose equality in members and type *)
@@ -106,7 +116,7 @@ let rec pattern_of_constr env sigma c =
     | Prod (_,a,_b) when not (dependent (mkRel 1) _b) ->
 	let b =pop _b in
 	let pa,sa = pattern_of_constr env sigma a in
-	let pb,sb = pattern_of_constr env sigma (pop b) in
+	let pb,sb = pattern_of_constr env sigma b in
 	let sort_b = sf_of env sigma b in
 	let sort_a = sf_of env sigma a in
 	  PApp(Product (sort_a,sort_b),
@@ -143,27 +153,27 @@ let patterns_of_constr env sigma nrels term=
 
 let rec quantified_atom_of_constr env sigma nrels term =
   match kind_of_term (whd_delta env term) with
-      Prod (_,atom,ff) ->
+      Prod (id,atom,ff) -> 
 	if eq_constr ff (Lazy.force _False) then
 	  let patts=patterns_of_constr env sigma nrels atom in
 	      `Nrule patts
-	else
-	  quantified_atom_of_constr env sigma (succ nrels) ff
-    | _ ->
+	else 
+	  quantified_atom_of_constr (Environ.push_rel (id,None,atom) env) sigma (succ nrels) ff
+    | _ ->  
 	let patts=patterns_of_constr env sigma nrels term in
 	    `Rule patts
 
 let litteral_of_constr env sigma term=
   match kind_of_term (whd_delta env term) with
-    | Prod (_,atom,ff) ->
+    | Prod (id,atom,ff) -> 
 	if eq_constr ff (Lazy.force _False) then
 	  match (atom_of_constr env sigma atom) with
 	      `Eq(t,a,b) -> `Neq(t,a,b)
 	    | `Other(p) -> `Nother(p)
 	else
 	  begin
-	    try
-	      quantified_atom_of_constr env sigma 1 ff
+	    try 
+	      quantified_atom_of_constr (Environ.push_rel (id,None,atom) env) sigma 1 ff  
 	    with Not_found ->
 	      `Other (decompose_term env sigma term)
 	  end

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: constrintern.mli 13329 2010-07-26 11:05:39Z herbelin $ i*)
+(*i $Id: constrintern.mli 13492 2010-10-04 21:20:01Z herbelin $ i*)
 
 (*i*)
 open Names
@@ -53,7 +53,7 @@ type var_internalization_data =
     identifier list *
       (* impargs to automatically add to the variable, e.g. for "JMeq A a B b"
           in implicit mode, this is [A;B] and this adds (A:=A) and (B:=B) *)
-    Impargs.implicits_list * (* signature of impargs of the variable *)
+    Impargs.implicit_status list * (** signature of impargs of the variable *)
     scope_name option list (* subscopes of the args of the variable *)
 
 (* A map of free variables to their implicit arguments and scopes *)

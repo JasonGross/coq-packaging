@@ -110,6 +110,7 @@ Specification language
 - Binders given before ":" in lemmas and in definitions built by tactics are
   now automatically introduced (possible source of incompatibility that can
   be resolved by invoking "Unset Automatic Introduction").
+- New support for multiple implicit arguments signatures per reference.
 
 Module system
 
@@ -139,6 +140,12 @@ Extraction
   dangerous for the complexity. In particular many eta-expansions at the top
   of functions body are now avoided, clever partial applications will likely
   be preserved, let-ins are almost always kept, etc.
+- In the same spirit, auto-inlining is now disabled by default, except for
+  induction principles, since this feature was producing more frequently
+  weird code than clear gain. The previous behavior can be restored via
+  "Set Extraction AutoInline".
+- Unicode characters in identifiers are now transformed into ascii strings
+  that are legal in Ocaml and other languages.
 - Harsh support of module extraction to Haskell and Scheme: module hierarchy
   is flattened, module abbreviations and functor applications are expanded,
   module types and unapplied functors are discarded.
@@ -190,11 +197,11 @@ Vernacular commands
   illustration of wrong commands.
 - Most commands referring to constant (e.g. Print or About) now support
   referring to the constant by a notation string.
-- Made generation of boolean equality automatic for datatypes (use
-  "Unset Boolean Equality Schemes" for deactivation).
-- Made support for automatic generation of case analysis schemes and
-  congruence schemes available to user (governed by options "Unset
-  Case Analysis Schemes" and "Unset Congruence Schemes").
+- New option "Boolean Equality Schemes" to make generation of boolean
+  equality automatic for datatypes (together with option "Decidable
+  Equality Schemes", this replaces deprecated option "Equality Scheme").
+- Made support for automatic generation of case analysis schemes available
+  to user (governed by option "Set Case Analysis Schemes").
 - New command "(Global?) Generalizable [All|No] Variable(s)? ident(s)?" to
   declare which identifiers are generalizable in `{} and `() binders.
 - New command "Print Opaque Dependencies" to display opaque constants in
@@ -205,6 +212,8 @@ Vernacular commands
 - Syntax of Implicit Type now supports more than one block of variables of
   a given type.
 - Command "Canonical Structure" now warns when it has no effects.
+- Commands of the form "Set X" or "Unset X" now support "Local" and "Global"
+  prefixes.
 
 Library
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: record.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
+(* $Id: record.ml 13492 2010-10-04 21:20:01Z herbelin $ *)
 
 open Pp
 open Util
@@ -259,8 +259,7 @@ let declare_structure finite infer id idbuild paramimpls params arity fieldimpls
       mind_entry_record = true;
       mind_entry_finite = recursivity_flag_of_kind finite;
       mind_entry_inds = [mie_ind] } in
-(* TODO : maybe switch to KernelVerbose *)
-  let kn = Command.declare_mutual_inductive_with_eliminations KernelSilent mie [(paramimpls,[])] in
+  let kn = Command.declare_mutual_inductive_with_eliminations KernelVerbose mie [(paramimpls,[])] in
   let rsp = (kn,0) in (* This is ind path of idstruc *)
   let cstr = (rsp,1) in
   let kinds,sp_projs = declare_projections rsp ~kind ?name coers fieldimpls fields in
@@ -325,8 +324,8 @@ let declare_class finite def infer id idbuild paramimpls params arity fieldimpls
 	  (DefinitionEntry proj_entry, IsDefinition Definition)
 	in
 	let cref = ConstRef cst in
-	Impargs.declare_manual_implicits false cref paramimpls;
-	Impargs.declare_manual_implicits false (ConstRef proj_cst) (List.hd fieldimpls);
+	Impargs.declare_manual_implicits false cref [paramimpls];
+	Impargs.declare_manual_implicits false (ConstRef proj_cst) [List.hd fieldimpls];
 	Classes.set_typeclass_transparency (EvalConstRef cst) false;
 	if infer then Evd.fold (fun ev evi _ -> Recordops.declare_method (ConstRef cst) ev sign) sign ();
 	cref, [proj_name, Some proj_cst]

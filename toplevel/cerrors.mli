@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cerrors.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: cerrors.mli 13431 2010-09-18 08:15:29Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -19,9 +19,13 @@ val print_loc : loc -> std_ppcmds
 
 val explain_exn : exn -> std_ppcmds
 
-(** Same, but will re-raise all anomalies instead of explaining them *)
+(** Precompute errors raised during vernac interpretation *)
 
 val explain_exn_no_anomaly : exn -> std_ppcmds
+
+(** Pre-explain a vernac interpretation error *)
+
+val process_vernac_interp_error : exn -> exn
 
 (** For debugging purpose (?), the explain function can be twicked *)
 
