@@ -1,8 +1,10 @@
-coq (8.3+dfsg-1) UNRELEASED; urgency=low
+coq (8.3+dfsg-1) experimental; urgency=low
 
   * New upstream release
+    - add 0001-Fix-missing-coqlib-argument-to-coqdep-in-test-suite.patch
+  * Bump Standards-Version to 3.9.1 (no changes)
 
- -- Stéphane Glondu <glondu@debian.org>  Thu, 14 Oct 2010 17:58:45 +0200
+ -- Stéphane Glondu <glondu@debian.org>  Sat, 16 Oct 2010 09:56:23 +0200
 
 coq (8.3~rc1+dfsg-1) experimental; urgency=low
 
