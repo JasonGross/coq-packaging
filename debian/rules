@@ -49,7 +49,7 @@ ifeq ($(BUILDCACHE),)
 # the default one without -silent (-silent maybe cause buildd to
 # timeout because of lack of output)
 
-	$(MAKE) STRIP=true VALIDOPTS="-o -m" COMPLEXITY= check
+	$(MAKE) world STRIP=true
 	$(MAKE) DOC_TARGETS=$(HTMLDOC) $(HTMLDOC)
 else
 	rsync -a --exclude=debian --exclude=.git $(BUILDCACHE)/ .
@@ -57,7 +57,7 @@ endif
 
 .PHONY: override_dh_auto_test
 override_dh_auto_test:
-# TODO: run make check here instead of in override_dh_auto_build (?)
+	$(MAKE) check COMPLEXITY= BESTCHICKEN=/bin/true
 
 .PHONY: override_dh_auto_install
 override_dh_auto_install:
