@@ -1,3 +1,9 @@
+coq (8.3+dfsg-2) UNRELEASED; urgency=low
+
+  * NOT RELEASED YET
+
+ -- Stéphane Glondu <glondu@debian.org>  Tue, 19 Oct 2010 12:10:18 +0200
+
 coq (8.3+dfsg-1) experimental; urgency=low
 
   * New upstream release
