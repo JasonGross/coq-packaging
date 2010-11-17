@@ -1,2 +1,3 @@
 0001-Fix-missing-coqlib-argument-to-coqdep-in-test-suite.patch
 0002-Fix-mixed-implicit-and-normal-rules.patch
+0003-Support-for-camlp5-6.02.0.patch
