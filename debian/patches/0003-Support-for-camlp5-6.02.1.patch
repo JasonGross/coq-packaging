@@ -1,0 +1,156 @@
+From: glondu <glondu@85f007b7-540e-0410-9357-904b9bb8a0f7>
+Date: Tue, 16 Nov 2010 20:25:56 +0000
+Subject: [PATCH] Support for camlp5 6.02.1
+
+Signed-off-by: Stephane Glondu <steph@glondu.net>
+---
+ lib/compat.ml4         |   12 ++++++++++++
+ parsing/pcoq.ml4       |   23 ++++++++++++++---------
+ parsing/pcoq.mli       |    2 ++
+ toplevel/metasyntax.ml |   26 +++++++++++++-------------
+ 4 files changed, 41 insertions(+), 22 deletions(-)
+
+diff --git a/lib/compat.ml4 b/lib/compat.ml4
+index 9b6bb19..a77c2bc 100644
+--- a/lib/compat.ml4
++++ b/lib/compat.ml4
+@@ -65,3 +65,15 @@ let unloc = M.unloc
+ let join_loc = M.join_loc
+ type token = M.token
+ type lexer = M.lexer
++
++IFDEF CAMLP5_6_00 THEN
++
++let slist0sep x y = Gramext.Slist0sep (x, y, false)
++let slist1sep x y = Gramext.Slist1sep (x, y, false)
++
++ELSE
++
++let slist0sep x y = Gramext.Slist0sep (x, y)
++let slist1sep x y = Gramext.Slist1sep (x, y)
++
++END
+diff --git a/parsing/pcoq.ml4 b/parsing/pcoq.ml4
+index 90a9220..de1b3ed 100644
+--- a/parsing/pcoq.ml4
++++ b/parsing/pcoq.ml4
+@@ -145,6 +145,11 @@ module Gram =
+       G.delete_rule e pil
+   end
+ 
++IFDEF CAMLP5_6_02_1 THEN
++let entry_print x = Gram.Entry.print !Pp_control.std_ft x
++ELSE
++let entry_print = Gram.Entry.print
++END
+ 
+ let camlp4_verbosity silent f x =
+   let a = !Gramext.warning_verbose in
+@@ -631,16 +636,16 @@ let rec symbol_of_constr_prod_entry_key assoc from forpat typ =
+     | ETConstrList (typ',[]) ->
+         Gramext.Slist1 (symbol_of_constr_prod_entry_key assoc from forpat (ETConstr typ'))
+     | ETConstrList (typ',tkl) ->
+-        Gramext.Slist1sep
+-          (symbol_of_constr_prod_entry_key assoc from forpat (ETConstr typ'),
+-	   make_sep_rules tkl)
++        Compat.slist1sep
++          (symbol_of_constr_prod_entry_key assoc from forpat (ETConstr typ'))
++          (make_sep_rules tkl)
+     | ETBinderList (false,[]) ->
+         Gramext.Slist1
+ 	  (symbol_of_constr_prod_entry_key assoc from forpat (ETBinder false))
+     | ETBinderList (false,tkl) ->
+-        Gramext.Slist1sep
+-	  (symbol_of_constr_prod_entry_key assoc from forpat (ETBinder false),
+-	   make_sep_rules tkl)
++        Compat.slist1sep
++          (symbol_of_constr_prod_entry_key assoc from forpat (ETBinder false))
++          (make_sep_rules tkl)
+     | _ ->
+     match interp_constr_prod_entry_key assoc from forpat typ with
+       | (eobj,None,_) -> Gramext.Snterm (Gram.Entry.obj eobj)
+@@ -654,16 +659,16 @@ let rec symbol_of_constr_prod_entry_key assoc from forpat typ =
+ let rec symbol_of_prod_entry_key = function
+   | Alist1 s -> Gramext.Slist1 (symbol_of_prod_entry_key s)
+   | Alist1sep (s,sep) ->
+-      Gramext.Slist1sep (symbol_of_prod_entry_key s, Gramext.Stoken ("",sep))
++      Compat.slist1sep (symbol_of_prod_entry_key s) (Gramext.Stoken ("", sep))
+   | Alist0 s -> Gramext.Slist0 (symbol_of_prod_entry_key s)
+   | Alist0sep (s,sep) ->
+-      Gramext.Slist0sep (symbol_of_prod_entry_key s, Gramext.Stoken ("",sep))
++      Compat.slist0sep (symbol_of_prod_entry_key s) (Gramext.Stoken ("", sep))
+   | Aopt s -> Gramext.Sopt (symbol_of_prod_entry_key s)
+   | Amodifiers s ->
+        Gramext.srules
+         [([], Gramext.action(fun _loc -> []));
+          ([Gramext.Stoken ("", "(");
+-           Gramext.Slist1sep ((symbol_of_prod_entry_key s), Gramext.Stoken ("", ","));
++           Compat.slist1sep (symbol_of_prod_entry_key s) (Gramext.Stoken ("", ","));
+            Gramext.Stoken ("", ")")],
+ 	   Gramext.action (fun _ l _ _loc -> l))]
+   | Aself -> Gramext.Sself
+diff --git a/parsing/pcoq.mli b/parsing/pcoq.mli
+index e4566e7..7dbd78e 100644
+--- a/parsing/pcoq.mli
++++ b/parsing/pcoq.mli
+@@ -23,6 +23,8 @@ open Libnames
+ 
+ module Gram : Grammar.S with type te = Compat.token
+ 
++val entry_print : 'a Gram.Entry.e -> unit
++
+ (**********************************************************************)
+ (* The parser of Coq is built from three kinds of rule declarations:
+    - dynamic rules declared at the evaluation of Coq files (using
+diff --git a/toplevel/metasyntax.ml b/toplevel/metasyntax.ml
+index 6ee00f4..ddb1b11 100644
+--- a/toplevel/metasyntax.ml
++++ b/toplevel/metasyntax.ml
+@@ -106,33 +106,33 @@ let add_tactic_notation (n,prods,e) =
+ let print_grammar = function
+   | "constr" | "operconstr" | "binder_constr" ->
+       msgnl (str "Entry constr is");
+-      Gram.Entry.print Pcoq.Constr.constr;
++      entry_print Pcoq.Constr.constr;
+       msgnl (str "and lconstr is");
+-      Gram.Entry.print Pcoq.Constr.lconstr;
++      entry_print Pcoq.Constr.lconstr;
+       msgnl (str "where binder_constr is");
+-      Gram.Entry.print Pcoq.Constr.binder_constr;
++      entry_print Pcoq.Constr.binder_constr;
+       msgnl (str "and operconstr is");
+-      Gram.Entry.print Pcoq.Constr.operconstr;
++      entry_print Pcoq.Constr.operconstr;
+   | "pattern" ->
+-      Gram.Entry.print Pcoq.Constr.pattern
++      entry_print Pcoq.Constr.pattern
+   | "tactic" ->
+       msgnl (str "Entry tactic_expr is");
+-      Gram.Entry.print Pcoq.Tactic.tactic_expr;
++      entry_print Pcoq.Tactic.tactic_expr;
+       msgnl (str "Entry binder_tactic is");
+-      Gram.Entry.print Pcoq.Tactic.binder_tactic;
++      entry_print Pcoq.Tactic.binder_tactic;
+       msgnl (str "Entry simple_tactic is");
+-      Gram.Entry.print Pcoq.Tactic.simple_tactic;
++      entry_print Pcoq.Tactic.simple_tactic;
+   | "vernac" ->
+       msgnl (str "Entry vernac is");
+-      Gram.Entry.print Pcoq.Vernac_.vernac;
++      entry_print Pcoq.Vernac_.vernac;
+       msgnl (str "Entry command is");
+-      Gram.Entry.print Pcoq.Vernac_.command;
++      entry_print Pcoq.Vernac_.command;
+       msgnl (str "Entry syntax is");
+-      Gram.Entry.print Pcoq.Vernac_.syntax;
++      entry_print Pcoq.Vernac_.syntax;
+       msgnl (str "Entry gallina is");
+-      Gram.Entry.print Pcoq.Vernac_.gallina;
++      entry_print Pcoq.Vernac_.gallina;
+       msgnl (str "Entry gallina_ext is");
+-      Gram.Entry.print Pcoq.Vernac_.gallina_ext;
++      entry_print Pcoq.Vernac_.gallina_ext;
+   | _ -> error "Unknown or unprintable grammar entry."
+ 
+ (**********************************************************************)
+-- 
