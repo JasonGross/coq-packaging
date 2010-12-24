@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: output.ml 13541 2010-10-13 19:53:29Z notin $ i*)
+(*i $Id: output.ml 13676 2010-12-04 10:34:21Z herbelin $ i*)
 
 open Cdglobals
 open Index
@@ -287,7 +287,7 @@ module Latex = struct
       printf "\\coqdocindent{%2.2fem}\n" space
 
   let module_ref m s =
-    printf "\\moduleid{%s}{%s}" m (escaped s)
+    printf "\\coqdocmodule{%s}{%s}" m (escaped s)
 
   let ident_ref m fid typ s =
     let id = if fid <> "" then (m ^ "." ^ fid) else m in

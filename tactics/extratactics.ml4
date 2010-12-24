@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extratactics.ml4 13434 2010-09-18 20:11:37Z msozeau $ *)
+(* $Id: extratactics.ml4 13658 2010-11-29 11:09:05Z glondu $ *)
 
 open Pp
 open Pcoq
@@ -545,7 +545,7 @@ let subst_var_with_hole occ tid t =
     | RVar (_,id) as x -> 
         if id = tid 
         then (decr occref; if !occref = 0 then x
-                           else (incr locref; RHole (Ploc.make !locref 0 (0,0),Evd.QuestionMark(Evd.Define true))))
+                           else (incr locref; RHole (make_loc (!locref,0),Evd.QuestionMark(Evd.Define true))))
         else x
     | c -> map_rawconstr_left_to_right substrec c in
   let t' = substrec t
@@ -558,7 +558,7 @@ let subst_hole_with_term occ tc t =
   let rec substrec = function
     | RHole (_,Evd.QuestionMark(Evd.Define true)) -> 
         decr occref; if !occref = 0 then tc
-                     else (incr locref; RHole (Ploc.make !locref 0 (0,0),Evd.QuestionMark(Evd.Define true)))
+                     else (incr locref; RHole (make_loc (!locref,0),Evd.QuestionMark(Evd.Define true)))
     | c -> map_rawconstr_left_to_right substrec c
   in
   substrec t
@@ -580,8 +580,8 @@ let hResolve id c occ t gl =
     try 
       Pretyping.Default.understand sigma env t_hole
     with 
-    | Ploc.Exc (loc,Pretype_errors.PretypeError (_, Pretype_errors.UnsolvableImplicit _)) -> 
-        resolve_hole (subst_hole_with_term (Ploc.line_nb loc) c_raw t_hole)
+    | Stdpp.Exc_located (loc,Pretype_errors.PretypeError (_, Pretype_errors.UnsolvableImplicit _)) -> 
+        resolve_hole (subst_hole_with_term (fst (unloc loc)) c_raw t_hole)
   in
   let t_constr = resolve_hole (subst_var_with_hole occ id t_raw) in
   let t_constr_type = Retyping.get_type_of env sigma t_constr in
@@ -628,4 +628,37 @@ END
 TACTIC EXTEND constr_eq
 | [ "constr_eq" constr(x) constr(y) ] -> [ 
     if eq_constr x y then tclIDTAC else tclFAIL 0 (str "Not equal") ]
+END
+
+TACTIC EXTEND is_evar
+| [ "is_evar" constr(x) ] ->
+    [ match kind_of_term x with
+        | Evar _ -> tclIDTAC
+        | _ -> tclFAIL 0 (str "Not an evar")
+    ]
+END
+
+let rec has_evar x =
+  match kind_of_term x with
+    | Evar _ -> true
+    | Rel _ | Var _ | Meta _ | Sort _ | Const _ | Ind _ | Construct _ ->
+      false
+    | Cast (t1, _, t2) | Prod (_, t1, t2) | Lambda (_, t1, t2) ->
+      has_evar t1 || has_evar t2
+    | LetIn (_, t1, t2, t3) ->
+      has_evar t1 || has_evar t2 || has_evar t3
+    | App (t1, ts) ->
+      has_evar t1 || has_evar_array ts
+    | Case (_, t1, t2, ts) ->
+      has_evar t1 || has_evar t2 || has_evar_array ts
+    | Fix ((_, tr)) | CoFix ((_, tr)) ->
+      has_evar_prec tr
+and has_evar_array x =
+  array_exists has_evar x
+and has_evar_prec (_, ts1, ts2) =
+  array_exists has_evar ts1 || array_exists has_evar ts2
+
+TACTIC EXTEND has_evar
+| [ "has_evar" constr(x) ] ->
+    [ if has_evar x then tclIDTAC else tclFAIL 0 (str "No evars") ]
 END

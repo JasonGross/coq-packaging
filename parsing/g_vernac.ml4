@@ -9,7 +9,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmo" i*)
 
-(* $Id: g_vernac.ml4 13492 2010-10-04 21:20:01Z herbelin $ *)
+(* $Id: g_vernac.ml4 13699 2010-12-09 19:24:45Z herbelin $ *)
 
 
 open Pp
@@ -233,7 +233,7 @@ GEXTEND Gram
   def_body:
     [ [ bl = binders; ":="; red = reduce; c = lconstr ->
       (match c with
-          CCast(_,c, Rawterm.CastConv (k,t)) -> DefineBody (bl, red, c, Some t)
+          CCast(_,c, Rawterm.CastConv (Term.DEFAULTcast,t)) -> DefineBody (bl, red, c, Some t)
         | _ -> DefineBody (bl, red, c, None))
     | bl = binders; ":"; t = lconstr; ":="; red = reduce; c = lconstr ->
 	DefineBody (bl, red, c, Some t)

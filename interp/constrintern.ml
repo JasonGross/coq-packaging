@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: constrintern.ml 13492 2010-10-04 21:20:01Z herbelin $ *)
+(* $Id: constrintern.ml 13620 2010-11-04 14:11:49Z herbelin $ *)
 
 open Pp
 open Util
@@ -266,6 +266,9 @@ let set_var_scope loc id istermvar (_,_,scopt,scopes) ntnvars =
   try
     let idscopes,typ = List.assoc id ntnvars in
     if !idscopes <> None &
+      (* scopes have no effect on the interpretation of identifiers, hence
+         we can tolerate having a variable occurring several times in
+         different scopes: *) typ <> NtnInternTypeIdent &
       make_current_scope (Option.get !idscopes)
       <> make_current_scope (scopt,scopes) then
 	error_inconsistent_scope loc id

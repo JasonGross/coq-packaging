@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: subtyping.ml 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: subtyping.ml 13616 2010-11-03 12:14:36Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -163,7 +163,7 @@ let check_inductive cst env mp1 l info1 mp2 mib2 spec2 subst1 subst2 reso1 reso2
   match mind_of_delta reso2 kn2  with
       | kn2' when kn2=kn2' -> ()
       | kn2' -> 
-	  if not (eq_mind (mind_of_delta reso1 kn1) kn2') then 
+	  if not (eq_mind (mind_of_delta reso1 kn1) (subst_ind subst2 kn2')) then 
 	    error ()
   end;
   (* we check that records and their field names are preserved. *)

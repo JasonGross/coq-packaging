@@ -8,7 +8,7 @@
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
 
-(*i $Id: Nbasic.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: Nbasic.v 13734 2010-12-21 18:21:56Z letouzey $ i*)
 
 Require Import ZArith.
 Require Import BigNumPrelude.
@@ -260,13 +260,6 @@ Section ReduceRec.
 
 End ReduceRec.
 
-Definition opp_compare cmp :=
-  match cmp with
-  | Lt => Gt
-  | Eq => Eq
-  | Gt => Lt
-  end.
-
 Section CompareRec.
 
  Variable wm w : Type.
@@ -447,7 +440,7 @@ End AddS.
   | Lt => y < x
   | Gt => y > x
   end ->
-  match opp_compare u with
+  match CompOpp u with
   | Eq => x = y
   | Lt => x < y
   | Gt => x > y

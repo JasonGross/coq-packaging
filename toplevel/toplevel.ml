@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: toplevel.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: toplevel.ml 13668 2010-12-02 17:43:59Z herbelin $ *)
 
 open Pp
 open Util
@@ -276,7 +276,6 @@ let rec is_pervasive_exn = function
   | Error_in_file (_,_,e) -> is_pervasive_exn e
   | Stdpp.Exc_located (_,e) -> is_pervasive_exn e
   | DuringCommandInterp (_,e) -> is_pervasive_exn e
-  | DuringSyntaxChecking (_,e) -> is_pervasive_exn e
   | _ -> false
 
 (* Toplevel error explanation, dealing with locations, Drop, Ctrl-D
@@ -285,8 +284,7 @@ let rec is_pervasive_exn = function
 let print_toplevel_error exc =
   let (dloc,exc) =
     match exc with
-      | DuringCommandInterp (loc,ie)
-      | DuringSyntaxChecking (loc,ie) ->
+      | DuringCommandInterp (loc,ie) ->
           if loc = dummy_loc then (None,ie) else (Some loc, ie)
       | _ -> (None, exc)
   in
@@ -335,8 +333,7 @@ let rec discard_to_dot () =
  * in encountered. *)
 
 let process_error = function
-  | DuringCommandInterp _
-  | DuringSyntaxChecking _ as e -> e
+  | DuringCommandInterp _ as e -> e
   | e ->
       if is_pervasive_exn e then
 	e

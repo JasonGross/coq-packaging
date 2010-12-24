@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: eterm.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: eterm.mli 13693 2010-12-08 15:32:25Z msozeau $ i*)
 open Environ
 open Tacmach
 open Term
@@ -24,7 +24,7 @@ val sort_dependencies : (int * evar_info * Intset.t) list -> (int * evar_info * 
    evars contexts, object and type *)
 val eterm_obligations : env -> identifier -> evar_map -> evar_map -> int ->
   ?status:obligation_definition_status -> constr -> types -> 
-  (identifier * types * loc * obligation_definition_status * Intset.t * 
+  (identifier * types * hole_kind located * obligation_definition_status * Intset.t * 
       tactic option) array
     (* Existential key, obl. name, type as product, location of the original evar, associated tactic,
        status and dependencies as indexes into the array *)

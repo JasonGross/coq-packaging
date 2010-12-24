@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: cases.ml 13511 2010-10-06 20:48:16Z herbelin $ *)
+(* $Id: cases.ml 13728 2010-12-19 11:35:20Z herbelin $ *)
 
 open Util
 open Names
@@ -1648,9 +1648,11 @@ let prepare_predicate loc typing_fun evdref env tomatchs sign tycon pred =
 	let sigma2,pred2 = build_inversion_problem loc env !evdref tomatchs t in
 	[!evdref, KnownDep, pred1; sigma2, DepUnknown, pred2]
     | None, Some (None, t) ->
-	(* Only one strategy: we build an "inversion" predicate *)
-	let sigma,pred = build_inversion_problem loc env !evdref tomatchs t in
-	[sigma, DepUnknown, pred]
+	(* First strategy: we build an "inversion" predicate *)
+	let sigma1,pred = build_inversion_problem loc env !evdref tomatchs t in
+	(* Second strategy: we abstract the tycon wrt to the dependencies *)
+        let pred2 = lift (List.length names) t in
+	[sigma1, DepUnknown, pred; !evdref, KnownNotDep, pred2]
     | None,  _ ->
 	(* No type constaints: we use two strategies *)
 	let t = mkExistential env ~src:(loc, CasesType) evdref in

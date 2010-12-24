@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mlutil.mli 13420 2010-09-16 15:47:08Z letouzey $ i*)
+(*i $Id: mlutil.mli 13733 2010-12-21 13:08:53Z letouzey $ i*)
 
 open Util
 open Names
@@ -63,6 +63,7 @@ val var2var' : ml_type -> ml_type
 type abbrev_map = global_reference -> ml_type option
 
 val type_expand : abbrev_map -> ml_type -> ml_type
+val type_simpl : ml_type -> ml_type
 val type_to_sign : abbrev_map -> ml_type -> sign
 val type_to_signature : abbrev_map -> ml_type -> signature
 val type_expunge : abbrev_map -> ml_type -> ml_type
@@ -116,8 +117,8 @@ val optimize_fix : ml_ast -> ml_ast
 val inline : global_reference -> ml_ast -> bool
 
 exception Impossible
-val check_function_branch : ml_branch -> ml_ast
-val check_constant_branch : ml_branch -> ml_ast
+val branch_as_fun : ml_type list -> ml_branch -> ml_ast
+val branch_as_cst : ml_branch -> ml_ast
 
 (* Classification of signatures *)
 

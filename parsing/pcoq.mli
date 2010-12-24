@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pcoq.mli 13329 2010-07-26 11:05:39Z herbelin $ i*)
+(*i $Id: pcoq.mli 13690 2010-12-06 16:15:54Z glondu $ i*)
 
 open Util
 open Names
@@ -22,6 +22,8 @@ open Libnames
 (* The parser of Coq                                                  *)
 
 module Gram : Grammar.S with type te = Compat.token
+
+val entry_print : 'a Gram.Entry.e -> unit
 
 (**********************************************************************)
 (* The parser of Coq is built from three kinds of rule declarations:

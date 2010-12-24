@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernac.ml 13488 2010-10-03 22:27:05Z herbelin $ *)
+(* $Id: vernac.ml 13668 2010-12-02 17:43:59Z herbelin $ *)
 
 (* Parsing of vernacular. *)
 
@@ -34,8 +34,7 @@ exception HasNotFailed
 let raise_with_file file exc =
   let (cmdloc,re) =
     match exc with
-      | DuringCommandInterp(loc,e)
-      | DuringSyntaxChecking(loc,e) -> (loc,e)
+      | DuringCommandInterp(loc,e) -> (loc,e)
       | e -> (dummy_loc,e)
   in
   let (inner,inex) =
@@ -171,7 +170,7 @@ let rec vernac_com interpfun (loc,com) =
 	  | e ->
 	      (* if [e] is an anomaly, the next function will re-raise it *)
 	      let msg = Cerrors.explain_exn_no_anomaly e in
-	      msgnl (str "The command has indeed failed with message:" ++
+	      if_verbose msgnl (str "The command has indeed failed with message:" ++
 		     fnl () ++ str "=> " ++ hov 0 msg)
 	end
 
