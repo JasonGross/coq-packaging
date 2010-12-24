@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: cerrors.ml 13431 2010-09-18 08:15:29Z herbelin $ *)
+(* $Id: cerrors.ml 13639 2010-11-16 15:36:01Z glondu $ *)
 
 open Pp
 open Util
@@ -81,6 +81,10 @@ let rec explain_exn_default_aux anomaly_string report_fn = function
       hov 0 (str "Syntax error: Undefined token.")
   | Lexer.Error (Bad_token s) ->
       hov 0 (str "Syntax error: Bad token" ++ spc () ++ str s ++ str ".")
+  | Stdpp.Exc_located (loc,exc) ->
+      hov 0 ((if loc = dummy_loc then (mt ())
+               else (str"At location " ++ print_loc loc ++ str":" ++ fnl ()))
+               ++ explain_exn_default_aux anomaly_string report_fn exc)
   | Assert_failure (s,b,e) ->
       hov 0 (anomaly_string () ++ str "assert failure" ++ spc () ++
 	       (if s <> "" then
@@ -167,10 +171,13 @@ let explain_exn_default =
 let raise_if_debug e =
   if !Flags.debug then raise e
 
-let _ = Tactic_debug.explain_logic_error := explain_exn_default
+let _ = Tactic_debug.explain_logic_error :=
+  (fun e -> explain_exn_default (process_vernac_interp_error e))
 
 let _ = Tactic_debug.explain_logic_error_no_anomaly :=
-          explain_exn_default_aux (fun () -> mt()) (fun () -> str ".")
+  (fun e ->
+    explain_exn_default_aux (fun () -> mt()) (fun () -> str ".")
+      (process_vernac_interp_error e))
 
 let explain_exn_function = ref explain_exn_default
 

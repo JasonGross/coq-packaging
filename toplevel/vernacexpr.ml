@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacexpr.ml 13492 2010-10-04 21:20:01Z herbelin $ i*)
+(*i $Id: vernacexpr.ml 13668 2010-12-02 17:43:59Z herbelin $ i*)
 
 open Util
 open Names
@@ -360,10 +360,7 @@ and located_vernac_expr = loc * vernac_expr
 (* Locating errors raised just after the dot is parsed but before the
    interpretation phase *)
 
-exception DuringSyntaxChecking of exn located
-
-let syntax_checking_error loc s =
-  raise (DuringSyntaxChecking (loc,UserError ("",Pp.str s)))
+let syntax_checking_error loc s = user_err_loc (loc,"",Pp.str s)
 
 (**********************************************************************)
 (* Managing locality *)

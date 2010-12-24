@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile 13540 2010-10-13 19:53:28Z notin $ 
+# $Id: Makefile 13566 2010-10-19 13:22:08Z glondu $ 
 
 
 # Makefile for Coq
@@ -160,8 +160,18 @@ else
 stage1 $(STAGE1_TARGETS) : always
 	$(call stage-template,1)
 
+ifneq (,$(STAGE1_IMPLICITS))
+$(STAGE1_IMPLICITS) : always
+	$(call stage-template,1)
+endif
+
 stage2 $(STAGE2_TARGETS) : stage1
 	$(call stage-template,2)
+
+ifneq (,$(STAGE2_IMPLICITS))
+$(STAGE2_IMPLICITS) : stage1
+	$(call stage-template,2)
+endif
 
 # Nota:
 # - world is one of the targets in $(STAGE2_TARGETS), hence launching
