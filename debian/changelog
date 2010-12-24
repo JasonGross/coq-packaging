@@ -1,6 +1,10 @@
-coq (8.3+dfsg-2) UNRELEASED; urgency=low
+coq (8.3.pl1+dfsg-1) UNRELEASED; urgency=low
 
-  * NOT RELEASED YET
+  * New upstream release
+    - remove all patches (applied upstream)
+  * debian/rules:
+    - run test-suite in override_dh_auto_test, skip coqchk run
+    - make "build" explicitly a phony target
 
  -- Stéphane Glondu <glondu@debian.org>  Tue, 19 Oct 2010 12:10:18 +0200
 
