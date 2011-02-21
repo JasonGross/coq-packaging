@@ -1,0 +1,155 @@
+From: Stephane Glondu <steph@glondu.net>
+Date: Wed, 17 Nov 2010 21:26:49 +0000
+Subject: Fix build with camlp5 6.02.1
+
+This is a squash of upstream commits 13647 and 13706 in v8.2 branch.
+---
+ lib/compat.ml4         |   10 ++++++++++
+ parsing/pcoq.ml4       |   11 ++++++++---
+ parsing/pcoq.mli       |    2 ++
+ parsing/q_util.ml4     |    6 +++---
+ toplevel/metasyntax.ml |   26 +++++++++++++-------------
+ 5 files changed, 36 insertions(+), 19 deletions(-)
+
+diff --git a/lib/compat.ml4 b/lib/compat.ml4
+index 40cffad..de049b2 100644
+--- a/lib/compat.ml4
++++ b/lib/compat.ml4
+@@ -69,3 +69,13 @@ let join_loc = M.join_loc
+ type token = M.token
+ type lexer = M.lexer
+ let using = M.using
++
++(** Compatibility with Camlp5 6.x *)
++
++IFDEF CAMLP5_6_00 THEN
++let slist0sep x y = Gramext.Slist0sep (x, y, false)
++let slist1sep x y = Gramext.Slist1sep (x, y, false)
++ELSE
++let slist0sep x y = Gramext.Slist0sep (x, y)
++let slist1sep x y = Gramext.Slist1sep (x, y)
++END
+diff --git a/parsing/pcoq.ml4 b/parsing/pcoq.ml4
+index d2d81cd..3ab89cd 100644
+--- a/parsing/pcoq.ml4
++++ b/parsing/pcoq.ml4
+@@ -159,6 +159,11 @@ module Gram =
+       errorlabstrm "Pcoq.delete_rule" (str "GDELETE_RULE forbidden.")
+   end
+ 
++IFDEF CAMLP5_6_02_1 THEN
++let entry_print x = Gram.Entry.print !Pp_control.std_ft x
++ELSE
++let entry_print = Gram.Entry.print
++END
+ 
+ let camlp4_verbosity silent f x =
+   let a = !Gramext.warning_verbose in
+@@ -746,9 +751,9 @@ let rec symbol_of_production assoc from forpat typ =
+     | ETConstrList (typ',[]) ->
+         Gramext.Slist1 (symbol_of_production assoc from forpat (ETConstr typ'))
+     | ETConstrList (typ',tkl) ->
+-        Gramext.Slist1sep
+-          (symbol_of_production assoc from forpat (ETConstr typ'),
+-           Gramext.srules
++        Compat.slist1sep
++          (symbol_of_production assoc from forpat (ETConstr typ'))
++          (Gramext.srules
+              [List.map (fun x -> Gramext.Stoken x) tkl,
+               List.fold_right (fun _ v -> Gramext.action (fun _ -> v)) tkl
+                 (Gramext.action (fun loc -> ()))])
+diff --git a/parsing/pcoq.mli b/parsing/pcoq.mli
+index 0a4b349..077f178 100644
+--- a/parsing/pcoq.mli
++++ b/parsing/pcoq.mli
+@@ -24,6 +24,8 @@ val lexer : Compat.lexer
+ 
+ module Gram : Grammar.S with type te = Compat.token
+ 
++val entry_print : 'a Gram.Entry.e -> unit
++
+ (* The superclass of all grammar entries *)
+ type grammar_object
+ 
+diff --git a/parsing/q_util.ml4 b/parsing/q_util.ml4
+index da4329b..0d2a890 100644
+--- a/parsing/q_util.ml4
++++ b/parsing/q_util.ml4
+@@ -82,7 +82,7 @@ let modifiers e =
+ <:expr<  Gramext.srules
+     [([], Gramext.action(fun _loc -> []));
+      ([Gramext.Stoken ("", "(");
+-       Gramext.Slist1sep ($e$, Gramext.Stoken ("", ","));
++       Compat.slist1sep $e$ (Gramext.Stoken ("", ","));
+        Gramext.Stoken ("", ")")],
+       Gramext.action (fun _ l _ _loc -> l))]
+  >>
+@@ -96,14 +96,14 @@ let rec interp_entry_name loc s sep =
+                    String.sub s (l-9) 9 = "_list_sep" then
+     let t, g = interp_entry_name loc (String.sub s 3 (l-12)) "" in
+     let sep = <:expr< Gramext.Stoken("",$str:sep$) >> in
+-    List1ArgType t, <:expr< Gramext.Slist1sep $g$ $sep$ >>
++    List1ArgType t, <:expr< Compat.slist1sep $g$ $sep$ >>
+   else if l > 5 & String.sub s (l-5) 5 = "_list" then
+     let t, g = interp_entry_name loc (String.sub s 0 (l-5)) "" in
+     List0ArgType t, <:expr< Gramext.Slist0 $g$ >>
+   else if l > 9 & String.sub s (l-9) 9 = "_list_sep" then
+     let t, g = interp_entry_name loc (String.sub s 0 (l-9)) "" in
+     let sep = <:expr< Gramext.Stoken("",$str:sep$) >> in
+-    List0ArgType t, <:expr< Gramext.Slist0sep $g$ $sep$ >>
++    List0ArgType t, <:expr< Compat.slist0sep $g$ $sep$ >>
+   else if l > 4 & String.sub s (l-4) 4 = "_opt" then
+     let t, g = interp_entry_name loc (String.sub s 0 (l-4)) "" in
+     OptArgType t, <:expr< Gramext.Sopt $g$ >>
+diff --git a/toplevel/metasyntax.ml b/toplevel/metasyntax.ml
+index 821a73f..ba10708 100644
+--- a/toplevel/metasyntax.ml
++++ b/toplevel/metasyntax.ml
+@@ -100,33 +100,33 @@ let add_tactic_notation (n,prods,e) =
+ let print_grammar = function
+   | "constr" | "operconstr" | "binder_constr" ->
+       msgnl (str "Entry constr is");
+-      Gram.Entry.print Pcoq.Constr.constr;
++      entry_print Pcoq.Constr.constr;
+       msgnl (str "and lconstr is");
+-      Gram.Entry.print Pcoq.Constr.lconstr;
++      entry_print Pcoq.Constr.lconstr;
+       msgnl (str "where binder_constr is");
+-      Gram.Entry.print Pcoq.Constr.binder_constr;
++      entry_print Pcoq.Constr.binder_constr;
+       msgnl (str "and operconstr is");
+-      Gram.Entry.print Pcoq.Constr.operconstr;
++      entry_print Pcoq.Constr.operconstr;
+   | "pattern" ->
+-      Gram.Entry.print Pcoq.Constr.pattern
++      entry_print Pcoq.Constr.pattern
+   | "tactic" -> 
+       msgnl (str "Entry tactic_expr is");
+-      Gram.Entry.print Pcoq.Tactic.tactic_expr;
++      entry_print Pcoq.Tactic.tactic_expr;
+       msgnl (str "Entry binder_tactic is");
+-      Gram.Entry.print Pcoq.Tactic.binder_tactic;
++      entry_print Pcoq.Tactic.binder_tactic;
+       msgnl (str "Entry simple_tactic is");
+-      Gram.Entry.print Pcoq.Tactic.simple_tactic;
++      entry_print Pcoq.Tactic.simple_tactic;
+   | "vernac" -> 
+       msgnl (str "Entry vernac is");
+-      Gram.Entry.print Pcoq.Vernac_.vernac;
++      entry_print Pcoq.Vernac_.vernac;
+       msgnl (str "Entry command is");
+-      Gram.Entry.print Pcoq.Vernac_.command;
++      entry_print Pcoq.Vernac_.command;
+       msgnl (str "Entry syntax is");
+-      Gram.Entry.print Pcoq.Vernac_.syntax;
++      entry_print Pcoq.Vernac_.syntax;
+       msgnl (str "Entry gallina is");
+-      Gram.Entry.print Pcoq.Vernac_.gallina;
++      entry_print Pcoq.Vernac_.gallina;
+       msgnl (str "Entry gallina_ext is");
+-      Gram.Entry.print Pcoq.Vernac_.gallina_ext;
++      entry_print Pcoq.Vernac_.gallina_ext;
+   | _ -> error "Unknown or unprintable grammar entry."
+ 
+ (**********************************************************************)
+-- 
