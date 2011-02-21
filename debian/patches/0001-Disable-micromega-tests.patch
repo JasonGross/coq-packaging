@@ -1,6 +1,6 @@
 From: Stephane Glondu <steph@glondu.net>
 Date: Mon, 22 Feb 2010 10:39:03 +0100
-Subject: [PATCH] Disable micromega tests
+Subject: Disable micromega tests
 
 Workaround for bug #570920.
 ---

@@ -1,6 +1,6 @@
 From: Stephane Glondu <steph@glondu.net>
 Date: Fri, 2 Jul 2010 15:00:43 +0200
-Subject: [PATCH] Remove dependency to Unix from module Profile
+Subject: Remove dependency to Unix from module Profile
 
 Applied-Upstream: https://gforge.inria.fr/scm/viewvc.php?view=rev&root=coq&revision=13234
 Signed-off-by: Stephane Glondu <steph@glondu.net>
