@@ -1,3 +1,11 @@
+coq (8.2.pl2+dfsg-2) unstable; urgency=low
+
+  * Add Fix-build-with-camlp5-6.02.1.patch
+  * Bump versioned build-dependency on liblablgtk2-ocaml-dev to ease
+    lablgtk2 transition
+
+ -- Stéphane Glondu <glondu@debian.org>  Mon, 21 Feb 2011 16:51:11 +0100
+
 coq (8.2.pl2+dfsg-1) unstable; urgency=low
 
   * New upstream release
