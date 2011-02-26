@@ -1,3 +1,9 @@
+coq (8.3.pl1+dfsg-2) experimental; urgency=low
+
+  * Set and check COQ_VERSION used to compute COQ_ABI in debian/rules
+
+ -- Stéphane Glondu <glondu@debian.org>  Sat, 26 Feb 2011 18:12:12 +0100
+
 coq (8.3.pl1+dfsg-1) experimental; urgency=low
 
   * New upstream release
