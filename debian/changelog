@@ -5,38 +5,20 @@ coq (8.3.pl1+dfsg-1) experimental; urgency=low
   * debian/rules:
     - run test-suite in override_dh_auto_test, skip coqchk run
     - make "build" explicitly a phony target
+  * Update copyright file
+  * Fix installation of emacs files
+  * Install plugins in new binary package libcoq-ocaml
+  * Bump Standards-Version to 3.9.1 (no changes)
 
  -- Stéphane Glondu <glondu@debian.org>  Fri, 24 Dec 2010 12:51:59 +0100
 
-coq (8.3+dfsg-1) experimental; urgency=low
+coq (8.2.pl2+dfsg-2) unstable; urgency=low
 
-  * New upstream release
-    - add 0001-Fix-missing-coqlib-argument-to-coqdep-in-test-suite.patch
-  * Bump Standards-Version to 3.9.1 (no changes)
+  * Add Fix-build-with-camlp5-6.02.1.patch
+  * Bump versioned build-dependency on liblablgtk2-ocaml-dev to ease
+    lablgtk2 transition
 
- -- Stéphane Glondu <glondu@debian.org>  Sat, 16 Oct 2010 09:56:23 +0200
-
-coq (8.3~rc1+dfsg-1) experimental; urgency=low
-
-  * New upstream release candidate
-
- -- Stéphane Glondu <glondu@debian.org>  Tue, 10 Aug 2010 19:22:15 +0200
-
-coq (8.3~beta0+13323-1) experimental; urgency=low
-
-  * New upstream snapshot
-  * Update copyright file
-  * Fix installation of emacs files
-
- -- Stéphane Glondu <glondu@debian.org>  Sat, 24 Jul 2010 20:17:44 +0200
-
-coq (8.3~beta0+13298-1) experimental; urgency=low
-
-  * New upstream snapshot
-    - remove all patches
-  * Install plugins in new binary package libcoq-ocaml
-
- -- Stéphane Glondu <glondu@debian.org>  Wed, 21 Jul 2010 15:16:53 +0200
+ -- Stéphane Glondu <glondu@debian.org>  Mon, 21 Feb 2011 16:51:11 +0100
 
 coq (8.2.pl2+dfsg-1) unstable; urgency=low
 
