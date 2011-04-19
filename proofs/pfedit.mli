@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: pfedit.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: pfedit.mli 13981 2011-04-08 16:59:26Z herbelin $ i*)
 
 (*i*)
 open Util
@@ -202,6 +202,6 @@ val mutate : (pftreestate -> pftreestate) -> unit
 
 (* [build_by_tactic typ tac] returns a term of type [typ] by calling [tac] *)
 
-val build_constant_by_tactic : named_context_val -> types -> tactic ->
+val build_constant_by_tactic : identifier -> named_context_val -> types -> tactic ->
   Entries.definition_entry
 val build_by_tactic : types -> tactic -> constr

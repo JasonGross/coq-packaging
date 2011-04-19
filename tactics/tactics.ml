@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tactics.ml 13693 2010-12-08 15:32:25Z msozeau $ *)
+(* $Id: tactics.ml 13981 2011-04-08 16:59:26Z herbelin $ *)
 
 open Pp
 open Util
@@ -3469,7 +3469,7 @@ let abstract_subproof id tac gl =
     try flush_and_check_evars (project gl) concl
     with Uninstantiated_evar _ ->
       error "\"abstract\" cannot handle existentials." in
-  let const = Pfedit.build_constant_by_tactic secsign concl
+  let const = Pfedit.build_constant_by_tactic id secsign concl
     (tclCOMPLETE (tclTHEN (tclDO (List.length sign) intro) tac)) in
   let cd = Entries.DefinitionEntry const in
   let lem = mkConst (Declare.declare_internal_constant id (cd,IsProof Lemma)) in

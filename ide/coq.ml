@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq.ml 13431 2010-09-18 08:15:29Z herbelin $ *)
+(* $Id: coq.ml 13751 2010-12-24 09:56:05Z letouzey $ *)
 
 open Vernac
 open Vernacexpr
@@ -26,10 +26,6 @@ open Reductionops
 open Termops
 open Namegen
 open Ideutils
-
-let prerr_endline s = if !debug then prerr_endline s else ()
-
-let output = ref (Format.formatter_of_out_channel stdout)
 
 let msg m =
   let b =  Buffer.create 103 in
@@ -394,7 +390,7 @@ let compute_reset_info loc_ast =
   }
 
 let reset_initial () =
-  prerr_endline "Reset initial called"; flush stderr;
+  prerr_endline "Reset initial called";
   Vernacentries.abort_refine Lib.reset_initial ()
 
 let reset_to sp =
@@ -412,7 +408,7 @@ let interp_with_options verbosely options s =
   let pe = Pcoq.Gram.Entry.parse Pcoq.main_entry pa in
   (* Temporary hack to make coqide.byte work (WTF???) - now with less screen
   * pollution *)
-  Pervasives.prerr_string " \r"; Pervasives.flush stderr;
+  (try Pervasives.prerr_string " \r"; Pervasives.flush stderr with _ -> ());
   match pe with
     | None -> assert false
     | Some((loc,vernac) as last) ->

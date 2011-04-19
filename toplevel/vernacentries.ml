@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacentries.ml 13492 2010-10-04 21:20:01Z herbelin $ i*)
+(*i $Id: vernacentries.ml 13922 2011-03-21 16:25:18Z letouzey $ i*)
 
 (* Concrete syntax of the mathematical vernacular MV V2.6 *)
 
@@ -1013,9 +1013,7 @@ let vernac_set_option locality key = function
   | BoolValue b -> set_bool_option_value_gen locality key b
 
 let vernac_unset_option locality key =
-  try set_bool_option_value_gen locality key false
-  with _ ->
-  set_int_option_value_gen locality key None
+  unset_option_value_gen locality key
 
 let vernac_add_option key lv =
   let f = function

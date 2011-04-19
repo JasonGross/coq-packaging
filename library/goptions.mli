@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: goptions.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: goptions.mli 13922 2011-03-21 16:25:18Z letouzey $ i*)
 
 (* This module manages customization parameters at the vernacular level     *)
 
@@ -157,6 +157,7 @@ val get_ref_table :
 val set_int_option_value_gen    : bool option -> option_name -> int option -> unit
 val set_bool_option_value_gen   : bool option -> option_name -> bool   -> unit
 val set_string_option_value_gen : bool option -> option_name -> string -> unit
+val unset_option_value_gen : bool option -> option_name -> unit
 
 val set_int_option_value    : option_name -> int option -> unit
 val set_bool_option_value   : option_name -> bool   -> unit

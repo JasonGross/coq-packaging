@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: system.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: system.ml 13750 2010-12-24 09:55:54Z letouzey $ *)
 
 open Pp
 open Util
@@ -19,12 +19,21 @@ let safe_getenv_def var def =
     Sys.getenv var
   with Not_found ->
     warning ("Environment variable "^var^" not found: using '"^def^"' .");
-    flush Pervasives.stdout;
+    flush_all ();
     def
 
 let getenv_else s dft = try Sys.getenv s with Not_found -> dft
 
-let home = (safe_getenv_def "HOME" ".")
+(* On win32, the home directory is probably not in $HOME, but in
+   some other environment variable *)
+
+let home =
+  try Sys.getenv "HOME" with Not_found ->
+    try (Sys.getenv "HOMEDRIVE")^(Sys.getenv "HOMEPATH") with Not_found ->
+      try Sys.getenv "USERPROFILE" with Not_found ->
+	warning ("Cannot determine user home directory, using '.' .");
+	flush_all ();
+	"."
 
 let safe_getenv n = safe_getenv_def n ("$"^n)
 

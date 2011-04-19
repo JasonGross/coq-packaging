@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: names.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: names.mli 13804 2011-01-27 00:41:34Z letouzey $ i*)
 
 (*s Identifiers *)
 
@@ -139,6 +139,7 @@ val user_con : constant -> kernel_name
 val canonical_con : constant -> kernel_name
 val repr_con : constant -> module_path * dir_path * label
 val eq_constant : constant -> constant -> bool
+val con_with_label : constant -> label -> constant
 
 val string_of_con : constant -> string
 val con_label : constant -> label
