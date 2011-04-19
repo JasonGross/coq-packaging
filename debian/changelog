@@ -1,3 +1,9 @@
+coq (8.3.pl2+dfsg-1) UNRELEASED; urgency=low
+
+  * New upstream release
+
+ -- Stéphane Glondu <glondu@debian.org>  Tue, 19 Apr 2011 16:54:06 +0200
+
 coq (8.3.pl1+dfsg-2) experimental; urgency=low
 
   * Set and check COQ_VERSION used to compute COQ_ABI in debian/rules
