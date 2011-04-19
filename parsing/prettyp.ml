@@ -10,7 +10,7 @@
  * on May-June 2006 for implementation of abstraction of pretty-printing of objects.
  *)
 
-(* $Id: prettyp.ml 13492 2010-10-04 21:20:01Z herbelin $ *)
+(* $Id: prettyp.ml 13967 2011-04-08 14:08:43Z herbelin $ *)
 
 open Pp
 open Util
@@ -460,13 +460,15 @@ let gallina_print_constant_with_infos sp =
   with_line_skip (print_name_infos (ConstRef sp))
 
 let gallina_print_syntactic_def kn =
-  let sep = " := "
-  and qid = Nametab.shortest_qualid_of_syndef Idset.empty kn
+  let qid = Nametab.shortest_qualid_of_syndef Idset.empty kn
   and (vars,a) = Syntax_def.search_syntactic_definition kn in
   let c = Topconstr.rawconstr_of_aconstr dummy_loc a in
-  str "Notation " ++ pr_qualid qid ++
-  prlist_with_sep spc pr_id (List.map fst vars) ++ str sep ++
-  Constrextern.without_symbols pr_lrawconstr c ++ fnl ()
+  hov 2
+    (hov 4
+       (str "Notation " ++ pr_qualid qid ++
+        prlist (fun id -> spc () ++ pr_id id) (List.map fst vars) ++ 
+        spc () ++ str ":=") ++
+     spc () ++ Constrextern.without_symbols pr_rawconstr c) ++ fnl ()
 
 let gallina_print_leaf_entry with_values ((sp,kn as oname),lobj) =
   let sep = if with_values then " = " else " : "

@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
 
-(* $Id: vernacextend.ml4 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: vernacextend.ml4 13799 2011-01-25 17:38:40Z glondu $ *)
 
 open Util
 open Genarg
@@ -31,7 +31,7 @@ let rec make_let e = function
 let add_clause s (_,pt,e) l =
   let p = make_patt pt in
   let w = Some (make_when (MLast.loc_of_expr e) pt) in
-  (p, w, make_let e pt)::l
+  (p, <:vala<w>>, make_let e pt)::l
 
 let check_unicity s l =
   let l' = List.map (fun (_,l,_) -> extract_signature l) l in
@@ -43,7 +43,8 @@ let check_unicity s l =
 let make_clauses s l =
   check_unicity s l;
   let default =
-    (<:patt< _ >>,None,<:expr< failwith "Vernac extension: cannot occur" >>) in
+    (<:patt< _ >>,<:vala<None>>,
+     <:expr< failwith "Vernac extension: cannot occur" >>) in
   List.fold_right (add_clause s) l [default]
 
 let mlexpr_of_clause =

@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: class_tactics.ml4 13332 2010-07-26 22:12:43Z msozeau $ *)
+(* $Id: class_tactics.ml4 13902 2011-03-10 15:50:24Z msozeau $ *)
 
 open Pp
 open Util
@@ -85,7 +85,7 @@ let evars_to_goals p evm =
     if goals = [] then None
     else
       let goals = List.rev goals in
-      let evm' = evars_reset_evd evm' evm in
+      let evm' = evars_reset_evd ~with_conv_pbs:false evm' evm in
 	Some (goals, evm')
 
 (** Typeclasses instance search tactic / eauto *)
