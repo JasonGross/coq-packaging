@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ideutils.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: ideutils.mli 13751 2010-12-24 09:56:05Z letouzey $ i*)
 
 val async : ('a -> unit) -> 'a -> unit
 val sync  : ('a -> 'b) -> 'a -> 'b
@@ -34,6 +34,7 @@ val is_char_start : char -> bool
 val lib_ide_file : string -> string
 val my_stat : string -> Unix.stats option
 
+val safe_prerr_endline : string -> unit
 val prerr_endline : string -> unit
 val prerr_string : string -> unit
 val print_id : 'a -> unit

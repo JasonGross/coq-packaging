@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: evd.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
+(* $Id: evd.ml 13902 2011-03-10 15:50:24Z msozeau $ *)
 
 open Pp
 open Util
@@ -507,7 +507,9 @@ let empty =  {
   metas=Metamap.empty
 }
 
-let evars_reset_evd evd d = {d with evars = evd.evars}
+let evars_reset_evd ?(with_conv_pbs=false) evd d =
+  {d with evars = evd.evars; 
+     conv_pbs = if with_conv_pbs then evd.conv_pbs else d.conv_pbs}
 let add_conv_pb pb d = {d with conv_pbs = pb::d.conv_pbs}
 let evar_source evk d = (EvarMap.find d.evars evk).evar_source
 

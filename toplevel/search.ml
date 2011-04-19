@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: search.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: search.ml 13853 2011-02-24 07:57:31Z glondu $ *)
 
 open Pp
 open Util
@@ -197,7 +197,8 @@ let filter_by_module_from_list = function
   | l, outside -> filter_by_module l (not outside)
 
 let filter_subproof gr _ _ =
-  not (string_string_contains (name_of_reference gr) "_subproof")
+  not (string_string_contains (name_of_reference gr) "_subproof") &&
+  not (string_string_contains (name_of_reference gr) "_admitted")
 
 let (&&&&&) f g x y z = f x y z && g x y z
 

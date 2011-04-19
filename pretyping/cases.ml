@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: cases.ml 13728 2010-12-19 11:35:20Z herbelin $ *)
+(* $Id: cases.ml 13962 2011-04-06 17:00:45Z herbelin $ *)
 
 open Util
 open Names
@@ -1203,7 +1203,7 @@ and match_current pb tomatch =
 	  let case = mkCase (ci,nf_betaiota Evd.empty pred,current,brvals) in
 	  let inst = List.map mkRel deps in
 	  { uj_val = applist (case, inst);
-	    uj_type = substl inst typ }
+	    uj_type = prod_applist typ inst }
 
 and compile_branch current names deps pb arsign eqn cstr =
   let sign, pb = build_branch current deps names pb arsign eqn cstr in

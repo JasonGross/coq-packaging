@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: extraction.ml 13733 2010-12-21 13:08:53Z letouzey $ i*)
+(*i $Id: extraction.ml 13795 2011-01-22 14:43:06Z glondu $ i*)
 
 (*i*)
 open Util
@@ -394,6 +394,9 @@ and extract_ind env kn = (* kn is supposed to be in long form *)
     (* Third pass: we determine special cases. *)
     let ind_info =
       try
+	let ip = (kn, 0) in
+	let r = IndRef ip in
+	if is_custom r then raise (I Standard);
 	if not mib.mind_finite then raise (I Coinductive);
 	if mib.mind_ntypes <> 1 then raise (I Standard);
 	let p = packets.(0) in
@@ -405,9 +408,6 @@ and extract_ind env kn = (* kn is supposed to be in long form *)
 	then raise (I Singleton);
 	if l = [] then raise (I Standard);
 	if not mib.mind_record then raise (I Standard);
-	let ip = (kn, 0) in
-	let r = IndRef ip in
-	if is_custom r then raise (I Standard);
 	(* Now we're sure it's a record. *)
 	(* First, we find its field names. *)
 	let rec names_prod t = match kind_of_term t with

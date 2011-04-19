@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: table.mli 13420 2010-09-16 15:47:08Z letouzey $ i*)
+(*i $Id: table.mli 14012 2011-04-15 16:45:27Z letouzey $ i*)
 
 open Names
 open Libnames
@@ -29,6 +29,7 @@ val error_constant : global_reference -> 'a
 val error_inductive : global_reference -> 'a
 val error_nb_cons : unit -> 'a
 val error_module_clash : module_path -> module_path -> 'a
+val error_no_module_expr : module_path -> 'a
 val error_unknown_module : qualid -> 'a
 val error_scheme : unit -> 'a
 val error_not_visible : global_reference -> 'a

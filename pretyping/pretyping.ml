@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pretyping.ml 13408 2010-09-11 19:19:04Z herbelin $ *)
+(* $Id: pretyping.ml 13780 2011-01-07 16:37:57Z herbelin $ *)
 
 open Pp
 open Util
@@ -634,7 +634,10 @@ module Pretyping_F (Coercion : Coercion.S) = struct
 		let cty = nf_evar !evdref cj.uj_type and tval = nf_evar !evdref tj.utj_val in
 		let cj = match k with
 		  | VMcast when not (occur_existential cty || occur_existential tval) ->
-		      ignore (Reduction.vm_conv Reduction.CUMUL env cty tval); cj
+		     (try ignore (Reduction.vm_conv Reduction.CUMUL env cty tval); cj
+                      with Reduction.NotConvertible ->
+                        error_actual_type_loc loc env !evdref cj tval)
+
 		  | _ -> inh_conv_coerce_to_tycon loc env evdref cj (mk_tycon tval)
 		in
 		let v = mkCast (cj.uj_val, k, tval) in

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: clenv.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
+(* $Id: clenv.ml 13902 2011-03-10 15:50:24Z msozeau $ *)
 
 open Pp
 open Util
@@ -305,7 +305,7 @@ let evar_clenv_unique_resolver = clenv_unique_resolver
 
 let connect_clenv gls clenv =
   { clenv with
-    evd = evars_reset_evd gls.sigma clenv.evd;
+    evd = evars_reset_evd ~with_conv_pbs:true gls.sigma clenv.evd;
     env = Global.env_of_context gls.it.evar_hyps }
 
 (* [clenv_fchain mv clenv clenv']

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: table.ml 13733 2010-12-21 13:08:53Z letouzey $ i*)
+(*i $Id: table.ml 14012 2011-04-15 16:45:27Z letouzey $ i*)
 
 open Names
 open Term
@@ -309,6 +309,12 @@ let error_module_clash mp1 mp2 =
   err (str "The Coq modules " ++ pr_long_mp mp1 ++ str " and " ++
        pr_long_mp mp2 ++ str " have the same ML name.\n" ++
        str "This is not supported yet. Please do some renaming first.")
+
+let error_no_module_expr mp =
+  err (str "The module " ++ pr_long_mp mp
+       ++ str " has no body, it probably comes from\n"
+       ++ str "some Declare Module outside any Module Type.\n"
+       ++ str "This situation is currently unsupported by the extraction.")
 
 let error_unknown_module m =
   err (str "Module" ++ spc () ++ pr_qualid m ++ spc () ++ str "not found.")

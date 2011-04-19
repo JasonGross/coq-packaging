@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: subtac_cases.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
+(* $Id: subtac_cases.ml 14003 2011-04-14 23:09:41Z letouzey $ *)
 
 open Cases
 open Util
@@ -1741,7 +1741,7 @@ let constrs_of_pats typing_fun env isevars eqns tomatchs sign neqs arity =
 	 let j = typing_fun (mk_tycon tycon) rhs_env eqn.rhs.it in
 	 let bbody = it_mkLambda_or_LetIn j.uj_val rhs_rels'
 	 and btype = it_mkProd_or_LetIn j.uj_type rhs_rels' in
-	 let branch_name = id_of_string ("branch_" ^ (string_of_int !i)) in
+	 let branch_name = id_of_string ("program_branch_" ^ (string_of_int !i)) in
 	 let branch_decl = (Name branch_name, Some (lift !i bbody), (lift !i btype)) in
 	 let branch =
 	   let bref = RVar (dummy_loc, branch_name) in
