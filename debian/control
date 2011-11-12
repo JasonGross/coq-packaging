@@ -13,7 +13,7 @@ Build-Depends:
  ocaml-nox (>= 3.11.1-3~),
  ocaml-best-compilers,
  camlp5 (>= 5.12-2~),
- liblablgtk2-ocaml-dev (>= 2.14.2),
+ liblablgtk2-ocaml-dev (>= 2.14),
  texlive-latex-extra,
  hevea (>= 1.10-7)
 Homepage: http://coq.inria.fr/
