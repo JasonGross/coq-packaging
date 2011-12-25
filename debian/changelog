@@ -1,3 +1,9 @@
+coq (8.3.pl3+dfsg-1) UNRELEASED; urgency=low
+
+  * New upstream release
+
+ -- Stéphane Glondu <glondu@debian.org>  Sun, 25 Dec 2011 13:25:06 +0100
+
 coq (8.3.pl2+dfsg-2) unstable; urgency=low
 
   * Recompile with OCaml 3.12.1 (no changes)
