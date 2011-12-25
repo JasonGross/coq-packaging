@@ -1,8 +1,9 @@
-coq (8.3.pl3+dfsg-1) UNRELEASED; urgency=low
+coq (8.3.pl3+dfsg-1) unstable; urgency=low
 
   * New upstream release
+    - remove all patches (applied upstream)
 
- -- Stéphane Glondu <glondu@debian.org>  Sun, 25 Dec 2011 13:25:06 +0100
+ -- Stéphane Glondu <glondu@debian.org>  Sun, 25 Dec 2011 13:46:09 +0100
 
 coq (8.3.pl2+dfsg-2) unstable; urgency=low
 
