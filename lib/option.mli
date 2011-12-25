@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: option.mli 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: option.mli 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 (** Module implementing basic combinators for OCaml option type.
    It tries follow closely the style of OCaml standard library.

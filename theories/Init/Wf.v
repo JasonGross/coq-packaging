@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Wf.v 13492 2010-10-04 21:20:01Z herbelin $ i*)
+(*i $Id: Wf.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (** * This module proves the validity of
     - well-founded recursion (also known as course of values)

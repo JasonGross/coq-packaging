@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coq.ml 13751 2010-12-24 09:56:05Z letouzey $ *)
+(* $Id: coq.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Vernac
 open Vernacexpr
@@ -297,7 +297,7 @@ let rec attribute_of_vernac_command = function
   (* Proof management *)
   | VernacGoal _ -> [GoalStartingCommand]
 
-  | VernacAbort _ -> [NavigationCommand]
+  | VernacAbort _ -> []
   | VernacAbortAll -> [NavigationCommand]
   | VernacRestart -> [NavigationCommand]
   | VernacSuspend -> [NavigationCommand]

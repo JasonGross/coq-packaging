@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -8,7 +8,7 @@
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
 
-(*i $Id: NMake_gen.ml 13734 2010-12-21 18:21:56Z letouzey $ i*)
+(*i $Id: NMake_gen.ml 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (*S NMake_gen.ml : this file generates NMake.v *)
 
@@ -55,7 +55,7 @@ let _ =
 
   pr "(************************************************************************)";
   pr "(*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)";
-  pr "(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)";
+  pr "(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)";
   pr "(*   \\VV/  **************************************************************)";
   pr "(*    //   *      This file is distributed under the terms of the       *)";
   pr "(*         *       GNU Lesser General Public License Version 2.1        *)";

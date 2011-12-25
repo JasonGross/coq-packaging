@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: classops.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: classops.ml 14776 2011-12-07 17:54:28Z herbelin $ *)
 
 open Util
 open Pp
@@ -369,8 +369,8 @@ let load_coercion _ o =
   then
     cache_coercion o
 
-let open_coercion _ o =
-  if not
+let open_coercion i o =
+  if i = 1 && not
     (!automatically_import_coercions || Flags.version_less_or_equal Flags.V8_2)
   then
     cache_coercion o

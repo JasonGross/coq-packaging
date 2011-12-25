@@ -1,13 +1,13 @@
 (* -*- compile-command: "make -C ../.. bin/coqdoc" -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: main.ml 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: main.ml 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (* Modified by Lionel Elie Mamane <lionel@mamane.lu> on 9 & 10 Mar 2004:
  *  - handling of absolute filenames (function coq_module)
@@ -135,7 +135,7 @@ let add_path dir name =
 
 (* turn A/B/C into A.B.C *)
 let rec name_of_path p name dirname suffix =
-  if p = dirname then String.concat "." (name::suffix)
+  if p = dirname then String.concat "." (if name = "" then suffix else (name::suffix))
   else
     let subdir = Filename.dirname dirname in
     if subdir = dirname then raise Not_found

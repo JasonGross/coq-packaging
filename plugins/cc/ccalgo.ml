@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ccalgo.ml 13409 2010-09-13 07:53:13Z soubiran $ *)
+(* $Id: ccalgo.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 (* This file implements the basic congruence-closure algorithm by *)
 (* Downey,Sethi and Tarjan. *)

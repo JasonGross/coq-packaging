@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: system.ml 13750 2010-12-24 09:55:54Z letouzey $ *)
+(* $Id: system.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Pp
 open Util
@@ -103,7 +103,7 @@ let canonical_path_name p =
 (* All subdirectories, recursively *)
 
 let exists_dir dir =
-  try let _ = opendir dir in true with Unix_error _ -> false
+  try let _ = closedir (opendir dir) in true with Unix_error _ -> false
 
 let skipped_dirnames = ref ["CVS"; "_darcs"]
 

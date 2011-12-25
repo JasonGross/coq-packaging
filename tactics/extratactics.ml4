@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: extratactics.ml4 13658 2010-11-29 11:09:05Z glondu $ *)
+(* $Id: extratactics.ml4 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Pp
 open Pcoq
@@ -661,4 +661,11 @@ and has_evar_prec (_, ts1, ts2) =
 TACTIC EXTEND has_evar
 | [ "has_evar" constr(x) ] ->
     [ if has_evar x then tclIDTAC else tclFAIL 0 (str "No evars") ]
+END
+
+TACTIC EXTEND is_hyp
+| [ "is_var" constr(x) ] ->
+  [ match kind_of_term x with
+    | Var _ -> tclIDTAC
+    | _ -> tclFAIL 0 (str "Not a variable or hypothesis") ]
 END

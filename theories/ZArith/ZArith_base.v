@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ZArith_base.v 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: ZArith_base.v 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 (** Library for manipulating integers based on binary encoding.
     These are the basic modules, required by [Omega] and [Ring] for instance.

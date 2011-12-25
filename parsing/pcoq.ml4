@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo pa_macro.cmo" i*)
 
-(*i $Id: pcoq.ml4 13690 2010-12-06 16:15:54Z glondu $ i*)
+(*i $Id: pcoq.ml4 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 open Pp
 open Util

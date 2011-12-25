@@ -6,7 +6,7 @@
 #         #       GNU Lesser General Public License Version 2.1       #
 #######################################################################
 
-# $Id: Makefile 13566 2010-10-19 13:22:08Z glondu $ 
+# $Id: Makefile 14090 2011-05-03 13:34:16Z pboutill $ 
 
 
 # Makefile for Coq
@@ -228,7 +228,7 @@ docclean:
 	rm -f doc/refman/euclid.ml doc/refman/euclid.mli
 	rm -f doc/refman/heapsort.ml doc/refman/heapsort.mli
 	rm -f doc/common/version.tex
-	rm -f doc/refman/styles.hva doc/refman/cover.html doc/refman/*.eps doc/refman/Reference-Manual.html
+	rm -f doc/refman/styles.hva doc/refman/cover.html doc/refman/Reference-Manual.html
 	rm -f doc/coq.tex
 	rm -f doc/refman/styles.hva doc/refman/cover.html 
 
