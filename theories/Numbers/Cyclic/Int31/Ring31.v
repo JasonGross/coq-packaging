@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Ring31.v 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: Ring31.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (** * Int31 numbers defines Z/(2^31)Z, and can hence be equipped
       with a ring structure and a ring tactic *)

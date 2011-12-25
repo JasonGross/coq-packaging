@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: tactics.ml 13981 2011-04-08 16:59:26Z herbelin $ *)
+(* $Id: tactics.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Pp
 open Util
@@ -1708,8 +1708,8 @@ let letin_tac_gen with_eq name c ty occs gl =
   tclTHENLIST
     [ convert_concl_no_check newcl DEFAULTcast;
       intro_gen dloc (IntroMustBe id) lastlhyp true false;
-      eq_tac;
-      tclMAP convert_hyp_no_check depdecls ] gl
+      tclMAP convert_hyp_no_check depdecls;
+      eq_tac ] gl
 
 let letin_tac with_eq name c ty occs =
   letin_tac_gen with_eq name c ty (occs,true)

@@ -1,12 +1,12 @@
 (* -*- compile-command: "make -C ../.. bin/coqtop.byte" -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: subtac_coercion.ml 13332 2010-07-26 22:12:43Z msozeau $ *)
+(* $Id: subtac_coercion.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Util
 open Names

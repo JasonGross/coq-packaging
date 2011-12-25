@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *   The HELM Project         /   The EU MoWGLI Project       *)
 (*         *   University of Bologna                                    *)
@@ -12,7 +12,7 @@
 (*                       http://helm.cs.unibo.it                        *)
 (************************************************************************)
 
-(*i $Id: xmlcommand.mli 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: xmlcommand.mli 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (* print_global qid fn                                                    *)
 (*  where qid  is a long name denoting a definition/theorem or            *)

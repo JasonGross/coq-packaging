@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ind_tables.ml 13392 2010-09-02 12:11:15Z vsiles $ i*)
+(*i $Id: ind_tables.ml 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (* File created by Vincent Siles, Oct 2007, extended into a generic
    support for generation of inductive schemes by Hugo Herbelin, Nov 2009 *)

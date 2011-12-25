@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: indtypes.ml 13323 2010-07-24 15:57:30Z herbelin $ *)
+(* $Id: indtypes.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Util
 open Names
@@ -247,8 +247,16 @@ let typecheck_inductive env mie =
   let param_ccls = List.fold_left (fun l (_,b,p) ->
     if b = None then
       let _,c = dest_prod_assum env p in
-      let u = match kind_of_term c with Sort (Type u) -> Some u | _ -> None in
-      u::l
+      (* Add Type levels to the ordered list of parameters contributing to *)
+      (* polymorphism unless there is aliasing (i.e. non distinct levels) *)
+      match kind_of_term c with
+      | Sort (Type u) ->
+          if List.mem (Some u) l then
+            None :: List.map (function Some v when u = v -> None | x -> x) l
+          else
+            Some u :: l
+      | _ ->
+          None :: l
     else
       l) [] params in
 

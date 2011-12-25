@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -8,7 +8,7 @@
 
 (*i camlp4use: "pa_extend.cmo q_MLast.cmo" i*)
 
-(* $Id: tacextend.ml4 13799 2011-01-25 17:38:40Z glondu $ *)
+(* $Id: tacextend.ml4 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Util
 open Genarg

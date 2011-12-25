@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: states.mli 13431 2010-09-18 08:15:29Z herbelin $ i*)
+(*i $Id: states.mli 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (*s States of the system. In that module, we provide functions to get
   and set the state of the whole system. Internally, it is done by

@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -10,7 +10,7 @@
  * on May-June 2006 for implementation of abstraction of pretty-printing of objects.
  *)
 
-(* $Id: prettyp.ml 13967 2011-04-08 14:08:43Z herbelin $ *)
+(* $Id: prettyp.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Pp
 open Util

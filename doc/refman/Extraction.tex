@@ -334,7 +334,7 @@ As an example of translation to a non-inductive datatype, let's turn
 {\tt nat} into Ocaml's {\tt int} (see caveat above):
 \begin{coq_example}
 Extract Inductive nat => int [ "0" "succ" ]
- "(fun fO fS n => if n=0 then fO () else fS (n-1))".
+ "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
 \end{coq_example}
 
 \asubsection{Avoiding conflicts with existing filenames}
@@ -543,7 +543,7 @@ Some pathological examples of extraction are grouped in the file
  After compilation those two examples run nonetheless,
  thanks to the correction of the extraction~\cite{Let02}. 
 
-% $Id: Extraction.tex 13153 2010-06-15 16:09:43Z letouzey $ 
+% $Id: Extraction.tex 14575 2011-10-18 15:49:01Z letouzey $ 
 
 %%% Local Variables: 
 %%% mode: latex

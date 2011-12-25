@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -10,7 +10,7 @@
 (* Add pr_o.cmo to circumvent a useless-warning bug when preprocessed with
  * ast-based camlp4 *)
 
-(*i $Id: lexer.ml4 13521 2010-10-10 21:59:00Z herbelin $ i*)
+(*i $Id: lexer.ml4 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 open Pp
 open Util

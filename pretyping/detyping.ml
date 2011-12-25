@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: detyping.ml 13329 2010-07-26 11:05:39Z herbelin $ *)
+(* $Id: detyping.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Pp
 open Util
@@ -467,7 +467,7 @@ and share_names isgoal n l avoid env c t =
         let b = detype isgoal avoid env b in
 	let id = next_name_away na avoid in
         let avoid = id::avoid and env = add_name (Name id) env in
-        share_names isgoal n ((Name id,Explicit,Some b,t')::l) avoid env c t
+        share_names isgoal n ((Name id,Explicit,Some b,t')::l) avoid env c (lift 1 t)
     (* Only if built with the f/n notation or w/o let-expansion in types *)
     | _, LetIn (_,b,_,t) when n > 0 ->
 	share_names isgoal n l avoid env c (subst1 b t)

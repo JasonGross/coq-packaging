@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: decl_interp.ml 13323 2010-07-24 15:57:30Z herbelin $ i*)
+(*i $Id: decl_interp.ml 14677 2011-11-17 22:19:38Z herbelin $ i*)
 
 open Util
 open Names
@@ -28,7 +28,7 @@ let intern_justification_items globs =
   Option.map (List.map (intern_constr globs))
 
 let intern_justification_method globs =
-  Option.map (intern_tactic globs)
+  Option.map (intern_pure_tactic globs)
 
 let intern_statement intern_it globs st =
   {st_label=st.st_label;

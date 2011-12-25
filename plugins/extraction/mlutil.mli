@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: mlutil.mli 13733 2010-12-21 13:08:53Z letouzey $ i*)
+(*i $Id: mlutil.mli 14786 2011-12-10 12:55:19Z letouzey $ i*)
 
 open Util
 open Names
@@ -29,6 +29,8 @@ val instantiation : ml_schema -> ml_type
 val needs_magic : ml_type * ml_type -> bool
 val put_magic_if : bool -> ml_ast -> ml_ast
 val put_magic : ml_type * ml_type -> ml_ast -> ml_ast
+
+val generalizable : ml_ast -> bool
 
 (*s ML type environment. *)
 
