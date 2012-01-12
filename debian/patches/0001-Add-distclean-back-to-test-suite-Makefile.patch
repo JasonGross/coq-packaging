@@ -1,0 +1,23 @@
+From: Stephane Glondu <steph@glondu.net>
+Date: Thu, 12 Jan 2012 16:30:10 +0100
+Subject: Add distclean back to test-suite/Makefile
+
+---
+ test-suite/Makefile |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/test-suite/Makefile b/test-suite/Makefile
+index cd5886f..f3013c0 100644
+--- a/test-suite/Makefile
++++ b/test-suite/Makefile
+@@ -97,6 +97,9 @@ clean:
+ 	  -name '*.stamp' -o -name '*.vo' -o -name '*.log' \
+ 	\) -print0 | xargs -0 rm -f
+ 
++distclean: clean
++	$(HIDE)find . -name '*.log' -print0 | xargs -0 rm -f
++
+ #######################################################################
+ # Per-subsystem targets
+ #######################################################################
+-- 
