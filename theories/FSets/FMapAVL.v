@@ -8,8 +8,6 @@
 
 (* Finite map library.  *)
 
-(* $Id: FMapAVL.v 13768 2011-01-06 13:55:35Z glondu $ *)
-
 (** * FMapAVL *)
 
 (** This module implements maps using AVL trees.
@@ -39,6 +37,7 @@ Open Local Scope lazy_bool_scope.
 Open Local Scope Int_scope.
 
 Definition key := X.t.
+Hint Transparent key.
 
 (** * Trees *)
 
@@ -542,12 +541,12 @@ Ltac intuition_in := repeat progress (intuition; inv In; inv MapsTo).
 Ltac join_tac :=
  intros l; induction l as [| ll _ lx ld lr Hlr lh];
    [ | intros x d r; induction r as [| rl Hrl rx rd rr _ rh]; unfold join;
-     [ | destruct (gt_le_dec lh (rh+2));
+     [ | destruct (gt_le_dec lh (rh+2)) as [GT|LE];
        [ match goal with |- context [ bal ?u ?v ?w ?z ] =>
            replace (bal u v w z)
            with (bal ll lx ld (join lr x d (Node rl rx rd rr rh))); [ | auto]
          end
-       | destruct (gt_le_dec rh (lh+2));
+       | destruct (gt_le_dec rh (lh+2)) as [GT'|LE'];
          [ match goal with |- context [ bal ?u ?v ?w ?z ] =>
              replace (bal u v w z)
              with (bal (join (Node ll lx ld lr lh) x d rl) rx rd rr); [ | auto]
@@ -823,7 +822,7 @@ Proof.
  intros l x e r; functional induction (bal l x e r); intros; clearf;
  inv bst; repeat apply create_bst; auto; unfold create; try constructor;
  (apply lt_tree_node || apply gt_tree_node); auto;
- (eapply lt_tree_trans || eapply gt_tree_trans); eauto.
+ (eapply lt_tree_trans || eapply gt_tree_trans); eauto. 
 Qed.
 Hint Resolve bal_bst.
 
@@ -1113,7 +1112,7 @@ Lemma join_bst : forall l x d r, bst l -> bst r ->
  lt_tree x l -> gt_tree x r -> bst (join l x d r).
 Proof.
  join_tac; auto; try (simpl; auto; fail); inv bst; apply bal_bst; auto;
- clear Hrl Hlr z; intro; intros; rewrite join_in in *.
+ clear Hrl Hlr; intro; intros; rewrite join_in in *.
  intuition; [ apply MX.lt_eq with x | ]; eauto.
  intuition; [ apply MX.eq_lt with x | ]; eauto.
 Qed.
@@ -1333,7 +1332,7 @@ Proof.
  inversion_clear H.
  destruct H7; simpl in *.
  order.
- destruct (elements_aux_mapsto r acc x e0); intuition eauto.
+ destruct (elements_aux_mapsto r acc x e0); intuition eauto. 
 Qed.
 
 Lemma elements_sort : forall s : t elt, bst s -> sort ltk (elements s).

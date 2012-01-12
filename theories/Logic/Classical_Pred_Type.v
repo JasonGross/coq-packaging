@@ -1,12 +1,13 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Classical_Pred_Type.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
+(* This file is a renaming for V5.10.14b, Oct 1995, of file Classical.v
+   introduced in Coq V5.8.3, June 1993 *)
 
 (** Classical Predicate Logic on Type *)
 

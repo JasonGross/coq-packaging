@@ -1,17 +1,21 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Zlogarithm.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
 (**********************************************************************)
-(** The integer logarithms with base 2.
 
-    There are three logarithms,
+(** The integer logarithms with base 2. *)
+
+(** THIS FILE IS DEPRECATED.
+    Please rather use [Z.log2] (or [Z.log2_up]), which
+    are defined in [BinIntDef], and whose properties can
+    be found in [BinInt.Z]. *)
+
+(*  There are three logarithms defined here,
     depending on the rounding of the real 2-based logarithm:
     - [Log_inf]: [y = (Log_inf x) iff 2^y <= x < 2^(y+1)]
       i.e. [Log_inf x] is the biggest integer that is smaller than [Log x]
@@ -20,11 +24,8 @@
     - [Log_nearest]: [y= (Log_nearest x) iff 2^(y-1/2) < x <= 2^(y+1/2)]
       i.e. [Log_nearest x] is the integer nearest from [Log x] *)
 
-Require Import ZArith_base.
-Require Import Omega.
-Require Import Zcomplements.
-Require Import Zpower.
-Open Local Scope Z_scope.
+Require Import ZArith_base Omega Zcomplements Zpower.
+Local Open Scope Z_scope.
 
 Section Log_pos. (* Log of positive integers *)
 
@@ -32,9 +33,9 @@ Section Log_pos. (* Log of positive integers *)
 
   Fixpoint log_inf (p:positive) : Z :=
     match p with
-      | xH => 0	(* 1 *)
-      | xO q => Zsucc (log_inf q)	(* 2n *)
-      | xI q => Zsucc (log_inf q)	(* 2n+1 *)
+      | xH => 0 (* 1 *)
+      | xO q => Zsucc (log_inf q)       (* 2n *)
+      | xI q => Zsucc (log_inf q)       (* 2n+1 *)
     end.
 
   Fixpoint log_sup (p:positive) : Z :=
@@ -45,6 +46,27 @@ Section Log_pos. (* Log of positive integers *)
     end.
 
   Hint Unfold log_inf log_sup.
+
+  Lemma Psize_log_inf : forall p, Zpos (Pos.size p) = Z.succ (log_inf p).
+  Proof.
+   induction p; simpl; now rewrite <- ?Z.succ_Zpos, ?IHp.
+  Qed.
+
+  Lemma Zlog2_log_inf : forall p, Z.log2 (Zpos p) = log_inf p.
+  Proof.
+   unfold Z.log2. destruct p; simpl; trivial; apply Psize_log_inf.
+  Qed.
+
+  Lemma Zlog2_up_log_sup : forall p, Z.log2_up (Zpos p) = log_sup p.
+  Proof.
+   induction p; simpl.
+   - change (Zpos p~1) with (2*(Zpos p)+1).
+     rewrite Z.log2_up_succ_double, Zlog2_log_inf; try easy.
+     unfold Z.succ. now rewrite !(Z.add_comm _ 1), Z.add_assoc.
+   - change (Zpos p~0) with (2*Zpos p).
+     now rewrite Z.log2_up_double, IHp.
+   - reflexivity.
+  Qed.
 
   (** Then we give the specifications of [log_inf] and [log_sup]
     and prove their validity *)

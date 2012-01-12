@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id$ *)
 
 
 let make_tag (tt:GText.tag_table) ~name prop =
@@ -32,7 +30,7 @@ struct
   let hidden = make_tag table ~name:"hidden" [`INVISIBLE true; `EDITABLE false]
   let folded = make_tag table ~name:"locked" [`EDITABLE false; `BACKGROUND "light grey"]
   let paren = make_tag table ~name:"paren" [`BACKGROUND "purple"]
-  let lax_end = make_tag table ~name:"sentence_end" []
+  let sentence = make_tag table ~name:"sentence" []
 end
 module Proof =
 struct

@@ -1,19 +1,20 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Znumtheory.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import ZArith_base.
 Require Import ZArithRing.
 Require Import Zcomplements.
 Require Import Zdiv.
 Require Import Wf_nat.
-Open Local Scope Z_scope.
+
+(** For compatibility reasons, this Open Scope isn't local as it should *)
+
+Open Scope Z_scope.
 
 (** This file contains some notions of number theory upon Z numbers:
      - a divisibility predicate [Zdivide]
@@ -21,308 +22,173 @@ Open Local Scope Z_scope.
      - Euclid algorithm [euclid]
      - a relatively prime predicate [rel_prime]
      - a prime predicate [prime]
-     - an efficient [Zgcd] function
+     - properties of the efficient [Z.gcd] function
 *)
 
-(** * Divisibility *)
+Notation Zgcd := Z.gcd (only parsing).
+Notation Zggcd := Z.ggcd (only parsing).
+Notation Zggcd_gcd := Z.ggcd_gcd (only parsing).
+Notation Zggcd_correct_divisors := Z.ggcd_correct_divisors (only parsing).
+Notation Zgcd_divide_l := Z.gcd_divide_l (only parsing).
+Notation Zgcd_divide_r := Z.gcd_divide_r (only parsing).
+Notation Zgcd_greatest := Z.gcd_greatest (only parsing).
+Notation Zgcd_nonneg := Z.gcd_nonneg (only parsing).
+Notation Zggcd_opp := Z.ggcd_opp (only parsing).
 
-Inductive Zdivide (a b:Z) : Prop :=
-    Zdivide_intro : forall q:Z, b = q * a -> Zdivide a b.
+(** The former specialized inductive predicate [Zdivide] is now
+    a generic existential predicate. *)
 
-(** Syntax for divisibility *)
+Notation Zdivide := Z.divide (only parsing).
 
-Notation "( a | b )" := (Zdivide a b) (at level 0) : Z_scope.
+(** Its former constructor is now a pseudo-constructor. *)
+
+Definition Zdivide_intro a b q (H:b=q*a) : Z.divide a b := ex_intro _ q H.
 
 (** Results concerning divisibility*)
 
-Lemma Zdivide_refl : forall a:Z, (a | a).
-Proof.
-  intros; apply Zdivide_intro with 1; ring.
-Qed.
+Notation Zdivide_refl := Z.divide_refl (only parsing).
+Notation Zone_divide := Z.divide_1_l (only parsing).
+Notation Zdivide_0 := Z.divide_0_r (only parsing).
+Notation Zmult_divide_compat_l := Z.mul_divide_mono_l (only parsing).
+Notation Zmult_divide_compat_r := Z.mul_divide_mono_r (only parsing).
+Notation Zdivide_plus_r := Z.divide_add_r (only parsing).
+Notation Zdivide_minus_l := Z.divide_sub_r (only parsing).
+Notation Zdivide_mult_l := Z.divide_mul_l (only parsing).
+Notation Zdivide_mult_r := Z.divide_mul_r (only parsing).
+Notation Zdivide_factor_r := Z.divide_factor_l (only parsing).
+Notation Zdivide_factor_l := Z.divide_factor_r (only parsing).
 
-Lemma Zone_divide : forall a:Z, (1 | a).
-Proof.
-  intros; apply Zdivide_intro with a; ring.
-Qed.
+Lemma Zdivide_opp_r a b : (a | b) -> (a | - b).
+Proof. apply Z.divide_opp_r. Qed.
 
-Lemma Zdivide_0 : forall a:Z, (a | 0).
-Proof.
-  intros; apply Zdivide_intro with 0; ring.
-Qed.
+Lemma Zdivide_opp_r_rev a b : (a | - b) -> (a | b).
+Proof. apply Z.divide_opp_r. Qed.
+
+Lemma Zdivide_opp_l a b : (a | b) -> (- a | b).
+Proof. apply Z.divide_opp_l. Qed.
+
+Lemma Zdivide_opp_l_rev a b : (- a | b) -> (a | b).
+Proof. apply Z.divide_opp_l. Qed.
+
+Theorem Zdivide_Zabs_l a b : (Z.abs a | b) -> (a | b).
+Proof. apply Z.divide_abs_l. Qed.
+
+Theorem Zdivide_Zabs_inv_l a b : (a | b) -> (Z.abs a | b).
+Proof. apply Z.divide_abs_l. Qed.
 
 Hint Resolve Zdivide_refl Zone_divide Zdivide_0: zarith.
-
-Lemma Zmult_divide_compat_l : forall a b c:Z, (a | b) -> (c * a | c * b).
-Proof.
-  simple induction 1; intros; apply Zdivide_intro with q.
-  rewrite H0; ring.
-Qed.
-
-Lemma Zmult_divide_compat_r : forall a b c:Z, (a | b) -> (a * c | b * c).
-Proof.
-  intros a b c; rewrite (Zmult_comm a c); rewrite (Zmult_comm b c).
-  apply Zmult_divide_compat_l; trivial.
-Qed.
-
 Hint Resolve Zmult_divide_compat_l Zmult_divide_compat_r: zarith.
-
-Lemma Zdivide_plus_r : forall a b c:Z, (a | b) -> (a | c) -> (a | b + c).
-Proof.
-  simple induction 1; intros q Hq; simple induction 1; intros q' Hq'.
-  apply Zdivide_intro with (q + q').
-  rewrite Hq; rewrite Hq'; ring.
-Qed.
-
-Lemma Zdivide_opp_r : forall a b:Z, (a | b) -> (a | - b).
-Proof.
-  simple induction 1; intros; apply Zdivide_intro with (- q).
-  rewrite H0; ring.
-Qed.
-
-Lemma Zdivide_opp_r_rev : forall a b:Z, (a | - b) -> (a | b).
-Proof.
-  intros; replace b with (- - b). apply Zdivide_opp_r; trivial. ring.
-Qed.
-
-Lemma Zdivide_opp_l : forall a b:Z, (a | b) -> (- a | b).
-Proof.
-  simple induction 1; intros; apply Zdivide_intro with (- q).
-  rewrite H0; ring.
-Qed.
-
-Lemma Zdivide_opp_l_rev : forall a b:Z, (- a | b) -> (a | b).
-Proof.
-  intros; replace a with (- - a). apply Zdivide_opp_l; trivial. ring.
-Qed.
-
-Lemma Zdivide_minus_l : forall a b c:Z, (a | b) -> (a | c) -> (a | b - c).
-Proof.
-  simple induction 1; intros q Hq; simple induction 1; intros q' Hq'.
-  apply Zdivide_intro with (q - q').
-  rewrite Hq; rewrite Hq'; ring.
-Qed.
-
-Lemma Zdivide_mult_l : forall a b c:Z, (a | b) -> (a | b * c).
-Proof.
-  simple induction 1; intros q Hq; apply Zdivide_intro with (q * c).
-  rewrite Hq; ring.
-Qed.
-
-Lemma Zdivide_mult_r : forall a b c:Z, (a | c) -> (a | b * c).
-Proof.
-  simple induction 1; intros q Hq; apply Zdivide_intro with (q * b).
-  rewrite Hq; ring.
-Qed.
-
-Lemma Zdivide_factor_r : forall a b:Z, (a | a * b).
-Proof.
-  intros; apply Zdivide_intro with b; ring.
-Qed.
-
-Lemma Zdivide_factor_l : forall a b:Z, (a | b * a).
-Proof.
-  intros; apply Zdivide_intro with b; ring.
-Qed.
-
 Hint Resolve Zdivide_plus_r Zdivide_opp_r Zdivide_opp_r_rev Zdivide_opp_l
   Zdivide_opp_l_rev Zdivide_minus_l Zdivide_mult_l Zdivide_mult_r
   Zdivide_factor_r Zdivide_factor_l: zarith.
 
 (** Auxiliary result. *)
 
-Lemma Zmult_one : forall x y:Z, x >= 0 -> x * y = 1 -> x = 1.
+Lemma Zmult_one x y : x >= 0 -> x * y = 1 -> x = 1.
 Proof.
-  intros x y H H0; destruct (Zmult_1_inversion_l _ _ H0) as [Hpos| Hneg].
-  assumption.
-  rewrite Hneg in H; simpl in H.
-  contradiction (Zle_not_lt 0 (-1)).
-    apply Zge_le; assumption.
-    apply Zorder.Zlt_neg_0.
+ Z.swap_greater. apply Z.eq_mul_1_nonneg.
 Qed.
 
 (** Only [1] and [-1] divide [1]. *)
 
-Lemma Zdivide_1 : forall x:Z, (x | 1) -> x = 1 \/ x = -1.
-Proof.
-  simple induction 1; intros.
-  elim (Z_lt_ge_dec 0 x); [ left | right ].
-  apply Zmult_one with q; auto with zarith; rewrite H0; ring.
-  assert (- x = 1); auto with zarith.
-  apply Zmult_one with (- q); auto with zarith; rewrite H0; ring.
-Qed.
+Notation Zdivide_1 := Z.divide_1_r (only parsing).
 
 (** If [a] divides [b] and [b] divides [a] then [a] is [b] or [-b]. *)
 
-Lemma Zdivide_antisym : forall a b:Z, (a | b) -> (b | a) -> a = b \/ a = - b.
-Proof.
-  simple induction 1; intros.
-  inversion H1.
-  rewrite H0 in H2; clear H H1.
-  case (Z_zerop a); intro.
-  left; rewrite H0; rewrite e; ring.
-  assert (Hqq0 : q0 * q = 1).
-  apply Zmult_reg_l with a.
-  assumption.
-  ring_simplify.
-  pattern a at 2 in |- *; rewrite H2; ring.
-  assert (q | 1).
-  rewrite <- Hqq0; auto with zarith.
-  elim (Zdivide_1 q H); intros.
-  rewrite H1 in H0; left; omega.
-  rewrite H1 in H0; right; omega.
-Qed.
-
-Theorem Zdivide_trans: forall a b c, (a | b) -> (b | c) ->  (a | c).
-Proof.
-  intros a b c [d H1] [e H2]; exists (d * e); auto with zarith.
-  rewrite H2; rewrite H1; ring.
-Qed.
+Notation Zdivide_antisym := Z.divide_antisym (only parsing).
+Notation Zdivide_trans := Z.divide_trans (only parsing).
 
 (** If [a] divides [b] and [b<>0] then [|a| <= |b|]. *)
 
-Lemma Zdivide_bounds : forall a b:Z, (a | b) -> b <> 0 -> Zabs a <= Zabs b.
+Lemma Zdivide_bounds a b : (a | b) -> b <> 0 -> Z.abs a <= Z.abs b.
 Proof.
-  simple induction 1; intros.
-  assert (Zabs b = Zabs q * Zabs a).
-  subst; apply Zabs_Zmult.
-  rewrite H2.
-  assert (H3 := Zabs_pos q).
-  assert (H4 := Zabs_pos a).
-  assert (Zabs q * Zabs a >= 1 * Zabs a); auto with zarith.
-  apply Zmult_ge_compat; auto with zarith.
-  elim (Z_lt_ge_dec (Zabs q) 1); [ intros | auto with zarith ].
-  assert (Zabs q = 0).
-  omega.
-  assert (q = 0).
-  rewrite <- (Zabs_Zsgn q).
-  rewrite H5; auto with zarith.
-  subst q; omega.
+ intros H Hb.
+ rewrite <- Z.divide_abs_l, <- Z.divide_abs_r in H.
+ apply Z.abs_pos in Hb.
+ now apply Z.divide_pos_le.
 Qed.
 
 (** [Zdivide] can be expressed using [Zmod]. *)
 
 Lemma Zmod_divide : forall a b, b<>0 -> a mod b = 0 -> (b | a).
 Proof.
- intros a b NZ EQ.
- apply Zdivide_intro with (a/b).
- rewrite (Z_div_mod_eq_full a b NZ) at 1.
- rewrite EQ; ring.
+ apply Z.mod_divide.
 Qed.
 
 Lemma Zdivide_mod : forall a b, (b | a) -> a mod b = 0.
 Proof.
-  intros a b (c,->); apply Z_mod_mult.
+ intros a b (c,->); apply Z_mod_mult.
 Qed.
 
 (** [Zdivide] is hence decidable *)
 
-Lemma Zdivide_dec : forall a b:Z, {(a | b)} + {~ (a | b)}.
+Lemma Zdivide_dec a b : {(a | b)} + {~ (a | b)}.
 Proof.
-  intros a b; elim (Ztrichotomy_inf a 0).
-  (* a<0 *)
-  intros H; elim H; intros.
-  case (Z_eq_dec (b mod - a) 0).
-  left; apply Zdivide_opp_l_rev; apply Zmod_divide; auto with zarith.
-  intro H1; right; intro; elim H1; apply Zdivide_mod; auto with zarith.
-  (* a=0 *)
-  case (Z_eq_dec b 0); intro.
-  left; subst; auto with zarith.
-  right; subst; intro H0; inversion H0; omega.
-  (* a>0 *)
-  intro H; case (Z_eq_dec (b mod a) 0).
-  left; apply Zmod_divide; auto with zarith.
-  intro H1; right; intro; elim H1; apply Zdivide_mod; auto with zarith.
+ destruct (Z.eq_dec a 0) as [Ha|Ha].
+  destruct (Z.eq_dec b 0) as [Hb|Hb].
+   left; subst; apply Z.divide_0_r.
+   right. subst. contradict Hb. now apply Z.divide_0_l.
+  destruct (Z.eq_dec (b mod a) 0).
+   left. now apply Z.mod_divide.
+   right. now rewrite <- Z.mod_divide.
+Defined.
+
+Theorem Zdivide_Zdiv_eq a b : 0 < a -> (a | b) ->  b = a * (b / a).
+Proof.
+ intros Ha H.
+ rewrite (Z.div_mod b a) at 1; auto with zarith.
+ rewrite Zdivide_mod; auto with zarith.
 Qed.
 
-Theorem Zdivide_Zdiv_eq: forall a b : Z,
- 0 < a -> (a | b) ->  b = a * (b / a).
+Theorem Zdivide_Zdiv_eq_2 a b c :
+ 0 < a -> (a | b) -> (c * b) / a = c * (b / a).
 Proof.
-  intros a b Hb Hc.
-  pattern b at 1; rewrite (Z_div_mod_eq b a); auto with zarith.
-  rewrite (Zdivide_mod b a); auto with zarith.
-Qed.
-
-Theorem Zdivide_Zdiv_eq_2: forall a b c : Z,
- 0 < a -> (a | b) -> (c * b)/a = c * (b / a).
-Proof.
-  intros a b c H1 H2.
-  inversion H2 as [z Hz].
-  rewrite Hz; rewrite Zmult_assoc.
-  repeat rewrite Z_div_mult; auto with zarith.
-Qed.
-
-Theorem Zdivide_Zabs_l: forall a b, (Zabs a | b) ->  (a | b).
-Proof.
-  intros a b [x H]; subst b.
-  pattern (Zabs a); apply Zabs_intro.
-  exists (- x); ring.
-  exists x; ring.
-Qed.
-
-Theorem Zdivide_Zabs_inv_l: forall a b, (a | b) ->  (Zabs a | b).
-Proof.
-  intros a b [x H]; subst b.
-  pattern (Zabs a); apply Zabs_intro.
-  exists (- x);  ring.
-  exists x; ring.
+ intros. apply Z.divide_div_mul_exact; auto with zarith.
 Qed.
 
 Theorem Zdivide_le: forall a b : Z,
  0 <= a -> 0 < b -> (a | b) ->  a <= b.
 Proof.
-  intros a b H1 H2 [q H3]; subst b.
-  case (Zle_lt_or_eq 0 a); auto with zarith; intros H3.
-  case (Zle_lt_or_eq 0 q); auto with zarith.
-  apply (Zmult_le_0_reg_r a); auto with zarith.
-  intros H4; apply Zle_trans with (1 * a); auto with zarith.
-  intros H4; subst q; omega.
+ intros. now apply Z.divide_pos_le.
 Qed.
 
-Theorem Zdivide_Zdiv_lt_pos: forall a b : Z,
+Theorem Zdivide_Zdiv_lt_pos a b :
  1 < a -> 0 < b -> (a | b) ->  0 < b / a < b .
 Proof.
-  intros a b H1 H2 H3; split.
-  apply Zmult_lt_reg_r with a; auto with zarith.
-  rewrite (Zmult_comm (Zdiv b a)); rewrite <- Zdivide_Zdiv_eq; auto with zarith.
-  apply Zmult_lt_reg_r with a; auto with zarith.
-  repeat rewrite (fun x => Zmult_comm x a); auto with zarith.
+  intros H1 H2 H3; split.
+  apply Z.mul_pos_cancel_l with a; auto with zarith.
   rewrite <- Zdivide_Zdiv_eq; auto with zarith.
-  pattern b at 1; replace b with (1 * b); auto with zarith.
-  apply Zmult_lt_compat_r; auto with zarith.
+  now apply Z.div_lt.
 Qed.
 
-Lemma Zmod_div_mod: forall n m a, 0 < n -> 0 < m ->
- (n | m) -> a mod n = (a mod m) mod n.
+Lemma Zmod_div_mod n m a:
+ 0 < n -> 0 < m -> (n | m) -> a mod n = (a mod m) mod n.
 Proof.
-  intros n m a H1 H2 H3.
-  pattern a at 1; rewrite (Z_div_mod_eq a m); auto with zarith.
-  case H3; intros q Hq; pattern m at 1; rewrite Hq.
-  rewrite (Zmult_comm q).
-  rewrite Zplus_mod; auto with zarith.
-  rewrite <- Zmult_assoc; rewrite Zmult_mod; auto with zarith.
-  rewrite Z_mod_same; try rewrite Zmult_0_l; auto with zarith.
-  rewrite (Zmod_small 0); auto with zarith.
-  rewrite Zplus_0_l; rewrite Zmod_mod; auto with zarith.
+  intros H1 H2 (p,Hp).
+  rewrite (Z.div_mod a m) at 1; auto with zarith.
+  rewrite Hp at 1.
+  rewrite Z.mul_shuffle0, Z.add_comm, Z.mod_add; auto with zarith.
 Qed.
 
-Lemma Zmod_divide_minus: forall a b c : Z, 0 < b ->
- a mod b = c -> (b | a - c).
+Lemma Zmod_divide_minus a b c:
+ 0 < b -> a mod b = c -> (b | a - c).
 Proof.
-  intros a b c H H1; apply Zmod_divide; auto with zarith.
+  intros H H1. apply Z.mod_divide; auto with zarith.
   rewrite Zminus_mod; auto with zarith.
-  rewrite H1; pattern c at 1; rewrite <- (Zmod_small c b); auto with zarith.
-  rewrite Zminus_diag; apply Zmod_small; auto with zarith.
-  subst; apply Z_mod_lt; auto with zarith.
+  rewrite H1. rewrite <- (Z.mod_small c b) at 1.
+  rewrite Z.sub_diag, Z.mod_0_l; auto with zarith.
+  subst. now apply Z.mod_pos_bound.
 Qed.
 
-Lemma Zdivide_mod_minus: forall a b c : Z, 0 <= c < b ->
- (b | a - c) -> a mod b = c.
+Lemma Zdivide_mod_minus a b c:
+ 0 <= c < b -> (b | a - c) -> a mod b = c.
 Proof.
-  intros a b c (H1, H2) H3; assert (0 < b); try apply Zle_lt_trans with c; auto.
+  intros (H1, H2) H3.
+  assert (0 < b) by Z.order.
   replace a with ((a - c) + c); auto with zarith.
-  rewrite Zplus_mod; auto with zarith.
-  rewrite (Zdivide_mod (a -c) b); try rewrite Zplus_0_l; auto with zarith.
-  rewrite Zmod_mod; try apply Zmod_small; auto with zarith.
+  rewrite Z.add_mod; auto with zarith.
+  rewrite (Zdivide_mod (a-c) b); try rewrite Z.add_0_l; auto with zarith.
+  rewrite Z.mod_mod; try apply Zmod_small; auto with zarith.
 Qed.
 
 (** * Greatest common divisor (gcd). *)
@@ -338,12 +204,12 @@ Inductive Zis_gcd (a b d:Z) : Prop :=
 
 (** Trivial properties of [gcd] *)
 
-Lemma Zis_gcd_sym : forall a b d:Z, Zis_gcd a b d -> Zis_gcd b a d.
+Lemma Zis_gcd_sym : forall a b d, Zis_gcd a b d -> Zis_gcd b a d.
 Proof.
-  simple induction 1; constructor; intuition.
+  induction 1; constructor; intuition.
 Qed.
 
-Lemma Zis_gcd_0 : forall a:Z, Zis_gcd a 0 a.
+Lemma Zis_gcd_0 : forall a, Zis_gcd a 0 a.
 Proof.
   constructor; auto with zarith.
 Qed.
@@ -358,19 +224,18 @@ Proof.
   constructor; auto with zarith.
 Qed.
 
-Lemma Zis_gcd_minus : forall a b d:Z, Zis_gcd a (- b) d -> Zis_gcd b a d.
+Lemma Zis_gcd_minus : forall a b d, Zis_gcd a (- b) d -> Zis_gcd b a d.
 Proof.
-  simple induction 1; constructor; intuition.
+  induction 1; constructor; intuition.
 Qed.
 
-Lemma Zis_gcd_opp : forall a b d:Z, Zis_gcd a b d -> Zis_gcd b a (- d).
+Lemma Zis_gcd_opp : forall a b d, Zis_gcd a b d -> Zis_gcd b a (- d).
 Proof.
-  simple induction 1; constructor; intuition.
+  induction 1; constructor; intuition.
 Qed.
 
-Lemma Zis_gcd_0_abs : forall a:Z, Zis_gcd 0 a (Zabs a).
+Lemma Zis_gcd_0_abs a : Zis_gcd 0 a (Z.abs a).
 Proof.
-  intros a.
   apply Zabs_ind.
   intros; apply Zis_gcd_sym; apply Zis_gcd_0; auto.
   intros; apply Zis_gcd_opp; apply Zis_gcd_0; auto.
@@ -429,7 +294,7 @@ Section extended_euclid_algorithm.
   (** The recursive part of Euclid's algorithm uses well-founded
       recursion of non-negative integers. It maintains 6 integers
       [u1,u2,u3,v1,v2,v3] such that the following invariant holds:
-      [u1*a+u2*b=u3] and [v1*a+v2*b=v3] and [gcd(u2,v3)=gcd(a,b)].
+      [u1*a+u2*b=u3] and [v1*a+v2*b=v3] and [gcd(u3,v3)=gcd(a,b)].
       *)
 
   Lemma euclid_rec :
@@ -519,14 +384,15 @@ Qed.
 Lemma Zis_gcd_mult :
   forall a b c d:Z, Zis_gcd a b d -> Zis_gcd (c * a) (c * b) (c * d).
 Proof.
-  intros a b c d; simple induction 1; constructor; intuition.
-  elim (Zis_gcd_bezout a b d H). intros.
-  elim H3; intros.
-  elim H4; intros.
-  apply Zdivide_intro with (u * q + v * q0).
-  rewrite <- H5.
+  intros a b c d; simple induction 1. constructor; auto with zarith.
+  intros x Ha Hb.
+  elim (Zis_gcd_bezout a b d H). intros u v Huv.
+  elim Ha; intros a' Ha'.
+  elim Hb; intros b' Hb'.
+  apply Zdivide_intro with (u * a' + v * b').
+  rewrite <- Huv.
   replace (c * (u * a + v * b)) with (u * (c * a) + v * (c * b)).
-  rewrite H6; rewrite H7; ring.
+  rewrite Ha'; rewrite Hb'; ring.
   ring.
 Qed.
 
@@ -625,14 +491,14 @@ Proof.
   exists a'; auto with zarith.
   exists b'; auto with zarith.
   intros x (xa,H5) (xb,H6).
-  destruct (H4 (x*g)).
+  destruct (H4 (x*g)) as (x',Hx').
   exists xa; rewrite Zmult_assoc; rewrite <- H5; auto.
   exists xb; rewrite Zmult_assoc; rewrite <- H6; auto.
-  replace g with (1*g) in H7; auto with zarith.
-  do 2 rewrite Zmult_assoc in H7.
-  generalize (Zmult_reg_r _ _ _ H2 H7); clear H7; intros.
-  rewrite Zmult_1_r in H7.
-  exists q; auto with zarith.
+  replace g with (1*g) in Hx'; auto with zarith.
+  do 2 rewrite Zmult_assoc in Hx'.
+  apply Zmult_reg_r in Hx'; trivial.
+  rewrite Zmult_1_r in Hx'.
+  exists x'; auto with zarith.
 Qed.
 
 Theorem rel_prime_sym: forall a b, rel_prime a b -> rel_prime b a.
@@ -875,249 +741,62 @@ Proof.
   contradict Hp; auto with zarith.
 Qed.
 
+(** we now prove that [Z.gcd] is indeed a gcd in
+   the sense of [Zis_gcd]. *)
 
-(** We could obtain a [Zgcd] function via Euclid algorithm. But we propose
-  here a binary version of [Zgcd], faster and executable within Coq.
+Notation Zgcd_is_pos := Z.gcd_nonneg (only parsing).
 
-   Algorithm:
-
-   gcd 0 b = b
-   gcd a 0 = a
-   gcd (2a) (2b) = 2(gcd a b)
-   gcd (2a+1) (2b) = gcd (2a+1) b
-   gcd (2a) (2b+1) = gcd a (2b+1)
-   gcd (2a+1) (2b+1) = gcd (b-a) (2*a+1)
-                    or gcd (a-b) (2*b+1), depending on whether a<b
-*)
-
-Open Scope positive_scope.
-
-Fixpoint Pgcdn (n: nat) (a b : positive) : positive :=
-  match n with
-    | O => 1
-    | S n =>
-      match a,b with
-	| xH, _ => 1
-	| _, xH => 1
-	| xO a, xO b => xO (Pgcdn n a b)
-	| a, xO b => Pgcdn n a b
-	| xO a, b => Pgcdn n a b
-	| xI a', xI b' =>
-          match Pcompare a' b' Eq with
-	    | Eq => a
-	    | Lt => Pgcdn  n (b'-a') a
-	    | Gt => Pgcdn n (a'-b') b
-          end
-      end
-  end.
-
-Definition Pgcd (a b: positive) := Pgcdn (Psize a + Psize b)%nat a b.
-
-Close Scope positive_scope.
-
-Definition Zgcd (a b : Z) : Z :=
-  match a,b with
-    | Z0, _ => Zabs b
-    | _, Z0 => Zabs a
-    | Zpos a, Zpos b => Zpos (Pgcd a b)
-    | Zpos a, Zneg b => Zpos (Pgcd a b)
-    | Zneg a, Zpos b => Zpos (Pgcd a b)
-    | Zneg a, Zneg b => Zpos (Pgcd a b)
-  end.
-
-Lemma Zgcd_is_pos : forall a b, 0 <= Zgcd a b.
+Lemma Zgcd_is_gcd : forall a b, Zis_gcd a b (Z.gcd a b).
 Proof.
-  unfold Zgcd; destruct a; destruct b; auto with zarith.
-Qed.
-
-Lemma Zis_gcd_even_odd : forall a b g, Zis_gcd (Zpos a) (Zpos (xI b)) g ->
-  Zis_gcd (Zpos (xO a)) (Zpos (xI b)) g.
-Proof.
-  intros.
-  destruct H.
-  constructor; auto.
-  destruct H as (e,H2); exists (2*e); auto with zarith.
-  rewrite Zpos_xO; rewrite H2; ring.
-  intros.
-  apply H1; auto.
-  rewrite Zpos_xO in H2.
-  rewrite Zpos_xI in H3.
-  apply Gauss with 2; auto.
-  apply bezout_rel_prime.
-  destruct H3 as (bb, H3).
-  apply Bezout_intro with bb (-Zpos b).
-  omega.
-Qed.
-
-Lemma Pgcdn_correct : forall n a b, (Psize a + Psize b<=n)%nat ->
-  Zis_gcd (Zpos a) (Zpos b) (Zpos (Pgcdn n a b)).
-Proof.
-  intro n; pattern n; apply lt_wf_ind; clear n; intros.
-  destruct n.
-  simpl.
-  destruct a; simpl in *; try inversion H0.
-  destruct a.
-  destruct b; simpl.
-  case_eq (Pcompare a b Eq); intros.
-  (* a = xI, b = xI, compare = Eq *)
-  rewrite (Pcompare_Eq_eq _ _ H1); apply Zis_gcd_refl.
-  (* a = xI, b = xI, compare = Lt *)
-  apply Zis_gcd_sym.
-  apply Zis_gcd_for_euclid with 1.
-  apply Zis_gcd_sym.
-  replace (Zpos (xI b) - 1 * Zpos (xI a)) with (Zpos(xO (b - a))).
-  apply Zis_gcd_even_odd.
-  apply H; auto.
-  simpl in *.
-  assert (Psize (b-a) <= Psize b)%nat.
-  apply Psize_monotone.
-  change (Zpos (b-a) < Zpos b).
-  rewrite (Zpos_minus_morphism _ _ H1).
-  assert (0 < Zpos a) by (compute; auto).
-  omega.
-  omega.
-  rewrite Zpos_xO; do 2 rewrite Zpos_xI.
-  rewrite Zpos_minus_morphism; auto.
-  omega.
-  (* a = xI, b = xI, compare = Gt *)
-  apply Zis_gcd_for_euclid with 1.
-  replace (Zpos (xI a) - 1 * Zpos (xI b)) with (Zpos(xO (a - b))).
-  apply Zis_gcd_sym.
-  apply Zis_gcd_even_odd.
-  apply H; auto.
-  simpl in *.
-  assert (Psize (a-b) <= Psize a)%nat.
-  apply Psize_monotone.
-  change (Zpos (a-b) < Zpos a).
-  rewrite (Zpos_minus_morphism b a).
-  assert (0 < Zpos b) by (compute; auto).
-  omega.
-  rewrite ZC4; rewrite H1; auto.
-  omega.
-  rewrite Zpos_xO; do 2 rewrite Zpos_xI.
-  rewrite Zpos_minus_morphism; auto.
-  omega.
-  rewrite ZC4; rewrite H1; auto.
-  (* a = xI, b = xO *)
-  apply Zis_gcd_sym.
-  apply Zis_gcd_even_odd.
-  apply Zis_gcd_sym.
-  apply H; auto.
-  simpl in *; omega.
-  (* a = xI, b = xH *)
-  apply Zis_gcd_1.
-  destruct b; simpl.
-  (* a = xO, b = xI *)
-  apply Zis_gcd_even_odd.
-  apply H; auto.
-  simpl in *; omega.
-  (* a = xO, b = xO *)
-  rewrite (Zpos_xO a); rewrite (Zpos_xO b); rewrite (Zpos_xO (Pgcdn n a b)).
-  apply Zis_gcd_mult.
-  apply H; auto.
-  simpl in *; omega.
-  (* a = xO, b = xH *)
-  apply Zis_gcd_1.
-  (* a = xH *)
-  simpl; apply Zis_gcd_sym; apply Zis_gcd_1.
-Qed.
-
-Lemma Pgcd_correct : forall a b, Zis_gcd (Zpos a) (Zpos b) (Zpos (Pgcd a b)).
-Proof.
-  unfold Pgcd; intros.
-  apply Pgcdn_correct; auto.
-Qed.
-
-Lemma Zgcd_is_gcd : forall a b, Zis_gcd a b (Zgcd a b).
-Proof.
-  destruct a.
-  intros.
-  simpl.
-  apply Zis_gcd_0_abs.
-  destruct b; simpl.
-  apply Zis_gcd_0.
-  apply Pgcd_correct.
-  apply Zis_gcd_sym.
-  apply Zis_gcd_minus; simpl.
-  apply Pgcd_correct.
-  destruct b; simpl.
-  apply Zis_gcd_minus; simpl.
-  apply Zis_gcd_sym.
-  apply Zis_gcd_0.
-  apply Zis_gcd_minus; simpl.
-  apply Zis_gcd_sym.
-  apply Pgcd_correct.
-  apply Zis_gcd_sym.
-  apply Zis_gcd_minus; simpl.
-  apply Zis_gcd_minus; simpl.
-  apply Zis_gcd_sym.
-  apply Pgcd_correct.
+ constructor.
+ apply Z.gcd_divide_l.
+ apply Z.gcd_divide_r.
+ apply Z.gcd_greatest.
 Qed.
 
 Theorem Zgcd_spec : forall x y : Z, {z : Z | Zis_gcd x y z /\ 0 <= z}.
 Proof.
-  intros x y; exists (Zgcd x y).
-  split; [apply Zgcd_is_gcd  | apply Zgcd_is_pos].
+  intros x y; exists (Z.gcd x y).
+  split; [apply Zgcd_is_gcd  | apply Z.gcd_nonneg].
 Qed.
 
 Theorem Zdivide_Zgcd: forall p q r : Z,
- (p | q) -> (p | r) -> (p | Zgcd q r).
+ (p | q) -> (p | r) -> (p | Z.gcd q r).
 Proof.
-  intros p q r H1 H2.
-  assert (H3: (Zis_gcd q r (Zgcd q r))).
-  apply Zgcd_is_gcd.
-  inversion_clear H3; auto.
+ intros. now apply Z.gcd_greatest.
 Qed.
 
 Theorem Zis_gcd_gcd: forall a b c : Z,
- 0 <= c ->  Zis_gcd a b c -> Zgcd a b = c.
+ 0 <= c ->  Zis_gcd a b c -> Z.gcd a b = c.
 Proof.
   intros a b c H1 H2.
   case (Zis_gcd_uniqueness_apart_sign a b c (Zgcd a b)); auto.
   apply Zgcd_is_gcd; auto.
-  case Zle_lt_or_eq with (1 := H1); clear H1; intros H1; subst; auto.
-  intros H3; subst.
-  generalize (Zgcd_is_pos a b); auto with zarith.
-  case (Zgcd a b); simpl; auto; intros; discriminate.
+  Z.le_elim H1.
+  generalize (Z.gcd_nonneg a b); auto with zarith.
+  subst. now case (Z.gcd a b).
 Qed.
 
-Theorem Zgcd_inv_0_l: forall x y, Zgcd x y = 0 -> x = 0.
-Proof.
-  intros x y H.
-  assert (F1: Zdivide 0 x).
-   rewrite <- H.
-   generalize (Zgcd_is_gcd x y); intros HH; inversion HH; auto.
-  inversion F1 as [z H1].
-  rewrite H1; ring.
-Qed.
-
-Theorem Zgcd_inv_0_r: forall x y, Zgcd x y = 0 -> y = 0.
-Proof.
-  intros x y H.
-  assert (F1: Zdivide 0 y).
-   rewrite <- H.
-   generalize (Zgcd_is_gcd x y); intros HH; inversion HH; auto.
-  inversion F1 as [z H1].
-  rewrite H1; ring.
-Qed.
+Notation Zgcd_inv_0_l := Z.gcd_eq_0_l (only parsing).
+Notation Zgcd_inv_0_r := Z.gcd_eq_0_r (only parsing).
 
 Theorem Zgcd_div_swap0 : forall a b : Z,
- 0 < Zgcd a b ->
+ 0 < Z.gcd a b ->
  0 < b ->
- (a / Zgcd a b) * b = a * (b/Zgcd a b).
+ (a / Z.gcd a b) * b = a * (b/Z.gcd a b).
 Proof.
   intros a b Hg Hb.
   assert (F := Zgcd_is_gcd a b); inversion F as [F1 F2 F3].
-  pattern b at 2; rewrite (Zdivide_Zdiv_eq (Zgcd a b) b); auto.
+  pattern b at 2; rewrite (Zdivide_Zdiv_eq (Z.gcd a b) b); auto.
   repeat rewrite Zmult_assoc; f_equal.
   rewrite Zmult_comm.
   rewrite <- Zdivide_Zdiv_eq; auto.
 Qed.
 
 Theorem Zgcd_div_swap : forall a b c : Z,
- 0 < Zgcd a b ->
+ 0 < Z.gcd a b ->
  0 < b ->
- (c * a) / Zgcd a b * b = c * a * (b/Zgcd a b).
+ (c * a) / Z.gcd a b * b = c * a * (b/Z.gcd a b).
 Proof.
   intros a b c Hg Hb.
   assert (F := Zgcd_is_gcd a b); inversion F as [F1 F2 F3].
@@ -1129,44 +808,21 @@ Proof.
   rewrite <- Zdivide_Zdiv_eq; auto.
 Qed.
 
-Lemma Zgcd_comm : forall a b, Zgcd a b = Zgcd b a.
+Notation Zgcd_comm := Z.gcd_comm (only parsing).
+
+Lemma Zgcd_ass a b c : Zgcd (Zgcd a b) c = Zgcd a (Zgcd b c).
 Proof.
-  intros.
-  apply Zis_gcd_gcd.
-  apply Zgcd_is_pos.
-  apply Zis_gcd_sym.
-  apply Zgcd_is_gcd.
+ symmetry. apply Z.gcd_assoc.
 Qed.
 
-Lemma Zgcd_ass : forall a b c, Zgcd (Zgcd a b) c = Zgcd a (Zgcd b c).
-Proof.
-  intros.
-  apply Zis_gcd_gcd.
-  apply Zgcd_is_pos.
-  destruct (Zgcd_is_gcd a b).
-  destruct (Zgcd_is_gcd b c).
-  destruct (Zgcd_is_gcd a (Zgcd b c)).
-  constructor; eauto using Zdivide_trans.
-Qed.
+Notation Zgcd_Zabs := Z.gcd_abs_l (only parsing).
+Notation Zgcd_0 := Z.gcd_0_r (only parsing).
+Notation Zgcd_1 := Z.gcd_1_r (only parsing).
 
-Lemma Zgcd_Zabs : forall a b, Zgcd (Zabs a) b = Zgcd a b.
-Proof.
-  destruct a; simpl; auto.
-Qed.
-
-Lemma Zgcd_0 : forall a, Zgcd a 0 = Zabs a.
-Proof.
-  destruct a; simpl; auto.
-Qed.
-
-Lemma Zgcd_1 : forall a, Zgcd a 1 = 1.
-Proof.
-  intros; apply Zis_gcd_gcd; auto with zarith; apply Zis_gcd_1.
-Qed.
 Hint Resolve Zgcd_0 Zgcd_1 : zarith.
 
 Theorem Zgcd_1_rel_prime : forall a b,
- Zgcd a b = 1 <-> rel_prime a b.
+ Z.gcd a b = 1 <-> rel_prime a b.
 Proof.
   unfold rel_prime; split; intro H.
   rewrite <- H; apply Zgcd_is_gcd.
@@ -1248,168 +904,4 @@ Proof.
   inversion_clear tmp as [Hr1 Hr2 Hr3].
   absurd (n = 0); auto with zarith.
   case Hr1; auto with zarith.
-Qed.
-
-(** A Generalized Gcd that also computes Bezout coefficients.
-   The algorithm is the same as for Zgcd. *)
-
-Open Scope positive_scope.
-
-Fixpoint Pggcdn (n: nat) (a b : positive) : (positive*(positive*positive)) :=
-  match n with
-    | O => (1,(a,b))
-    | S n =>
-      match a,b with
-	| xH, b => (1,(1,b))
-	| a, xH => (1,(a,1))
-	| xO a, xO b =>
-           let (g,p) := Pggcdn n a b in
-           (xO g,p)
-	| a, xO b =>
-           let (g,p) := Pggcdn n a b in
-           let (aa,bb) := p in
-           (g,(aa, xO bb))
-	| xO a, b =>
-           let (g,p) := Pggcdn n a b in
-           let (aa,bb) := p in
-           (g,(xO aa, bb))
-	| xI a', xI b' =>
-           match Pcompare a' b' Eq with
-	     | Eq => (a,(1,1))
-	     | Lt =>
-	        let (g,p) := Pggcdn n (b'-a') a in
-	        let (ba,aa) := p in
-	        (g,(aa, aa + xO ba))
-	     | Gt =>
-		let (g,p) := Pggcdn n (a'-b') b in
-		let (ab,bb) := p in
-		(g,(bb+xO ab, bb))
-	   end
-      end
-  end.
-
-Definition Pggcd (a b: positive) := Pggcdn (Psize a + Psize b)%nat a b.
-
-Open Scope Z_scope.
-
-Definition Zggcd (a b : Z) : Z*(Z*Z) :=
-  match a,b with
-    | Z0, _ => (Zabs b,(0, Zsgn b))
-    | _, Z0 => (Zabs a,(Zsgn a, 0))
-    | Zpos a, Zpos b =>
-       let (g,p) := Pggcd a b in
-       let (aa,bb) := p in
-       (Zpos g, (Zpos aa, Zpos bb))
-    | Zpos a, Zneg b =>
-       let (g,p) := Pggcd a b in
-       let (aa,bb) := p in
-       (Zpos g, (Zpos aa, Zneg bb))
-    | Zneg a, Zpos b =>
-       let (g,p) := Pggcd a b in
-       let (aa,bb) := p in
-       (Zpos g, (Zneg aa, Zpos bb))
-    | Zneg a, Zneg b =>
-       let (g,p) := Pggcd a b in
-       let (aa,bb) := p in
-       (Zpos g, (Zneg aa, Zneg bb))
-  end.
-
-
-Lemma Pggcdn_gcdn : forall n a b,
-  fst (Pggcdn n a b) = Pgcdn n a b.
-Proof.
-  induction n.
-  simpl; auto.
-  destruct a; destruct b; simpl; auto.
-  destruct (Pcompare a b Eq); simpl; auto.
-  rewrite <- IHn; destruct (Pggcdn n (b-a) (xI a)) as (g,(aa,bb)); simpl; auto.
-  rewrite <- IHn; destruct (Pggcdn n (a-b) (xI b)) as (g,(aa,bb)); simpl; auto.
-  rewrite <- IHn; destruct (Pggcdn n (xI a) b) as (g,(aa,bb)); simpl; auto.
-  rewrite <- IHn; destruct (Pggcdn n a (xI b)) as (g,(aa,bb)); simpl; auto.
-  rewrite <- IHn; destruct (Pggcdn n a b) as (g,(aa,bb)); simpl; auto.
-Qed.
-
-Lemma Pggcd_gcd : forall a b, fst (Pggcd a b) = Pgcd a b.
-Proof.
-  intros; exact (Pggcdn_gcdn (Psize a+Psize b)%nat a b).
-Qed.
-
-Lemma Zggcd_gcd : forall a b, fst (Zggcd a b) = Zgcd a b.
-Proof.
-  destruct a; destruct b; simpl; auto; rewrite <- Pggcd_gcd;
-    destruct (Pggcd p p0) as (g,(aa,bb)); simpl; auto.
-Qed.
-
-Open Scope positive_scope.
-
-Lemma Pggcdn_correct_divisors : forall n a b,
-  let (g,p) := Pggcdn n a b in
-  let (aa,bb):=p in
-  (a=g*aa) /\ (b=g*bb).
-Proof.
-  induction n.
-  simpl; auto.
-  destruct a; destruct b; simpl; auto.
-  case_eq (Pcompare a b Eq); intros.
-  (* Eq *)
-  rewrite Pmult_comm; simpl; auto.
-  rewrite (Pcompare_Eq_eq _ _ H); auto.
-  (* Lt *)
-  generalize (IHn (b-a) (xI a)); destruct (Pggcdn n (b-a) (xI a)) as (g,(ba,aa)); simpl.
-  intros (H0,H1); split; auto.
-  rewrite Pmult_plus_distr_l.
-  rewrite Pmult_xO_permute_r.
-  rewrite <- H1; rewrite <- H0.
-  simpl; f_equal; symmetry.
-  apply Pplus_minus; auto.
-  rewrite ZC4; rewrite H; auto.
-  (* Gt *)
-  generalize (IHn (a-b) (xI b)); destruct (Pggcdn n (a-b) (xI b)) as (g,(ab,bb)); simpl.
-  intros (H0,H1); split; auto.
-  rewrite Pmult_plus_distr_l.
-  rewrite Pmult_xO_permute_r.
-  rewrite <- H1; rewrite <- H0.
-  simpl; f_equal; symmetry.
-  apply Pplus_minus; auto.
-  (* Then... *)
-  generalize (IHn (xI a) b); destruct (Pggcdn n (xI a) b) as (g,(ab,bb)); simpl.
-  intros (H0,H1); split; auto.
-  rewrite Pmult_xO_permute_r; rewrite H1; auto.
-  generalize (IHn a (xI b)); destruct (Pggcdn n a (xI b)) as (g,(ab,bb)); simpl.
-  intros (H0,H1); split; auto.
-  rewrite Pmult_xO_permute_r; rewrite H0; auto.
-  generalize (IHn a b); destruct (Pggcdn n a b) as (g,(ab,bb)); simpl.
-  intros (H0,H1); split; subst; auto.
-Qed.
-
-Lemma Pggcd_correct_divisors : forall a b,
-  let (g,p) := Pggcd a b in
-  let (aa,bb):=p in
-  (a=g*aa) /\ (b=g*bb).
-Proof.
-  intros a b; exact (Pggcdn_correct_divisors (Psize a + Psize b)%nat a b).
-Qed.
-
-Close Scope positive_scope.
-
-Lemma Zggcd_correct_divisors : forall a b,
-  let (g,p) := Zggcd a b in
-  let (aa,bb):=p in
-  (a=g*aa) /\ (b=g*bb).
-Proof.
-  destruct a; destruct b; simpl; auto; try solve [rewrite Pmult_comm; simpl; auto];
-    generalize (Pggcd_correct_divisors p p0); destruct (Pggcd p p0) as (g,(aa,bb));
-      destruct 1; subst; auto.
-Qed.
-
-Theorem Zggcd_opp: forall x y,
-  Zggcd (-x) y = let (p1,p) := Zggcd x y in
-                 let (p2,p3) := p in
-                 (p1,(-p2,p3)).
-Proof.
-intros [|x|x] [|y|y]; unfold Zggcd, Zopp; auto.
-case Pggcd; intros p1 (p2, p3); auto.
-case Pggcd; intros p1 (p2, p3); auto.
-case Pggcd; intros p1 (p2, p3); auto.
-case Pggcd; intros p1 (p2, p3); auto.
 Qed.

@@ -6,8 +6,6 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: FSetEqProperties.v 12400 2009-10-19 13:14:18Z letouzey $ *)
-
 (** * Finite sets library *)
 
 (** This module proves many properties of finite sets that

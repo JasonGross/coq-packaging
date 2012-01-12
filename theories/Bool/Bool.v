@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Bool.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (** The type [bool] is defined in the prelude as
     [Inductive bool : Set := true : bool | false : bool] *)
@@ -259,6 +257,11 @@ Proof.
   intros. apply orb_false_iff; trivial.
 Qed.
 
+Lemma orb_diag : forall b, b || b = b.
+Proof.
+ destr_bool.
+Qed.
+
 (** [true] is a zero for [orb] *)
 
 Lemma orb_true_r : forall b:bool, b || true = true.
@@ -363,6 +366,11 @@ Qed.
 
 Notation andb_b_false := andb_false_r (only parsing).
 Notation andb_false_b := andb_false_l (only parsing).
+
+Lemma andb_diag : forall b, b && b = b.
+Proof.
+ destr_bool.
+Qed.
 
 (** [true] is neutral for [andb] *)
 
@@ -545,6 +553,21 @@ Lemma xorb_move_r_l_2 :
   forall b b' b'':bool, b = xorb b' b'' -> xorb b b'' = b'.
 Proof.
   destr_bool.
+Qed.
+
+Lemma negb_xorb_l : forall b b', negb (xorb b b') = xorb (negb b) b'.
+Proof.
+ destruct b,b'; trivial.
+Qed.
+
+Lemma negb_xorb_r : forall b b', negb (xorb b b') = xorb b (negb b').
+Proof.
+ destruct b,b'; trivial.
+Qed.
+
+Lemma xorb_negb_negb : forall b b', xorb (negb b) (negb b') = xorb b b'.
+Proof.
+ destruct b,b'; trivial.
 Qed.
 
 (** Lemmas about the [b = true] embedding of [bool] to [Prop] *)
@@ -768,7 +791,7 @@ Qed.
 Lemma iff_reflect : forall P b, (P<->b=true) -> reflect P b.
 Proof.
  destr_bool; intuition.
-Qed.
+Defined.
 
 (** It would be nice to join [reflect_iff] and [iff_reflect]
     in a unique [iff] statement, but this isn't allowed since
@@ -779,7 +802,7 @@ Qed.
 Lemma reflect_dec : forall P b, reflect P b -> {P}+{~P}.
 Proof.
  destruct 1; auto.
-Qed.
+Defined.
 
 (** Reciprocally, from a decidability, we could state a
     [reflect] as soon as we have a [bool_of_sumbool]. *)

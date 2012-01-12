@@ -1,13 +1,11 @@
 (* -*- coding: utf-8 -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Diaconescu.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (** Diaconescu showed that the Axiom of Choice entails Excluded-Middle
    in topoi [Diaconescu75]. Lacas and Werner adapted the proof to show
@@ -158,8 +156,8 @@ End PredExt_RelChoice_imp_EM.
 (**********************************************************************)
 (** * B. Proof-Irrel. + Rel. Axiom of Choice -> Excl.-Middle for Equality *)
 
-(** This is an adaptation of Diaconescu's paradox exploiting that
-    proof-irrelevance is some form of extensionality *)
+(** This is an adaptation of Diaconescu's theorem, exploiting the
+    form of extensionality provided by proof-irrelevance *)
 
 Section ProofIrrel_RelChoice_imp_EqEM.
 

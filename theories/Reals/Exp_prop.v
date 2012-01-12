@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Exp_prop.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -648,7 +646,7 @@ Proof.
   apply H3.
   rewrite Rminus_0_r; apply Rabs_right.
   apply Rle_ge.
-  unfold Rdiv in |- *; repeat apply Rmult_le_pos.
+  unfold Rdiv in |- *; apply Rmult_le_pos. 
   apply pow_le.
   apply Rle_trans with 1.
   left; apply Rlt_0_1.

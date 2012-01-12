@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -8,8 +8,6 @@
 
 (* coqwc - counts the lines of spec, proof and comments in Coq sources
  * Copyright (C) 2003 Jean-Christophe Filliâtre *)
-
-(*i $Id: coqwc.mll 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (*s {\bf coqwc.} Counts the lines of spec, proof and comments in a Coq source.
     It assumes the files to be lexically well-formed. *)

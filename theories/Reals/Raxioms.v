@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Raxioms.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (*********************************************************)
 (**    Axiomatisation of the classical reals             *)
@@ -107,13 +105,13 @@ Hint Resolve Rlt_asym Rplus_lt_compat_l Rmult_lt_compat_l: real.
 (**********************************************************)
 
 (**********)
-Boxed Fixpoint INR (n:nat) : R :=
+Fixpoint INR (n:nat) : R :=
   match n with
   | O => 0
   | S O => 1
   | S n => INR n + 1
   end.
-Arguments Scope INR [nat_scope].
+Arguments INR n%nat.
 
 
 (**********************************************************)
@@ -127,7 +125,7 @@ Definition IZR (z:Z) : R :=
   | Zpos n => INR (nat_of_P n)
   | Zneg n => - INR (nat_of_P n)
   end.
-Arguments Scope IZR [Z_scope].
+Arguments IZR z%Z.
 
 (**********************************************************)
 (** *    [R] Archimedean                                  *)

@@ -1,12 +1,10 @@
-(************************************************************************)
+ (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Plus.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (** Properties of addition. [add] is defined in [Init/Peano.v] as:
 <<
@@ -26,17 +24,10 @@ Open Local Scope nat_scope.
 
 Implicit Types m n p q : nat.
 
-(** * Zero is neutral *)
-
-Lemma plus_0_l : forall n, 0 + n = n.
-Proof.
-  reflexivity.
-Qed.
-
-Lemma plus_0_r : forall n, n + 0 = n.
-Proof.
-  intro; symmetry  in |- *; apply plus_n_O.
-Qed.
+(** * Zero is neutral 
+Deprecated : Already in Init/Peano.v *)
+Notation plus_0_l := plus_O_n (only parsing).
+Definition plus_0_r n := eq_sym (plus_n_O n).
 
 (** * Commutativity *)
 
@@ -49,14 +40,8 @@ Hint Immediate plus_comm: arith v62.
 
 (** * Associativity *)
 
-Lemma plus_Snm_nSm : forall n m, S n + m = n + S m.
-Proof.
-  intros.
-  simpl in |- *.
-  rewrite (plus_comm n m).
-  rewrite (plus_comm n (S m)).
-  trivial with arith.
-Qed.
+Definition plus_Snm_nSm : forall n m, S n + m = n + S m:=
+ plus_n_Sm.
 
 Lemma plus_assoc : forall n m p, n + (m + p) = n + m + p.
 Proof.

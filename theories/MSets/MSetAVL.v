@@ -7,8 +7,6 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id$ *)
-
 (** * MSetAVL : Implementation of MSetInterface via AVL trees *)
 
 (** This module implements finite sets using AVL trees.
@@ -48,6 +46,7 @@ Local Open Scope Int_scope.
 Local Open Scope lazy_bool_scope.
 
 Definition elt := X.t.
+Hint Transparent elt.
 
 (** ** Trees
 
@@ -376,7 +375,7 @@ Fixpoint fold (A : Type) (f : elt -> A -> A)(s : t) : A -> A :=
   | Leaf => a
   | Node l x r _ => fold f r (f x (fold f l a))
  end.
-Implicit Arguments fold [A].
+Arguments fold [A] f s _.
 
 
 (** ** Subset *)
@@ -877,12 +876,12 @@ Open Scope Int_scope.
 Ltac join_tac :=
  intro l; induction l as [| ll _ lx lr Hlr lh];
    [ | intros x r; induction r as [| rl Hrl rx rr _ rh]; unfold join;
-     [ | destruct (gt_le_dec lh (rh+2));
+     [ | destruct (gt_le_dec lh (rh+2)) as [GT|LE];
        [ match goal with |- context b [ bal ?a ?b ?c] =>
            replace (bal a b c)
            with (bal ll lx (join lr x (Node rl rx rr rh))); [ | auto]
          end
-       | destruct (gt_le_dec rh (lh+2));
+       | destruct (gt_le_dec rh (lh+2)) as [GT'|LE'];
          [ match goal with |- context b [ bal ?a ?b ?c] =>
              replace (bal a b c)
              with (bal (join (Node ll lx lr lh) x rl) rx rr); [ | auto]
@@ -905,7 +904,7 @@ Instance join_ok : forall l x r `(Ok l, Ok r, lt_tree x l, gt_tree x r),
  Ok (join l x r).
 Proof.
  join_tac; auto with *; inv; apply bal_ok; auto;
- clear Hrl Hlr z; intro; intros; rewrite join_spec in *.
+ clear Hrl Hlr; intro; intros; rewrite join_spec in *.
  intuition; [ setoid_replace y with x | ]; eauto.
  intuition; [ setoid_replace y with x | ]; eauto.
 Qed.
@@ -1691,7 +1690,7 @@ Proof.
 Qed.
 
 Definition lt (s1 s2 : t) : Prop :=
- exists s1', exists s2', Ok s1' /\ Ok s2' /\ eq s1 s1' /\ eq s2 s2'
+ exists s1' s2', Ok s1' /\ Ok s2' /\ eq s1 s1' /\ eq s2 s2'
    /\ L.lt (elements s1') (elements s2').
 
 Instance lt_strorder : StrictOrder lt.
@@ -1768,7 +1767,7 @@ Lemma compare_more_Cmp : forall x1 cont x2 r2 e2 l,
    Cmp (compare_more x1 cont (More x2 r2 e2)) (x1::l)
       (flatten_e (More x2 r2 e2)).
 Proof.
- simpl; intros; elim_compare x1 x2; simpl; auto.
+ simpl; intros; elim_compare x1 x2; simpl; red; auto.
 Qed.
 
 Lemma compare_cont_Cmp : forall s1 cont e2 l,

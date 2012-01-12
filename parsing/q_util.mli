@@ -1,14 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: q_util.mli 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
-val patt_of_expr : MLast.expr -> MLast.patt
+open Compat
 
 val mlexpr_of_list :  ('a -> MLast.expr) -> 'a list -> MLast.expr
 
@@ -32,4 +30,4 @@ val mlexpr_of_string : string -> MLast.expr
 
 val mlexpr_of_option : ('a -> MLast.expr) -> 'a option -> MLast.expr
 
-val mlexpr_of_prod_entry_key : Pcoq.Gram.te Extend.prod_entry_key -> MLast.expr
+val mlexpr_of_prod_entry_key : Pcoq.prod_entry_key -> MLast.expr

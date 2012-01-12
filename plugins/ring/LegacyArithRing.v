@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: LegacyArithRing.v 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 (* Instantiation of the Ring tactic for the naturals of Arith $*)
 
@@ -17,7 +15,7 @@ Require Import Eqdep_dec.
 
 Open Local Scope nat_scope.
 
-Unboxed Fixpoint nateq (n m:nat) {struct m} : bool :=
+Fixpoint nateq (n m:nat) {struct m} : bool :=
   match n, m with
   | O, O => true
   | S n', S m' => nateq n' m'

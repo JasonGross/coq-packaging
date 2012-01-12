@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: ppconstr.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 (*i*)
 open Util
@@ -19,19 +17,15 @@ open Ppextend
 open Topconstr
 open Term
 open Pattern
-open Rawterm
+open Glob_term
 open Constrextern
 open Termops
 (*i*)
 
-let sep_p = fun _ -> str"."
 let sep_v = fun _ -> str"," ++ spc()
-let sep_pp = fun _ -> str":"
-let sep_bar = fun _ -> spc() ++ str"| "
 let pr_tight_coma () = str "," ++ cut ()
 
 let latom = 0
-let lannot = 100
 let lprod = 200
 let llambda = 200
 let lif = 200
@@ -110,18 +104,14 @@ let pr_with_comments loc pp = pr_located (fun x -> x) (loc,pp)
 
 let pr_sep_com sep f c = pr_with_comments (constr_loc c) (sep() ++ f c)
 
-let pr_optc pr = function
-  | None -> mt ()
-  | Some x -> pr_sep_com spc pr x
-
 let pr_in_comment pr x = str "(* " ++ pr x ++ str " *)"
 
 let pr_universe = Univ.pr_uni
 
-let pr_rawsort = function
-  | RProp Term.Null -> str "Prop"
-  | RProp Term.Pos -> str "Set"
-  | RType u -> hov 0 (str "Type" ++ pr_opt (pr_in_comment pr_universe) u)
+let pr_glob_sort = function
+  | GProp Term.Null -> str "Prop"
+  | GProp Term.Pos -> str "Set"
+  | GType u -> hov 0 (str "Type" ++ pr_opt (pr_in_comment pr_universe) u)
 
 let pr_id = pr_id
 let pr_name = pr_name
@@ -187,6 +177,8 @@ let rec pr_patt sep inh p =
   | CPatCstr (_,c,[]) -> pr_reference c, latom
   | CPatCstr (_,c,args) ->
       pr_reference c ++ prlist (pr_patt spc (lapp,L)) args, lapp
+  | CPatCstrExpl (_,c,args) ->
+      str "@" ++ pr_reference c ++ prlist (pr_patt spc (lapp,L)) args, lapp
   | CPatAtom (_,None) -> str "_", latom
   | CPatAtom (_,Some r) -> pr_reference r, latom
   | CPatOr (_,pl) ->
@@ -315,85 +307,6 @@ let split_product na' = function
       rename na na' t (CProdN(loc,(nal,bk,t)::bl,c))
   | _ -> anomaly "ill-formed fixpoint body"
 
-let merge_binders (na1,bk1,ty1) cofun (na2,bk2,ty2) codom =
-  let na =
-    match snd na1, snd na2 with
-        Anonymous, Name id ->
-          if occur_var_constr_expr id cofun then
-            failwith "avoid capture"
-          else na2
-      | Name id, Anonymous ->
-          if occur_var_constr_expr id codom then
-            failwith "avoid capture"
-          else na1
-      | Anonymous, Anonymous -> na1
-      | Name id1, Name id2 ->
-          if id1 <> id2 then failwith "not same name" else na1 in
-  let ty =
-    match ty1, ty2 with
-        CHole _, _ -> ty2
-      | _, CHole _ -> ty1
-      | _ ->
-          Constrextern.check_same_type ty1 ty2;
-          ty2 in
-  (LocalRawAssum ([na],bk1,ty), codom)
-
-let rec strip_domain bvar cofun c =
-  match c with
-    | CArrow(loc,a,b) ->
-        merge_binders bvar cofun ((dummy_loc,Anonymous),default_binder_kind,a) b
-    | CProdN(loc,[([na],bk,ty)],c') ->
-        merge_binders bvar cofun (na,bk,ty) c'
-    | CProdN(loc,([na],bk,ty)::bl,c') ->
-        merge_binders bvar cofun (na,bk,ty) (CProdN(loc,bl,c'))
-    | CProdN(loc,(na::nal,bk,ty)::bl,c') ->
-        merge_binders bvar cofun (na,bk,ty) (CProdN(loc,(nal,bk,ty)::bl,c'))
-    | _ -> failwith "not a product"
-
-(* Note: binder sharing is lost *)
-let rec strip_domains (nal,bk,ty) cofun c =
-  match nal with
-      [] -> assert false
-    | [na] ->
-        let bnd, c' = strip_domain (na,bk,ty) cofun c in
-        ([bnd],None,c')
-    | na::nal ->
-        let f = CLambdaN(dummy_loc,[(nal,bk,ty)],cofun) in
-        let bnd, c1 = strip_domain (na,bk,ty) f c in
-        (try
-          let bl, rest, c2 = strip_domains (nal,bk,ty) cofun c1 in
-          (bnd::bl, rest, c2)
-        with Failure _ -> ([bnd],Some (nal,bk,ty), c1))
-
-(* Re-share binders *)
-let rec factorize_binders = function
-  | ([] | [_] as l) -> l
-  | LocalRawAssum (nal,k,ty) as d :: (LocalRawAssum (nal',k',ty')::l as l') ->
-      (try
-	let _ = Constrextern.check_same_type ty ty' in
-	factorize_binders (LocalRawAssum (nal@nal',k,ty)::l)
-      with _ ->
-	d :: factorize_binders l')
-  | d :: l -> d :: factorize_binders l
-
-(* Extract lambdas when a type constraint occurs *)
-let rec extract_def_binders c ty =
-  match c with
-    | CLambdaN(loc,bvar::lams,b) ->
-        (try
-          let f = CLambdaN(loc,lams,b) in
-          let bvar', rest, ty' = strip_domains bvar f ty in
-          let c' =
-            match rest, lams with
-                None,[] -> b
-              | None, _ -> f
-              | Some bvar,_ -> CLambdaN(loc,bvar::lams,b) in
-          let (bl,c2,ty2) = extract_def_binders c' ty' in
-          (factorize_binders (bvar'@bl), c2, ty2)
-        with Failure _ ->
-          ([],c,ty))
-    | _ -> ([],c,ty)
-
 let rec split_fix n typ def =
   if n = 0 then ([],typ,def)
   else
@@ -436,21 +349,6 @@ let pr_recursive pr_decl id = function
         (pr_decl true) dl ++
       fnl() ++ str "for " ++ pr_id id
 
-let is_var id = function
-  | CRef (Ident (_,id')) when id=id' -> true
-  | _ -> false
-
-let tm_clash = function
-  | (CRef (Ident (_,id)), Some (CApp (_,_,nal)))
-      when List.exists (function CRef (Ident (_,id')),_ -> id=id' | _ -> false)
-	nal
-      -> Some id
-  | (CRef (Ident (_,id)), Some (CAppExpl (_,_,nal)))
-      when List.exists (function CRef (Ident (_,id')) -> id=id' | _ -> false)
-	nal
-      -> Some id
-  | _ -> None
-
 let pr_asin pr (na,indnalopt) =
   (match na with (* Decision of printing "_" or not moved to constrextern.ml *)
     | Some na -> spc () ++ str "as " ++  pr_lname na
@@ -467,8 +365,6 @@ let pr_case_type pr po =
     | None | Some (CHole _) -> mt()
     | Some p ->
         spc() ++ hov 2 (str "return" ++ pr_sep_com spc (pr lsimple) p)
-
-let pr_return_type pr po = pr_case_type pr po
 
 let pr_simple_return_type pr na po =
   (match na with
@@ -621,9 +517,9 @@ let pr pr sep inherited a =
   | CHole _ -> str "_", latom
   | CEvar (_,n,l) -> pr_evar (pr mt) n l, latom
   | CPatVar (_,(_,p)) -> str "?" ++ pr_patvar p, latom
-  | CSort (_,s) -> pr_rawsort s, latom
+  | CSort (_,s) -> pr_glob_sort s, latom
   | CCast (_,a,CastConv (k,b)) ->
-      let s = match k with VMcast -> "<:" | DEFAULTcast -> ":" in
+      let s = match k with VMcast -> "<:" | DEFAULTcast | REVERTcast -> ":" in
       hv 0 (pr mt (lcast,L) a ++ cut () ++ str s ++ pr mt (-lcast,E) b),
       lcast
   | CCast (_,a,CastCoerce) ->
@@ -636,43 +532,10 @@ let pr pr sep inherited a =
   | CGeneralization (_,bk,ak,c) -> pr_generalization bk ak (pr mt lsimple c), latom
   | CPrim (_,p) -> pr_prim_token p, prec_of_prim_token p
   | CDelimiters (_,sc,a) -> pr_delimiters sc (pr mt lsimple a), 1
-  | CDynamic _ -> str "<dynamic>", latom
   in
   let loc = constr_loc a in
   pr_with_comments loc
     (sep() ++ if prec_less prec inherited then strm else surround strm)
-
-
-let rec strip_context n iscast t =
-  if n = 0 then
-    [], if iscast then match t with CCast (_,c,_) -> c | _ -> t else t
-  else match t with
-    | CLambdaN (loc,(nal,bk,t)::bll,c) ->
-	let n' = List.length nal in
-	if n' > n then
-	  let nal1,nal2 = list_chop n nal in
-	  [LocalRawAssum (nal1,bk,t)], CLambdaN (loc,(nal2,bk,t)::bll,c)
-	else
-	let bl', c = strip_context (n-n') iscast
-	  (if bll=[] then c else CLambdaN (loc,bll,c)) in
-	LocalRawAssum (nal,bk,t) :: bl', c
-    | CProdN (loc,(nal,bk,t)::bll,c) ->
-	let n' = List.length nal in
-	if n' > n then
-	  let nal1,nal2 = list_chop n nal in
-	  [LocalRawAssum (nal1,bk,t)], CProdN (loc,(nal2,bk,t)::bll,c)
-	else
-	let bl', c = strip_context (n-n') iscast
-	  (if bll=[] then c else CProdN (loc,bll,c)) in
-	LocalRawAssum (nal,bk,t) :: bl', c
-    | CArrow (loc,t,c) ->
-	let bl', c = strip_context (n-1) iscast c in
-	LocalRawAssum ([loc,Anonymous],default_binder_kind,t) :: bl', c
-    | CCast (_,c,_) -> strip_context n false c
-    | CLetIn (_,na,b,c) ->
-	let bl', c = strip_context (n-1) iscast c in
-	LocalRawDef (na,b) :: bl', c
-    | _ -> anomaly "strip_context"
 
 type term_pr = {
   pr_constr_expr   : constr_expr -> std_ppcmds;

@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(*i 	     $Id: Ndist.v 14641 2011-11-06 11:59:10Z herbelin $	      i*)
-
 Require Import Arith.
 Require Import Min.
 Require Import BinPos.
@@ -303,7 +301,7 @@ Proof.
   cut (forall a'':N, Nxor (Npos p) a' = a'' -> Nbit a'' k = false).
   intros. apply H1. reflexivity.
   intro a''. case a''. intro. reflexivity.
-  intros. rewrite <- H1. rewrite (Nxor_semantics (Npos p) a' k). unfold xorf in |- *.
+  intros. rewrite <- H1. rewrite (Nxor_semantics (Npos p) a' k).
   rewrite
    (Nplength_zeros (Npos p) (Pplength p)
       (refl_equal (Nplength (Npos p))) k H0).
