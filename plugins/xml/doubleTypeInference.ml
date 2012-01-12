@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *   The HELM Project         /   The EU MoWGLI Project       *)
 (*         *   University of Bologna                                    *)
@@ -27,7 +27,7 @@ let cprop =
 ;;
 
 let whd_betadeltaiotacprop env _evar_map ty =
- let module R = Rawterm in
+ let module R = Glob_term in
  let module C = Closure in
  let module CR = C.RedFlags in
  (*** CProp is made Opaque ***)

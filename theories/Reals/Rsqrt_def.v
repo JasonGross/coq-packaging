@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Rsqrt_def.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import Sumbool.
 Require Import Rbase.
@@ -15,7 +13,7 @@ Require Import SeqSeries.
 Require Import Ranalysis1.
 Open Local Scope R_scope.
 
-Boxed Fixpoint Dichotomy_lb (x y:R) (P:R -> bool) (N:nat) {struct N} : R :=
+Fixpoint Dichotomy_lb (x y:R) (P:R -> bool) (N:nat) {struct N} : R :=
   match N with
     | O => x
     | S n =>
@@ -56,7 +54,7 @@ Proof.
   assumption.
   unfold Rdiv in |- *; apply Rmult_le_reg_l with 2.
   prove_sup0.
-  pattern 2 at 3 in |- *; rewrite Rmult_comm.
+  rewrite Rmult_comm.
   rewrite Rmult_assoc; rewrite <- Rinv_l_sym; [ idtac | discrR ].
   rewrite Rmult_1_r.
   rewrite double.
@@ -95,7 +93,7 @@ Proof.
   case (P ((Dichotomy_lb x y P n + Dichotomy_ub x y P n) / 2)).
   unfold Rdiv in |- *; apply Rmult_le_reg_l with 2.
   prove_sup0.
-  pattern 2 at 3 in |- *; rewrite Rmult_comm.
+  rewrite Rmult_comm.
   rewrite Rmult_assoc; rewrite <- Rinv_l_sym; [ idtac | discrR ].
   rewrite Rmult_1_r.
   rewrite double.
@@ -120,7 +118,7 @@ Proof.
   assumption.
   unfold Rdiv in |- *; apply Rmult_le_reg_l with 2.
   prove_sup0.
-  pattern 2 at 3 in |- *; rewrite Rmult_comm.
+  rewrite Rmult_comm.
   rewrite Rmult_assoc; rewrite <- Rinv_l_sym; [ rewrite Rmult_1_r | discrR ].
   rewrite double; apply Rplus_le_compat.
   assumption.

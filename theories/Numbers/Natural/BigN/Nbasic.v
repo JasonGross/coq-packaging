@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -8,15 +8,33 @@
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
 
-(*i $Id: Nbasic.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
-Require Import ZArith.
+Require Import ZArith Ndigits.
 Require Import BigNumPrelude.
 Require Import Max.
 Require Import DoubleType.
 Require Import DoubleBase.
 Require Import CyclicAxioms.
 Require Import DoubleCyclic.
+
+Arguments mk_zn2z_ops [t] ops.
+Arguments mk_zn2z_ops_karatsuba [t] ops.
+Arguments mk_zn2z_specs [t ops] specs.
+Arguments mk_zn2z_specs_karatsuba [t ops] specs.
+Arguments ZnZ.digits [t] Ops.
+Arguments ZnZ.zdigits [t] Ops.
+
+Lemma Pshiftl_nat_Zpower : forall n p,
+  Zpos (Pos.shiftl_nat p n) = Zpos p * 2 ^ Z.of_nat n.
+Proof.
+ intros.
+ rewrite Z.mul_comm.
+ induction n. simpl; auto.
+ transitivity (2 * (2 ^ Z.of_nat n * Zpos p)).
+ rewrite <- IHn. auto.
+ rewrite Z.mul_assoc.
+ rewrite inj_S.
+ rewrite <- Z.pow_succ_r; auto with zarith.
+Qed.
 
 (* To compute the necessary height *)
 
@@ -212,8 +230,8 @@ Fixpoint extend_tr (n : nat) {struct n}: (word w (S (n + m))) :=
 
 End ExtendMax.
 
-Implicit Arguments extend_tr[w m].
-Implicit Arguments castm[w m n].
+Arguments extend_tr [w m] v n.
+Arguments castm     [w m n] H x.
 
 
 
@@ -287,11 +305,7 @@ Section CompareRec.
  Variable w_to_Z: w -> Z.
  Variable w_to_Z_0: w_to_Z w_0 = 0.
  Variable spec_compare0_m: forall x,
-    match compare0_m x with
-      Eq => w_to_Z w_0 = wm_to_Z x
-    | Lt => w_to_Z w_0 < wm_to_Z x
-    | Gt => w_to_Z w_0 > wm_to_Z x
-    end.
+   compare0_m x = (w_to_Z w_0 ?= wm_to_Z x).
  Variable wm_to_Z_pos: forall x, 0 <= wm_to_Z x < base wm_base.
 
  Let double_to_Z := double_to_Z wm_base wm_to_Z.
@@ -308,29 +322,25 @@ Section CompareRec.
 
 
  Lemma spec_compare0_mn: forall n x,
-    match compare0_mn n x with
-      Eq => 0 = double_to_Z n x
-    | Lt => 0 < double_to_Z n x
-    | Gt => 0 > double_to_Z n x
-    end.
-  Proof.
+   compare0_mn n x = (0 ?= double_to_Z n x).
+ Proof.
   intros n; elim n; clear n; auto.
-  intros x; generalize (spec_compare0_m x); rewrite w_to_Z_0; auto.
+  intros x; rewrite spec_compare0_m; rewrite w_to_Z_0; auto.
   intros n Hrec x; case x; unfold compare0_mn; fold compare0_mn; auto.
+  fold word in *.
   intros xh xl.
-  generalize (Hrec xh); case compare0_mn; auto.
-  generalize (Hrec xl); case compare0_mn; auto.
-  simpl double_to_Z; intros H1 H2; rewrite H1; rewrite <- H2; auto.
-  simpl double_to_Z; intros H1 H2; rewrite <- H2; auto.
-  case (double_to_Z_pos n xl); auto with zarith.
-  intros H1; simpl double_to_Z.
-  set (u := DoubleBase.double_wB wm_base n).
-  case (double_to_Z_pos n xl); intros H2 H3.
-  assert (0 < u); auto with zarith.
-  unfold u, DoubleBase.double_wB, base; auto with zarith.
+  rewrite 2 Hrec.
+  simpl double_to_Z.
+  set (wB := DoubleBase.double_wB wm_base n).
+  case Zcompare_spec; intros Cmp.
+  rewrite <- Cmp. reflexivity.
+  symmetry. apply Zgt_lt, Zlt_gt. (* ;-) *)
+  assert (0 < wB).
+   unfold wB, DoubleBase.double_wB, base; auto with zarith.
   change 0 with (0 + 0); apply Zplus_lt_le_compat; auto with zarith.
   apply Zmult_lt_0_compat; auto with zarith.
-  case (double_to_Z_pos n xh); auto with zarith.
+  case (double_to_Z_pos n xl); auto with zarith.
+  case (double_to_Z_pos n xh); intros; exfalso; omega.
   Qed.
 
  Fixpoint compare_mn_1 (n:nat) : word wm n -> w -> comparison :=
@@ -348,17 +358,9 @@ Section CompareRec.
   end.
 
  Variable spec_compare: forall x y,
-   match compare x y with
-     Eq => w_to_Z x = w_to_Z y
-   | Lt => w_to_Z x < w_to_Z y
-   | Gt => w_to_Z x > w_to_Z y
-   end.
+   compare x y = Zcompare (w_to_Z x) (w_to_Z y).
  Variable spec_compare_m: forall x y,
-   match compare_m x y with
-     Eq => wm_to_Z x = w_to_Z y
-   | Lt => wm_to_Z x < w_to_Z y
-   | Gt => wm_to_Z x > w_to_Z y
-   end.
+   compare_m x y = Zcompare (wm_to_Z x) (w_to_Z y).
  Variable wm_base_lt: forall x,
    0 <= w_to_Z x < base (wm_base).
 
@@ -369,8 +371,8 @@ Section CompareRec.
  intros n (H0, H); split; auto.
  apply Zlt_le_trans with (1:= H).
  unfold double_wB, DoubleBase.double_wB; simpl.
- rewrite base_xO.
- set (u := base (double_digits wm_base n)).
+ rewrite Pshiftl_nat_S, base_xO.
+ set (u := base (Pos.shiftl_nat wm_base n)).
  assert (0 < u).
   unfold u, base; auto with zarith.
  replace (u^2) with (u * u); simpl; auto with zarith.
@@ -380,26 +382,23 @@ Section CompareRec.
 
 
  Lemma spec_compare_mn_1: forall n x y,
-   match compare_mn_1 n x y with
-     Eq => double_to_Z n x = w_to_Z y
-   | Lt => double_to_Z n x < w_to_Z y
-   | Gt => double_to_Z n x > w_to_Z y
-   end.
+   compare_mn_1 n x y = Zcompare (double_to_Z n x) (w_to_Z y).
  Proof.
  intros n; elim n; simpl; auto; clear n.
  intros n Hrec x; case x; clear x; auto.
- intros y; generalize (spec_compare w_0 y); rewrite w_to_Z_0; case compare; auto.
- intros xh xl y; simpl; generalize (spec_compare0_mn n xh); case compare0_mn; intros H1b.
+ intros y; rewrite spec_compare; rewrite w_to_Z_0. reflexivity.
+ intros xh xl y; simpl;
+ rewrite spec_compare0_mn, Hrec. case Zcompare_spec.
+ intros H1b.
  rewrite <- H1b; rewrite Zmult_0_l; rewrite Zplus_0_l; auto.
- apply Hrec.
- apply Zlt_gt.
+ symmetry. apply Zlt_gt.
  case (double_wB_lt n y); intros _ H0.
  apply Zlt_le_trans with (1:= H0).
  fold double_wB.
  case (double_to_Z_pos n xl); intros H1 H2.
  apply Zle_trans with (double_to_Z n xh * double_wB n); auto with zarith.
  apply Zle_trans with (1 * double_wB n); auto with zarith.
- case (double_to_Z_pos n xh); auto with zarith.
+ case (double_to_Z_pos n xh); intros; exfalso; omega.
  Qed.
 
 End CompareRec.
@@ -433,22 +432,6 @@ Section AddS.
 
 End AddS.
 
-
- Lemma spec_opp: forall u x y,
-  match u with
-  | Eq => y = x
-  | Lt => y < x
-  | Gt => y > x
-  end ->
-  match CompOpp u with
-  | Eq => x = y
-  | Lt => x < y
-  | Gt => x > y
-  end.
- Proof.
- intros u x y; case u; simpl; auto with zarith.
- Qed.
-
  Fixpoint length_pos x :=
   match x with xH => O | xO x1 => S (length_pos x1) | xI x1 => S (length_pos x1) end.
 
@@ -474,34 +457,112 @@ End AddS.
 
  Variable w: Type.
 
- Theorem digits_zop: forall w (x: znz_op w),
-  znz_digits (mk_zn2z_op x) = xO (znz_digits x).
+ Theorem digits_zop: forall t (ops : ZnZ.Ops t),
+  ZnZ.digits (mk_zn2z_ops ops) = xO (ZnZ.digits ops).
+ Proof.
  intros ww x; auto.
  Qed.
 
- Theorem digits_kzop: forall w (x: znz_op w),
-  znz_digits (mk_zn2z_op_karatsuba x) = xO (znz_digits x).
+ Theorem digits_kzop: forall t (ops : ZnZ.Ops t),
+  ZnZ.digits (mk_zn2z_ops_karatsuba ops) = xO (ZnZ.digits ops).
+ Proof.
  intros ww x; auto.
  Qed.
 
- Theorem make_zop: forall w (x: znz_op w),
-  znz_to_Z (mk_zn2z_op x) =
+ Theorem make_zop: forall t (ops : ZnZ.Ops t),
+  @ZnZ.to_Z _ (mk_zn2z_ops ops) =
     fun z => match z with
-                W0 => 0
-             | WW xh xl => znz_to_Z x xh * base (znz_digits x)
-                                + znz_to_Z x xl
+             | W0 => 0
+             | WW xh xl => ZnZ.to_Z xh * base (ZnZ.digits ops)
+                                + ZnZ.to_Z xl
              end.
+ Proof.
  intros ww x; auto.
  Qed.
 
- Theorem make_kzop: forall w (x: znz_op w),
-  znz_to_Z (mk_zn2z_op_karatsuba x) =
+ Theorem make_kzop: forall t (ops: ZnZ.Ops t),
+  @ZnZ.to_Z _ (mk_zn2z_ops_karatsuba ops) =
     fun z => match z with
-                W0 => 0
-             | WW xh xl => znz_to_Z x xh * base (znz_digits x)
-                                + znz_to_Z x xl
+             | W0 => 0
+             | WW xh xl => ZnZ.to_Z xh * base (ZnZ.digits ops)
+                                + ZnZ.to_Z xl
              end.
+ Proof.
  intros ww x; auto.
  Qed.
 
  End SimplOp.
+
+(** Abstract vision of a datatype of arbitrary-large numbers.
+    Concrete operations can be derived from these generic
+    fonctions, in particular from [iter_t] and [same_level].
+*)
+
+Module Type NAbstract.
+
+(** The domains: a sequence of [Z/nZ] structures *)
+
+Parameter dom_t : nat -> Type.
+Declare Instance dom_op n : ZnZ.Ops (dom_t n).
+Declare Instance dom_spec n : ZnZ.Specs (dom_op n).
+
+Axiom digits_dom_op : forall n,
+  ZnZ.digits (dom_op n) = Pos.shiftl_nat (ZnZ.digits (dom_op 0)) n.
+
+(** The type [t] of arbitrary-large numbers, with abstract constructor [mk_t]
+    and destructor [destr_t] and iterator [iter_t] *)
+
+Parameter t : Type.
+
+Parameter mk_t : forall (n:nat), dom_t n -> t.
+
+Inductive View_t : t -> Prop :=
+ Mk_t : forall n (x : dom_t n), View_t (mk_t n x).
+
+Axiom destr_t : forall x, View_t x. (* i.e. every x is a (mk_t n xw) *)
+
+Parameter iter_t : forall {A:Type}(f : forall n, dom_t n -> A), t -> A.
+
+Axiom iter_mk_t : forall A (f:forall n, dom_t n -> A),
+ forall n x, iter_t f (mk_t n x) = f n x.
+
+(** Conversion to [ZArith] *)
+
+Parameter to_Z : t -> Z.
+Local Notation "[ x ]" := (to_Z x).
+
+Axiom spec_mk_t : forall n x, [mk_t n x] = ZnZ.to_Z x.
+
+(** [reduce] is like [mk_t], but try to minimise the level of the number *)
+
+Parameter reduce : forall (n:nat), dom_t n -> t.
+Axiom spec_reduce : forall n x, [reduce n x] = ZnZ.to_Z x.
+
+(** Number of level in the tree representation of a number.
+    NB: This function isn't a morphism for setoid [eq]. *)
+
+Definition level := iter_t (fun n _ => n).
+
+(** [same_level] and its rich specification, indexed by [level] *)
+
+Parameter same_level : forall {A:Type}
+ (f : forall n, dom_t n -> dom_t n -> A), t -> t -> A.
+
+Axiom spec_same_level_dep :
+  forall res
+   (P : nat -> Z -> Z -> res -> Prop)
+   (Pantimon : forall n m z z' r, (n <= m)%nat -> P m z z' r -> P n z z' r)
+   (f : forall n, dom_t n -> dom_t n -> res)
+   (Pf: forall n x y, P n (ZnZ.to_Z x) (ZnZ.to_Z y) (f n x y)),
+   forall x y, P (level x) [x] [y] (same_level f x y).
+
+(** [mk_t_S] : building a number of the next level *)
+
+Parameter mk_t_S : forall (n:nat), zn2z (dom_t n) -> t.
+
+Axiom spec_mk_t_S : forall n (x:zn2z (dom_t n)),
+  [mk_t_S n x] = zn2z_to_Z (base (ZnZ.digits (dom_op n))) ZnZ.to_Z x.
+
+Axiom mk_t_S_level : forall n x, level (mk_t_S n x) = S n.
+
+End NAbstract.

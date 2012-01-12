@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Alembert.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -109,7 +107,7 @@ Proof.
   symmetry  in |- *; apply tech2; assumption.
   exists (sum_f_R0 An 0); unfold EUn in |- *; exists 0%nat; reflexivity.
   intro X; elim X; intros.
-  exists x; apply tech10;
+  exists x; apply Un_cv_crit_lub;
     [ unfold Un_growing in |- *; intro; rewrite tech5;
       pattern (sum_f_R0 An n) at 1 in |- *; rewrite <- Rplus_0_r;
 	apply Rplus_le_compat_l; left; apply H
@@ -524,7 +522,7 @@ Proof.
   symmetry  in |- *; apply tech2; assumption.
   exists (sum_f_R0 An 0); unfold EUn in |- *; exists 0%nat; reflexivity.
   intro X; elim X; intros.
-  exists x; apply tech10;
+  exists x; apply Un_cv_crit_lub;
     [ unfold Un_growing in |- *; intro; rewrite tech5;
       pattern (sum_f_R0 An n) at 1 in |- *; rewrite <- Rplus_0_r;
 	apply Rplus_le_compat_l; left; apply H

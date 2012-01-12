@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: vernac.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 (* Parsing of vernacular. *)
 
@@ -18,6 +16,7 @@ open System
 open Vernacexpr
 open Vernacinterp
 open Ppvernac
+open Compat
 
 (* The functions in this module may raise (unexplainable!) exceptions.
    Use the module Coqtoplevel, which catches these exceptions
@@ -41,14 +40,14 @@ let raise_with_file file exc =
     match re with
       | Error_in_file (_, (b,f,loc), e) when loc <> dummy_loc ->
           ((b, f, loc), e)
-      | Stdpp.Exc_located (loc, e) when loc <> dummy_loc ->
+      | Loc.Exc_located (loc, e) when loc <> dummy_loc ->
           ((false,file, loc), e)
-      | Stdpp.Exc_located (_, e) | e -> ((false,file,cmdloc), e)
+      | Loc.Exc_located (_, e) | e -> ((false,file,cmdloc), e)
   in
   raise (Error_in_file (file, inner, disable_drop inex))
 
 let real_error = function
-  | Stdpp.Exc_located (_, e) -> e
+  | Loc.Exc_located (_, e) -> e
   | Error_in_file (_, _, e) -> e
   | e -> e
 
@@ -62,6 +61,7 @@ let default_timeout = ref None
 let _ =
   Goptions.declare_int_option
     { Goptions.optsync  = true;
+      Goptions.optdepr  = false;
       Goptions.optname  = "the default timeout";
       Goptions.optkey   = ["Default";"Timeout"];
       Goptions.optread  = (fun () -> !default_timeout);
@@ -133,8 +133,8 @@ let verbose_phrase verbch loc =
 
 exception End_of_input
 
-let parse_phrase (po, verbch) =
-  match Pcoq.Gram.Entry.parse Pcoq.main_entry po with
+let parse_sentence (po, verbch) =
+  match Pcoq.Gram.entry_parse Pcoq.main_entry po with
     | Some (loc,_ as com) -> verbose_phrase verbch loc; com
     | None -> raise End_of_input
 
@@ -211,10 +211,11 @@ let rec vernac_com interpfun (loc,com) =
 	  | HasNotFailed ->
 	      errorlabstrm "Fail" (str "The command has not failed !")
 	  | e ->
-	      (* if [e] is an anomaly, the next function will re-raise it *)
-	      let msg = Cerrors.explain_exn_no_anomaly e in
-	      if_verbose msgnl (str "The command has indeed failed with message:" ++
-		     fnl () ++ str "=> " ++ hov 0 msg)
+	      (* Anomalies are re-raised by the next line *)
+	      let msg = Errors.print_no_anomaly e in
+	      if_verbose msgnl
+		(str "The command has indeed failed with message:" ++
+		 fnl () ++ str "=> " ++ hov 0 msg)
 	end
 
     | VernacTime v ->
@@ -249,22 +250,21 @@ let rec vernac_com interpfun (loc,com) =
       Format.set_formatter_out_channel stdout;
       raise (DuringCommandInterp (loc, e))
 
-and vernac interpfun input =
-  vernac_com interpfun (parse_phrase input)
-
 and read_vernac_file verbosely s =
   Flags.make_warn verbosely;
   let interpfun =
-    if verbosely then
-      Vernacentries.interp
-    else
-      Flags.silently Vernacentries.interp
+    if verbosely then Vernacentries.interp
+    else Flags.silently Vernacentries.interp
   in
-  let (in_chan, fname, input) = open_file_twice_if verbosely s in
+  let (in_chan, fname, input) =
+    open_file_twice_if verbosely s in
   try
     (* we go out of the following infinite loop when a End_of_input is
      * raised, which means that we raised the end of the file being loaded *)
-    while true do vernac interpfun input; pp_flush () done
+    while true do
+      vernac_com interpfun (parse_sentence input);
+      pp_flush ()
+    done
   with e ->   (* whatever the exception *)
     Format.set_formatter_out_channel stdout;
     close_input in_chan input;    (* we must close the file first *)
@@ -273,16 +273,19 @@ and read_vernac_file verbosely s =
           if do_beautify () then pr_new_syntax (make_loc (max_int,max_int)) None
       | _ -> raise_with_file fname e
 
-(* raw_do_vernac : char Stream.t -> unit
- * parses and executes one command of the vernacular char stream.
- * Marks the end of the command in the lib_stk with a new label to
- * make vernac undoing easier. Also freeze state to speed up
- * backtracking. *)
 
-let raw_do_vernac po =
-  vernac Vernacentries.interp (po,None);
+(* eval_expr : Util.loc * Vernacexpr.vernac_expr -> unit
+ * execute one vernacular command. Marks the end of the command in the lib_stk
+ * with a new label to make vernac undoing easier. Also freeze state to speed up
+ * backtracking. *)
+let eval_expr last =
+  vernac_com Vernacentries.interp last;
   Lib.add_frozen_state();
   Lib.mark_end_of_command()
+
+(* raw_do_vernac : Pcoq.Gram.parsable -> unit
+ * vernac_step . parse_sentence *)
+let raw_do_vernac po = eval_expr (parse_sentence (po,None))
 
 (* XML output hooks *)
 let xml_start_library = ref (fun _ -> ())
@@ -305,15 +308,14 @@ let load_vernac verb file =
 (* Compile a vernac file (f is assumed without .v suffix) *)
 let compile verbosely f =
   let ldir,long_f_dot_v = Flags.verbosely Library.start_library f in
-    if Dumpglob.multi_dump () then
-      Dumpglob.open_glob_file (f ^ ".glob");
-    Dumpglob.dump_string ("F" ^ Names.string_of_dirpath ldir ^ "\n");
-    if !Flags.xml_export then !xml_start_library ();
-    let _ = load_vernac verbosely long_f_dot_v in
-     if Pfedit.get_all_proof_names () <> [] then
-	(message "Error: There are pending proofs"; exit 1);
-      if !Flags.xml_export then !xml_end_library ();
-      if Dumpglob.multi_dump () then Dumpglob.close_glob_file ();
-      Library.save_library_to ldir (long_f_dot_v ^ "o")
+  Dumpglob.start_dump_glob long_f_dot_v;
+  Dumpglob.dump_string ("F" ^ Names.string_of_dirpath ldir ^ "\n");
+  if !Flags.xml_export then !xml_start_library ();
+  let _ = load_vernac verbosely long_f_dot_v in
+  if Pfedit.get_all_proof_names () <> [] then
+    (message "Error: There are pending proofs"; exit 1);
+  if !Flags.xml_export then !xml_end_library ();
+  Dumpglob.end_dump_glob ();
+  Library.save_library_to ldir (long_f_dot_v ^ "o")
 
 

@@ -1,3 +1,17 @@
+(************************************************************************)
+(*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(*   \VV/  **************************************************************)
+(*    //   *      This file is distributed under the terms of the       *)
+(*         *       GNU Lesser General Public License Version 2.1        *)
+(************************************************************************)
+
+(* Created by Bruno Barras for Benjamin Grégoire as part of the
+   bytecode-based reduction machine, Oct 2004 *)
+(* Bug fix #1419 by Jean-Marc Notin, Mar 2007 *)
+
+(* This file manages the table of global symbols for the bytecode machine *)
+
 open Names
 open Term
 open Vm
@@ -9,7 +23,6 @@ open Cbytegen
 
 
 external tcode_of_code : emitcodes -> int -> tcode = "coq_tcode_of_code"
-external free_tcode : tcode -> unit = "coq_static_free"
 external eval_tcode : tcode -> values array -> values = "coq_eval_tcode"
 
 (*******************)
@@ -114,10 +127,9 @@ let rec slot_for_getglobal env kn =
 (*    Pp.msgnl(str"not yet evaluated");*)
     let pos =
       match Cemitcodes.force cb.const_body_code with
-      | BCdefined(boxed,(code,pl,fv)) ->
+      | BCdefined(code,pl,fv) ->
 	let v = eval_to_patch env (code,pl,fv) in
-  	if boxed then set_global_boxed kn v
-	else set_global v
+	set_global v
     | BCallias kn' -> slot_for_getglobal env kn'
     | BCconstant -> set_global (val_of_constant kn) in
 (*Pp.msgnl(str"value stored at: "++int pos);*)

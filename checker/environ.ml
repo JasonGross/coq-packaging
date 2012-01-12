@@ -98,7 +98,7 @@ let named_type id env =
 
 (* Universe constraints *)
 let add_constraints c env =
-  if c == Constraint.empty then
+  if c == empty_constraint then
     env
   else
     let s = env.env_stratification in
@@ -121,25 +121,16 @@ let add_constant kn cs env =
 	env_constants = new_constants } in
   { env with env_globals = new_globals }
 
-(* constant_type gives the type of a constant *)
-let constant_type env kn =
-  let cb = lookup_constant kn env in
-  cb.const_type
-
 type const_evaluation_result = NoBody | Opaque
 
 exception NotEvaluableConst of const_evaluation_result
 
 let constant_value env kn =
   let cb = lookup_constant kn env in
-  if cb.const_opaque then raise (NotEvaluableConst Opaque);
   match cb.const_body with
-    | Some l_body -> force_constr l_body
-    | None -> raise (NotEvaluableConst NoBody)
-
-let constant_opt_value env cst =
-  try Some (constant_value env cst)
-  with NotEvaluableConst _ -> None
+    | Def l_body -> force_constr l_body
+    | OpaqueDef _ -> raise (NotEvaluableConst Opaque)
+    | Undef _ -> raise (NotEvaluableConst NoBody)
 
 (* A global const is evaluable if it is defined and not opaque *)
 let evaluable_constant cst env =

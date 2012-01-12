@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Wf_nat.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (** Well-founded relations and natural numbers *)
 
@@ -260,19 +258,6 @@ Qed.
 
 Unset Implicit Arguments.
 
-(** [n]th iteration of the function [f] *)
-
-Fixpoint iter_nat (n:nat) (A:Type) (f:A -> A) (x:A) : A :=
-  match n with
-    | O => x
-    | S n' => f (iter_nat n' A f x)
-  end.
-
-Theorem iter_nat_plus :
-  forall (n m:nat) (A:Type) (f:A -> A) (x:A),
-    iter_nat (n + m) A f x = iter_nat n A f (iter_nat m A f x).
-Proof.
-  simple induction n;
-    [ simpl in |- *; auto with arith
-      | intros; simpl in |- *; apply f_equal with (f := f); apply H ].
-Qed.
+Notation iter_nat := @nat_iter (only parsing).
+Notation iter_nat_plus := @nat_iter_plus (only parsing).
+Notation iter_nat_invariant := @nat_iter_invariant (only parsing).

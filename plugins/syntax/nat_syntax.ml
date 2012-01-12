@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: nat_syntax.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 (* This file defines the printer for natural numbers in [nat] *)
 
@@ -16,7 +14,7 @@ open Pp
 open Util
 open Names
 open Coqlib
-open Rawterm
+open Glob_term
 open Libnames
 open Bigint
 open Coqlib
@@ -38,11 +36,11 @@ let nat_of_int dloc n =
 	   strbrk "working with large numbers in nat (observed threshold " ++
 	   strbrk "may vary from 5000 to 70000 depending on your system " ++
 	   strbrk "limits and on the command executed).");
-      let ref_O = RRef (dloc, glob_O) in
-      let ref_S = RRef (dloc, glob_S) in
+      let ref_O = GRef (dloc, glob_O) in
+      let ref_S = GRef (dloc, glob_S) in
       let rec mk_nat acc n =
 	if n <> zero then
-	  mk_nat (RApp (dloc,ref_S, [acc])) (sub_1 n)
+	  mk_nat (GApp (dloc,ref_S, [acc])) (sub_1 n)
 	else
 	  acc
       in
@@ -58,8 +56,8 @@ let nat_of_int dloc n =
 exception Non_closed_number
 
 let rec int_of_nat = function
-  | RApp (_,RRef (_,s),[a]) when s = glob_S -> add_1 (int_of_nat a)
-  | RRef (_,z) when z = glob_O -> zero
+  | GApp (_,GRef (_,s),[a]) when s = glob_S -> add_1 (int_of_nat a)
+  | GRef (_,z) when z = glob_O -> zero
   | _ -> raise Non_closed_number
 
 let uninterp_nat p =
@@ -75,4 +73,4 @@ let _ =
   Notation.declare_numeral_interpreter "nat_scope"
     (nat_path,["Coq";"Init";"Datatypes"])
     nat_of_int
-    ([RRef (dummy_loc,glob_S); RRef (dummy_loc,glob_O)], uninterp_nat, true)
+    ([GRef (dummy_loc,glob_S); GRef (dummy_loc,glob_O)], uninterp_nat, true)

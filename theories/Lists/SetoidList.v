@@ -6,8 +6,6 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: SetoidList.v 12919 2010-04-10 16:30:44Z herbelin $ *)
-
 Require Export List.
 Require Export Sorting.
 Require Export Setoid Basics Morphisms.
@@ -81,6 +79,10 @@ Qed.
 
 Definition inclA l l' := forall x, InA x l -> InA x l'.
 Definition equivlistA l l' := forall x, InA x l <-> InA x l'.
+
+Lemma incl_nil l : inclA nil l.
+Proof. intro. intros. inversion H. Qed.
+Hint Resolve incl_nil : list.
 
 (** lists with same elements modulo [eqA] at the same place *)
 
@@ -159,8 +161,7 @@ Qed.
 Hint Resolve In_InA.
 
 Lemma InA_split : forall l x, InA x l ->
- exists l1, exists y, exists l2,
- eqA x y /\ l = l1++y::l2.
+ exists l1 y l2, eqA x y /\ l = l1++y::l2.
 Proof.
 induction l; intros; inv.
 exists (@nil A); exists a; exists l; auto.
@@ -747,7 +748,7 @@ rewrite filter_In in H; destruct H.
 eapply SortA_InfA_InA; eauto.
 Qed.
 
-Implicit Arguments eq [ [A] ].
+Arguments eq {A} x _.
 
 Lemma filter_InA : forall f, Proper (eqA==>eq) f ->
  forall l x, InA x (List.filter f l) <-> InA x l /\ f x = true.

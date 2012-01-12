@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: subtyping.ml 10664 2008-03-14 11:27:37Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -239,22 +237,29 @@ let check_constant env mp1 l info1 cb2 spec2 subst1 subst2 =
     match info1 with
       | Constant cb1 ->
 	assert (cb1.const_hyps=[] && cb2.const_hyps=[]) ;
-	  (*Start by checking types*)
-	  let cb1 = subst_const_body subst1 cb1 in
-	  let cb2 = subst_const_body subst2 cb2 in
-	  let typ1 = Typeops.type_of_constant_type env cb1.const_type in
-	  let typ2 = Typeops.type_of_constant_type env cb2.const_type in
-	    check_type env typ1 typ2;
-	  let con = make_con mp1 empty_dirpath l in
-	    (match cb2 with
-               | {const_body=Some lc2;const_opaque=false} ->
-		   let c2 = force_constr lc2 in
-		   let c1 = match cb1.const_body with
-		     | Some lc1 -> force_constr lc1
-		     | None -> Const con
-		   in
-		     check_conv conv env c1 c2
-               | _ -> ())
+	let cb1 = subst_const_body subst1 cb1 in
+	let cb2 = subst_const_body subst2 cb2 in
+	(*Start by checking types*)
+	let typ1 = Typeops.type_of_constant_type env cb1.const_type in
+	let typ2 = Typeops.type_of_constant_type env cb2.const_type in
+	check_type env typ1 typ2;
+	(* Now we check the bodies:
+	 - A transparent constant can only be implemented by a compatible
+	   transparent constant.
+         - In the signature, an opaque is handled just as a parameter:
+           anything of the right type can implement it, even if bodies differ.
+	*)
+	(match cb2.const_body with
+	  | Undef _ | OpaqueDef _ -> ()
+	  | Def lc2 ->
+	    (match cb1.const_body with
+	      | Undef _ | OpaqueDef _ -> error ()
+	      | Def lc1 ->
+	        (* NB: cb1 might have been strengthened and appear as transparent.
+	           Anyway [check_conv] will handle that afterwards. *)
+		let c1 = force_constr lc1 in
+		let c2 = force_constr lc2 in
+		check_conv conv env c1 c2))
       | IndType ((kn,i),mind1) ->
 	  ignore (Util.error (
 		    "The kernel does not recognize yet that a parameter can be " ^
@@ -262,7 +267,7 @@ let check_constant env mp1 l info1 cb2 spec2 subst1 subst2 =
 		      "inductive type and give a definition to map the old name to the new " ^
 		      "name."));
       assert (mind1.mind_hyps=[] && cb2.const_hyps=[]) ;
-      if cb2.const_body <> None then error () ;
+      if constant_has_body cb2 then error () ;
       let arity1 = type_of_inductive env (mind1,mind1.mind_packets.(i)) in
       let typ2 = Typeops.type_of_constant_type env cb2.const_type in
        check_conv conv_leq env arity1 typ2
@@ -273,7 +278,7 @@ let check_constant env mp1 l info1 cb2 spec2 subst1 subst2 =
        "constructor and give a definition to map the old name to the new " ^
        "name."));
       assert (mind1.mind_hyps=[] && cb2.const_hyps=[]) ;
-      if cb2.const_body <> None then error () ;
+      if constant_has_body cb2 then error () ;
       let ty1 = type_of_constructor cstr (mind1,mind1.mind_packets.(i)) in
       let ty2 = Typeops.type_of_constant_type env cb2.const_type in
        check_conv conv env ty1 ty2
@@ -281,7 +286,7 @@ let check_constant env mp1 l info1 cb2 spec2 subst1 subst2 =
 
 let rec check_modules  env msb1 msb2 subst1 subst2 =
   let mty1 = module_type_of_module None msb1 in
-  let mty2 =  module_type_of_module None msb2 in
+  let mty2 = module_type_of_module None msb2 in
     check_modtypes env mty1 mty2 subst1 subst2 false;
  
 
@@ -363,11 +368,5 @@ and check_modtypes  env mtb1 mtb2 subst1 subst2 equiv =
      else check_structure  env mtb1' mtb2' equiv subst1 subst2
 
 let check_subtypes env sup super =
-  (*if sup<>super then*)
   check_modtypes env (strengthen sup sup.typ_mp) super empty_subst
-    (map_mp super.typ_mp sup.typ_mp) false
-
-let check_equal env sup super =
-  (*if sup<>super then*)
-  check_modtypes env sup super empty_subst 
-    (map_mp super.typ_mp sup.typ_mp) true
+      (map_mp super.typ_mp sup.typ_mp) false

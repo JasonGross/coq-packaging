@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Qcanon.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import Field.
 Require Import QArith.
@@ -20,7 +18,7 @@ Record Qc : Set := Qcmake { this :> Q ; canon : Qred this = this }.
 
 Delimit Scope Qc_scope with Qc.
 Bind Scope Qc_scope with Qc.
-Arguments Scope Qcmake [Q_scope].
+Arguments Qcmake this%Q _.
 Open Scope Qc_scope.
 
 Lemma Qred_identity :
@@ -71,7 +69,7 @@ Proof.
 Qed.
 
 Definition Q2Qc (q:Q) : Qc := Qcmake (Qred q) (Qred_involutive q).
-Arguments Scope Q2Qc [Q_scope].
+Arguments Q2Qc q%Q.
 Notation " !! " := Q2Qc : Qc_scope.
 
 Lemma Qc_is_canon : forall q q' : Qc, q == q' -> q = q'.
@@ -468,18 +466,16 @@ Proof.
   destruct n; simpl.
   destruct 1; auto.
   intros.
-  apply Qc_is_canon.
-  simpl.
-  compute; auto.
+  now apply Qc_is_canon.
 Qed.
 
 Lemma Qcpower_pos : forall p n, 0 <= p -> 0 <= p^n.
 Proof.
   induction n; simpl; auto with qarith.
-  intros; compute; intro; discriminate.
+  easy.
   intros.
   apply Qcle_trans with (0*(p^n)).
-  compute; intro; discriminate.
+  easy.
   apply Qcmult_le_compat_r; auto.
 Qed.
 

@@ -1,13 +1,11 @@
 (* -*- coding: utf-8 -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: Basics.v 14641 2011-11-06 11:59:10Z herbelin $ *)
-
 (** Standard functions and combinators.
 
    Proofs about them require functional extensionality and can be found
@@ -19,7 +17,7 @@
 
 (** The polymorphic identity function is defined in [Datatypes]. *)
 
-Implicit Arguments id [[A]].
+Arguments id {A} x.
 
 (** Function composition. *)
 
@@ -55,5 +53,5 @@ Definition apply {A B} (f : A -> B) (x : A) := f x.
 
 (** Curryfication of [prod] is defined in [Logic.Datatypes]. *)
 
-Implicit Arguments prod_curry [[A] [B] [C]].
-Implicit Arguments prod_uncurry [[A] [B] [C]].
+Arguments prod_curry   {A B C} f p.
+Arguments prod_uncurry {A B C} f x y.

@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Rprod.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import Compare.
 Require Import Rbase.
@@ -17,7 +15,7 @@ Require Import Binomial.
 Open Local Scope R_scope.
 
 (** TT Ak; 0<=k<=N *)
-Boxed Fixpoint prod_f_R0 (f:nat -> R) (N:nat) : R :=
+Fixpoint prod_f_R0 (f:nat -> R) (N:nat) : R :=
   match N with
     | O => f O
     | S p => prod_f_R0 f p * f (S p)

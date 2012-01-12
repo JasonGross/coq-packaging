@@ -1,12 +1,14 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Classical_Prop.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
+(* File created for Coq V5.10.14b, Oct 1995 *)
+(* Classical tactics for proving disjunctions by Julien Narboux, Jul 2005 *)
+(* Inferred proof-irrelevance and eq_rect_eq added by Hugo Herbelin, Mar 2006 *)
 
 (** Classical Propositional Logic *)
 

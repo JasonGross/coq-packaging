@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: pp.ml4 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Pp_control
 
@@ -275,11 +273,6 @@ let pp_dirs ft =
 
 (* pretty print on stdout and stderr *)
 
-let pp_std_dirs = pp_dirs !std_ft
-let pp_err_dirs = pp_dirs !err_ft
-
-let ppcmds x = Ppdir_ppcmds x
-
 (* Special chars for emacs, to detect warnings inside goal output *)
 let emacs_warning_start_string = String.make 1 (Char.chr 254)
 let emacs_warning_end_string = String.make 1 (Char.chr 255)
@@ -339,3 +332,7 @@ let msgnl x = msgnl_with !std_ft x
 let msgerr x = msg_with !err_ft x
 let msgerrnl x = msgnl_with !err_ft x
 let msg_warning x = msg_warning_with !err_ft x
+
+let string_of_ppcmds c =
+  msg_with Format.str_formatter c;
+  Format.flush_str_formatter ()

@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Rtrigo.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import Rbase.
 Require Import Rfunctions.
@@ -18,7 +16,6 @@ Require Export Cos_rel.
 Require Export Cos_plus.
 Require Import ZArith_base.
 Require Import Zcomplements.
-Require Import Classical_Prop.
 Local Open Scope nat_scope.
 Local Open Scope R_scope.
 
@@ -372,7 +369,11 @@ Qed.
 
 Lemma cos_sin_0_var : forall x:R, cos x <> 0 \/ sin x <> 0.
 Proof.
-  intro; apply not_and_or; apply cos_sin_0.
+  intros x.
+  destruct (Req_dec (cos x) 0). 2: now left.
+  right. intros H'.
+  apply (cos_sin_0 x).
+  now split.
 Qed.
 
 (*****************************************************************)

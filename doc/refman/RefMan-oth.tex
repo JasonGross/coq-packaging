@@ -225,8 +225,7 @@ a subterm that matches the pattern {\termpattern} (holes of the
 pattern are either denoted by ``{\texttt \_}'' or
 by ``{\texttt ?{\ident}}'' when non linear patterns are expected).
 
-\item {\tt SearchAbout [ \nelist{\zeroone{-}{\termpatternorstr}}{}
-].}\\
+\item {\tt SearchAbout \nelist{\zeroone{-}{\termpatternorstr}}{}.}\\
 
 \noindent where {\termpatternorstr} is a
 {\termpattern} or a {\str}, or a {\str} followed by a scope
@@ -241,24 +240,23 @@ search excludes the objects that mention that {\termpattern} or that
 {\str}.
 
 \item
-\begin{tabular}[t]{@{}l}
-  {\tt SearchAbout {\termpatternorstr} inside {\module$_1$} \ldots{} {\module$_n$}.} \\
-  {\tt SearchAbout [ \nelist{{\termpatternorstr}}{} ]
+  {\tt SearchAbout \nelist{{\termpatternorstr}}{}
     inside {\module$_1$} \ldots{} {\module$_n$}.}
-\end{tabular}
 
 This restricts the search to constructions defined in modules
 {\module$_1$} \ldots{} {\module$_n$}.
 
 \item
-\begin{tabular}[t]{@{}l}
-  {\tt SearchAbout {\termpatternorstr} outside {\module$_1$}...{\module$_n$}.} \\
-  {\tt SearchAbout [ \nelist{{\termpatternorstr}}{} ]
+  {\tt SearchAbout \nelist{{\termpatternorstr}}{}
      outside {\module$_1$}...{\module$_n$}.}
-\end{tabular}
 
 This restricts the search to constructions not defined in modules
 {\module$_1$} \ldots{} {\module$_n$}.
+
+\item {\tt SearchAbout [ ... ]. }
+
+For compatibility with older versions, the list of objects to search
+may be enclosed by optional {\tt [  ]} delimiters.
 
 \end{Variants}
 
@@ -268,8 +266,8 @@ This restricts the search to constructions not defined in modules
 Require Import ZArith.
 \end{coq_example*}
 \begin{coq_example}
-SearchAbout [ Zmult Zplus "distr" ].
-SearchAbout [ "+"%Z "*"%Z "distr" -positive -Prop].
+SearchAbout Zmult Zplus "distr".
+SearchAbout "+"%Z "*"%Z "distr" -positive -Prop.
 SearchAbout (?x * _ + ?x * _)%Z outside OmegaLemmas.
 \end{coq_example}
 
@@ -337,16 +335,6 @@ This restricts the search to constructions not defined in modules
 {\module$_1$} \ldots{} {\module$_n$}.
 
 \end{Variants}
-
-% \subsection[\tt SearchIsos {\term}.]{\tt SearchIsos {\term}.\comindex{SearchIsos}}
-% \label{searchisos}
-% \texttt{SearchIsos} searches terms by their type modulo isomorphism.
-% This command displays the full name of all constants, variables,
-% inductive types, and inductive constructors of the current
-% context whose type is isomorphic to {\term} modulo the contextual part of the
-% following axiomatization (the mutual inductive types with one constructor,
-% without implicit arguments, and for which projections exist, are regarded as a
-% sequence of $\sa{}$):
 
 
 % \begin{tabbing}
@@ -631,6 +619,12 @@ files is only possible under the bytecode version of {\tt coqtop}
 (i.e. {\tt coqtop} called with options {\tt -byte}, see chapter 
 \ref{Addoc-coqc}), or when Coq has been compiled with a version of
 Objective Caml that supports native {\tt Dynlink} ($\ge$ 3.11).
+
+\begin{Variants}
+\item {\tt Local Declare ML Module {\str$_1$} .. {\str$_n$}.}\\
+  This variant is not exported to the modules that import the module
+  where they occur, even if outside a section.
+\end{Variants}
 
 \begin{ErrMsgs}
 \item \errindex{File not found on loadpath : \str}
@@ -938,7 +932,7 @@ a {\tt Timeout} are unaffected.
 
 \subsection[\tt Unset Default Timeout.]{\tt Unset Default Timeout.\comindex{Unset Default Timeout}}
 
-This command turns off the use of a defaut timeout.
+This command turns off the use of a default timeout.
 
 \subsection[\tt Test Default Timeout.]{\tt Test Default Timeout.\comindex{Test Default Timeout}}
 
@@ -978,12 +972,6 @@ time of writing this documentation, the default value is 50).
 \subsection[\tt Test Printing Depth.]{\tt Test Printing Depth.\comindex{Test Printing Depth}}
 This command displays the current nesting depth used for display.
 
-%\subsection{\tt Explain ...}
-%Not yet documented.
-
-%\subsection{\tt Go ...}
-%Not yet documented.
-
 %\subsection{\tt Abstraction ...}
 %Not yet documented.
 
@@ -997,7 +985,7 @@ compares applicative terms while the other is a brute-force but efficient
 algorithm that first normalizes the terms before comparing them.  The
 second algorithm is based on a bytecode representation of terms
 similar to the bytecode representation used in the ZINC virtual
-machine~\cite{Leroy90}. It is specially useful for intensive
+machine~\cite{Leroy90}. It is especially useful for intensive
 computation of algebraic values, such as numbers, and for reflexion-based
 tactics. The commands to fine-tune the reduction strategies and the
 lazy conversion algorithm are described first.
@@ -1187,8 +1175,6 @@ control the scope of their effect. There are four kinds of commands:
   The {\tt Set} and {\tt Unset} commands belong to this category.
 \end{itemize}
 
-
-% $Id: RefMan-oth.tex 13923 2011-03-21 16:25:20Z letouzey $ 
 
 %%% Local Variables: 
 %%% mode: latex

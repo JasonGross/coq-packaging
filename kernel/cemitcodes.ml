@@ -1,3 +1,15 @@
+(************************************************************************)
+(*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(*   \VV/  **************************************************************)
+(*    //   *      This file is distributed under the terms of the       *)
+(*         *       GNU Lesser General Public License Version 2.1        *)
+(************************************************************************)
+
+(* Author: Benjamin Grégoire as part of the bytecode-based virtual reduction
+   machine, Oct 2004 *)
+(* Extension: Arnaud Spiwack (support for native arithmetic), May 2005 *)
+
 open Names
 open Term
 open Cbytecodes
@@ -321,12 +333,12 @@ let subst_to_patch s (code,pl,fv) =
   code,List.rev_map (subst_patch s) pl,fv
 
 type body_code =
-  | BCdefined of bool * to_patch
+  | BCdefined of to_patch
   | BCallias of constant
   | BCconstant
 
 let subst_body_code s = function
-  | BCdefined (b,tp) -> BCdefined (b,subst_to_patch s tp)
+  | BCdefined tp -> BCdefined (subst_to_patch s tp)
   | BCallias kn -> BCallias (fst (subst_con s kn))
   | BCconstant -> BCconstant
 
@@ -337,11 +349,6 @@ let from_val = from_val
 let force = force subst_body_code
 
 let subst_to_patch_subst = subst_substituted
-
-let is_boxed tps =
-  match force tps with
-  | BCdefined(b,_) -> b
-  | _ -> false
 
 let repr_body_code = repr_substituted
 

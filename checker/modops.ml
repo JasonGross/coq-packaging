@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: modops.ml 9872 2007-05-30 16:01:18Z soubiran $ i*)
 
 (*i*)
 open Util
@@ -24,8 +22,6 @@ let error_not_a_constant l =
 let error_not_a_functor _ = error "Application of not a functor"
 
 let error_incompatible_modtypes _ _ = error "Incompatible module types"
-
-let error_not_equal _ _ = error "Not equal modules"
 
 let error_not_match l _ =
   error ("Signature components for label "^string_of_label l^" do not match")
@@ -61,11 +57,6 @@ let destr_functor env mtb =
       	    (arg_id,arg_t,body_t)
   | _ -> error_not_a_functor mtb
 
-
-let is_functor = function
- | SEBfunctor (arg_id,arg_t,body_t) -> true
- | _ -> false
-
 let module_body_of_type mp mtb = 
   { mod_mp = mp;
     mod_type = mtb.typ_expr;
@@ -74,14 +65,6 @@ let module_body_of_type mp mtb =
     mod_constraints = mtb.typ_constraints;
     mod_delta = mtb.typ_delta;
     mod_retroknowledge = []}
-
-let check_modpath_equiv env mp1 mp2 = 
-  if mp1=mp2 then () else
- (*   let mb1=lookup_module  mp1 env in
-    let mb2=lookup_module mp2 env in
-      if (delta_of_mp mb1.mod_delta mp1)=(delta_of_mp mb2.mod_delta mp2)
-      then ()
-      else*) error_not_equal mp1 mp2
 
 let rec add_signature mp sign resolver env = 
   let add_one env (l,elem) =
@@ -112,23 +95,16 @@ and add_module mb env =
 
 
 let strengthen_const mp_from l cb resolver =
-  match cb.const_opaque, cb.const_body with
-  | false, Some _ -> cb
-  | true, Some _ 
-  | _, None ->
+  match cb.const_body with
+    | Def _ -> cb
+    | _ ->
       let con = make_con mp_from empty_dirpath l in
-     (* let con =  constant_of_delta resolver con in*)
-      let const = Const con in 
-      let const_subs = Some (Declarations.from_val const) in
-	{cb with 
-	   const_body = const_subs;
-	   const_opaque = false;
-	}
-	  
+      (* let con =  constant_of_delta resolver con in*)
+      { cb with const_body = Def (Declarations.from_val (Const con)) }
 
 let rec strengthen_mod mp_from mp_to mb =
   if Declarations.mp_in_delta mb.mod_mp mb.mod_delta then
-    mb 
+    mb
   else
     match mb.mod_type with
      | SEBstruct (sign) -> 
@@ -154,34 +130,33 @@ and strengthen_sig mp_from sign mp_to resolver =
 	resolve_out,item'::rest'
     | (_,SFBmind _ as item):: rest ->
 	let resolve_out,rest' = strengthen_sig mp_from rest mp_to resolver in
-	resolve_out,item::rest'
+	  resolve_out,item::rest'
     | (l,SFBmodule mb) :: rest ->
 	let mp_from' = MPdot (mp_from,l) in
 	let mp_to' = MPdot(mp_to,l) in
 	let mb_out = strengthen_mod mp_from' mp_to' mb in
 	let item' = l,SFBmodule (mb_out) in
 	let resolve_out,rest' = strengthen_sig mp_from rest mp_to resolver in
-	resolve_out, item'::rest'
-    | (l,SFBmodtype mty as item) :: rest ->
+	resolve_out (*add_delta_resolver resolve_out mb.mod_delta*),
+	item':: rest'
+    | (l,SFBmodtype mty as item) :: rest -> 
 	let resolve_out,rest' = strengthen_sig mp_from rest mp_to resolver in
-	resolve_out, item::rest'
+	resolve_out,item::rest'
 
 let strengthen mtb mp =
     match mtb.typ_expr with
-      | SEBstruct (sign) ->
+      | SEBstruct (sign) -> 
 	  let resolve_out,sign_out =
-	    strengthen_sig mtb.typ_mp sign mp mtb.typ_delta
-	  in
-	  {mtb with
-	    typ_expr = SEBstruct(sign_out);
-	    typ_delta = resolve_out(*add_delta_resolver mtb.typ_delta
+	    strengthen_sig mtb.typ_mp sign mp mtb.typ_delta in
+	    {mtb with
+	       typ_expr = SEBstruct(sign_out);
+	       typ_delta = resolve_out(*add_delta_resolver mtb.typ_delta
 		(add_mp_delta_resolver mtb.typ_mp mp resolve_out)*)}
       | SEBfunctor _ -> mtb
       | _ -> anomaly "Modops:the evaluation of the structure failed "
 
 let subst_and_strengthen mb mp =
-  strengthen_mod mb.mod_mp mp
-    (subst_module (map_mp mb.mod_mp mp) mb)
+  strengthen_mod mb.mod_mp mp (subst_module (map_mp mb.mod_mp mp) mb)
 
 
 let module_type_of_module mp mb =

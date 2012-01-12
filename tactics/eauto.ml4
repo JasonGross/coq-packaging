@@ -1,14 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
-
-(* $Id: eauto.ml4 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Pp
 open Util
@@ -19,7 +17,6 @@ open Termops
 open Sign
 open Reduction
 open Proof_type
-open Proof_trees
 open Declarations
 open Tacticals
 open Tacmach
@@ -28,7 +25,7 @@ open Tactics
 open Pattern
 open Clenv
 open Auto
-open Rawterm
+open Glob_term
 open Hiddentac
 
 let eauto_unif_flags = { auto_unif_flags with Unification.modulo_delta = full_transparent_state }
@@ -71,6 +68,7 @@ let rec prolog l n gl =
   (tclFIRST (List.map (fun t -> (tclTHEN t prol)) (one_step l gl))) gl
 
 let prolog_tac l n gl =
+  let l = List.map (prepare_hint (pf_env gl)) l in
   let n =
     match n with
       |  ArgArg n -> n
@@ -81,7 +79,7 @@ let prolog_tac l n gl =
     errorlabstrm "Prolog.prolog" (str "Prolog failed.")
 
 TACTIC EXTEND prolog
-| [ "prolog" "[" constr_list(l) "]" int_or_var(n) ] -> [ prolog_tac l n ]
+| [ "prolog" "[" open_constr_list(l) "]" int_or_var(n) ] -> [ prolog_tac l n ]
 END
 
 open Auto
@@ -95,7 +93,7 @@ let priority l = List.map snd (List.filter (fun (pr,_) -> pr = 0) l)
 
 let unify_e_resolve flags (c,clenv) gls =
   let clenv' = connect_clenv gls clenv in
-  let _ = clenv_unique_resolver false ~flags clenv' gls in
+  let _ = clenv_unique_resolver ~flags clenv' gls in
   h_simplest_eapply c gls
 
 let rec e_trivial_fail_db db_list local_db goal =
@@ -170,7 +168,7 @@ let find_first_goal gls =
 
 type search_state = {
   depth : int; (*r depth of search before failing *)
-  tacres : goal list sigma * validation;
+  tacres : goal list sigma;
   last_tactic : std_ppcmds Lazy.t;
   dblist : Auto.hint_db list;
   localdb :  Auto.hint_db list }
@@ -179,15 +177,15 @@ module SearchProblem = struct
 
   type state = search_state
 
-  let success s = (sig_it (fst s.tacres)) = []
+  let success s = (sig_it s.tacres) = []
 
   let pr_ev evs ev = Printer.pr_constr_env (Evd.evar_env ev) (Evarutil.nf_evar evs ev.Evd.evar_concl)
 
   let pr_goals gls =
-    let evars = Evarutil.nf_evars (Refiner.project gls) in
+    let evars = Evarutil.nf_evar_map (Refiner.project gls) in
       prlist (pr_ev evars) (sig_it gls)
 
-  let filter_tactics (glls,v) l =
+  let filter_tactics glls l =
 (*     let _ = Proof_trees.db_pr_goal (List.hd (sig_it glls)) in *)
 (*     let evars = Evarutil.nf_evars (Refiner.project glls) in *)
 (*     msg (str"Goal:" ++ pr_ev evars (List.hd (sig_it glls)) ++ str"\n"); *)
@@ -195,11 +193,10 @@ module SearchProblem = struct
       | [] -> []
       | (tac,pptac) :: tacl ->
 	  try
-	    let (lgls,ptl) = apply_tac_list tac glls in
-	    let v' p = v (ptl p) in
+	    let lgls = apply_tac_list tac glls in
 (* 	    let gl = Proof_trees.db_pr_goal (List.hd (sig_it glls)) in *)
 (* 	      msg (hov 1 (pptac ++ str" gives: \n" ++ pr_goals lgls ++ str"\n")); *)
-	      ((lgls,v'),pptac) :: aux tacl
+	      (lgls,pptac) :: aux tacl
 	  with e -> Refiner.catch_failerror e; aux tacl
     in aux l
 
@@ -207,14 +204,14 @@ module SearchProblem = struct
      number of remaining goals. *)
   let compare s s' =
     let d = s'.depth - s.depth in
-    let nbgoals s = List.length (sig_it (fst s.tacres)) in
+    let nbgoals s = List.length (sig_it s.tacres) in
     if d <> 0 then d else nbgoals s - nbgoals s'
 
   let branching s =
     if s.depth = 0 then
       []
     else
-      let lg = fst s.tacres in
+      let lg = s.tacres in
       let nbgl = List.length (sig_it lg) in
       assert (nbgl > 0);
       let g = find_first_goal lg in
@@ -232,7 +229,7 @@ module SearchProblem = struct
       in
       let intro_tac =
 	List.map
-	  (fun ((lgls,_) as res,pp) ->
+	  (fun (lgls as res,pp) ->
 	     let g' = first_goal lgls in
 	     let hintl =
 	       make_resolve_hyp (pf_env g') (project g') (pf_last_hyp g')
@@ -248,7 +245,7 @@ module SearchProblem = struct
 	  filter_tactics s.tacres (e_possible_resolve s.dblist (List.hd s.localdb) (pf_concl g))
 	in
 	List.map
-	  (fun ((lgls,_) as res, pp) ->
+	  (fun (lgls as res, pp) ->
 	     let nbgl' = List.length (sig_it lgls) in
 	     if nbgl' < nbgl then
 	       { depth = s.depth; tacres = res; last_tactic = pp;
@@ -294,7 +291,7 @@ let e_breadth_search debug n db_list local_db gl =
   with Not_found -> error "eauto: breadth first search failed."
 
 let e_search_auto debug (in_depth,p) lems db_list gl =
-  let local_db = make_local_hint_db true lems gl in
+  let local_db = make_local_hint_db ~ts:full_transparent_state true lems gl in
   if in_depth then
     e_depth_search debug p db_list local_db gl
   else
@@ -306,18 +303,12 @@ let eauto_with_bases debug np lems db_list =
   tclTRY (e_search_auto debug np lems db_list)
 
 let eauto debug np lems dbnames =
-  let db_list =
-    List.map
-      (fun x ->
-	 try searchtable_map x
-	 with Not_found -> error ("No such Hint database: "^x^"."))
-      ("core"::dbnames)
-  in
+  let db_list = make_db_list dbnames in
   tclTRY (e_search_auto debug np lems db_list)
 
 let full_eauto debug n lems gl =
   let dbnames = current_db_names () in
-  let dbnames =  list_subtract dbnames ["v62"] in
+  let dbnames =  list_remove "v62" dbnames in
   let db_list = List.map searchtable_map dbnames in
   tclTRY (e_search_auto debug n lems db_list) gl
 
@@ -349,19 +340,20 @@ ARGUMENT EXTEND hintbases
 | [ ] -> [ Some [] ]
 END
 
-let pr_constr_coma_sequence prc _ _ = prlist_with_sep pr_comma prc
+let pr_constr_coma_sequence prc _ _ =
+  prlist_with_sep pr_comma (fun (_,c) -> prc c)
 
 ARGUMENT EXTEND constr_coma_sequence
-  TYPED AS constr_list
+  TYPED AS open_constr_list
   PRINTED BY pr_constr_coma_sequence
-| [ constr(c) "," constr_coma_sequence(l) ] -> [ c::l ]
-| [ constr(c) ] -> [ [c] ]
+| [ open_constr(c) "," constr_coma_sequence(l) ] -> [ c::l ]
+| [ open_constr(c) ] -> [ [c] ]
 END
 
-let pr_auto_using prc _prlc _prt = Pptactic.pr_auto_using prc
+let pr_auto_using prc _prlc _prt = Pptactic.pr_auto_using (fun (_,c) -> prc c)
 
 ARGUMENT EXTEND auto_using
-  TYPED AS constr_list
+  TYPED AS open_constr_list
   PRINTED BY pr_auto_using
 | [ "using" constr_coma_sequence(l) ] -> [ l ]
 | [ ] -> [ [] ]
@@ -413,19 +405,6 @@ let autounfold db cls gl =
     | OnHyp (id,occs,where) -> tac occs (Some (id,where))
     | OnConcl occs -> tac occs None)
     cls gl
-
-let autosimpl db cl =
-  let unfold_of_elts constr (b, elts) =
-    if not b then
-      List.map (fun c -> all_occurrences, constr c) elts
-    else []
-  in
-  let unfolds = List.concat (List.map (fun dbname ->
-    let db = searchtable_map dbname in
-    let (ids, csts) = Hint_db.transparent_state db in
-      unfold_of_elts (fun x -> EvalConstRef x) (Cpred.elements csts) @
-      unfold_of_elts (fun x -> EvalVarRef x) (Idpred.elements ids)) db)
-  in unfold_option unfolds cl
 
 open Extraargs
 
@@ -519,4 +498,56 @@ END
 
 TACTIC EXTEND convert_concl_no_check
 | ["convert_concl_no_check" constr(x) ] -> [ convert_concl_no_check x DEFAULTcast ]
+END
+
+
+let pr_hints_path_atom prc _ _ a =
+  match a with
+  | PathAny -> str"."
+  | PathHints grs ->
+    prlist_with_sep pr_spc Printer.pr_global grs
+
+ARGUMENT EXTEND hints_path_atom
+  TYPED AS hints_path_atom
+  PRINTED BY pr_hints_path_atom
+| [ global_list(g) ] -> [ PathHints (List.map Nametab.global g) ]
+| [ "*" ] -> [ PathAny ]
+END
+
+let pr_hints_path prc prx pry c =
+  let rec aux = function
+  | PathAtom a -> pr_hints_path_atom prc prx pry a
+  | PathStar p -> str"(" ++ aux p ++ str")*"
+  | PathSeq (p, p') -> aux p ++ spc () ++ aux p'
+  | PathOr (p, p') -> str "(" ++ aux p ++ str"|" ++ aux p' ++ str")"
+  | PathEmpty -> str"ø"
+  | PathEpsilon -> str"ε"
+  in aux c
+
+ARGUMENT EXTEND hints_path
+  TYPED AS hints_path
+  PRINTED BY pr_hints_path
+| [ "(" hints_path(p) ")"  ] -> [ p ]
+| [ "!" hints_path(p)  ] -> [ PathStar p ]
+| [ "emp" ] -> [ PathEmpty ]
+| [ "eps" ] -> [ PathEpsilon ]
+| [ hints_path_atom(a) ] -> [ PathAtom a ]
+| [ hints_path(p) "|" hints_path(q) ] -> [ PathOr (p, q) ]
+| [ hints_path(p) ";" hints_path(q) ] -> [ PathSeq (p, q) ]
+END
+
+let pr_hintbases _prc _prlc _prt = Pptactic.pr_hintbases
+
+ARGUMENT EXTEND opthints
+  TYPED AS preident_list_opt
+  PRINTED BY pr_hintbases
+| [ ":" ne_preident_list(l) ] -> [ Some l ]
+| [ ] -> [ None ]
+END
+
+VERNAC COMMAND EXTEND HintCut
+| [ "Hint" "Cut" "[" hints_path(p) "]" opthints(dbnames) ] -> [
+  let entry = HintsCutEntry p in
+    Auto.add_hints (Vernacexpr.use_section_locality ()) 
+      (match dbnames with None -> ["core"] | Some l -> l) entry ]
 END

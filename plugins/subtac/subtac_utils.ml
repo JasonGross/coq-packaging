@@ -15,10 +15,8 @@ let ($) f x = f x
 let contrib_name = "Program"
 
 let subtac_dir = [contrib_name]
-let fix_sub_module = "Wf"
-let utils_module = "Utils"
-let fixsub_module = subtac_dir @ [fix_sub_module]
-let utils_module = subtac_dir @ [utils_module]
+let fixsub_module = subtac_dir @ ["Wf"]
+let utils_module = subtac_dir @ ["Utils"]
 let tactics_module = subtac_dir @ ["Tactics"]
 let init_constant dir s () = gen_constant contrib_name dir s
 let init_reference dir s () = gen_reference contrib_name dir s
@@ -27,7 +25,6 @@ let safe_init_constant md name () =
   check_required_library ("Coq"::md);
   init_constant md name ()
 
-let fixsub = init_constant fixsub_module "Fix_sub"
 let ex_pi1 = init_constant utils_module "ex_pi1"
 let ex_pi2 = init_constant utils_module "ex_pi2"
 
@@ -55,11 +52,9 @@ let build_sig () =
 
 let sig_ = build_sig
 
-let fix_proto = init_constant tactics_module "fix_proto"
-let fix_proto_ref () = 
-  match Nametab.global (make_ref "Program.Tactics.fix_proto") with
-  | ConstRef c -> c
-  | _ -> assert false
+let fix_proto = safe_init_constant tactics_module "fix_proto"
+
+let hide_obligation = safe_init_constant tactics_module "obligation"
 
 let eq_ind = init_constant ["Init"; "Logic"] "eq"
 let eq_rec = init_constant ["Init"; "Logic"] "eq_rec"
@@ -92,12 +87,6 @@ let ex_intro = init_reference ["Init"; "Logic"] "ex_intro"
 let proj1 = init_constant ["Init"; "Logic"] "proj1"
 let proj2 = init_constant ["Init"; "Logic"] "proj2"
 
-let boolind = init_constant ["Init"; "Datatypes"] "bool"
-let sumboolind = init_constant ["Init"; "Specif"] "sumbool"
-let natind = init_constant ["Init"; "Datatypes"] "nat"
-let intind = init_constant ["ZArith"; "binint"] "Z"
-let existSind = init_constant ["Init"; "Specif"] "sigS"
-
 let existS = build_sigma_type
 
 let prod = build_prod
@@ -120,8 +109,8 @@ let my_print_rel_context env ctx = Printer.pr_rel_context env ctx
 let my_print_context = Termops.print_rel_context
 let my_print_named_context = Termops.print_named_context
 let my_print_env = Termops.print_env
-let my_print_rawconstr = Printer.pr_rawconstr_env
-let my_print_evardefs = Evd.pr_evar_map
+let my_print_glob_constr = Printer.pr_glob_constr_env
+let my_print_evardefs = Evd.pr_evar_map None
 
 let my_print_tycon_type = Evarutil.pr_tycon_type
 
@@ -253,7 +242,7 @@ let build_dependent_sum l =
 		([intros;
 		  (tclTHENSEQ
 		     [constructor_tac false (Some 1) 1
-			(Rawterm.ImplicitBindings [mkVar n]);
+			(Glob_term.ImplicitBindings [mkVar n]);
 		      cont]);
 		 ])))
 	in
@@ -356,7 +345,7 @@ let destruct_ex ext ex =
       | _ -> [acc]
   in aux ex ext
 
-open Rawterm
+open Glob_term
 
 let id_of_name = function
     Name n -> n
@@ -418,7 +407,6 @@ let string_of_intset d =
 open Printer
 open Ppconstr
 open Nameops
-open Termops
 open Evd
 
 let pr_meta_map evd =
@@ -430,11 +418,11 @@ let pr_meta_map evd =
     | (mv,Cltyp (na,b)) ->
       	hov 0
 	  (pr_meta mv ++ pr_name na ++ str " : " ++
-           print_constr b.rebus ++ fnl ())
+           Termops.print_constr b.rebus ++ fnl ())
     | (mv,Clval(na,b,_)) ->
       	hov 0
 	  (pr_meta mv ++ pr_name na ++ str " := " ++
-             print_constr (fst b).rebus ++ fnl ())
+             Termops.print_constr (fst b).rebus ++ fnl ())
   in
   prlist pr_meta_binding ml
 
@@ -445,11 +433,11 @@ let pr_evar_info evi =
     (*pr_idl (List.rev (ids_of_named_context (evar_context evi))) *)
     Printer.pr_named_context (Global.env()) (evar_context evi)
   in
-  let pty = print_constr evi.evar_concl in
+  let pty = Termops.print_constr evi.evar_concl in
   let pb =
     match evi.evar_body with
       | Evar_empty -> mt ()
-      | Evar_defined c -> spc() ++ str"=> "  ++ print_constr c
+      | Evar_defined c -> spc() ++ str"=> "  ++ Termops.print_constr c
   in
   hov 2 (str"["  ++ phyps ++ spc () ++ str"|- "  ++ pty ++ pb ++ str"]")
 
@@ -463,11 +451,11 @@ let pr_evar_map sigma =
 let pr_constraints pbs =
   h 0
     (prlist_with_sep pr_fnl (fun (pbty,t1,t2) ->
-      print_constr t1 ++ spc() ++
+      Termops.print_constr t1 ++ spc() ++
       str (match pbty with
 	| Reduction.CONV -> "=="
 	| Reduction.CUMUL -> "<=") ++
-      spc() ++ print_constr t2) pbs)
+      spc() ++ Termops.print_constr t2) pbs)
 
 let pr_evar_map evd =
   let pp_evm =
@@ -486,4 +474,4 @@ let tactics_tac s =
   lazy(make_kn (MPfile contrib_tactics_path) (make_dirpath []) (mk_label s))
 
 let tactics_call tac args =
-  TacArg(TacCall(dummy_loc, ArgArg(dummy_loc, Lazy.force (tactics_tac tac)),args))
+  TacArg(dummy_loc,TacCall(dummy_loc, ArgArg(dummy_loc, Lazy.force (tactics_tac tac)),args))

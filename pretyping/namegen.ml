@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: namegen.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 (* Created from contents that was formerly in termops.ml and
    nameops.ml, Nov 2009 *)
@@ -133,9 +131,9 @@ let mkProd_or_LetIn_name env b d = mkProd_or_LetIn (name_assumption env d) b
 let mkLambda_or_LetIn_name env b d = mkLambda_or_LetIn (name_assumption env d)b
 
 let it_mkProd_or_LetIn_name env b hyps =
-  it_mkProd_or_LetIn ~init:b (name_context env hyps)
+  it_mkProd_or_LetIn b (name_context env hyps)
 let it_mkLambda_or_LetIn_name env b hyps =
-  it_mkLambda_or_LetIn ~init:b (name_context env hyps)
+  it_mkLambda_or_LetIn b (name_context env hyps)
 
 (**********************************************************************)
 (* Fresh names *)
@@ -205,6 +203,17 @@ let next_ident_away id avoid =
 
 let next_name_away_with_default default na avoid =
   let id = match na with Name id -> id | Anonymous -> id_of_string default in
+  next_ident_away id avoid
+
+let reserved_type_name = ref (fun t -> Anonymous)
+let set_reserved_typed_name f = reserved_type_name := f
+
+let next_name_away_with_default_using_types default na avoid t =
+  let id = match na with
+    | Name id -> id
+    | Anonymous -> match !reserved_type_name t with
+	| Name id -> id
+	| Anonymous -> id_of_string default in
   next_ident_away id avoid
 
 let next_name_away = next_name_away_with_default "H"

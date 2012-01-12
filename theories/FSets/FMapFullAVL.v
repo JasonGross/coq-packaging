@@ -8,8 +8,6 @@
 
 (* Finite map library.  *)
 
-(* $Id: FMapFullAVL.v 13090 2010-06-08 13:56:14Z herbelin $ *)
-
 (** * FMapFullAVL
 
    This file contains some complements to [FMapAVL].

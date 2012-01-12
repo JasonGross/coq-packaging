@@ -1,30 +1,20 @@
-INSTALLATION PROCEDURE FOR THE PRECOMPILED VERSION OF COQ SYSTEM UNDER MACOS X
-------------------------------------------------------------------------------
+INSTALLATION PROCEDURE FOR THE PRECOMPILED COQ V8.1 SYSTEM UNDER MACOS X
+------------------------------------------------------------------------
 
-Here comes an bundle version of CoqIdE that you can save anywhere you want on
-your disk.
+You can also use fink, or the MacOS X package prepared by the Coq
+team. To use the MacOS X package,:
 
-Its main limitation is that double clicking and drap&drop on the application
-icon of a .v file won't open the file ! You must use Menu/Ctrl-o to open a
-file. (GTK-OSX handles it but lablgtk don't as far as I know.)
+1) Download archive coq-8.1-macosx-ppc.dmg (for PowerPC-base computer)
+   or coq-8.1-macosx-i386.dmg (for Pentium-based computer).
 
-An other limitation is that Sortcut aren't MacOS like ! (The question is again
-how to make "" throw CaML.)
+2) Double-click on its icon; it mounts a disk volume named "Coq V8.1".
 
-Notice that "Compile" and "File"/"Export to" menu items should work (modulo
-(pdf)latex finding).
+3) Open volume "Coq 8.1" and double-click on coq-8.1.pkg to launch the
+   installer (you'll need administrator permissions).
 
-if you want to use coqide from your terminal add
- 
-alias coqide /YOUR_INSTALL_DIRECTORY/CoqIdEv8.3.app/Contents/MacOS/startcoqide 
+4) Coq installs in /usr/local/bin, which should be in your PATH, and
+   can be used from a Terminal window: the interactive toplevel is
+   named coqtop and the compiler is coqc.
 
-at your ~/.profile. ("YOUR_INSTALL_DIRECTORY" is often "Applications"). Options
-such as -I/-R should work on this setting.
-
-You could also add
-/YOUR_INSTALL_DIRECTORY/CoqIdEv8.3.app/Contents/Resources/bin/ at your path to
-use coqtop/coq-tex/coq... from any terminal but CAUTION coqide of that directory
-won't work.
-
-
-See up-to-date informations on http://coq.inria.fr/download.
+If you have any trouble with this installation, please contact:
+coq-bugs@pauillac.inria.fr.

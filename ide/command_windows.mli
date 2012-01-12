@@ -1,22 +1,14 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: command_windows.mli 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
 class command_window :
-  unit ->
+  Coq.coqtop ref -> Preferences.pref ref ->
   object
     method new_command : ?command:string -> ?term:string -> unit -> unit
     method frame : GBin.frame
   end
-
- val main : unit -> unit
-
-val command_window : unit -> command_window
-
-

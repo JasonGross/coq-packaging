@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: tactic_debug.ml 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 open Names
 open Constrextern
@@ -36,8 +34,18 @@ let explain_logic_error = ref (fun e -> mt())
 let explain_logic_error_no_anomaly = ref (fun e -> mt())
 
 (* Prints the goal *)
+
 let db_pr_goal g =
-  msgnl (str "Goal:" ++ fnl () ++ Proof_trees.db_pr_goal (Refiner.sig_it g))
+  let env = Refiner.pf_env g in
+  let penv = print_named_context env in
+  let pc = print_constr_env env (Goal.V82.concl (Refiner.project g) (Refiner.sig_it g)) in
+  str"  " ++ hv 0 (penv ++ fnl () ++
+                   str "============================" ++ fnl ()  ++
+                   str" "  ++ pc) ++ fnl ()
+
+let db_pr_goal g =
+  msgnl (str "Goal:" ++ fnl () ++ db_pr_goal g)
+
 
 (* Prints the commands *)
 let help () =
@@ -145,11 +153,6 @@ let db_mc_pattern_success debug =
   if debug <> DebugOff & !skip = 0 then
     msgnl (str "The goal has been successfully matched!" ++ fnl() ++
            str "Let us execute the right-hand side part..." ++ fnl())
-
-let pp_match_pattern env = function
-  | Term c -> Term (extern_constr_pattern (names_of_rel_context env) c)
-  | Subterm (b,o,c) ->
-    Subterm (b,o,(extern_constr_pattern (names_of_rel_context env) c))
 
 (* Prints a failure message for an hypothesis pattern *)
 let db_hyp_pattern_failure debug env (na,hyp) =

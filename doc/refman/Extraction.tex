@@ -469,9 +469,9 @@ mandatory. It only enhances readability of extracted code.
 You can then copy-paste the output to a file {\tt euclid.ml} or let 
 \Coq\ do it for you with the following command: 
 
-\begin{coq_example}
+\begin{verbatim}
 Extraction "euclid" eucl_dev.
-\end{coq_example}
+\end{verbatim}
 
 Let us play the resulting program:
 
@@ -542,8 +542,6 @@ Some pathological examples of extraction are grouped in the file
  This is probably due to an heavy use of impredicativity.
  After compilation those two examples run nonetheless,
  thanks to the correction of the extraction~\cite{Let02}. 
-
-% $Id: Extraction.tex 14575 2011-10-18 15:49:01Z letouzey $ 
 
 %%% Local Variables: 
 %%% mode: latex

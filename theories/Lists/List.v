@@ -1,14 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: List.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
-Require Import Le Gt Minus Min Bool.
+Require Import Le Gt Minus Bool.
 
 Set Implicit Arguments.
 
@@ -55,9 +53,16 @@ Section Lists.
 
 End Lists.
 
-(* Keep these notations local to prevent conflicting notations *)
-Local Notation "[ ]" := nil : list_scope.
-Local Notation "[ a ; .. ; b ]" := (a :: .. (b :: []) ..) : list_scope.
+
+(** Standard notations for lists. 
+In a special module to avoid conflict. *)
+Module ListNotations.
+Notation " [ ] " := nil : list_scope.
+Notation " [ x ] " := (cons x nil) : list_scope.
+Notation " [ x ; .. ; y ] " := (cons x .. (cons y nil) ..) : list_scope.
+End ListNotations.
+
+Import ListNotations.
 
 (** ** Facts about lists *)
 
@@ -119,7 +124,7 @@ Section Facts.
     unfold not; intros a H; inversion_clear H.
   Qed.
 
-  Theorem in_split : forall x (l:list A), In x l -> exists l1, exists l2, l = l1++x::l2.
+  Theorem in_split : forall x (l:list A), In x l -> exists l1 l2, l = l1++x::l2.
   Proof.
   induction l; simpl; destruct 1.
   subst a; auto.
@@ -254,7 +259,7 @@ Section Facts.
   Qed.
 
 
-  (** Compatibility wtih other operations *)
+  (** Compatibility with other operations *)
 
   Lemma app_length : forall l l' : list A, length (l++l') = length l + length l'.
   Proof.
@@ -1643,7 +1648,7 @@ Proof. exact Forall2_nil. Qed.
 
 Theorem Forall2_app_inv_l : forall A B (R:A->B->Prop) l1 l2 l',
   Forall2 R (l1 ++ l2) l' ->
-  exists l1', exists l2', Forall2 R l1 l1' /\ Forall2 R l2 l2' /\ l' = l1' ++ l2'.
+  exists l1' l2', Forall2 R l1 l1' /\ Forall2 R l2 l2' /\ l' = l1' ++ l2'.
 Proof.
   induction l1; intros.
     exists [], l'; auto.
@@ -1654,7 +1659,7 @@ Qed.
 
 Theorem Forall2_app_inv_r : forall A B (R:A->B->Prop) l1' l2' l,
   Forall2 R l (l1' ++ l2') ->
-  exists l1, exists l2, Forall2 R l1 l1' /\ Forall2 R l2 l2' /\ l = l1 ++ l2.
+  exists l1 l2, Forall2 R l1 l1' /\ Forall2 R l2 l2' /\ l = l1 ++ l2.
 Proof.
   induction l1'; intros.
     exists [], l; auto.

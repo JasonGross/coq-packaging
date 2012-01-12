@@ -133,6 +133,24 @@ one gulp, as a proof term (see Section~\ref{exact}).
 
 \SeeAlso {\tt Proof with {\tac}.} in Section~\ref{ProofWith}.
 
+\subsection[\tt Proof using {\ident$_1$ \dots {\ident$_n$}}.]
+{\tt Proof using {\ident$_1$ \dots {\ident$_n$}}.
+\comindex{Proof using} \label{ProofUsing}}
+
+This command applies in proof editing mode. 
+It declares the set of section variables (see~\ref{Variable}) 
+used by the proof. At {\tt Qed} time, the system will assert that 
+the set of section variables actually used in the proof is a subset of
+the declared one.
+
+The set of declared variables is closed under type dependency.
+For example if {\tt T} is variable and {\tt a} is a variable of
+type {\tt T}, the commands {\tt Proof using a} and
+{\tt Proof using T a} are actually equivalent.
+
+\variant {\tt Proof using {\ident$_1$ \dots {\ident$_n$}} with {\tac}.} 
+in Section~\ref{ProofWith}.
+
 \subsection[\tt Abort.]{\tt Abort.\comindex{Abort}}
 
 This command cancels the current proof development, switching back to
@@ -211,7 +229,6 @@ backtracks one step.
 
 \begin{ErrMsgs}
 \item \errindex{No focused proof (No proof-editing in progress)}
-\item \errindex{Undo stack would be exhausted}
 \end{ErrMsgs}
 
 \begin{Variants}
@@ -221,18 +238,6 @@ backtracks one step.
   Repeats {\tt Undo} {\num} times.
 
 \end{Variants}
-
-\subsection[\tt Set Undo {\num}.]{\tt Set Undo {\num}.\comindex{Set Undo}}
-
-This command changes the maximum number of {\tt Undo}'s that will be
-possible when doing a proof. It only affects proofs started after
-this command, such that if you want to change the current undo limit
-inside a proof, you should first restart this proof.
-
-\subsection[\tt Unset Undo.]{\tt Unset Undo.\comindex{Unset Undo}}
-
-This command resets the default number of possible {\tt Undo} commands
-(which is currently 12).
 
 \subsection[\tt Restart.]{\tt Restart.\comindex{Restart}}
 This command restores the proof editing process to the original goal.
@@ -361,8 +366,6 @@ All the hypotheses remains usable in the proof development.
 \subsection[\tt Unset Hyps Limit.]{\tt Unset Hyps Limit.\comindex{Unset Hyps Limit}}
 This command goes back to the default mode which is to print all
 available hypotheses.
-
-% $Id: RefMan-pro.tex 13091 2010-06-08 13:56:19Z herbelin $
 
 
 \subsection[\tt Set Automatic Introduction.]{\tt Set Automatic Introduction.\comindex{Set Automatic Introduction}\comindex{Unset Automatic Introduction}\label{Set Automatic Introduction}}

@@ -1,19 +1,16 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: printer.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Pp
 open Util
 open Names
 open Nameops
 open Term
-open Termops
 open Sign
 open Environ
 open Global
@@ -22,18 +19,18 @@ open Libnames
 open Nametab
 open Evd
 open Proof_type
-open Decl_mode
 open Refiner
 open Pfedit
 open Ppconstr
 open Constrextern
 open Tacexpr
 
-let emacs_str s alts =
-  match !Flags.print_emacs, !Flags.print_emacs_safechar with
-    | true, true -> alts
-    | true , false -> s
-    | false,_ -> ""
+open Store.Field
+
+let emacs_str s =
+  if !Flags.print_emacs then s else ""
+let delayed_emacs_cmd s =
+  if !Flags.print_emacs then s () else str ""
 
 (**********************************************************************)
 (** Terms                                                             *)
@@ -63,7 +60,7 @@ let pr_constr_under_binders_env_gen pr env (ids,c) =
   (* we also need to preserve the actual names of the patterns *)
   (* So what to do? *)
   let assums = List.map (fun id -> (Name id,(* dummy *) mkProp)) ids in
-  pr (push_rels_assum assums env) c
+  pr (Termops.push_rels_assum assums env) c
 
 let pr_constr_under_binders_env = pr_constr_under_binders_env_gen pr_constr_env
 let pr_lconstr_under_binders_env = pr_constr_under_binders_env_gen pr_lconstr_env
@@ -88,30 +85,30 @@ let pr_ljudge_env env j =
 
 let pr_ljudge j = pr_ljudge_env (Global.env()) j
 
-let pr_lrawconstr_env env c =
-  pr_lconstr_expr (extern_rawconstr (vars_of_env env) c)
-let pr_rawconstr_env env c =
-  pr_constr_expr (extern_rawconstr (vars_of_env env) c)
+let pr_lglob_constr_env env c =
+  pr_lconstr_expr (extern_glob_constr (Termops.vars_of_env env) c)
+let pr_glob_constr_env env c =
+  pr_constr_expr (extern_glob_constr (Termops.vars_of_env env) c)
 
-let pr_lrawconstr c =
-  pr_lconstr_expr (extern_rawconstr Idset.empty c)
-let pr_rawconstr c =
-  pr_constr_expr (extern_rawconstr Idset.empty c)
+let pr_lglob_constr c =
+  pr_lconstr_expr (extern_glob_constr Idset.empty c)
+let pr_glob_constr c =
+  pr_constr_expr (extern_glob_constr Idset.empty c)
 
 let pr_cases_pattern t =
   pr_cases_pattern_expr (extern_cases_pattern Idset.empty t)
 
 let pr_lconstr_pattern_env env c =
-  pr_lconstr_pattern_expr (extern_constr_pattern (names_of_rel_context env) c)
+  pr_lconstr_pattern_expr (extern_constr_pattern (Termops.names_of_rel_context env) c)
 let pr_constr_pattern_env env c =
-  pr_constr_pattern_expr (extern_constr_pattern (names_of_rel_context env) c)
+  pr_constr_pattern_expr (extern_constr_pattern (Termops.names_of_rel_context env) c)
 
 let pr_lconstr_pattern t =
-  pr_lconstr_pattern_expr (extern_constr_pattern empty_names_context t)
+  pr_lconstr_pattern_expr (extern_constr_pattern Termops.empty_names_context t)
 let pr_constr_pattern t =
-  pr_constr_pattern_expr (extern_constr_pattern empty_names_context t)
+  pr_constr_pattern_expr (extern_constr_pattern Termops.empty_names_context t)
 
-let pr_sort s = pr_rawsort (extern_sort s)
+let pr_sort s = pr_glob_sort (extern_sort s)
 
 let _ = Termops.set_print_constr pr_lconstr_env
 
@@ -121,7 +118,7 @@ let _ = Termops.set_print_constr pr_lconstr_env
 let pr_global_env = pr_global_env
 let pr_global = pr_global_env Idset.empty
 
-let pr_constant env cst = pr_global_env (vars_of_env env) (ConstRef cst)
+let pr_constant env cst = pr_global_env (Termops.vars_of_env env) (ConstRef cst)
 let pr_existential env ev = pr_lconstr_env env (mkEvar ev)
 let pr_inductive env ind = pr_lconstr_env env (mkInd ind)
 let pr_constructor env cstr = pr_lconstr_env env (mkConstruct cstr)
@@ -129,8 +126,8 @@ let pr_constructor env cstr = pr_lconstr_env env (mkConstruct cstr)
 let pr_evaluable_reference ref =
   pr_global (Tacred.global_of_evaluable_reference ref)
 
-(*let pr_rawterm t =
-  pr_lconstr (Constrextern.extern_rawconstr Idset.empty t)*)
+(*let pr_glob_constr t =
+  pr_lconstr (Constrextern.extern_glob_constr Idset.empty t)*)
 
 (*open Pattern
 
@@ -222,7 +219,7 @@ let pr_context_limit n env =
 	   else
              let pidt = pr_var_decl env d in
 	     (i+1, (pps ++ fnl () ++
-		      str (emacs_str (String.make 1 (Char.chr 253)) "") ++
+		      str (emacs_str "") ++
 		      pidt)))
         env ~init:(0,(mt ()))
     in
@@ -231,7 +228,7 @@ let pr_context_limit n env =
         (fun env d pps ->
            let pnat = pr_rel_decl env d in
 	   (pps ++ fnl () ++
-	      str (emacs_str (String.make 1 (Char.chr 253)) "") ++
+	      str (emacs_str "") ++
 	      pnat))
         env ~init:(mt ())
     in
@@ -242,18 +239,6 @@ let pr_context_of env = match Flags.print_hyps_limit () with
   | Some n -> hv 0 (pr_context_limit n env)
 
 (* display goal parts (Proof mode) *)
-
-let pr_restricted_named_context among env =
-  hv 0 (fold_named_context
-	  (fun env ((id,_,_) as d) pps ->
-	     if true || Idset.mem id among then
-	       pps ++
-		 fnl () ++ str (emacs_str (String.make 1 (Char.chr 253)) "") ++
-		 pr_var_decl env d
-	     else
-	       pps)
-          env ~init:(mt ()))
-
 
 let pr_predicate pr_elt (b, elts) =
   let pr_elts = prlist_with_sep spc pr_elt elts in
@@ -270,39 +255,34 @@ let pr_transparent_state (ids, csts) =
   hv 0 (str"VARIABLES: " ++ pr_idpred ids ++ fnl () ++
 	str"CONSTANTS: " ++ pr_cpred csts ++ fnl ())
 
-let pr_subgoal_metas metas env=
-  let pr_one (meta,typ) =
-    str "?" ++ int meta ++ str " : " ++
-      hov 0 (pr_ltype_env_at_top env typ) ++ fnl () ++
-      str (emacs_str (String.make 1 (Char.chr 253)) "") in
-    hv 0 (prlist_with_sep mt pr_one metas)
-
 (* display complete goal *)
-let default_pr_goal g =
-  let env = evar_unfiltered_env g in
+let default_pr_goal gs =
+  let (g,sigma) = Goal.V82.nf_evar (project gs) (sig_it gs) in
+  let env = Goal.V82.unfiltered_env sigma g in
   let preamb,thesis,penv,pc =
-    if g.evar_extra = None then
-          mt (), mt (),
-	  pr_context_of env,
-	  pr_ltype_env_at_top env g.evar_concl
-    else
-      (str "     *** Declarative Mode ***" ++ fnl ()++fnl ()),
-      (str "thesis := "  ++ fnl ()),
-       pr_context_of env,
-       pr_ltype_env_at_top env g.evar_concl
+    mt (), mt (),
+    pr_context_of env,
+    pr_ltype_env_at_top env (Goal.V82.concl sigma g)
   in
     preamb ++
     str"  " ++ hv 0 (penv ++ fnl () ++
-		       str (emacs_str (String.make 1 (Char.chr 253)) "")  ++
+		       str (emacs_str "")  ++
 		       str "============================" ++ fnl ()  ++
 		       thesis ++ str " " ++  pc) ++ fnl ()
 
+(* display a goal tag *)
+let pr_goal_tag g =
+  let s = " (ID " ^ Goal.uid g ^ ")" in
+  str (emacs_str s)
+
 (* display the conclusion of a goal *)
-let pr_concl n g =
-  let env = evar_env g in
-  let pc = pr_ltype_env_at_top env g.evar_concl in
-    str (emacs_str (String.make 1 (Char.chr 253)) "")  ++
-      str "subgoal " ++ int n ++ str " is:" ++ cut () ++ str" "  ++ pc
+let pr_concl n sigma g =
+  let (g,sigma) = Goal.V82.nf_evar sigma g in
+  let env = Goal.V82.env sigma g in
+  let pc = pr_ltype_env_at_top env (Goal.V82.concl sigma g) in
+    str (emacs_str "")  ++
+      str "subgoal " ++ int n ++ pr_goal_tag g ++
+      str " is:" ++ cut () ++ str" "  ++ pc
 
 (* display evar type: a context and a type *)
 let pr_evgl_sign gl =
@@ -316,6 +296,12 @@ let pr_evgl_sign gl =
   let pc = pr_lconstr gl.evar_concl in
   hov 0 (str"[" ++ ps ++ spc () ++ str"|- "  ++ pc ++ str"]" ++ spc () ++ warn)
 
+(* Print an existential variable *)
+
+let pr_evar (ev, evd) =
+  let pegl = pr_evgl_sign evd in
+  (hov 0 (str (string_of_existential ev)  ++ str " : " ++ pegl))
+
 (* Print an enumerated list of existential variables *)
 let rec pr_evars_int i = function
   | [] -> (mt ())
@@ -326,20 +312,42 @@ let rec pr_evars_int i = function
               str (string_of_existential ev)  ++ str " : " ++ pegl)) ++
       fnl () ++ pei
 
-let default_pr_subgoal n =
+let default_pr_subgoal n sigma =
   let rec prrec p = function
     | [] -> error "No such goal."
     | g::rest ->
        	if p = 1 then
-          let pg = default_pr_goal g in
-          v 0 (str "subgoal " ++ int n ++ str " is:" ++ cut () ++ pg)
+          let pg = default_pr_goal { sigma=sigma ; it=g } in
+          v 0 (str "subgoal " ++ int n ++ pr_goal_tag g
+	       ++ str " is:" ++ cut () ++ pg)
        	else
 	  prrec (p-1) rest
   in
   prrec n
 
+let emacs_print_dependent_evars sigma seeds =
+  let evars () =
+    let evars = Evarutil.evars_of_evars_in_types_of_list sigma seeds in
+    let evars =
+      Intmap.fold begin fun e i s ->
+	let e' = str (string_of_existential e) in
+	match i with
+	| None -> s ++ str" " ++ e' ++ str " open,"
+	| Some i ->
+	  s ++ str " " ++ e' ++ str " using " ++
+	    Intset.fold begin fun d s ->
+	      str (string_of_existential d) ++ str " " ++ s
+	    end i (str ",")
+      end evars (str "")
+    in
+    cut () ++ 
+    str "(dependent evars:" ++ evars ++ str ")" ++ fnl ()
+  in
+  delayed_emacs_cmd evars
+
 (* Print open subgoals. Checks for uninstantiated existential variables *)
-let default_pr_subgoals close_cmd sigma = function
+(* spiwack: [seeds] is for printing dependent evars in emacs mode. *)
+let default_pr_subgoals close_cmd sigma seeds = function
   | [] ->
       begin
 	match close_cmd with
@@ -349,37 +357,45 @@ let default_pr_subgoals close_cmd sigma = function
 	| None ->
 	    let exl = Evarutil.non_instantiated sigma in
 	      if exl = [] then
-		(str"Proof completed." ++ fnl ())
+		(str"No more subgoals." ++ fnl ()
+		 ++ emacs_print_dependent_evars sigma seeds)
 	      else
 		let pei = pr_evars_int 1 exl in
 		  (str "No more subgoals but non-instantiated existential " ++
-		     str "variables:" ++ fnl () ++ (hov 0 pei))
+		     str "variables:" ++ fnl () ++ (hov 0 pei)
+		   ++ emacs_print_dependent_evars sigma seeds)
       end
   | [g] ->
-      let pg = default_pr_goal g in
-      v 0 (str ("1 "^"subgoal") ++cut () ++ pg)
+      let pg = default_pr_goal { it = g ; sigma = sigma } in
+      v 0 (
+	str ("1 "^"subgoal") ++ pr_goal_tag g ++ cut () ++ pg
+	++ emacs_print_dependent_evars sigma seeds
+      )
   | g1::rest ->
       let rec pr_rec n = function
         | [] -> (mt ())
         | g::rest ->
-            let pc = pr_concl n g in
+            let pc = pr_concl n sigma g in
             let prest = pr_rec (n+1) rest in
             (cut () ++ pc ++ prest)
       in
-      let pg1 = default_pr_goal g1 in
+      let pg1 = default_pr_goal { it = g1 ; sigma = sigma } in
       let prest = pr_rec 2 rest in
-      v 0 (int(List.length rest+1) ++ str" subgoals" ++ cut ()
-	   ++ pg1 ++ prest ++ fnl ())
-
+      v 0 (
+	int(List.length rest+1) ++ str" subgoals" ++
+          str (emacs_str ", subgoal 1") ++ pr_goal_tag g1 ++ cut ()
+	++ pg1 ++ prest ++ fnl ()
+	++ emacs_print_dependent_evars sigma seeds
+      )
 
 (**********************************************************************)
 (* Abstraction layer                                                  *)
 
 
 type printer_pr = {
- pr_subgoals            : string option -> evar_map -> goal list -> std_ppcmds;
- pr_subgoal             : int -> goal list -> std_ppcmds;
- pr_goal                : goal -> std_ppcmds;
+ pr_subgoals            : string option -> evar_map -> evar list -> goal list -> std_ppcmds;
+ pr_subgoal             : int -> evar_map -> goal list -> std_ppcmds;
+ pr_goal                : goal sigma -> std_ppcmds;
 }
 
 let default_printer_pr = {
@@ -400,25 +416,41 @@ let pr_goal     x = !printer_pr.pr_goal     x
 (**********************************************************************)
 
 let pr_open_subgoals () =
-  let pfts = get_pftreestate () in
-  let gls = fst (frontier (proof_of_pftreestate pfts)) in
-  match focus() with
-    | 0 ->
-        let sigma = (top_goal_of_pftreestate pfts).sigma in
-        let close_cmd = Decl_mode.get_end_command pfts in
-        pr_subgoals close_cmd sigma gls
-    | n ->
-	assert (n > List.length gls);
-	if List.length gls < 2 then
-	  pr_subgoal n gls
-	else
-	  (* LEM TODO: this way of saying how many subgoals has to be abstracted out*)
-	  v 0 (int(List.length gls) ++ str" subgoals" ++ cut () ++
-	  pr_subgoal n gls)
+  let p = Proof_global.give_me_the_proof () in
+  let { Evd.it = goals ; sigma = sigma } = Proof.V82.subgoals p in
+  let seeds = Proof.V82.top_evars p in
+  begin match goals with
+  | [] -> let { Evd.it = bgoals ; sigma = bsigma } = Proof.V82.background_subgoals p in
+            begin match bgoals with
+	    | [] -> pr_subgoals None sigma seeds goals
+	    | _ -> pr_subgoals None bsigma seeds bgoals ++ fnl () ++ fnl () ++
+		      str"This subproof is complete, but there are still unfocused goals:"
+		(* spiwack: to stay compatible with the proof general and coqide,
+		    I use print the message after the goal. It would be better to have
+		    something like:
+ 		      str"This subproof is complete, but there are still unfocused goals:" 
+		      ++ fnl () ++ fnl () ++ pr_subgoals None bsigma bgoals
+		    instead. But it doesn't quite work.
+		*)
+	    end
+  | _ -> pr_subgoals None sigma seeds goals
+  end
 
 let pr_nth_open_subgoal n =
-  let pf = proof_of_pftreestate (get_pftreestate ()) in
-  pr_subgoal n (fst (frontier pf))
+  let pf = get_pftreestate () in
+  let { it=gls ; sigma=sigma } = Proof.V82.subgoals pf in
+  pr_subgoal n sigma gls
+
+let pr_goal_by_id id =
+  let p = Proof_global.give_me_the_proof () in
+  let g = Goal.get_by_uid id in
+  let pr gs = 
+    v 0 (str ("goal / evar " ^ id ^ " is:") ++ cut ()
+	 ++ pr_goal gs)
+  in
+  try
+    Proof.in_proof p (fun sigma -> pr {it=g;sigma=sigma})
+  with Not_found -> error "Invalid goal identifier."
 
 (* Elementary tactics *)
 
@@ -458,7 +490,7 @@ let pr_prim_rule = function
         | [] -> mt () in
       (str"cofix " ++ pr_id f ++  str" with " ++ print_mut others)
   | Refine c ->
-      str(if occur_meta c then "refine " else "exact ") ++
+      str(if Termops.occur_meta c then "refine " else "exact ") ++
       Constrextern.with_meta_as_hole pr_constr c
 
   | Convert_concl (c,_) ->
@@ -570,3 +602,90 @@ let pr_instance_gmap insts =
   prlist_with_sep fnl (fun (gr, insts) ->
     prlist_with_sep fnl pr_instance (cmap_to_list insts))
     (Gmap.to_list insts)
+
+(** Inductive declarations *)
+
+open Declarations
+open Termops
+open Reduction
+open Inductive
+open Inductiveops
+
+let print_params env params =
+  if params = [] then mt () else pr_rel_context env params ++ brk(1,2)
+
+let print_constructors envpar names types =
+  let pc =
+    prlist_with_sep (fun () -> brk(1,0) ++ str "| ")
+      (fun (id,c) -> pr_id id ++ str " : " ++ pr_lconstr_env envpar c)
+      (Array.to_list (array_map2 (fun n t -> (n,t)) names types))
+  in
+  hv 0 (str "  " ++ pc)
+
+let build_ind_type env mip =
+  match mip.mind_arity with
+    | Monomorphic ar -> ar.mind_user_arity
+    | Polymorphic ar ->
+      it_mkProd_or_LetIn (mkSort (Type ar.poly_level)) mip.mind_arity_ctxt
+
+let print_one_inductive env mib ((_,i) as ind) =
+  let mip = mib.mind_packets.(i) in
+  let params = mib.mind_params_ctxt in
+  let args = extended_rel_list 0 params in
+  let arity = hnf_prod_applist env (build_ind_type env mip) args in
+  let cstrtypes = Inductive.type_of_constructors ind (mib,mip) in
+  let cstrtypes = Array.map (fun c -> hnf_prod_applist env c args) cstrtypes in
+  let envpar = push_rel_context params env in
+  hov 0 (
+    pr_id mip.mind_typename ++ brk(1,4) ++ print_params env params ++
+    str ": " ++ pr_lconstr_env envpar arity ++ str " :=") ++
+  brk(0,2) ++ print_constructors envpar mip.mind_consnames cstrtypes
+
+let print_mutual_inductive env mind mib =
+  let inds = list_tabulate (fun x -> (mind,x)) (Array.length mib.mind_packets)
+  in
+  hov 0 (
+    str (if mib.mind_finite then "Inductive " else "CoInductive ") ++
+    prlist_with_sep (fun () -> fnl () ++ str"  with ")
+      (print_one_inductive env mib) inds)
+
+let get_fields =
+  let rec prodec_rec l subst c =
+    match kind_of_term c with
+    | Prod (na,t,c) ->
+	let id = match na with Name id -> id | Anonymous -> id_of_string "_" in
+	prodec_rec ((id,true,substl subst t)::l) (mkVar id::subst) c
+    | LetIn (na,b,_,c) ->
+	let id = match na with Name id -> id | Anonymous -> id_of_string "_" in
+	prodec_rec ((id,false,substl subst b)::l) (mkVar id::subst) c
+    | _               -> List.rev l
+  in
+  prodec_rec [] []
+
+let print_record env mind mib =
+  let mip = mib.mind_packets.(0) in
+  let params = mib.mind_params_ctxt in
+  let args = extended_rel_list 0 params in
+  let arity = hnf_prod_applist env (build_ind_type env mip) args in
+  let cstrtypes = Inductive.type_of_constructors (mind,0) (mib,mip) in
+  let cstrtype = hnf_prod_applist env cstrtypes.(0) args in
+  let fields = get_fields cstrtype in
+  let envpar = push_rel_context params env in
+  hov 0 (
+    hov 0 (
+      str "Record " ++ pr_id mip.mind_typename ++ brk(1,4) ++
+      print_params env params ++
+      str ": " ++ pr_lconstr_env envpar arity ++ brk(1,2) ++
+      str ":= " ++ pr_id mip.mind_consnames.(0)) ++
+    brk(1,2) ++
+    hv 2 (str "{ " ++
+      prlist_with_sep (fun () -> str ";" ++ brk(2,0))
+        (fun (id,b,c) ->
+	  pr_id id ++ str (if b then " : " else " := ") ++
+	  pr_lconstr_env envpar c) fields) ++ str" }")
+
+let pr_mutual_inductive_body env mind mib =
+  if mib.mind_record & not !Flags.raw_print then
+    print_record env mind mib
+  else
+    print_mutual_inductive env mind mib

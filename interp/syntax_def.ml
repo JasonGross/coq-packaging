@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: syntax_def.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Util
 open Pp
@@ -64,7 +62,7 @@ let subst_syntax_constant (subst,(local,pat,onlyparse)) =
 let classify_syntax_constant (local,_,_ as o) =
   if local then Dispose else Substitute o
 
-let (in_syntax_constant, out_syntax_constant) =
+let in_syntax_constant : bool * interpretation * bool -> obj =
   declare_object {(default_object "SYNTAXCONSTANT") with
     cache_function = cache_syntax_constant;
     load_function = load_syntax_constant;

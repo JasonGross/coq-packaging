@@ -1,18 +1,15 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Ring_normalize.v 14641 2011-11-06 11:59:10Z herbelin $ *)
-
 Require Import LegacyRing_theory.
 Require Import Quote.
 
 Set Implicit Arguments.
-Unset Boxed Definitions.
 
 Lemma index_eq_prop : forall n m:index, Is_true (index_eq n m) -> n = m.
 Proof.
@@ -749,11 +746,11 @@ Qed.
 (* End properties. *)
 End semi_rings.
 
-Implicit Arguments Cons_varlist.
-Implicit Arguments Cons_monom.
-Implicit Arguments SPconst.
-Implicit Arguments SPplus.
-Implicit Arguments SPmult.
+Arguments Cons_varlist : default implicits.
+Arguments Cons_monom : default implicits.
+Arguments SPconst : default implicits.
+Arguments SPplus : default implicits.
+Arguments SPmult : default implicits.
 
 Section rings.
 

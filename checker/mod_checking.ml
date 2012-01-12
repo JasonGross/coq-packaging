@@ -21,8 +21,8 @@ let refresh_arity ar =
       Sort (Type u) when not (Univ.is_univ_variable u) ->
         let u' = Univ.fresh_local_univ() in
         mkArity (ctxt,Type u'),
-        Univ.enforce_geq u' u Univ.Constraint.empty
-    | _ -> ar, Univ.Constraint.empty
+        Univ.enforce_geq u' u Univ.empty_constraint
+    | _ -> ar, Univ.empty_constraint
 
 let check_constant_declaration env kn cb =
   Flags.if_verbose msgnl (str "  checking cst: " ++ prcon kn);
@@ -33,7 +33,7 @@ let check_constant_declaration env kn cb =
         let ty, cu = refresh_arity ty in
         let envty = add_constraints cu env' in
         let _ = infer_type envty ty in
-        (match cb.const_body with
+        (match body_of_constant cb with
           | Some bd ->
               let j = infer env' (force_constr bd) in
               conv_leq envty j ty
@@ -57,13 +57,6 @@ let rec list_split_assoc k rev_before = function
   | [] -> raise Not_found
   | (k',b)::after when k=k' -> rev_before,b,after
   | h::tail -> list_split_assoc k (h::rev_before) tail
-
-let rec list_fold_map2 f e = function
-  |  []  -> (e,[],[])
-  |  h::t ->
-       let e',h1',h2' = f e h in
-       let e'',t1',t2' = list_fold_map2 f e' t in
-	 e'',h1'::t1',h2'::t2'
 
 let check_definition_sub env cb1 cb2 =
   let check_type env t1 t2 =
@@ -117,14 +110,19 @@ let check_definition_sub env cb1 cb2 =
   let typ1 = Typeops.type_of_constant_type env cb1.const_type in
   let typ2 = Typeops.type_of_constant_type env cb2.const_type in
   check_type env typ1 typ2;
-  (match cb2 with
-    | {const_body=Some lc2;const_opaque=false} ->
-	let c2 = force_constr lc2 in
-	let c1 = match cb1.const_body with
-	  | Some lc1 -> force_constr lc1
-	  | None -> assert false in
-	Reduction.conv env c1 c2
-    | _ -> ())
+  (* In the spirit of subtyping.check_constant, we accept
+     any implementations of parameters and opaques terms,
+     as long as they have the right type *)
+  (match cb2.const_body with
+    | Undef _ | OpaqueDef _ -> ()
+    | Def lc2 ->
+	(match cb1.const_body with
+	  | Def lc1 ->
+	    let c1 = force_constr lc1 in
+            let c2 = force_constr lc2 in
+	    Reduction.conv env c1 c2
+	  (* Coq only places transparent cb in With_definition_body *)
+	  | _ -> assert false))
 
 let lookup_modtype mp env =
   try Environ.lookup_modtype mp env
@@ -259,14 +257,14 @@ and check_module env mp mb =
 	  {typ_mp=mp;
 	   typ_expr=sign;
 	   typ_expr_alg=None;
-	   typ_constraints=Univ.Constraint.empty;
+	   typ_constraints=Univ.empty_constraint;
 	   typ_delta = mb.mod_delta;}
 	and mtb2 =
 	  {typ_mp=mp;
 	   typ_expr=mb.mod_type;
 	   typ_expr_alg=None;
-	   typ_constraints=Univ.Constraint.empty;
-	   typ_delta = mb.mod_delta;};
+	   typ_constraints=Univ.empty_constraint;
+	   typ_delta = mb.mod_delta;}
 	in
 	let env = add_module (module_body_of_type mp mtb1) env in
 	check_subtypes env mtb1 mtb2

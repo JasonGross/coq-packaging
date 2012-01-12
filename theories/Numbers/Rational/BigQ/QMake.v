@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -39,6 +39,8 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
 
  Definition t := t_.
 
+ Bind Scope abstract_scope with t t_.
+
  (** Specification with respect to [QArith] *)
 
  Local Open Scope Q_scope.
@@ -55,7 +57,7 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  Definition to_Q (q: t) :=
  match q with
    | Qz x => Z.to_Z x # 1
-   | Qq x y => if N.eq_bool y N.zero then 0
+   | Qq x y => if N.eqb y N.zero then 0
                else Z.to_Z x # Z2P (N.to_Z y)
  end.
 
@@ -66,26 +68,18 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  Proof.
  intros x; rewrite N.spec_0; generalize (N.spec_pos x). romega.
  Qed.
-(*
- Lemma if_fun_commut : forall A B (f:A->B)(b:bool) a a',
- f (if b then a else a') = if b then f a else f a'.
- Proof. now destruct b. Qed.
 
- Lemma if_fun_commut' : forall A B C D (f:A->B)(b:{C}+{D}) a a',
- f (if b then a else a') = if b then f a else f a'.
- Proof. now destruct b. Qed.
-*)
+ Ltac destr_zcompare := case Z.compare_spec; intros ?H.
+
  Ltac destr_eqb :=
   match goal with
-   | |- context [Z.eq_bool ?x ?y] =>
-     rewrite (Z.spec_eq_bool x y);
-     generalize (Zeq_bool_if (Z.to_Z x) (Z.to_Z y));
-     case (Zeq_bool (Z.to_Z x) (Z.to_Z y));
+   | |- context [Z.eqb ?x ?y] =>
+     rewrite (Z.spec_eqb x y);
+     case (Z.eqb_spec (Z.to_Z x) (Z.to_Z y));
      destr_eqb
-   | |- context [N.eq_bool ?x ?y] =>
-     rewrite (N.spec_eq_bool x y);
-     generalize (Zeq_bool_if (N.to_Z x) (N.to_Z y));
-     case (Zeq_bool (N.to_Z x) (N.to_Z y));
+   | |- context [N.eqb ?x ?y] =>
+     rewrite (N.spec_eqb x y);
+     case (Z.eqb_spec (N.to_Z x) (N.to_Z y));
      [ | let H:=fresh "H" in
          try (intro H;generalize (N_to_Z_pos _ H); clear H)];
      destr_eqb
@@ -100,6 +94,7 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
   Z.spec_gcd N.spec_gcd Zgcd_Zabs Zgcd_1
   spec_Z_of_N spec_Zabs_N
  : nz.
+
  Ltac nzsimpl := autorewrite with nz in *.
 
  Ltac qsimpl := try red; unfold to_Q; simpl; intros;
@@ -143,13 +138,13 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
   match x, y with
   | Qz zx, Qz zy => Z.compare zx zy
   | Qz zx, Qq ny dy =>
-    if N.eq_bool dy N.zero then Z.compare zx Z.zero
+    if N.eqb dy N.zero then Z.compare zx Z.zero
     else Z.compare (Z.mul zx (Z_of_N dy)) ny
   | Qq nx dx, Qz zy =>
-    if N.eq_bool dx N.zero then Z.compare Z.zero zy
+    if N.eqb dx N.zero then Z.compare Z.zero zy
     else Z.compare nx (Z.mul zy (Z_of_N dx))
   | Qq nx dx, Qq ny dy =>
-    match N.eq_bool dx N.zero, N.eq_bool dy N.zero with
+    match N.eqb dx N.zero, N.eqb dy N.zero with
     | true, true => Eq
     | true, false => Z.compare Z.zero ny
     | false, true => Z.compare nx Z.zero
@@ -299,15 +294,15 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
     match y with
     | Qz zy => Qz (Z.add zx zy)
     | Qq ny dy =>
-      if N.eq_bool dy N.zero then x
+      if N.eqb dy N.zero then x
       else Qq (Z.add (Z.mul zx (Z_of_N dy)) ny) dy
     end
   | Qq nx dx =>
-    if N.eq_bool dx N.zero then y
+    if N.eqb dx N.zero then y
     else match y with
     | Qz zy => Qq (Z.add nx (Z.mul zy (Z_of_N dx))) dx
     | Qq ny dy =>
-      if N.eq_bool dy N.zero then x
+      if N.eqb dy N.zero then x
       else
        let n := Z.add (Z.mul nx (Z_of_N dy)) (Z.mul ny (Z_of_N dx)) in
        let d := N.mul dx dy in
@@ -331,15 +326,15 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
     match y with
     | Qz zy => Qz (Z.add zx zy)
     | Qq ny dy =>
-      if N.eq_bool dy N.zero then x
+      if N.eqb dy N.zero then x
       else norm (Z.add (Z.mul zx (Z_of_N dy)) ny) dy
     end
   | Qq nx dx =>
-    if N.eq_bool dx N.zero then y
+    if N.eqb dx N.zero then y
     else match y with
     | Qz zy => norm (Z.add nx (Z.mul zy (Z_of_N dx))) dx
     | Qq ny dy =>
-      if N.eq_bool dy N.zero then x
+      if N.eqb dy N.zero then x
       else
        let n := Z.add (Z.mul nx (Z_of_N dy)) (Z.mul ny (Z_of_N dx)) in
        let d := N.mul dx dy in
@@ -376,8 +371,8 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  Proof.
  intros [z | x y]; simpl.
  rewrite Z.spec_opp; auto.
- match goal with  |- context[N.eq_bool ?X ?Y] =>
-  generalize (N.spec_eq_bool X Y); case N.eq_bool
+ match goal with  |- context[N.eqb ?X ?Y] =>
+  generalize (N.spec_eqb X Y); case N.eqb
  end; auto; rewrite N.spec_0.
  rewrite Z.spec_opp; auto.
  Qed.
@@ -427,26 +422,29 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
   | Qq nx dx, Qq ny dy => Qq (Z.mul nx ny) (N.mul dx dy)
   end.
 
+ Ltac nsubst :=
+  match goal with E : N.to_Z _ = _ |- _ => rewrite E in * end.
+
  Theorem spec_mul : forall x y, [mul x y] == [x] * [y].
  Proof.
  intros [x | nx dx] [y | ny dy]; unfold Qmult; simpl; qsimpl.
  rewrite Pmult_1_r, Z2P_correct; auto.
  destruct (Zmult_integral (N.to_Z dx) (N.to_Z dy)); intuition.
- rewrite H0 in H1; auto with zarith.
- rewrite H0 in H1; auto with zarith.
- rewrite H in H1; nzsimpl; auto with zarith.
+ nsubst; auto with zarith.
+ nsubst; auto with zarith.
+ nsubst; nzsimpl; auto with zarith.
  rewrite Zpos_mult_morphism, 2 Z2P_correct; auto.
  Qed.
 
  Definition norm_denum n d :=
-  if N.eq_bool d N.one then Qz n else Qq n d.
+  if N.eqb d N.one then Qz n else Qq n d.
 
  Lemma spec_norm_denum : forall n d,
   [norm_denum n d] == [Qq n d].
  Proof.
  unfold norm_denum; intros; simpl; qsimpl.
  congruence.
- rewrite H0 in *; auto with zarith.
+ nsubst; auto with zarith.
  Qed.
 
  Definition irred n d :=
@@ -526,7 +524,7 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  Qed.
 
  Definition mul_norm_Qz_Qq z n d :=
-   if Z.eq_bool z Z.zero then zero
+   if Z.eqb z Z.zero then zero
    else
     let gcd := N.gcd (Zabs_N z) d in
     match N.compare gcd N.one with
@@ -554,12 +552,12 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  intros z n d; unfold mul_norm_Qz_Qq; nzsimpl; rewrite Zcompare_gt.
  destr_eqb; nzsimpl; intros Hz.
  qsimpl; rewrite Hz; auto.
- destruct Z_le_gt_dec; intros.
+ destruct Z_le_gt_dec as [LE|GT].
  qsimpl.
  rewrite spec_norm_denum.
  qsimpl.
- rewrite Zdiv_gcd_zero in z0; auto with zarith.
- rewrite H in *. rewrite Zdiv_0_l in *; discriminate.
+ rewrite Zdiv_gcd_zero in GT; auto with zarith.
+ nsubst. rewrite Zdiv_0_l in *; discriminate.
  rewrite <- Zmult_assoc, (Zmult_comm (Z.to_Z n)), Zmult_assoc.
  rewrite Zgcd_div_swap0; try romega.
  ring.
@@ -635,13 +633,15 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  rewrite spec_norm_denum.
  qsimpl.
 
- destruct (Zmult_integral _ _ H0) as [Eq|Eq].
+ match goal with E : (_ * _ = 0)%Z |- _ =>
+  destruct (Zmult_integral _ _ E) as [Eq|Eq] end.
  rewrite Eq in *; simpl in *.
  rewrite <- Hg2' in *; auto with zarith.
  rewrite Eq in *; simpl in *.
  rewrite <- Hg2 in *; auto with zarith.
 
- destruct (Zmult_integral _ _ H) as [Eq|Eq].
+ match goal with E : (_ * _ = 0)%Z |- _ =>
+  destruct (Zmult_integral _ _ E) as [Eq|Eq] end.
  rewrite Hz' in Eq; rewrite Eq in *; auto with zarith.
  rewrite Hz in Eq; rewrite Eq in *; auto with zarith.
 
@@ -689,13 +689,13 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
 
  rewrite Zgcd_1_rel_prime in *.
  apply bezout_rel_prime.
- destruct (rel_prime_bezout _ _ H4) as [u v Huv].
+ destruct (rel_prime_bezout (Z.to_Z ny) (N.to_Z dy)) as [u v Huv]; trivial.
  apply Bezout_intro with (u*g')%Z (v*g)%Z.
  rewrite <- Huv, <- Hg1', <- Hg2. ring.
 
  rewrite Zgcd_1_rel_prime in *.
  apply bezout_rel_prime.
- destruct (rel_prime_bezout _ _ H3) as [u v Huv].
+ destruct (rel_prime_bezout (Z.to_Z nx) (N.to_Z dx)) as [u v Huv]; trivial.
  apply Bezout_intro with (u*g)%Z (v*g')%Z.
  rewrite <- Huv, <- Hg2', <- Hg1. ring.
  Qed.
@@ -753,10 +753,7 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  destr_eqb; nzsimpl; intros.
  intros; rewrite Zabs_eq in *; romega.
  intros; rewrite Zabs_eq in *; romega.
- clear H1.
- rewrite H0.
- compute; auto.
- clear H1.
+ nsubst; compute; auto.
  set (n':=Z.to_Z n) in *; clearbody n'.
  rewrite Zabs_eq by romega.
  red; simpl.
@@ -768,9 +765,7 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  destr_eqb; nzsimpl; intros.
  intros; rewrite Zabs_non_eq in *; romega.
  intros; rewrite Zabs_non_eq in *; romega.
- clear H1.
- red; nzsimpl; rewrite H0; compute; auto.
- clear H1.
+ nsubst; compute; auto.
  set (n':=Z.to_Z n) in *; clearbody n'.
  red; simpl; nzsimpl.
  rewrite Zabs_non_eq by romega.
@@ -789,7 +784,7 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
          | Gt => Qq Z.minus_one (Zabs_N z)
        end
      | Qq n d =>
-       if N.eq_bool d N.zero then zero else
+       if N.eqb d N.zero then zero else
        match Z.compare Z.zero n with
          | Eq => zero
          | Lt =>
@@ -926,9 +921,9 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  destr_eqb; nzsimpl; intros.
  apply Qeq_refl.
  rewrite N.spec_square in *; nzsimpl.
- elim (Zmult_integral _ _ H0); romega.
- rewrite N.spec_square in *; nzsimpl.
- rewrite H in H0; romega.
+ match goal with E : (_ * _ = 0)%Z |- _ =>
+  elim (Zmult_integral _ _ E); romega end.
+ rewrite N.spec_square in *; nzsimpl; nsubst; romega.
  rewrite Z.spec_square, N.spec_square.
  red; simpl.
  rewrite Zpos_mult_morphism; rewrite !Z2P_correct; auto.
@@ -937,8 +932,8 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
 
  Definition power_pos (x : t) p : t :=
   match x with
-  | Qz zx => Qz (Z.power_pos zx p)
-  | Qq nx dx => Qq (Z.power_pos nx p) (N.power_pos dx p)
+  | Qz zx => Qz (Z.pow_pos zx p)
+  | Qq nx dx => Qq (Z.pow_pos nx p) (N.pow_pos dx p)
   end.
 
  Theorem spec_power_pos : forall x p, [power_pos x p] == [x] ^ Zpos p.
@@ -946,25 +941,26 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  intros [ z | n d ] p; unfold power_pos.
  (* Qz *)
  simpl.
- rewrite Z.spec_power_pos.
+ rewrite Z.spec_pow_pos.
  rewrite Qpower_decomp.
  red; simpl; f_equal.
  rewrite Zpower_pos_1_l; auto.
  (* Qq *)
  simpl.
- rewrite Z.spec_power_pos.
+ rewrite Z.spec_pow_pos.
  destr_eqb; nzsimpl; intros.
  apply Qeq_sym; apply Qpower_positive_0.
- rewrite N.spec_power_pos in *.
+ rewrite N.spec_pow_pos in *.
  assert (0 < N.to_Z d ^ ' p)%Z by
   (apply Zpower_gt_0; auto with zarith).
  romega.
- rewrite N.spec_power_pos, H in *.
- rewrite Zpower_0_l in H0; [romega|discriminate].
+ exfalso.
+ rewrite N.spec_pow_pos in *. nsubst.
+ rewrite Zpower_0_l in *; [romega|discriminate].
  rewrite Qpower_decomp.
  red; simpl; do 3 f_equal.
  rewrite Z2P_correct by (generalize (N.spec_pos d); romega).
- rewrite N.spec_power_pos. auto.
+ rewrite N.spec_pow_pos. auto.
  Qed.
 
  Instance strong_spec_power_pos x p `(Reduced x) : Reduced (power_pos x p).
@@ -979,10 +975,11 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  revert H.
  unfold Reduced; rewrite strong_spec_red, Qred_iff; simpl.
  destr_eqb; nzsimpl; simpl; intros.
- rewrite N.spec_power_pos in H0.
- rewrite H, Zpower_0_l in *; [romega|discriminate].
+ exfalso.
+ rewrite N.spec_pow_pos in *. nsubst.
+ rewrite Zpower_0_l in *; [romega|discriminate].
  rewrite Z2P_correct in *; auto.
- rewrite N.spec_power_pos, Z.spec_power_pos; auto.
+ rewrite N.spec_pow_pos, Z.spec_pow_pos; auto.
  rewrite Zgcd_1_rel_prime in *.
  apply rel_prime_Zpower; auto with zarith.
  Qed.
@@ -1274,7 +1271,7 @@ Module Make (N:NType)(Z:ZType)(Import NZ:NType_ZType N Z) <: QType.
  apply Qred_complete; apply spec_power_pos; auto.
  induction p using Pind.
  simpl; ring.
- rewrite nat_of_P_succ_morphism; simpl Qcpower.
+ rewrite Psucc_S; simpl Qcpower.
  rewrite <- IHp; clear IHp.
  unfold Qcmult, Q2Qc.
  apply Qc_decomp; intros _ _; unfold this.

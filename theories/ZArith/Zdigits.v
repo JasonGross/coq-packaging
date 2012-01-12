@@ -1,13 +1,11 @@
 (* -*- coding: utf-8 -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Zdigits.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (** Bit vectors interpreted as integers.
     Contribution by Jean Duprat (ENS Lyon). *)
@@ -47,17 +45,17 @@ Section VALUE_OF_BOOLEAN_VECTORS.
     exact 0%Z.
 
     inversion H0.
-    exact (bit_value a + 2 * H H2)%Z.
+    exact (bit_value h + 2 * H H2)%Z.
   Defined.
 
   Lemma two_compl_value : forall n:nat, Bvector (S n) -> Z.
   Proof.
     simple induction n; intros.
     inversion H.
-    exact (- bit_value a)%Z.
+    exact (- bit_value h)%Z.
 
     inversion H0.
-    exact (bit_value a + 2 * H H2)%Z.
+    exact (bit_value h + 2 * H H2)%Z.
   Defined.
 
 End VALUE_OF_BOOLEAN_VECTORS.
@@ -136,7 +134,7 @@ Section Z_BRIC_A_BRAC.
 
   Lemma binary_value_Sn :
     forall (n:nat) (b:bool) (bv:Bvector n),
-      binary_value (S n) (Vcons bool b n bv) =
+      binary_value (S n) ( b :: bv) =
       (bit_value b + 2 * binary_value n bv)%Z.
   Proof.
     intros; auto.
@@ -221,7 +219,7 @@ Section Z_BRIC_A_BRAC.
     destruct (Zeven.Zeven_odd_dec z); intros.
     rewrite <- Zeven.Zeven_div2; auto.
 
-    generalize (Zeven.Zodd_div2 z H z0); omega.
+    generalize (Zeven.Zodd_div2 z z0); omega.
   Qed.
 
   Lemma Z_to_two_compl_Sn_z :

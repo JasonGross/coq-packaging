@@ -1,12 +1,13 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Eqdep_dec.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
+(* Created by Bruno Barras, Jan 1998 *)
+(* Made a module instance for EqdepFacts by Hugo Herbelin, Mar 2006 *)
 
 (** We prove that there is only one proof of [x=x], i.e [refl_equal x].
     This holds if the equality upon the set of [x] is decidable.

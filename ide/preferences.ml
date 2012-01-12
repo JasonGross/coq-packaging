@@ -1,53 +1,44 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: preferences.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
-
 open Configwin
 open Printf
-open Util
 
-let pref_file = Filename.concat System.home ".coqiderc"
+let pref_file = Filename.concat Minilib.xdg_config_home "coqiderc"
 
-let accel_file = Filename.concat System.home ".coqide.keys"
+let accel_file = Filename.concat Minilib.xdg_config_home "coqide.keys"
 
 let mod_to_str (m:Gdk.Tags.modifier) =
   match m with
-    | `MOD1 -> "MOD1"
-    | `MOD2 -> "MOD2"
-    | `MOD3 -> "MOD3"
-    | `MOD4 -> "MOD4"
-    | `MOD5 -> "MOD5"
-    | `BUTTON1 -> "BUTTON1"
-    | `BUTTON2 -> "BUTTON2"
-    | `BUTTON3 -> "BUTTON3"
-    | `BUTTON4 -> "BUTTON4"
-    | `BUTTON5 -> "BUTTON5"
-    | `CONTROL -> "CONTROL"
-    | `LOCK -> "LOCK"
-    | `SHIFT -> "SHIFT"
+    | `MOD1 -> "<Alt>"
+    | `MOD2 -> "<Mod2>"
+    | `MOD3 -> "<Mod3>"
+    | `MOD4 -> "<Mod4>"
+    | `MOD5 -> "<Mod5>"
+    | `CONTROL -> "<Control>"
+    | `SHIFT -> "<Shift>"
+    |  `BUTTON1| `BUTTON2| `BUTTON3| `BUTTON4| `BUTTON5| `LOCK -> ""
 
-let (str_to_mod:string -> Gdk.Tags.modifier) =
-  function
-    | "MOD1" -> `MOD1
-    | "MOD2" -> `MOD2
-    | "MOD3" -> `MOD3
-    | "MOD4" -> `MOD4
-    | "MOD5" -> `MOD5
-    | "BUTTON1" -> `BUTTON1
-    | "BUTTON2" -> `BUTTON2
-    | "BUTTON3" -> `BUTTON3
-    | "BUTTON4" -> `BUTTON4
-    | "BUTTON5" -> `BUTTON5
-    | "CONTROL" -> `CONTROL
-    | "LOCK" -> `LOCK
-    | "SHIFT" -> `SHIFT
-    | s -> `MOD1
+let mod_list_to_str l = List.fold_left (fun s m -> (mod_to_str m)^s) "" l
+
+let str_to_mod_list s = snd (GtkData.AccelGroup.parse s)
+
+type project_behavior = Ignore_args | Append_args | Subst_args
+
+let string_of_project_behavior = function
+  |Ignore_args -> "ignored"
+  |Append_args -> "appended to arguments"
+  |Subst_args -> "taken instead of arguments"
+
+let project_behavior_of_string s =
+  if s = "taken instead of arguments" then Subst_args
+  else if s = "appended to arguments" then Append_args
+  else Ignore_args
 
 type pref =
     {
@@ -63,6 +54,9 @@ type pref =
       mutable auto_save_delay : int;
       mutable auto_save_name : string * string;
 
+      mutable read_project : project_behavior;
+      mutable project_file_name : string;
+
       mutable encoding_use_locale : bool;
       mutable encoding_use_utf8 : bool;
       mutable encoding_manual : string;
@@ -70,11 +64,11 @@ type pref =
       mutable automatic_tactics : string list;
       mutable cmd_print : string;
 
-      mutable modifier_for_navigation : Gdk.Tags.modifier list;
-      mutable modifier_for_templates : Gdk.Tags.modifier list;
-      mutable modifier_for_tactics : Gdk.Tags.modifier list;
-      mutable modifier_for_display : Gdk.Tags.modifier list;
-      mutable modifiers_valid : Gdk.Tags.modifier list;
+      mutable modifier_for_navigation : string;
+      mutable modifier_for_templates : string;
+      mutable modifier_for_tactics : string;
+      mutable modifier_for_display : string;
+      mutable modifiers_valid : string;
 
       mutable cmd_browse : string;
       mutable cmd_editor : string;
@@ -117,6 +111,9 @@ let (current:pref ref) =
     auto_save_delay = 10000;
     auto_save_name = "#","#";
 
+    read_project = Ignore_args;
+    project_file_name = "_CoqProject";
+
     encoding_use_locale = true;
     encoding_use_utf8 = false;
     encoding_manual = "ISO_8859-1";
@@ -124,18 +121,20 @@ let (current:pref ref) =
     automatic_tactics = ["trivial"; "tauto"; "auto"; "omega";
 			 "auto with *"; "intuition" ];
 
-    modifier_for_navigation = [`CONTROL; `MOD1];
-    modifier_for_templates = [`CONTROL; `SHIFT];
-    modifier_for_tactics = [`CONTROL; `MOD1];
-    modifier_for_display = [`MOD1;`SHIFT];
-    modifiers_valid = [`SHIFT; `CONTROL; `MOD1];
+    modifier_for_navigation = "<Control><Alt>";
+    modifier_for_templates = "<Control><Shift>";
+    modifier_for_tactics = "<Control><Alt>";
+    modifier_for_display = "<Alt><Shift>";
+    modifiers_valid = "<Alt><Control><Shift>";
 
 
     cmd_browse = Flags.browser_cmd_fmt;
     cmd_editor = if Sys.os_type = "Win32" then "NOTEPAD %s" else "emacs %s";
 
 (*    text_font = Pango.Font.from_string "sans 12";*)
-    text_font = Pango.Font.from_string "Monospace 10";
+    text_font = Pango.Font.from_string (match Coq_config.gtk_platform with
+					  |`QUARTZ -> "Arial Unicode MS 11"
+					  |_ -> "Monospace 10");
 
     doc_url = Coq_config.wwwrefman;
     library_url = Coq_config.wwwstdlib;
@@ -168,13 +167,15 @@ let contextual_menus_on_goal = ref (fun x -> ())
 let resize_window = ref (fun () -> ())
 
 let save_pref () =
+  if not (Sys.file_exists Minilib.xdg_config_home)
+  then Unix.mkdir Minilib.xdg_config_home 0o700;
   (try GtkData.AccelMap.save accel_file
   with _ -> ());
   let p = !current in
-  try
-    let add = Stringmap.add in
+
+    let add = Minilib.Stringmap.add in
     let (++) x f = f x in
-    Stringmap.empty ++
+    Minilib.Stringmap.empty ++
     add "cmd_coqc" [p.cmd_coqc] ++
     add "cmd_make" [p.cmd_make] ++
     add "cmd_coqmakefile" [p.cmd_coqmakefile] ++
@@ -186,22 +187,20 @@ let save_pref () =
     add "auto_save_delay" [string_of_int p.auto_save_delay] ++
     add "auto_save_name" [fst p.auto_save_name; snd p.auto_save_name] ++
 
+    add "project_options" [string_of_project_behavior p.read_project] ++
+    add "project_file_name" [p.project_file_name] ++
+
     add "encoding_use_locale" [string_of_bool p.encoding_use_locale] ++
     add "encoding_use_utf8" [string_of_bool p.encoding_use_utf8] ++
     add "encoding_manual" [p.encoding_manual] ++
 
     add "automatic_tactics" p.automatic_tactics ++
     add "cmd_print" [p.cmd_print] ++
-    add "modifier_for_navigation"
-      (List.map mod_to_str p.modifier_for_navigation) ++
-    add "modifier_for_templates"
-      (List.map mod_to_str p.modifier_for_templates) ++
-    add "modifier_for_tactics"
-      (List.map mod_to_str p.modifier_for_tactics) ++
-    add "modifier_for_display"
-      (List.map mod_to_str p.modifier_for_display) ++
-    add "modifiers_valid"
-      (List.map mod_to_str p.modifiers_valid) ++
+    add "modifier_for_navigation" [p.modifier_for_navigation] ++
+    add "modifier_for_templates" [p.modifier_for_templates] ++
+    add "modifier_for_tactics" [p.modifier_for_tactics] ++
+    add "modifier_for_display" [p.modifier_for_display] ++
+    add "modifiers_valid" [p.modifiers_valid] ++
     add "cmd_browse" [p.cmd_browse] ++
     add "cmd_editor" [p.cmd_editor] ++
 
@@ -222,15 +221,17 @@ let save_pref () =
     add "vertical_tabs" [string_of_bool p.vertical_tabs] ++
     add "opposite_tabs" [string_of_bool p.opposite_tabs] ++
     Config_lexer.print_file pref_file
-  with _ -> prerr_endline "Could not save preferences."
 
 let load_pref () =
-  (try GtkData.AccelMap.load accel_file with _ -> ());
+  let accel_dir = List.find
+    (fun x -> Sys.file_exists (Filename.concat x "coqide.keys"))
+    Minilib.xdg_config_dirs in
+  GtkData.AccelMap.load (Filename.concat accel_dir "coqide.keys");
   let p = !current in
-  try
+
     let m = Config_lexer.load_file pref_file in
     let np = { p with cmd_coqc = p.cmd_coqc } in
-    let set k f = try let v = Stringmap.find k m in f v with _ -> () in
+    let set k f = try let v = Minilib.Stringmap.find k m in f v with _ -> () in
     let set_hd k f = set k (fun v -> f (List.hd v)) in
     let set_bool k f = set_hd k (fun v -> f (bool_of_string v)) in
     let set_int k f = set_hd k (fun v -> f (int_of_string v)) in
@@ -251,19 +252,22 @@ let load_pref () =
     set_bool "encoding_use_locale" (fun v -> np.encoding_use_locale <- v);
     set_bool "encoding_use_utf8" (fun v -> np.encoding_use_utf8 <- v);
     set_hd "encoding_manual" (fun v -> np.encoding_manual <- v);
+    set_hd "project_options"
+      (fun v -> np.read_project <- (project_behavior_of_string v));
+    set_hd "project_file_name" (fun v -> np.project_file_name <- v);
     set "automatic_tactics"
       (fun v -> np.automatic_tactics <- v);
     set_hd "cmd_print" (fun v -> np.cmd_print <- v);
-    set "modifier_for_navigation"
-      (fun v -> np.modifier_for_navigation <- List.map str_to_mod v);
-    set "modifier_for_templates"
-      (fun v -> np.modifier_for_templates <- List.map str_to_mod v);
-    set "modifier_for_tactics"
-      (fun v -> np.modifier_for_tactics <- List.map str_to_mod v);
-    set "modifier_for_display"
-      (fun v -> np.modifier_for_display <- List.map str_to_mod v);
-    set "modifiers_valid"
-      (fun v -> np.modifiers_valid <- List.map str_to_mod v);
+    set_hd "modifier_for_navigation"
+      (fun v -> np.modifier_for_navigation <- v);
+    set_hd "modifier_for_templates"
+      (fun v -> np.modifier_for_templates <- v);
+    set_hd "modifier_for_tactics"
+      (fun v -> np.modifier_for_tactics <- v);
+    set_hd "modifier_for_display"
+      (fun v -> np.modifier_for_display <- v);
+    set_hd "modifiers_valid"
+      (fun v -> np.modifiers_valid <- v);
     set_command_with_pair_compat "cmd_browse" (fun v -> np.cmd_browse <- v);
     set_command_with_pair_compat "cmd_editor" (fun v -> np.cmd_editor <- v);
     set_hd "text_font" (fun v -> np.text_font <- Pango.Font.from_string v);
@@ -274,7 +278,7 @@ let load_pref () =
         v <> Coq_config.wwwcoq ^ "doc" &&
 	v <> Coq_config.wwwcoq ^ "doc/"
       then
-	prerr_endline ("Warning: Non-standard URL for Coq documentation in preference file: "^v);
+	(*prerr_endline ("Warning: Non-standard URL for Coq documentation in preference file: "^v);*)
       np.doc_url <- v);
     set_hd "library_url" (fun v -> np.library_url <- v);
     set_bool "show_toolbar" (fun v -> np.show_toolbar <- v);
@@ -289,21 +293,10 @@ let load_pref () =
     set_bool "lax_syntax" (fun v -> np.lax_syntax <- v);
     set_bool "vertical_tabs" (fun v -> np.vertical_tabs <- v);
     set_bool "opposite_tabs" (fun v -> np.opposite_tabs <- v);
-    current := np;
+    current := np
 (*
     Format.printf "in load_pref: current.text_font = %s@." (Pango.Font.to_string !current.text_font);
 *)
-  with e ->
-    prerr_endline ("Could not load preferences ("^
-		   (Printexc.to_string e)^").")
-
-let split_string_format s =
-  try
-    let i = Util.string_index_from s 0 "%s" in
-    let pre = (String.sub s 0 i) in
-    let post = String.sub s (i+2) (String.length s - i - 2) in
-    pre,post
-  with Not_found -> s,""
 
 let configure ?(apply=(fun () -> ())) () =
   let cmd_coqc =
@@ -462,46 +455,62 @@ let configure ?(apply=(fun () -> ())) () =
       (if !current.encoding_use_utf8 then "UTF-8"
        else if !current.encoding_use_locale then "LOCALE" else !current.encoding_manual)
   in
+  let read_project =
+    combo
+      "Project file options are"
+      ~f:(fun s -> !current.read_project <- project_behavior_of_string s)
+      ~editable:false
+      [string_of_project_behavior Subst_args;
+       string_of_project_behavior Append_args;
+       string_of_project_behavior Ignore_args]
+      (string_of_project_behavior !current.read_project)
+  in
+  let project_file_name =
+    string "Default name for project file"
+      ~f:(fun s -> !current.project_file_name <- s)
+      !current.project_file_name
+  in
   let help_string =
     "restart to apply"
   in
+  let the_valid_mod = str_to_mod_list !current.modifiers_valid in
   let modifier_for_tactics =
     modifiers
-      ~allow:!current.modifiers_valid
-      ~f:(fun l -> !current.modifier_for_tactics <- l)
+      ~allow:the_valid_mod
+      ~f:(fun l -> !current.modifier_for_tactics <- mod_list_to_str l)
       ~help:help_string
       "Modifiers for Tactics Menu"
-      !current.modifier_for_tactics
+      (str_to_mod_list !current.modifier_for_tactics)
   in
   let modifier_for_templates =
     modifiers
-      ~allow:!current.modifiers_valid
-      ~f:(fun l -> !current.modifier_for_templates <- l)
+      ~allow:the_valid_mod
+      ~f:(fun l -> !current.modifier_for_templates <- mod_list_to_str l)
       ~help:help_string
       "Modifiers for Templates Menu"
-      !current.modifier_for_templates
+      (str_to_mod_list !current.modifier_for_templates)
   in
   let modifier_for_navigation =
     modifiers
-      ~allow:!current.modifiers_valid
-      ~f:(fun l -> !current.modifier_for_navigation <- l)
+      ~allow:the_valid_mod
+      ~f:(fun l -> !current.modifier_for_navigation <- mod_list_to_str l)
       ~help:help_string
       "Modifiers for Navigation Menu"
-      !current.modifier_for_navigation
+      (str_to_mod_list !current.modifier_for_navigation)
   in
   let modifier_for_display =
     modifiers
-      ~allow:!current.modifiers_valid
-      ~f:(fun l -> !current.modifier_for_display <- l)
+      ~allow:the_valid_mod
+      ~f:(fun l -> !current.modifier_for_display <- mod_list_to_str l)
       ~help:help_string
       "Modifiers for Display Menu"
-      !current.modifier_for_display
+      (str_to_mod_list !current.modifier_for_display)
   in
   let modifiers_valid =
     modifiers
-      ~f:(fun l -> !current.modifiers_valid <- l)
+      ~f:(fun l -> !current.modifiers_valid <- mod_list_to_str l)
       "Allowed modifiers"
-      !current.modifiers_valid
+      the_valid_mod
   in
   let cmd_editor =
     let predefined = [ "emacs %s"; "vi %s"; "NOTEPAD %s" ] in
@@ -520,8 +529,7 @@ let configure ?(apply=(fun () -> ())) () =
       "netscape -remote \"openURL(%s)\"";
       "mozilla -remote \"openURL(%s)\"";
       "firefox -remote \"openURL(%s,new-windows)\" || firefox %s &";
-      "seamonkey -remote \"openURL(%s)\" || seamonkey %s &";
-      "open -a Safari %s &"
+      "seamonkey -remote \"openURL(%s)\" || seamonkey %s &"
     ] in
     combo
       ~help:"(%s for url)"
@@ -534,6 +542,8 @@ let configure ?(apply=(fun () -> ())) () =
   in
   let doc_url =
     let predefined = [
+      "file://"^(List.fold_left Filename.concat (Coq_config.docdir) ["html";"refman";""]);
+      Coq_config.wwwrefman;
       use_default_doc_url
     ] in
     combo
@@ -545,11 +555,13 @@ let configure ?(apply=(fun () -> ())) () =
       !current.doc_url in
   let library_url =
     let predefined = [
+      "file://"^(List.fold_left Filename.concat (Coq_config.docdir) ["html";"stdlib";""]);
       Coq_config.wwwstdlib
     ] in
     combo
       "Library URL"
       ~f:(fun s -> !current.library_url <- s)
+      ~new_allowed: true
       (predefined@[if List.mem !current.library_url predefined then ""
                    else !current.library_url])
       !current.library_url
@@ -577,27 +589,30 @@ let configure ?(apply=(fun () -> ())) () =
 (* ATTENTION !!!!! L'onglet Fonts doit etre en premier pour eviter un bug !!!!
    (shame on Benjamin) *)
   let cmds =
-    [Section("Fonts",
+    [Section("Fonts", Some `SELECT_FONT,
 	     [config_font]);
-     Section("Files",
+     Section("Files", Some `DIRECTORY,
 	     [global_auto_revert;global_auto_revert_delay;
 	      auto_save; auto_save_delay; (* auto_save_name*)
 	      encodings;
+	     ]);
+     Section("Project", Some (`STOCK "gtk-page-setup"),
+	     [project_file_name;read_project;
 	     ]);
 (*
      Section("Appearance",
 	     config_appearance);
 *)
-     Section("Externals",
+     Section("Externals", None,
 	     [cmd_coqc;cmd_make;cmd_coqmakefile; cmd_coqdoc; cmd_print;
 	      cmd_editor;
 	      cmd_browse;doc_url;library_url]);
-     Section("Tactics Wizard",
+     Section("Tactics Wizard", None,
 	     [automatic_tactics]);
-     Section("Shortcuts",
+     Section("Shortcuts", Some `PREFERENCES,
 	     [modifiers_valid; modifier_for_tactics;
 	      modifier_for_templates; modifier_for_display; modifier_for_navigation]);
-     Section("Misc",
+     Section("Misc", Some `ADD,
 	     misc)]
   in
 (*

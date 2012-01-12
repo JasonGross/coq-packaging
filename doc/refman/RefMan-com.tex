@@ -34,11 +34,6 @@ toplevel (to allow the dynamic link of tactics).  You can switch to
 the Caml toplevel with the command \verb!Drop.!, and come back to the
 \Coq~toplevel with the command \verb!Toplevel.loop();;!.
 
-% The command \verb!coqtop -searchisos! runs the search tool {\sf
-%   Coq\_SearchIsos} (see Section~\ref{coqsearchisos},
-% page~\pageref{coqsearchisos}) and, as the \Coq~system, can be combined
-% with the option \verb!-opt!.
-
 \section{Batch compilation ({\tt coqc})}
 The {\tt coqc} command takes a name {\em file} as argument.  Then it
 looks for a vernacular file named {\em file}{\tt .v}, and tries to
@@ -58,12 +53,15 @@ native-code versions of the system.
 \section[Resource file]{Resource file\index{Resource file}}
 
 When \Coq\ is launched, with either {\tt coqtop} or {\tt coqc}, the
-resource file \verb:$HOME/.coqrc.7.0: is loaded, where \verb:$HOME: is
-the home directory of the user.  If this file is not found, then the
-file \verb:$HOME/.coqrc: is searched. You can also specify an
+resource file \verb:$XDG_CONFIG_HOME/coq/coqrc.xxx: is loaded, where
+\verb:$XDG_CONFIG_HOME: is the configuration directory of the user (by
+default its home directory \verb!/.config! and \verb:xxx: is the version
+number (e.g. 8.3).  If this file is not found, then the file
+\verb:$XDG_CONFIG_HOME/coqrc: is searched. You can also specify an
 arbitrary name for the resource file (see option \verb:-init-file:
-below), or the name of another user to load the resource file of
-someone else (see option \verb:-user:).
+below), or the name of another user to load the resource file of someone
+else (see option \verb:-user:).
+
 
 This file may contain, for instance, \verb:Add LoadPath: commands to add
 directories to the load path of \Coq.
@@ -73,15 +71,22 @@ option \verb:-q:.
 \section[Environment variables]{Environment variables\label{EnvVariables}
 \index{Environment variables}}
 
-There are three environment variables used by the \Coq\ system.
+There are four environment variables used by the \Coq\ system.
 \verb:$COQBIN: for the directory where the binaries are,
-\verb:$COQLIB: for the directory where the standard library is, and 
+\verb:$COQLIB: for the directory where the standard library is,
+\verb:$COQPATH: for a list of directories seperated by \verb|:|
+(\verb|;| on windows) to add to the load path, and
 \verb:$COQTOP: for the directory of the sources. The latter is useful
 only for developers that are writing their own tactics and are using
 \texttt{coq\_makefile} (see \ref{Makefile}). If \verb:$COQBIN: or
 \verb:$COQLIB: are not defined, \Coq\ will use the default values
 (defined at installation time). So these variables are useful only if
 you move the \Coq\ binaries and library after installation.
+
+Coq will also honor \verb:$XDG_DATA_HOME: and \verb:$XDG_DATA_DIRS: (see
+\url{http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html}).
+Coq adds \verb:${XDG_DATA_HOME}/coq: and \verb:${XDG_DATA_DIRS}/coq: to its
+search path.
 
 \section[Options]{Options\index{Options of the command line}
 \label{vmoption}
@@ -173,11 +178,6 @@ The following command-line options are recognized by the commands {\tt
 
   Cause \Coq~not to load the resource file.
 
-\item[{\tt -user} {\em username}]\ 
-
-  Take resource file of user {\em username} (that is 
-  \verb+~+{\em username}{\tt /.coqrc.7.0}) instead of yours.
-
 \item[{\tt -load-ml-source} {\em file}]\ 
 
   Load the Caml source file {\em file}.
@@ -263,9 +263,25 @@ The following command-line options are recognized by the commands {\tt
  
 \item[{\tt -dont-load-proofs}]\ 
 
-  This avoids loading in memory the proofs of opaque theorems
-  resulting in a smaller memory requirement and faster compilation;
-  warning: this invalidates some features such as the extraction tool.
+  Warning: this is an unsafe mode.
+  Instead of loading in memory the proofs of opaque theorems, they are
+  treated as axioms. This results in smaller memory requirement and
+  faster compilation, but the behavior of the system might slightly change
+  (for instance during module subtyping), and some features won't be
+  available (for example {\tt Print Assumptions}).
+
+\item[{\tt -lazy-load-proofs}]\
+
+  This is the default behavior. Proofs of opaque theorems aren't
+  loaded immediately in memory, but only when necessary, for instance
+  during some module subtyping or {\tt Print Assumptions}. This should be
+  almost as fast and efficient as {\tt -dont-load-proofs}, with none
+  of its drawbacks.
+
+\item[{\tt -force-load-proofs}]\
+
+  Proofs of opaque theorems are loaded in memory as soon as the
+  corresponding {\tt Require} is done. This used to be Coq's default behavior.
 
 \item[{\tt -vm}]\ 
 
@@ -375,8 +391,6 @@ definition twice. Of course, the latter is slightly slower since it
 makes more disk access. It is also less secure since an attacker might
 have replaced the compiled library $A$ after it has been read by the
 first command, but before it has been read by the second command.
-
-% $Id: RefMan-com.tex 12443 2009-10-29 16:17:29Z gmelquio $ 
 
 %%% Local Variables: 
 %%% mode: latex

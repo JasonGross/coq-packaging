@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: inductiveops.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Util
 open Names
@@ -78,7 +76,7 @@ let mis_is_recursive_subset listind rarg =
     List.exists
       (fun ra ->
         match dest_recarg ra with
-	  | Mrec i -> List.mem i listind
+	  | Mrec (_,i) -> List.mem i listind
           | _ -> false) rvec
   in
   array_exists one_is_rec (dest_subterms rarg)
@@ -145,11 +143,8 @@ let make_case_info env ind style =
   let print_info = { ind_nargs = mip.mind_nrealargs_ctxt; style = style } in
   { ci_ind     = ind;
     ci_npar    = mib.mind_nparams;
-    ci_cstr_nargs = mip.mind_consnrealdecls;
+    ci_cstr_ndecls = mip.mind_consnrealdecls;
     ci_pp_info = print_info }
-
-let make_default_case_info env style ind =
-  make_case_info env ind style
 
 (*s Useful functions *)
 
@@ -201,12 +196,6 @@ let get_constructors env (ind,params) =
   let (mib,mip) = Inductive.lookup_mind_specif env ind in
   Array.init (Array.length mip.mind_consnames)
     (fun j -> get_constructor (ind,mib,mip,params) (j+1))
-
-let rec instantiate args c = match kind_of_term c, args with
-  | Prod (_,_,c), a::args -> instantiate args (subst1 a c)
-  | LetIn (_,b,_,c), args -> instantiate args (subst1 b c)
-  | _, [] -> c
-  | _ -> anomaly "too short arity"
 
 (* substitution in a signature *)
 
@@ -413,7 +402,7 @@ let is_constrained is u =
     let _ =
       merge_constraints
         (enforce_geq u (super u')
-          (enforce_geq u' is Constraint.empty))
+          (enforce_geq u' is empty_constraint))
         initial_universes in
     false
   with UniverseInconsistency _ -> true

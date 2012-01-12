@@ -1,6 +1,7 @@
 field/field_plugin.cma
 setoid_ring/newring_plugin.cma
 extraction/extraction_plugin.cma
+decl_mode/decl_mode_plugin.cma
 firstorder/ground_plugin.cma
 rtauto/rtauto_plugin.cma
 fourier/fourier_plugin.cma

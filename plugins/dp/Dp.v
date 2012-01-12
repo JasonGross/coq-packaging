@@ -6,8 +6,6 @@ Require Export Classical.
 (* Zenon *)
 
 (*  Copyright 2004 INRIA  *)
-(*  $Id: Dp.v 12337 2009-09-17 15:58:14Z glondu $  *)
-
 Lemma zenon_nottrue :
   (~True -> False).
 Proof. tauto. Qed.

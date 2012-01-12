@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: dumpglob.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 
 (* Dump of globalization (to be used by coqdoc) *)
@@ -33,8 +31,6 @@ let noglob () = glob_output := NoGlob
 
 let dump_to_stdout () = glob_output := StdOut; glob_file := Pervasives.stdout
 
-let multi_dump () = !glob_output = MultFiles
-
 let dump_to_dotglob f = glob_output := MultFiles
 
 let dump_into_file f = glob_output := File f; open_glob_file f
@@ -42,6 +38,23 @@ let dump_into_file f = glob_output := File f; open_glob_file f
 let dump_string s =
   if dump () then Pervasives.output_string !glob_file s
 
+let start_dump_glob vfile =
+  match !glob_output with
+  | MultFiles ->
+      open_glob_file (Filename.chop_extension vfile ^ ".glob");
+      output_string !glob_file "DIGEST ";
+      output_string !glob_file (Digest.to_hex (Digest.file vfile));
+      output_char !glob_file '\n'
+  | File f ->
+      open_glob_file f;
+      output_string !glob_file "DIGEST NO\n"
+  | NoGlob | StdOut ->
+      ()
+
+let end_dump_glob () =
+  match !glob_output with
+  | MultFiles | File _ -> close_glob_file ()
+  | NoGlob | StdOut -> ()
 
 let previous_state = ref MultFiles
 let pause () = previous_state := !glob_output; glob_output := NoGlob
@@ -163,11 +176,6 @@ let dump_constraint ((loc, n), _, _) sec ty =
     | Names.Name id -> dump_definition (loc, id) sec ty
     | Names.Anonymous -> ()
 
-let dump_name (loc, n) sec ty =
-  match n with
-    | Names.Name id -> dump_definition (loc, id) sec ty
-    | Names.Anonymous -> ()
-
 let dump_modref loc mp ty =
   if dump () then
     let (dp, l) = Lib.split_modpath mp in
@@ -192,12 +200,13 @@ let dump_libref loc dp ty =
 
 let cook_notation df sc =
   (* We encode notations so that they are space-free and still human-readable *)
-  (* - all spaces are replaced by _ *)
-  (* - all _ denoting a non-terminal symbol are replaced by x *)
-  (* - all terminal tokens are surrounded by single quotes, including '_' *)
-  (*   which already denotes terminal _ *)
-  (* - all single quotes in terminal tokens are doubled *)
-  (* The output is decoded in function Index.prepare_entry of coqdoc *)
+  (* - all spaces are replaced by _                                           *)
+  (* - all _ denoting a non-terminal symbol are replaced by x                 *)
+  (* - all terminal tokens are surrounded by single quotes, including '_'     *)
+  (*   which already denotes terminal _                                       *)
+  (* - all single quotes in terminal tokens are doubled                       *)
+  (* - characters < 32 are represented by '^A, '^B, '^C, etc                  *)
+  (* The output is decoded in function Index.prepare_entry of coqdoc          *)
   let ntn = String.make (String.length df * 3) '_' in
   let j = ref 0 in
   let l = String.length df - 1 in
@@ -211,8 +220,13 @@ let cook_notation df sc =
       (* Next token is a terminal *)
       ntn.[!j] <- '\''; incr j;
       while !i <= l && df.[!i] <> ' ' do
-	if df.[!i] = '\'' then (ntn.[!j] <- '\''; incr j);
-	ntn.[!j] <- df.[!i]; incr j; incr i
+	if df.[!i] < ' ' then
+	  let c = char_of_int (int_of_char 'A' + int_of_char df.[!i] - 1) in
+	  (String.blit ("'^" ^ String.make 1 c) 0 ntn !j 3; j := !j+3; incr i)
+	else begin
+	  if df.[!i] = '\'' then (ntn.[!j] <- '\''; incr j);
+	  ntn.[!j] <- df.[!i]; incr j; incr i
+	end
       done;
       ntn.[!j] <- '\''; incr j
     end;

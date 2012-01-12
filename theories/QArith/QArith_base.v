@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: QArith_base.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Export ZArith.
 Require Export ZArithRing.
@@ -20,7 +18,7 @@ Record Q : Set := Qmake {Qnum : Z; Qden : positive}.
 
 Delimit Scope Q_scope with Q.
 Bind Scope Q_scope with Q.
-Arguments Scope Qmake [Z_scope positive_scope].
+Arguments Qmake _%Z _%positive.
 Open Scope Q_scope.
 Ltac simpl_mult := repeat rewrite Zpos_mult_morphism.
 
@@ -29,7 +27,7 @@ Ltac simpl_mult := repeat rewrite Zpos_mult_morphism.
 Notation "a # b" := (Qmake a b) (at level 55, no associativity) : Q_scope.
 
 Definition inject_Z (x : Z) := Qmake x 1.
-Arguments Scope inject_Z [Z_scope].
+Arguments inject_Z x%Z.
 
 Notation QDen p := (Zpos (Qden p)).
 Notation " 0 " := (0#1) : Q_scope.
@@ -47,6 +45,13 @@ Infix "<=" := Qle : Q_scope.
 Notation "x > y" := (Qlt y x)(only parsing) : Q_scope.
 Notation "x >= y" := (Qle y x)(only parsing) : Q_scope.
 Notation "x <= y <= z" := (x<=y/\y<=z) : Q_scope.
+
+(** injection from Z is injective. *)
+
+Lemma inject_Z_injective (a b: Z): inject_Z a == inject_Z b <-> a = b.
+Proof.
+ unfold Qeq. simpl. omega.
+Qed.
 
 (** Another approach : using Qcompare for defining order relations. *)
 
@@ -92,7 +97,7 @@ Proof.
  unfold "?=". intros. apply Zcompare_antisym.
 Qed.
 
-Lemma Qcompare_spec : forall x y, CompSpec Qeq Qlt x y (x ?= y).
+Lemma Qcompare_spec : forall x y, CompareSpec (x==y) (x<y) (y<x) (x ?= y).
 Proof.
  intros.
  destruct (x ?= y) as [ ]_eqn:H; constructor; auto.
@@ -387,6 +392,26 @@ Proof.
   red; simpl; intro; ring.
 Qed.
 
+(** Injectivity of addition (uses theory about Qopp above): *)
+
+Lemma Qplus_inj_r (x y z: Q):
+  x + z == y + z <-> x == y.
+Proof.
+ split; intro E.
+  rewrite <- (Qplus_0_r x), <- (Qplus_0_r y).
+  rewrite <- (Qplus_opp_r z); auto.
+  do 2 rewrite Qplus_assoc.
+  rewrite E. reflexivity.
+ rewrite E. reflexivity.
+Qed.
+
+Lemma Qplus_inj_l (x y z: Q):
+  z + x == z + y <-> x == y.
+Proof.
+ rewrite (Qplus_comm z x), (Qplus_comm z y).
+ apply Qplus_inj_r.
+Qed.
+
 
 (** * Properties of [Qmult] *)
 
@@ -462,6 +487,21 @@ Proof.
   rewrite <- H0; ring.
 Qed.
 
+
+(** * inject_Z is a ring homomorphism: *)
+
+Lemma inject_Z_plus (x y: Z): inject_Z (x + y) = inject_Z x + inject_Z y.
+Proof.
+ unfold Qplus, inject_Z. simpl. f_equal. ring.
+Qed.
+
+Lemma inject_Z_mult (x y: Z): inject_Z (x * y) = inject_Z x * inject_Z y.
+Proof. reflexivity. Qed.
+
+Lemma inject_Z_opp (x: Z): inject_Z (- x) = - inject_Z x.
+Proof. reflexivity. Qed.
+
+
 (** * Inverse and division. *)
 
 Lemma Qinv_involutive : forall q, (/ / q) == q.
@@ -498,6 +538,25 @@ Proof.
   rewrite (Qmult_comm y x).
   fold (Qdiv (Qmult x y) y).
   apply Qdiv_mult_l; auto.
+Qed.
+
+(** Injectivity of Qmult (requires theory about Qinv above): *)
+
+Lemma Qmult_inj_r (x y z: Q): ~ z == 0 -> (x * z == y * z <-> x == y).
+Proof.
+ intro z_ne_0.
+ split; intro E.
+  rewrite <- (Qmult_1_r x), <- (Qmult_1_r y).
+  rewrite <- (Qmult_inv_r z); auto.
+  do 2 rewrite Qmult_assoc.
+  rewrite E. reflexivity.
+ rewrite E. reflexivity.
+Qed.
+
+Lemma Qmult_inj_l (x y z: Q): ~ z == 0 -> (z * x == z * y <-> x == y).
+Proof.
+ rewrite (Qmult_comm z x), (Qmult_comm z y).
+ apply Qmult_inj_r.
 Qed.
 
 (** * Properties of order upon Q. *)
@@ -538,6 +597,19 @@ Lemma Qlt_not_eq : forall x y, x<y -> ~ x==y.
 Proof.
   unfold Qlt, Qeq; auto with zarith.
 Qed.
+
+Lemma Zle_Qle (x y: Z): (x <= y)%Z = (inject_Z x <= inject_Z y).
+Proof.
+ unfold Qle. intros. simpl.
+ do 2 rewrite Zmult_1_r. reflexivity.
+Qed.
+
+Lemma Zlt_Qlt (x y: Z): (x < y)%Z = (inject_Z x < inject_Z y).
+Proof.
+ unfold Qlt. intros. simpl.
+ do 2 rewrite Zmult_1_r. reflexivity.
+Qed.
+
 
 (** Large = strict or equal *)
 
@@ -677,6 +749,54 @@ Proof.
   Close Scope Z_scope.
 Qed.
 
+Lemma Qplus_lt_le_compat :
+  forall x y z t, x<y -> z<=t -> x+z < y+t.
+Proof.
+  unfold Qplus, Qle, Qlt; intros (x1, x2) (y1, y2) (z1, z2) (t1, t2);
+    simpl; simpl_mult.
+  Open Scope Z_scope.
+  intros.
+  match goal with |- ?a < ?b => ring_simplify a b end.
+  rewrite Zplus_comm.
+  apply Zplus_le_lt_compat.
+  match goal with |- ?a <= ?b => ring_simplify z1 t1 ('z2) ('t2) a b end.
+  auto with zarith.
+  match goal with |- ?a < ?b => ring_simplify x1 y1 ('x2) ('y2) a b end.
+  assert (forall p, 0 < ' p) by reflexivity.
+  repeat (apply Zmult_lt_compat_r; auto).
+  Close Scope Z_scope.
+Qed.
+
+Lemma Qplus_le_l (x y z: Q): x + z <= y + z <-> x <= y.
+Proof.
+ split; intros.
+  rewrite <- (Qplus_0_r x), <- (Qplus_0_r y), <- (Qplus_opp_r z).
+  do 2 rewrite Qplus_assoc.
+  apply Qplus_le_compat; auto with *.
+ apply Qplus_le_compat; auto with *.
+Qed.
+
+Lemma Qplus_le_r (x y z: Q): z + x <= z + y <-> x <= y.
+Proof.
+ rewrite (Qplus_comm z x), (Qplus_comm z y).
+ apply Qplus_le_l.
+Qed.
+
+Lemma Qplus_lt_l (x y z: Q): x + z < y + z <-> x < y.
+Proof.
+ split; intros.
+  rewrite <- (Qplus_0_r x), <- (Qplus_0_r y), <- (Qplus_opp_r z).
+  do 2 rewrite Qplus_assoc.
+  apply Qplus_lt_le_compat; auto with *.
+ apply Qplus_lt_le_compat; auto with *.
+Qed.
+
+Lemma Qplus_lt_r (x y z: Q): z + x < z + y <-> x < y.
+Proof.
+ rewrite (Qplus_comm z x), (Qplus_comm z y).
+ apply Qplus_lt_l.
+Qed.
+
 Lemma Qmult_le_compat_r : forall x y z, x <= y -> 0 <= z -> x*z <= y*z.
 Proof.
   intros (a1,a2) (b1,b2) (c1,c2); unfold Qle, Qlt; simpl.
@@ -699,6 +819,19 @@ Proof.
   Close Scope Z_scope.
 Qed.
 
+Lemma Qmult_le_r (x y z: Q): 0 < z -> (x*z <= y*z <-> x <= y).
+Proof.
+ split; intro.
+  now apply Qmult_lt_0_le_reg_r with z.
+ apply Qmult_le_compat_r; auto with qarith.
+Qed.
+
+Lemma Qmult_le_l (x y z: Q): 0 < z -> (z*x <= z*y <-> x <= y).
+Proof.
+ rewrite (Qmult_comm z x), (Qmult_comm z y).
+ apply Qmult_le_r.
+Qed.
+
 Lemma Qmult_lt_compat_r : forall x y z, 0 < z  -> x < y -> x*z < y*z.
 Proof.
   intros (a1,a2) (b1,b2) (c1,c2); unfold Qle, Qlt; simpl.
@@ -711,6 +844,30 @@ Proof.
   omega.
   compute; auto.
   Close Scope Z_scope.
+Qed.
+
+Lemma Qmult_lt_r: forall x y z, 0 < z -> (x*z < y*z <-> x < y).
+Proof.
+ Open Scope Z_scope.
+ intros (a1,a2) (b1,b2) (c1,c2).
+ unfold Qle, Qlt; simpl.
+ simpl_mult.
+ replace (a1*c1*('b2*'c2)) with ((a1*'b2)*(c1*'c2)) by ring.
+ replace (b1*c1*('a2*'c2)) with ((b1*'a2)*(c1*'c2)) by ring.
+ assert (forall p, 0 < ' p) by reflexivity.
+ split; intros.
+  apply Zmult_lt_reg_r with (c1*'c2); auto with zarith.
+  apply Zmult_lt_0_compat; auto with zarith.
+ apply Zmult_lt_compat_r; auto with zarith.
+ apply Zmult_lt_0_compat. omega.
+ compute; auto.
+ Close Scope Z_scope.
+Qed.
+
+Lemma Qmult_lt_l (x y z: Q): 0 < z -> (z*x < z*y <-> x < y).
+Proof.
+ rewrite (Qmult_comm z x), (Qmult_comm z y).
+ apply Qmult_lt_r.
 Qed.
 
 Lemma Qmult_le_0_compat : forall a b, 0 <= a -> 0 <= b -> 0 <= a*b.
