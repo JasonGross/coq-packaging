@@ -1,8 +1,8 @@
-coq (8.4~beta+dfsg-1) UNRELEASED; urgency=low
+coq (8.4~beta+dfsg-1) experimental; urgency=low
 
   * New upstream beta release
 
- -- Stéphane Glondu <glondu@debian.org>  Thu, 12 Jan 2012 16:09:13 +0100
+ -- Stéphane Glondu <glondu@debian.org>  Thu, 12 Jan 2012 18:53:08 +0100
 
 coq (8.3.pl3+dfsg-1) unstable; urgency=low
 
