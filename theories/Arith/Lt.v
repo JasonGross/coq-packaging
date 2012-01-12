@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Lt.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (** Theorems about [lt] in nat. [lt] is defined in library [Init/Peano.v] as:
 <<
@@ -96,9 +94,9 @@ Proof.
 Qed.
 Hint Resolve lt_0_Sn: arith v62.
 
-Theorem lt_n_O : forall n, ~ n < 0.
-Proof le_Sn_O.
-Hint Resolve lt_n_O: arith v62.
+Theorem lt_n_0 : forall n, ~ n < 0.
+Proof le_Sn_0.
+Hint Resolve lt_n_0: arith v62.
 
 (** * Predecessor *)
 
@@ -192,4 +190,5 @@ Hint Immediate lt_0_neq: arith v62.
 Notation lt_O_Sn := lt_0_Sn (only parsing).
 Notation neq_O_lt := neq_0_lt (only parsing).
 Notation lt_O_neq := lt_0_neq (only parsing).
+Notation lt_n_O := lt_n_0 (only parsing).
 (* end hide *)

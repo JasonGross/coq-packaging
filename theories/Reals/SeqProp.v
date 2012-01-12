@@ -1,17 +1,14 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: SeqProp.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
 Require Import Rbase.
 Require Import Rfunctions.
 Require Import Rseries.
-Require Import Classical.
 Require Import Max.
 Open Local Scope R_scope.
 
@@ -29,31 +26,10 @@ Definition has_lb (Un:nat -> R) : Prop := bound (EUn (opp_seq Un)).
 Lemma growing_cv :
   forall Un:nat -> R, Un_growing Un -> has_ub Un -> { l:R | Un_cv Un l }.
 Proof.
-  unfold Un_growing, Un_cv in |- *; intros;
-    destruct (completeness (EUn Un) H0 (EUn_noempty Un)) as [x [H2 H3]].
-  exists x; intros eps H1.
-  unfold is_upper_bound in H2, H3.
-  assert (H5 : forall n:nat, Un n <= x).
-  intro n; apply (H2 (Un n) (Un_in_EUn Un n)).
-  cut (exists N : nat, x - eps < Un N).
-  intro H6; destruct H6 as [N H6]; exists N.
-  intros n H7; unfold R_dist in |- *; apply (Rabs_def1 (Un n - x) eps).
-  unfold Rgt in H1.
-  apply (Rle_lt_trans (Un n - x) 0 eps (Rle_minus (Un n) x (H5 n)) H1).
-  fold Un_growing in H; generalize (growing_prop Un n N H H7); intro H8.
-  generalize
-    (Rlt_le_trans (x - eps) (Un N) (Un n) H6 (Rge_le (Un n) (Un N) H8));
-    intro H9; generalize (Rplus_lt_compat_l (- x) (x - eps) (Un n) H9);
-      unfold Rminus in |- *; rewrite <- (Rplus_assoc (- x) x (- eps));
-        rewrite (Rplus_comm (- x) (Un n)); fold (Un n - x) in |- *;
-          rewrite Rplus_opp_l; rewrite (let (H1, H2) := Rplus_ne (- eps) in H2);
-            trivial.
-  cut (~ (forall N:nat, Un N <= x - eps)).
-  intro H6; apply (not_all_not_ex nat (fun N:nat => x - eps < Un N)).
-  intro H7; apply H6; intro N; apply Rnot_lt_le; apply H7.
-  intro H7; generalize (Un_bound_imp Un (x - eps) H7); intro H8;
-    unfold is_upper_bound in H8; generalize (H3 (x - eps) H8);
-      apply Rlt_not_le; apply tech_Rgt_minus; exact H1.
+  intros Un Hug Heub.
+  exists (projT1 (completeness (EUn Un) Heub (EUn_noempty Un))).
+  destruct (completeness _ Heub (EUn_noempty Un)) as (l, H).
+  now apply Un_cv_crit_lub.
 Qed.
 
 Lemma decreasing_growing :
@@ -518,68 +494,77 @@ Lemma approx_maj :
   forall (Un:nat -> R) (pr:has_ub Un) (eps:R),
     0 < eps ->  exists k : nat, Rabs (lub Un pr - Un k) < eps.
 Proof.
-  intros.
-  set (P := fun k:nat => Rabs (lub Un pr - Un k) < eps).
-  unfold P in |- *.
-  cut
-    ((exists k : nat, P k) ->
-      exists k : nat, Rabs (lub Un pr - Un k) < eps).
-  intros.
-  apply H0.
-  apply not_all_not_ex.
-  red in |- *; intro.
-  2: unfold P in |- *; trivial.
-  unfold P in H1.
-  cut (forall n:nat, Rabs (lub Un pr - Un n) >= eps).
-  intro.
-  cut (is_lub (EUn Un) (lub Un pr)).
-  intro.
-  unfold is_lub in H3.
-  unfold is_upper_bound in H3.
-  elim H3; intros.
-  cut (forall n:nat, eps <= lub Un pr - Un n).
-  intro.
-  cut (forall n:nat, Un n <= lub Un pr - eps).
-  intro.
-  cut (forall x:R, EUn Un x -> x <= lub Un pr - eps).
-  intro.
-  assert (H9 := H5 (lub Un pr - eps) H8).
-  cut (eps <= 0).
-  intro.
-  elim (Rlt_irrefl _ (Rlt_le_trans _ _ _ H H10)).
-  apply Rplus_le_reg_l with (lub Un pr - eps).
-  rewrite Rplus_0_r.
-  replace (lub Un pr - eps + eps) with (lub Un pr);
-  [ assumption | ring ].
-  intros.
-  unfold EUn in H8.
-  elim H8; intros.
-  rewrite H9; apply H7.
-  intro.
-  assert (H7 := H6 n).
-  apply Rplus_le_reg_l with (eps - Un n).
-  replace (eps - Un n + Un n) with eps.
-  replace (eps - Un n + (lub Un pr - eps)) with (lub Un pr - Un n).
-  assumption.
-  ring.
-  ring.
-  intro.
-  assert (H6 := H2 n).
-  rewrite Rabs_right in H6.
-  apply Rge_le.
-  assumption.
-  apply Rle_ge.
-  apply Rplus_le_reg_l with (Un n).
-  rewrite Rplus_0_r;
-    replace (Un n + (lub Un pr - Un n)) with (lub Un pr);
-    [ apply H4 | ring ].
-  exists n; reflexivity.
-  unfold lub in |- *.
-  case (ub_to_lub Un pr).
-  trivial.
-  intro.
-  assert (H2 := H1 n).
-  apply not_Rlt; assumption.
+  intros Un pr.
+  pose (Vn := fix aux n := match n with S n' => if Rle_lt_dec (aux n') (Un n) then Un n else aux n' | O => Un O end).
+  pose (In := fix aux n := match n with S n' => if Rle_lt_dec (Vn n) (Un n) then n else aux n' | O => O end).
+
+  assert (VUI: forall n, Vn n = Un (In n)).
+  induction n.
+  easy.
+  simpl.
+  destruct (Rle_lt_dec (Vn n) (Un (S n))) as [H1|H1].
+  destruct (Rle_lt_dec (Un (S n)) (Un (S n))) as [H2|H2].
+  easy.
+  elim (Rlt_irrefl _ H2).
+  destruct (Rle_lt_dec (Vn n) (Un (S n))) as [H2|H2].
+  elim (Rlt_irrefl _ (Rle_lt_trans _ _ _ H2 H1)).
+  exact IHn.
+
+  assert (HubV : has_ub Vn).
+  destruct pr as (ub, Hub).
+  exists ub.
+  intros x (n, Hn).
+  rewrite Hn, VUI.
+  apply Hub.
+  now exists (In n).
+
+  assert (HgrV : Un_growing Vn).
+  intros n.
+  induction n.
+  simpl.
+  destruct (Rle_lt_dec (Un O) (Un 1%nat)) as [H|_].
+  exact H.
+  apply Rle_refl.
+  simpl.
+  destruct (Rle_lt_dec (Vn n) (Un (S n))) as [H1|H1].
+  destruct (Rle_lt_dec (Un (S n)) (Un (S (S n)))) as [H2|H2].
+  exact H2.
+  apply Rle_refl.
+  destruct (Rle_lt_dec (Vn n) (Un (S (S n)))) as [H2|H2].
+  exact H2.
+  apply Rle_refl.
+
+  destruct (ub_to_lub Vn HubV) as (l, Hl).
+  unfold lub.
+  destruct (ub_to_lub Un pr) as (l', Hl').
+  replace l' with l.
+  intros eps Heps.
+  destruct (Un_cv_crit_lub Vn HgrV l Hl eps Heps) as (n, Hn).
+  exists (In n).
+  rewrite <- VUI.
+  rewrite Rabs_minus_sym.
+  apply Hn.
+  apply le_refl.
+
+  apply Rle_antisym.
+  apply Hl.
+  intros n (k, Hk).
+  rewrite Hk, VUI.
+  apply Hl'.
+  now exists (In k).
+  apply Hl'.
+  intros n (k, Hk).
+  rewrite Hk.
+  apply Rle_trans with (Vn k).
+  clear.
+  induction k.
+  apply Rle_refl.
+  simpl.
+  destruct (Rle_lt_dec (Vn k) (Un (S k))) as [H|H].
+  apply Rle_refl.
+  now apply Rlt_le.
+  apply Hl.
+  now exists k.
 Qed.
 
 (**********)
@@ -587,72 +572,23 @@ Lemma approx_min :
   forall (Un:nat -> R) (pr:has_lb Un) (eps:R),
     0 < eps ->  exists k : nat, Rabs (glb Un pr - Un k) < eps.
 Proof.
-  intros.
-  set (P := fun k:nat => Rabs (glb Un pr - Un k) < eps).
-  unfold P in |- *.
-  cut
-    ((exists k : nat, P k) ->
-      exists k : nat, Rabs (glb Un pr - Un k) < eps).
-  intros.
-  apply H0.
-  apply not_all_not_ex.
-  red in |- *; intro.
-  2: unfold P in |- *; trivial.
-  unfold P in H1.
-  cut (forall n:nat, Rabs (glb Un pr - Un n) >= eps).
-  intro.
-  cut (is_lub (EUn (opp_seq Un)) (- glb Un pr)).
-  intro.
-  unfold is_lub in H3.
-  unfold is_upper_bound in H3.
-  elim H3; intros.
-  cut (forall n:nat, eps <= Un n - glb Un pr).
-  intro.
-  cut (forall n:nat, opp_seq Un n <= - glb Un pr - eps).
-  intro.
-  cut (forall x:R, EUn (opp_seq Un) x -> x <= - glb Un pr - eps).
-  intro.
-  assert (H9 := H5 (- glb Un pr - eps) H8).
-  cut (eps <= 0).
-  intro.
-  elim (Rlt_irrefl _ (Rlt_le_trans _ _ _ H H10)).
-  apply Rplus_le_reg_l with (- glb Un pr - eps).
-  rewrite Rplus_0_r.
-  replace (- glb Un pr - eps + eps) with (- glb Un pr);
-  [ assumption | ring ].
-  intros.
-  unfold EUn in H8.
-  elim H8; intros.
-  rewrite H9; apply H7.
-  intro.
-  assert (H7 := H6 n).
-  unfold opp_seq in |- *.
-  apply Rplus_le_reg_l with (eps + Un n).
-  replace (eps + Un n + - Un n) with eps.
-  replace (eps + Un n + (- glb Un pr - eps)) with (Un n - glb Un pr).
-  assumption.
-  ring.
-  ring.
-  intro.
-  assert (H6 := H2 n).
-  rewrite Rabs_left1 in H6.
-  apply Rge_le.
-  replace (Un n - glb Un pr) with (- (glb Un pr - Un n));
-  [ assumption | ring ].
-  apply Rplus_le_reg_l with (- glb Un pr).
-  rewrite Rplus_0_r;
-    replace (- glb Un pr + (glb Un pr - Un n)) with (- Un n).
-  apply H4.
-  exists n; reflexivity.
-  ring.
-  unfold glb in |- *.
-  case (lb_to_glb Un pr); simpl.
-  intro.
-  rewrite Ropp_involutive.
-  trivial.
-  intro.
-  assert (H2 := H1 n).
-  apply not_Rlt; assumption.
+  intros Un pr.
+  unfold glb.
+  destruct lb_to_glb as (lb, Hlb).
+  intros eps Heps.
+  destruct (approx_maj _ pr eps Heps) as (n, Hn).
+  exists n.
+  unfold Rminus.
+  rewrite <- Ropp_plus_distr, Rabs_Ropp.
+  replace lb with (lub (opp_seq Un) pr).
+  now rewrite <- (Ropp_involutive (Un n)).
+  unfold lub.
+  destruct ub_to_lub as (ub, Hub).
+  apply Rle_antisym.
+  apply Hub.
+  apply Hlb.
+  apply Hlb.
+  apply Hub.
 Qed.
 
 (** Unicity of limit for convergent sequences *)
@@ -908,73 +844,6 @@ Proof.
   inversion H0.
   right; reflexivity.
   left; assumption.
-Qed.
-
-Lemma tech10 :
-  forall (Un:nat -> R) (x:R), Un_growing Un -> is_lub (EUn Un) x -> Un_cv Un x.
-Proof.
-  intros; cut (bound (EUn Un)).
-  intro; assert (H2 := Un_cv_crit _ H H1).
-  elim H2; intros.
-  case (total_order_T x x0); intro.
-  elim s; intro.
-  cut (forall n:nat, Un n <= x).
-  intro; unfold Un_cv in H3; cut (0 < x0 - x).
-  intro; elim (H3 (x0 - x) H5); intros.
-  cut (x1 >= x1)%nat.
-  intro; assert (H8 := H6 x1 H7).
-  unfold R_dist in H8; rewrite Rabs_left1 in H8.
-  rewrite Ropp_minus_distr in H8; unfold Rminus in H8.
-  assert (H9 := Rplus_lt_reg_r x0 _ _ H8).
-  assert (H10 := Ropp_lt_cancel _ _ H9).
-  assert (H11 := H4 x1).
-  elim (Rlt_irrefl _ (Rlt_le_trans _ _ _ H10 H11)).
-  apply Rle_minus; apply Rle_trans with x.
-  apply H4.
-  left; assumption.
-  unfold ge in |- *; apply le_n.
-  apply Rgt_minus; assumption.
-  intro; unfold is_lub in H0; unfold is_upper_bound in H0; elim H0; intros.
-  apply H4; unfold EUn in |- *; exists n; reflexivity.
-  rewrite b; assumption.
-  cut (forall n:nat, Un n <= x0).
-  intro; unfold is_lub in H0; unfold is_upper_bound in H0; elim H0; intros.
-  cut (forall y:R, EUn Un y -> y <= x0).
-  intro; assert (H8 := H6 _ H7).
-  elim (Rlt_irrefl _ (Rle_lt_trans _ _ _ H8 r)).
-  unfold EUn in |- *; intros; elim H7; intros.
-  rewrite H8; apply H4.
-  intro; case (Rle_dec (Un n) x0); intro.
-  assumption.
-  cut (forall n0:nat, (n <= n0)%nat -> x0 < Un n0).
-  intro; unfold Un_cv in H3; cut (0 < Un n - x0).
-  intro; elim (H3 (Un n - x0) H5); intros.
-  cut (max n x1 >= x1)%nat.
-  intro; assert (H8 := H6 (max n x1) H7).
-  unfold R_dist in H8.
-  rewrite Rabs_right in H8.
-  unfold Rminus in H8; do 2 rewrite <- (Rplus_comm (- x0)) in H8.
-  assert (H9 := Rplus_lt_reg_r _ _ _ H8).
-  cut (Un n <= Un (max n x1)).
-  intro; elim (Rlt_irrefl _ (Rle_lt_trans _ _ _ H10 H9)).
-  apply tech9; [ assumption | apply le_max_l ].
-  apply Rge_trans with (Un n - x0).
-  unfold Rminus in |- *; apply Rle_ge; do 2 rewrite <- (Rplus_comm (- x0));
-    apply Rplus_le_compat_l.
-  apply tech9; [ assumption | apply le_max_l ].
-  left; assumption.
-  unfold ge in |- *; apply le_max_r.
-  apply Rplus_lt_reg_r with x0.
-  rewrite Rplus_0_r; unfold Rminus in |- *; rewrite (Rplus_comm x0);
-    rewrite Rplus_assoc; rewrite Rplus_opp_l; rewrite Rplus_0_r;
-      apply H4; apply le_n.
-  intros; apply Rlt_le_trans with (Un n).
-  case (Rlt_le_dec x0 (Un n)); intro.
-  assumption.
-  elim n0; assumption.
-  apply tech9; assumption.
-  unfold bound in |- *; exists x; unfold is_lub in H0; elim H0; intros;
-    assumption.
 Qed.
 
 Lemma tech13 :

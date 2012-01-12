@@ -1,13 +1,10 @@
-(* -*- compile-command: "make -C ../.. bin/coqtop.byte" -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-(* $Id: subtac_coercion.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
-
 open Util
 open Names
 open Term
@@ -144,7 +141,7 @@ module Coercion = struct
 		let restargs = lift_args 1
 		  (List.rev (Array.to_list (Array.sub l (succ i) (len - (succ i)))))
 		in
-		let args = List.rev (restargs @ mkRel 1 :: lift_args 1 tele) in
+		let args = List.rev (restargs @ mkRel 1 :: List.map (lift 1) tele) in
 		let pred = mkLambda (n, eqT, applistc (lift 1 c) args) in
 		let eq = mkApp (delayed_force eq_ind, [| eqT; hdx; hdy |]) in
 		let evar = make_existential loc env isevars eq in
@@ -205,7 +202,7 @@ module Coercion = struct
 				 | Lambda (n, t, t') -> c, t'
 				     (*| Prod (n, t, t') -> t'*)
 				 | Evar (k, args) ->
-				     let (evs, t) = Evarutil.define_evar_as_lambda !isevars (k,args) in
+				     let (evs, t) = Evarutil.define_evar_as_lambda env !isevars (k,args) in
 				       isevars := evs;
 				       let (n, dom, rng) = destLambda t in
 				       let (domk, args) = destEvar dom in
@@ -330,8 +327,8 @@ module Coercion = struct
   let apply_pattern_coercion loc pat p =
     List.fold_left
       (fun pat (co,n) ->
-	 let f i = if i<n then Rawterm.PatVar (loc, Anonymous) else pat in
-	   Rawterm.PatCstr (loc, co, list_tabulate f (n+1), Anonymous))
+	 let f i = if i<n then Glob_term.PatVar (loc, Anonymous) else pat in
+	   Glob_term.PatCstr (loc, co, list_tabulate f (n+1), Anonymous))
       pat p
 
   (* raise Not_found if no coercion found *)
@@ -411,10 +408,10 @@ module Coercion = struct
     else
     let v', t' =
       try
-	let t2,t1,p = lookup_path_between env ( evd) (t,c1) in
+	let t2,t1,p = lookup_path_between env evd (t,c1) in
 	  match v with
 	      Some v ->
-		let j = apply_coercion env ( evd) p
+		let j = apply_coercion env evd p
 		  {uj_val = v; uj_type = t} t2 in
 		  Some j.uj_val, j.uj_type
 	    | None -> None, t
@@ -430,8 +427,8 @@ module Coercion = struct
     try inh_coerce_to_fail env evd rigidonly v t c1
     with NoCoercion ->
     match
-      kind_of_term (whd_betadeltaiota env ( evd) t),
-      kind_of_term (whd_betadeltaiota env ( evd) c1)
+      kind_of_term (whd_betadeltaiota env evd t),
+      kind_of_term (whd_betadeltaiota env evd c1)
     with
     | Prod (name,t1,t2), Prod (_,u1,u2) ->
         (* Conversion did not work, we may succeed with a coercion. *)

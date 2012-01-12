@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: tacinterp.ml 14677 2011-11-17 22:19:38Z herbelin $ *)
 
 open Constrintern
 open Closure
@@ -17,7 +15,7 @@ open Libobject
 open Pattern
 open Matching
 open Pp
-open Rawterm
+open Glob_term
 open Sign
 open Tacred
 open Util
@@ -48,6 +46,8 @@ open Pretyping
 open Pretyping.Default
 open Extrawit
 open Pcoq
+open Compat
+open Evd
 
 let safe_msgnl s =
     try msgnl s with e ->
@@ -60,20 +60,18 @@ let error_syntactic_metavariables_not_allowed loc =
     (loc,"out_ident",
      str "Syntactic metavariables allowed only in quotations.")
 
+let error_tactic_expected loc =
+  user_err_loc (loc,"",str "Tactic expected.")
+
 let error_global_not_found_loc (loc,qid) = error_global_not_found_loc loc qid
 
 let skip_metaid = function
   | AI x -> x
   | MetaId (loc,_) -> error_syntactic_metavariables_not_allowed loc
 
-type ltac_type =
-  | LtacFun of ltac_type
-  | LtacBasic
-  | LtacTactic
-
 (* Values for interpretation *)
 type value =
-  | VRTactic of (goal list sigma * validation) (* For Match results *)
+  | VRTactic of (goal list sigma) (* For Match results *)
                                                (* Not a true value *)
   | VFun of ltac_trace * (identifier*value) list *
       identifier option list * glob_tactic_expr
@@ -93,15 +91,15 @@ let dloc = dummy_loc
 let catch_error call_trace tac g =
   if call_trace = [] then tac g else try tac g with
   | LtacLocated _ as e -> raise e
-  | Stdpp.Exc_located (_,LtacLocated _) as e -> raise e
+  | Loc.Exc_located (_,LtacLocated _) as e -> raise e
   | e ->
     let (nrep,loc',c),tail = list_sep_last call_trace in
-    let loc,e' = match e with Stdpp.Exc_located(loc,e) -> loc,e | _ ->dloc,e in
+    let loc,e' = match e with Loc.Exc_located(loc,e) -> loc,e | _ ->dloc,e in
     if tail = [] then
       let loc = if loc = dloc then loc' else loc in
-      raise (Stdpp.Exc_located(loc,e'))
+      raise (Loc.Exc_located(loc,e'))
     else
-      raise (Stdpp.Exc_located(loc',LtacLocated((nrep,c,tail,loc),e')))
+      raise (Loc.Exc_located(loc',LtacLocated((nrep,c,tail,loc),e')))
 
 (* Signature for interpretation: val_interp and interpretation functions *)
 type interp_sign =
@@ -137,9 +135,9 @@ let rec pr_value env = function
   | VList (a::_) ->
       str "a list (first element is " ++ pr_value env a ++ str")"
 
-(* Transforms an id into a constr if possible, or fails *)
+(* Transforms an id into a constr if possible, or fails with Not_found *)
 let constr_of_id env id =
-  construct_reference (Environ.named_context env) id
+  Term.mkVar (let _ = Environ.lookup_named id env in id)
 
 (* To embed tactics *)
 let ((tactic_in : (interp_sign -> glob_tactic_expr) -> Dyn.t),
@@ -158,25 +156,6 @@ let valueOut = function
       anomalylabstrm "valueOut" (str "Dynamic tag should be value")
   | ast ->
     anomalylabstrm "valueOut" (str "Not a Dynamic ast: ")
-
-(* To embed constr *)
-let constrIn t = CDynamic (dummy_loc,constr_in t)
-let constrOut = function
-  | CDynamic (_,d) ->
-    if (Dyn.tag d) = "constr" then
-      constr_out d
-    else
-      anomalylabstrm "constrOut" (str "Dynamic tag should be constr")
-  | ast ->
-    anomalylabstrm "constrOut" (str "Not a Dynamic ast")
-
-(* Globalizes the identifier *)
-let find_reference env qid =
-  (* We first look for a variable of the current proof *)
-  match repr_qualid qid with
-    | (d,id) when repr_dirpath d = [] & List.mem id (ids_of_context env)
-	-> VarRef id
-    | _ -> Nametab.locate qid
 
 (* Table of "pervasives" macros tactics (e.g. auto, simpl, etc.) *)
 let atomic_mactab = ref Idmap.empty
@@ -213,7 +192,7 @@ let _ =
       (fun (s,t) -> add_primitive_tactic s t)
       [ "idtac",TacId [];
         "fail", TacFail(ArgArg 0,[]);
-        "fresh", TacArg(TacFreshId [])
+        "fresh", TacArg(dloc,TacFreshId [])
       ]
 
 let lookup_atomic id = Idmap.find id !atomic_mactab
@@ -347,15 +326,6 @@ let intern_name l ist = function
   | Anonymous -> Anonymous
   | Name id -> Name (intern_ident l ist id)
 
-let vars_of_ist (lfun,_,_,env) =
-  List.fold_left (fun s id -> Idset.add id s)
-    (vars_of_env env) lfun
-
-let get_current_context () =
-    try Pfedit.get_current_goal_context ()
-    with e when Logic.catchable_exception e ->
-      (Evd.empty, Global.env())
-
 let strict_check = ref false
 
 let adjust_loc loc = if !strict_check then dloc else loc
@@ -402,12 +372,12 @@ let intern_ltac_variable ist = function
 
 let intern_constr_reference strict ist = function
   | Ident (_,id) as r when not strict & find_hyp id ist ->
-      RVar (dloc,id), Some (CRef r)
+      GVar (dloc,id), Some (CRef r)
   | Ident (_,id) as r when find_ctxvar id ist ->
-      RVar (dloc,id), if strict then None else Some (CRef r)
+      GVar (dloc,id), if strict then None else Some (CRef r)
   | r ->
       let loc,_ as lqid = qualid_of_reference r in
-      RRef (loc,locate_global_with_alias lqid), if strict then None else Some (CRef r)
+      GRef (loc,locate_global_with_alias lqid), if strict then None else Some (CRef r)
 
 let intern_move_location ist = function
   | MoveAfter id -> MoveAfter (intern_hyp_or_metaid ist id)
@@ -525,12 +495,6 @@ let intern_bindings ist = function
 let intern_constr_with_bindings ist (c,bl) =
   (intern_constr ist c, intern_bindings ist bl)
 
-let intern_clause_pattern ist (l,occl) =
-  let rec check = function
-    | (hyp,l) :: rest -> (intern_hyp ist (skip_metaid hyp),l)::(check rest)
-    | [] -> []
-  in (l,check occl)
-
   (* TODO: catch ltac vars *)
 let intern_induction_arg ist = function
   | ElimOnConstr c -> ElimOnConstr (intern_constr_with_bindings ist c)
@@ -539,7 +503,7 @@ let intern_induction_arg ist = function
       if !strict_check then
 	(* If in a defined tactic, no intros-until *)
 	match intern_constr ist (CRef (Ident (dloc,id))) with
-	| RVar (loc,id),_ -> ElimOnIdent (loc,id)
+	| GVar (loc,id),_ -> ElimOnIdent (loc,id)
 	| c -> ElimOnConstr (c,NoBindings)
       else
 	ElimOnIdent (loc,id)
@@ -592,7 +556,7 @@ let intern_typed_pattern ist p =
   let dummy_pat = PRel 0 in
   (* we cannot ensure in non strict mode that the pattern is closed *)
   (* keeping a constr_expr copy is too complicated and we want anyway to *)
-  (* type it, so we remember the pattern as a rawconstr only *)
+  (* type it, so we remember the pattern as a glob_constr only *)
   (intern_constr_gen true false ist p,dummy_pat)
 
 let intern_typed_pattern_with_occurrences ist (l,p) =
@@ -735,7 +699,7 @@ let rec intern_atomic lf ist x =
       TacMutualCofix (b,intern_ident lf ist id, List.map f l)
   | TacCut c -> TacCut (intern_type ist c)
   | TacAssert (otac,ipat,c) ->
-      TacAssert (Option.map (intern_tactic ist) otac,
+      TacAssert (Option.map (intern_pure_tactic ist) otac,
                  Option.map (intern_intro_pattern lf ist) ipat,
                  intern_constr_gen false (otac<>None) ist c)
   | TacGeneralize cl ->
@@ -797,8 +761,8 @@ let rec intern_atomic lf ist x =
   | TacLeft (ev,bl) -> TacLeft (ev,intern_bindings ist bl)
   | TacRight (ev,bl) -> TacRight (ev,intern_bindings ist bl)
   | TacSplit (ev,b,bll) -> TacSplit (ev,b,List.map (intern_bindings ist) bll)
-  | TacAnyConstructor (ev,t) -> TacAnyConstructor (ev,Option.map (intern_tactic ist) t)
-  | TacConstructor (ev,n,bl) -> TacConstructor (ev,n,intern_bindings ist bl)
+  | TacAnyConstructor (ev,t) -> TacAnyConstructor (ev,Option.map (intern_pure_tactic ist) t)
+  | TacConstructor (ev,n,bl) -> TacConstructor (ev,intern_or_var ist n,intern_bindings ist bl)
 
   (* Conversion *)
   | TacReduce (r,cl) ->
@@ -826,7 +790,7 @@ let rec intern_atomic lf ist x =
 	(ev,
 	List.map (fun (b,m,c) -> (b,m,intern_constr_with_bindings ist c)) l,
 	clause_app (intern_hyp_location ist) cl,
-	Option.map (intern_tactic ist) by)
+	Option.map (intern_pure_tactic ist) by)
   | TacInversion (inv,hyp) ->
       TacInversion (intern_inversion_strength lf ist inv,
         intern_quantified_hypothesis ist hyp)
@@ -839,9 +803,9 @@ let rec intern_atomic lf ist x =
       let l = List.map (fun (id,a) -> (id,intern_genarg ist a)) l in
       TacAlias (loc,s,l,(dir,body))
 
-and intern_tactic ist tac = (snd (intern_tactic_seq ist tac) : glob_tactic_expr)
+and intern_tactic onlytac ist tac = snd (intern_tactic_seq onlytac ist tac)
 
-and intern_tactic_seq ist = function
+and intern_tactic_seq onlytac ist = function
   | TacAtom (loc,t) ->
       let lf = ref ist.ltacvars in
       let t = intern_atomic lf ist t in
@@ -851,50 +815,68 @@ and intern_tactic_seq ist = function
       let (l1,l2) = ist.ltacvars in
       let ist' = { ist with ltacvars = (extract_let_names l @ l1, l2) } in
       let l = List.map (fun (n,b) ->
-	  (n,intern_tacarg !strict_check (if isrec then ist' else ist) b)) l in
-      ist.ltacvars, TacLetIn (isrec,l,intern_tactic ist' u)
+	  (n,intern_tacarg !strict_check false (if isrec then ist' else ist) b)) l in
+      ist.ltacvars, TacLetIn (isrec,l,intern_tactic onlytac ist' u)
+
   | TacMatchGoal (lz,lr,lmr) ->
-      ist.ltacvars, TacMatchGoal(lz,lr, intern_match_rule ist lmr)
+      ist.ltacvars, TacMatchGoal(lz,lr, intern_match_rule onlytac ist lmr)
   | TacMatch (lz,c,lmr) ->
-      ist.ltacvars, TacMatch (lz,intern_tactic ist c,intern_match_rule ist lmr)
+      ist.ltacvars,
+      TacMatch (lz,intern_tactic_or_tacarg ist c,intern_match_rule onlytac ist lmr)
   | TacId l -> ist.ltacvars, TacId (intern_message ist l)
   | TacFail (n,l) ->
       ist.ltacvars, TacFail (intern_or_var ist n,intern_message ist l)
-  | TacProgress tac -> ist.ltacvars, TacProgress (intern_tactic ist tac)
-  | TacAbstract (tac,s) -> ist.ltacvars, TacAbstract (intern_tactic ist tac,s)
+  | TacProgress tac -> ist.ltacvars, TacProgress (intern_pure_tactic ist tac)
+  | TacAbstract (tac,s) ->
+      ist.ltacvars, TacAbstract (intern_pure_tactic ist tac,s)
   | TacThen (t1,[||],t2,[||]) ->
-      let lfun', t1 = intern_tactic_seq ist t1 in
-      let lfun'', t2 = intern_tactic_seq { ist with ltacvars = lfun' } t2 in
+      let lfun', t1 = intern_tactic_seq onlytac ist t1 in
+      let lfun'', t2 = intern_tactic_seq onlytac { ist with ltacvars = lfun' } t2 in
       lfun'', TacThen (t1,[||],t2,[||])
   | TacThen (t1,tf,t2,tl) ->
-      let lfun', t1 = intern_tactic_seq ist t1 in
+      let lfun', t1 = intern_tactic_seq onlytac ist t1 in
       let ist' = { ist with ltacvars = lfun' } in
       (* Que faire en cas de (tac complexe avec Match et Thens; tac2) ?? *)
-      lfun', TacThen (t1,Array.map (intern_tactic ist') tf,intern_tactic ist' t2,
-		       Array.map (intern_tactic ist') tl)
+      lfun', TacThen (t1,Array.map (intern_pure_tactic ist') tf,intern_pure_tactic ist' t2,
+		       Array.map (intern_pure_tactic ist') tl)
   | TacThens (t,tl) ->
-      let lfun', t = intern_tactic_seq ist t in
+      let lfun', t = intern_tactic_seq true ist t in
       let ist' = { ist with ltacvars = lfun' } in
       (* Que faire en cas de (tac complexe avec Match et Thens; tac2) ?? *)
-      lfun', TacThens (t, List.map (intern_tactic ist') tl)
+      lfun', TacThens (t, List.map (intern_pure_tactic ist') tl)
   | TacDo (n,tac) ->
-      ist.ltacvars, TacDo (intern_or_var ist n,intern_tactic ist tac)
-  | TacTry tac -> ist.ltacvars, TacTry (intern_tactic ist tac)
-  | TacInfo tac -> ist.ltacvars, TacInfo (intern_tactic ist tac)
-  | TacRepeat tac -> ist.ltacvars, TacRepeat (intern_tactic ist tac)
+      ist.ltacvars, TacDo (intern_or_var ist n,intern_pure_tactic ist tac)
+  | TacTry tac -> ist.ltacvars, TacTry (intern_pure_tactic ist tac)
+  | TacInfo tac -> ist.ltacvars, TacInfo (intern_pure_tactic ist tac)
+  | TacRepeat tac -> ist.ltacvars, TacRepeat (intern_pure_tactic ist tac)
+  | TacTimeout (n,tac) ->
+      ist.ltacvars, TacTimeout (intern_or_var ist n,intern_tactic onlytac ist tac)
   | TacOrelse (tac1,tac2) ->
-      ist.ltacvars, TacOrelse (intern_tactic ist tac1,intern_tactic ist tac2)
-  | TacFirst l -> ist.ltacvars, TacFirst (List.map (intern_tactic ist) l)
-  | TacSolve l -> ist.ltacvars, TacSolve (List.map (intern_tactic ist) l)
-  | TacComplete tac -> ist.ltacvars, TacComplete (intern_tactic ist tac)
-  | TacArg a -> ist.ltacvars, TacArg (intern_tacarg true ist a)
+      ist.ltacvars, TacOrelse (intern_pure_tactic ist tac1,intern_pure_tactic ist tac2)
+  | TacFirst l -> ist.ltacvars, TacFirst (List.map (intern_pure_tactic ist) l)
+  | TacSolve l -> ist.ltacvars, TacSolve (List.map (intern_pure_tactic ist) l)
+  | TacComplete tac -> ist.ltacvars, TacComplete (intern_pure_tactic ist tac)
+  | TacArg (loc,a) -> ist.ltacvars, intern_tactic_as_arg loc onlytac ist a
+
+and intern_tactic_as_arg loc onlytac ist a =
+  match intern_tacarg !strict_check onlytac ist a with
+  | TacCall _ | TacExternal _ | Reference _ | TacDynamic _ as a -> TacArg (loc,a)
+  | Tacexp a -> a
+  | TacVoid | IntroPattern _ | Integer _
+  | ConstrMayEval _ | TacFreshId _ as a ->
+      if onlytac then error_tactic_expected loc else TacArg (loc,a)
+  | MetaIdArg _ -> assert false
+
+and intern_tactic_or_tacarg ist = intern_tactic false ist
+
+and intern_pure_tactic ist = intern_tactic true ist
 
 and intern_tactic_fun ist (var,body) =
   let (l1,l2) = ist.ltacvars in
   let lfun' = List.rev_append (Option.List.flatten var) l1 in
-  (var,intern_tactic { ist with ltacvars = (lfun',l2) } body)
+  (var,intern_tactic_or_tacarg { ist with ltacvars = (lfun',l2) } body)
 
-and intern_tacarg strict ist = function
+and intern_tacarg strict onlytac ist = function
   | TacVoid -> TacVoid
   | Reference r -> intern_non_tactic_reference strict ist r
   | IntroPattern ipat ->
@@ -907,34 +889,35 @@ and intern_tacarg strict ist = function
       let id = id_of_string s in
       if find_ltacvar id ist then
 	if istac then Reference (ArgVar (adjust_loc loc,id))
-	else ConstrMayEval (ConstrTerm (RVar (adjust_loc loc,id), None))
+	else ConstrMayEval (ConstrTerm (GVar (adjust_loc loc,id), None))
       else error_syntactic_metavariables_not_allowed loc
   | TacCall (loc,f,[]) -> intern_isolated_tactic_reference strict ist f
   | TacCall (loc,f,l) ->
       TacCall (loc,
         intern_applied_tactic_reference ist f,
-        List.map (intern_tacarg !strict_check ist) l)
+        List.map (intern_tacarg !strict_check false ist) l)
   | TacExternal (loc,com,req,la) ->
-      TacExternal (loc,com,req,List.map (intern_tacarg !strict_check ist) la)
+      TacExternal (loc,com,req,List.map (intern_tacarg !strict_check false ist) la)
   | TacFreshId x -> TacFreshId (List.map (intern_or_var ist) x)
-  | Tacexp t -> Tacexp (intern_tactic ist t)
+  | Tacexp t -> Tacexp (intern_tactic onlytac ist t)
   | TacDynamic(loc,t) as x ->
       (match Dyn.tag t with
-	| "tactic" | "value" | "constr" -> x
+	| "tactic" | "value" -> x
+        | "constr" -> if onlytac then error_tactic_expected loc else x
 	| s -> anomaly_loc (loc, "",
                  str "Unknown dynamic: <" ++ str s ++ str ">"))
 
 (* Reads the rules of a Match Context or a Match *)
-and intern_match_rule ist = function
+and intern_match_rule onlytac ist = function
   | (All tc)::tl ->
-      All (intern_tactic ist tc) :: (intern_match_rule ist tl)
+      All (intern_tactic onlytac ist tc) :: (intern_match_rule onlytac ist tl)
   | (Pat (rl,mp,tc))::tl ->
       let {ltacvars=(lfun,l2); gsigma=sigma; genv=env} = ist in
       let lfun',metas1,hyps = intern_match_goal_hyps ist lfun rl in
       let ido,metas2,pat = intern_pattern ist lfun mp in
       let metas = list_uniquize (metas1@metas2) in
       let ist' = { ist with ltacvars = (metas@(Option.List.cons ido lfun'),l2) } in
-      Pat (hyps,pat,intern_tactic ist' tc) :: (intern_match_rule ist tl)
+      Pat (hyps,pat,intern_tactic onlytac ist' tc) :: (intern_match_rule onlytac ist tl)
   | [] -> []
 
 and intern_genarg ist x =
@@ -990,29 +973,15 @@ and intern_genarg ist x =
       match tactic_genarg_level s with
       | Some n ->
           (* Special treatment of tactic arguments *)
-          in_gen (globwit_tactic n) (intern_tactic ist
+          in_gen (globwit_tactic n) (intern_tactic_or_tacarg ist
 	    (out_gen (rawwit_tactic n) x))
       | None ->
           lookup_genarg_glob s ist x
-
-let intern_pure_tactic ist a =
-  match intern_tactic ist a with
-  | TacArg (TacCall _ | TacExternal _ | Reference _ | TacDynamic _ | Tacexp _) as a -> a
-  | TacArg _ | TacFun _ -> error "Tactic expected."
-  | a -> a
 
 (************* End globalization ************)
 
 (***************************************************************************)
 (* Evaluation/interpretation *)
-
-let constr_to_id loc = function
-  | VConstr ([],c) when isVar c -> destVar c
-  | _ -> invalid_arg_loc (loc, "Not an identifier")
-
-let constr_to_qid loc c =
-  try shortest_qualid_of_global Idset.empty (global_of_constr c)
-  with _ -> invalid_arg_loc (loc, "Not a global reference")
 
 let is_variable env id =
   List.mem id (ids_of_named_context (Environ.named_context env))
@@ -1053,7 +1022,7 @@ let try_interp_ltac_var coerce ist env (loc,id) =
 
 let interp_ltac_var coerce ist env locid =
   try try_interp_ltac_var coerce ist env locid
-  with Not_found -> anomaly "Detected as ltac var at interning time"
+  with Not_found -> anomaly ("Detected '" ^ (string_of_id (snd locid)) ^ "' as ltac var at interning time")
 
 (* Interprets an identifier which must be fresh *)
 let coerce_to_ident fresh env = function
@@ -1160,16 +1129,6 @@ let interp_hyp_list_as_list ist gl (loc,id as x) =
 
 let interp_hyp_list ist gl l =
   List.flatten (List.map (interp_hyp_list_as_list ist gl) l)
-
-let interp_clause_pattern ist gl (l,occl) =
-  let rec check acc = function
-    | (hyp,l) :: rest ->
-	let hyp = interp_hyp ist gl hyp in
-	if List.mem hyp acc then
-	  error ("Hypothesis "^(string_of_id hyp)^" occurs twice.");
-	(hyp,l)::(check (hyp::acc) rest)
-    | [] -> []
-  in (l,check [] occl)
 
 let interp_move_location ist gl = function
   | MoveAfter id -> MoveAfter (interp_hyp ist gl id)
@@ -1284,58 +1243,6 @@ let interp_fresh_id ist env l =
 
 let pf_interp_fresh_id ist gl = interp_fresh_id ist (pf_env gl)
 
-let implicit_tactic = ref None
-
-let declare_implicit_tactic tac = implicit_tactic := Some tac
-
-open Evd
-
-let solvable_by_tactic env evi (ev,args) src =
-  match (!implicit_tactic, src) with
-  | Some tac, (ImplicitArg _ | QuestionMark _)
-      when
-	Environ.named_context_of_val evi.evar_hyps =
-	Environ.named_context env ->
-      let id = id_of_string "H" in
-      start_proof id (Local,Proof Lemma) evi.evar_hyps evi.evar_concl
-	(fun _ _ -> ());
-      begin
-	try
-	  by (tclCOMPLETE tac);
-	  let _,(const,_,_,_) = cook_proof ignore in
-	  delete_current_proof (); const.const_entry_body
-	with e when Logic.catchable_exception e ->
-	  delete_current_proof();
-	  raise Exit
-      end
-  | _ -> raise Exit
-
-let solve_remaining_evars fail_evar use_classes env initial_sigma evd c =
-  let evdref =
-    if use_classes then ref (Typeclasses.resolve_typeclasses ~fail:true env evd)
-    else ref evd in
-  let rec proc_rec c =
-    let c = Reductionops.whd_evar !evdref c in
-    match kind_of_term c with
-      | Evar (ev,args as k) when not (Evd.mem initial_sigma ev) ->
-            let (loc,src) = evar_source ev !evdref in
-	    let sigma =  !evdref in
-	    let evi = Evd.find sigma ev in
-	    (try
-	      let c = solvable_by_tactic env evi k src in
-	      evdref := Evd.define ev c !evdref;
-	      c
-	    with Exit ->
-              if fail_evar then
-	        Pretype_errors.error_unsolvable_implicit loc env sigma evi src None
-              else
-                c)
-      | _ -> map_constr proc_rec c
-  in
-  let c = proc_rec c in
-  (* Side-effect *)
-  !evdref,c
-
 let interp_gen kind ist allow_patvar expand_evar fail_evar use_classes env sigma (c,ce) =
   let (ltacvars,unbndltacvars as vars) = extract_ltac_constr_values ist env in
   let c = match ce with
@@ -1348,13 +1255,14 @@ let interp_gen kind ist allow_patvar expand_evar fail_evar use_classes env sigma
       intern_gen (kind = IsType) ~allow_patvar ~ltacvars:ltacdata sigma env c
   in
   let trace = push_trace (dloc,LtacConstrInterp (c,vars)) ist.trace in
-  let evd,c =
+  let evdc =
     catch_error trace (understand_ltac expand_evar sigma env vars kind) c in
-  let evd,c =
+  let (evd,c) =
     if expand_evar then
-      solve_remaining_evars fail_evar use_classes env sigma evd c
+      solve_remaining_evars fail_evar use_classes
+        solve_by_implicit_tactic env sigma evdc
     else
-      evd,c in
+      evdc in
   db_constr ist.debug env c;
   (evd,c)
 
@@ -1372,6 +1280,9 @@ let interp_open_constr_gen kind ist =
 
 let interp_open_constr ccl =
   interp_open_constr_gen (OfType ccl)
+
+let interp_pure_open_constr ist =
+  interp_gen (OfType None) ist false false false false
 
 let interp_typed_pattern ist env sigma (c,_) =
   let sigma, c =
@@ -1393,7 +1304,7 @@ let constr_list_of_VList env = function
 let interp_constr_in_compound_list inj_fun dest_fun interp_fun ist env sigma l =
   let try_expand_ltac_var sigma x =
     try match dest_fun x with
-    | RVar (_,id), _ ->	
+    | GVar (_,id), _ ->	
         sigma,
         List.map inj_fun (constr_list_of_VList env (List.assoc id ist.lfun))
     | _ ->
@@ -1408,11 +1319,13 @@ let interp_constr_in_compound_list inj_fun dest_fun interp_fun ist env sigma l =
 let interp_constr_list ist env sigma c =
   snd (interp_constr_in_compound_list (fun x -> x) (fun x -> x) (fun ist env sigma c -> (Evd.empty, interp_constr ist env sigma c)) ist env sigma c)
 
-let inj_open c = (Evd.empty,c)
-
 let interp_open_constr_list =
   interp_constr_in_compound_list (fun x -> x) (fun x -> x)
     (interp_open_constr None)
+
+let interp_auto_lemmas ist env sigma lems =
+  let local_sigma, lems = interp_open_constr_list ist env sigma lems in
+  List.map (fun lem -> (local_sigma,lem)) lems
 
 (* Interprets a type expression *)
 let pf_interp_type ist gl =
@@ -1476,7 +1389,7 @@ let interp_may_eval f ist gl = function
 	f ist gl c
      with e ->
        debugging_exception_step ist false e (fun () ->
-         str"interpretation of term " ++ pr_rawconstr_env (pf_env gl) (fst c));
+         str"interpretation of term " ++ pr_glob_constr_env (pf_env gl) (fst c));
        raise e
 
 (* Interprets a constr expression possibly to first evaluate *)
@@ -1612,41 +1525,48 @@ let interp_open_constr_with_bindings ist env sigma (c,bl) =
 
 let loc_of_bindings = function
 | NoBindings -> dummy_loc
-| ImplicitBindings l -> loc_of_rawconstr (fst (list_last l))
+| ImplicitBindings l -> loc_of_glob_constr (fst (list_last l))
 | ExplicitBindings l -> pi1 (list_last l)
 
 let interp_open_constr_with_bindings_loc ist env sigma ((c,_),bl as cb) =
-  let loc1 = loc_of_rawconstr c in
+  let loc1 = loc_of_glob_constr c in
   let loc2 = loc_of_bindings bl in
   let loc = if loc2 = dummy_loc then loc1 else join_loc loc1 loc2 in
   let sigma, cb = interp_open_constr_with_bindings ist env sigma cb in
   sigma, (loc,cb)
 
-let interp_induction_arg ist gl sigma arg =
-  let env = pf_env gl in
+let interp_induction_arg ist gl arg =
+  let env = pf_env gl and sigma = project gl in
   match arg with
   | ElimOnConstr c ->
-      let sigma', (c,b) = interp_constr_with_bindings ist env sigma c in
-      let sigma, c = solve_remaining_evars false true env sigma sigma' c in
-      sigma, ElimOnConstr (c,b)
-  | ElimOnAnonHyp n as x -> sigma, x
+      ElimOnConstr (interp_constr_with_bindings ist env sigma c)
+  | ElimOnAnonHyp n as x -> x
   | ElimOnIdent (loc,id) ->
       try
-	sigma,
         match List.assoc id ist.lfun with
-	| VInteger n -> ElimOnAnonHyp n
-	| VIntroPattern (IntroIdentifier id) -> ElimOnIdent (loc,id)
-	| VConstr ([],c) -> ElimOnConstr (c,NoBindings)
+	| VInteger n ->
+	    ElimOnAnonHyp n
+	| VIntroPattern (IntroIdentifier id') ->
+	    if Tactics.is_quantified_hypothesis id' gl
+	    then ElimOnIdent (loc,id')
+	    else
+	      (try ElimOnConstr (sigma,(constr_of_id env id',NoBindings))
+	       with Not_found ->
+		user_err_loc (loc,"",
+		pr_id id ++ strbrk " binds to " ++ pr_id id' ++ strbrk " which is neither a declared or a quantified hypothesis."))
+	| VConstr ([],c) ->
+	    ElimOnConstr (sigma,(c,NoBindings))
 	| _ -> user_err_loc (loc,"",
 	      strbrk "Cannot coerce " ++ pr_id id ++
 	      strbrk " neither to a quantified hypothesis nor to a term.")
       with Not_found ->
-	(* Interactive mode *)
+	(* We were in non strict (interactive) mode *)
 	if Tactics.is_quantified_hypothesis id gl then
-          sigma, ElimOnIdent (loc,id)
+          ElimOnIdent (loc,id)
 	else
-          let c = interp_constr ist env sigma (RVar (loc,id),Some (CRef (Ident (loc,id)))) in
-          sigma, ElimOnConstr (c,NoBindings)
+          let c = (GVar (loc,id),Some (CRef (Ident (loc,id)))) in
+          let c = interp_constr ist env sigma c in
+          ElimOnConstr (sigma,(c,NoBindings))
 
 (* Associates variables with values and gives the remaining variables and
    values *)
@@ -1811,11 +1731,11 @@ let mk_int_or_var_value ist c = VInteger (interp_int_or_var ist c)
 
 let pack_sigma (sigma,c) = {it=c;sigma=sigma}
 
-let extend_gl_hyps gl sign =
- { gl with
-   it = { gl.it with
-     evar_hyps = 
-     List.fold_right Environ.push_named_context_val sign gl.it.evar_hyps } }
+let extend_gl_hyps { it=gl ; sigma=sigma } sign =
+  let hyps = Goal.V82.hyps sigma gl in
+  let new_hyps = List.fold_right Environ.push_named_context_val sign hyps in
+  (* spiwack: (2010/01/13) if a bug was reintroduced in [change] in is probably here *)
+  Goal.V82.new_goal_with sigma gl new_hyps
 
 (* Interprets an l-tac expression into a value *)
 let rec val_interp ist gl (tac:glob_tactic_expr) =
@@ -1827,7 +1747,7 @@ let rec val_interp ist gl (tac:glob_tactic_expr) =
   | TacLetIn (false,l,u) -> interp_letin ist gl l u
   | TacMatchGoal (lz,lr,lmr) -> interp_match_goal ist gl lz lr lmr
   | TacMatch (lz,c,lmr) -> interp_match ist gl lz c lmr
-  | TacArg a -> interp_tacarg ist gl a
+  | TacArg (loc,a) -> interp_tacarg ist gl a
   (* Delayed evaluation *)
   | t -> VFun (ist.trace,ist.lfun,[],t)
 
@@ -1860,6 +1780,7 @@ and eval_tactic ist = function
 	(Array.map (interp_tactic ist) tf) (interp_tactic ist t) (Array.map (interp_tactic ist) tl)
   | TacThens (t1,tl) -> tclTHENS (interp_tactic ist t1) (List.map (interp_tactic ist) tl)
   | TacDo (n,tac) -> tclDO (interp_int_or_var ist n) (interp_tactic ist tac)
+  | TacTimeout (n,tac) -> tclTIMEOUT (interp_int_or_var ist n) (interp_tactic ist tac)
   | TacTry tac -> tclTRY (interp_tactic ist tac)
   | TacInfo tac ->
       let t = (interp_tactic ist tac) in
@@ -1867,7 +1788,7 @@ and eval_tactic ist = function
 	  begin
 	    match tac with
 		TacAtom (_,_) -> t
-	      | _ -> abstract_tactic_expr (TacArg (Tacexp tac)) t
+	      | _ -> abstract_tactic_expr (TacArg (dloc,Tacexp tac)) t
 	  end
   | TacRepeat tac -> tclREPEAT (interp_tactic ist tac)
   | TacOrelse (tac1,tac2) ->
@@ -1979,19 +1900,19 @@ and eval_with_fail ist is_lazy goal tac =
 	VRTactic (catch_error trace tac goal)
     | a -> a)
   with
-    | FailError (0,s) | Stdpp.Exc_located(_, FailError (0,s))
-    | Stdpp.Exc_located(_,LtacLocated (_,FailError (0,s))) ->
+    | FailError (0,s) | Loc.Exc_located(_, FailError (0,s))
+    | Loc.Exc_located(_,LtacLocated (_,FailError (0,s))) ->
 	raise (Eval_fail (Lazy.force s))
     | FailError (lvl,s) -> raise (FailError (lvl - 1, s))
-    | Stdpp.Exc_located(s,FailError (lvl,s')) ->
-	raise (Stdpp.Exc_located(s,FailError (lvl - 1, s')))
-    | Stdpp.Exc_located(s,LtacLocated (s'',FailError (lvl,s'))) ->
-	raise (Stdpp.Exc_located(s,LtacLocated (s'',FailError (lvl - 1, s'))))
+    | Loc.Exc_located(s,FailError (lvl,s')) ->
+	raise (Loc.Exc_located(s,FailError (lvl - 1, s')))
+    | Loc.Exc_located(s,LtacLocated (s'',FailError (lvl,s'))) ->
+	raise (Loc.Exc_located(s,LtacLocated (s'',FailError (lvl - 1, s'))))
 
 (* Interprets the clauses of a recursive LetIn *)
 and interp_letrec ist gl llc u =
   let lref = ref ist.lfun in
-  let lve = list_map_left (fun ((_,id),b) -> (id,VRec (lref,TacArg b))) llc in
+  let lve = list_map_left (fun ((_,id),b) -> (id,VRec (lref,TacArg (dloc,b)))) llc in
   lref := lve@ist.lfun;
   let ist = { ist with lfun = lve@ist.lfun } in
   val_interp ist gl u
@@ -2005,6 +1926,8 @@ and interp_letin ist gl llc u =
 
 (* Interprets the Match Context expressions *)
 and interp_match_goal ist goal lz lr lmr =
+  let (gl,sigma) = Goal.V82.nf_evar (project goal) (sig_it goal) in
+  let goal = { it = gl ; sigma = sigma } in
   let hyps = pf_hyps goal in
   let hyps = if lr then List.rev hyps else hyps in
   let concl = pf_concl goal in
@@ -2116,7 +2039,7 @@ and interp_genarg ist gl x =
       in_gen wit_sort
         (destSort
 	  (pf_interp_constr ist gl
-	    (RSort (dloc,out_gen globwit_sort x), None)))
+	    (GSort (dloc,out_gen globwit_sort x), None)))
   | ConstrArgType ->
       in_gen wit_constr (pf_interp_constr ist gl (out_gen globwit_constr x))
   | ConstrMayEvalArgType ->
@@ -2152,7 +2075,7 @@ and interp_genarg ist gl x =
       | Some n ->
           (* Special treatment of tactic arguments *)
           in_gen (wit_tactic n)
-	    (TacArg(valueIn(VFun(ist.trace,ist.lfun,[],
+	    (TacArg(dloc,valueIn(VFun(ist.trace,ist.lfun,[],
 				 out_gen (globwit_tactic n) x))))
       | None ->
           lookup_interp_genarg s ist gl x
@@ -2189,9 +2112,9 @@ and interp_match ist g lz constr lmr =
         match_next_pattern find_next' () in
     match_next_pattern (fun () -> match_subterm_gen app c csr) () in
   let rec apply_match ist csr = function
-    | (All t)::_ ->
+    | (All t)::tl ->
         (try eval_with_fail ist lz g t
-         with e when is_match_catchable e -> apply_match ist csr [])
+         with e when is_match_catchable e -> apply_match ist csr tl)
     | (Pat ([],Term c,mt))::tl ->
         (try
             let lmatch =
@@ -2337,23 +2260,31 @@ and interp_atomic ist gl tac =
   | TacGeneralizeDep c -> h_generalize_dep (pf_interp_constr ist gl c)
   | TacLetTac (na,c,clp,b) ->
       let clp = interp_clause ist gl clp in
-      h_let_tac b (interp_fresh_name ist env na) (pf_interp_constr ist gl c) clp
+      if clp = nowhere then
+        (* We try to fully-typechect the term *)
+        h_let_tac b (interp_fresh_name ist env na)
+          (pf_interp_constr ist gl c) clp
+      else
+        (* We try to keep the pattern structure as much as possible *)
+        h_let_pat_tac b (interp_fresh_name ist env na)
+          (interp_pure_open_constr ist env sigma c) clp
 
   (* Automation tactics *)
   | TacTrivial (lems,l) ->
-      Auto.h_trivial (interp_constr_list ist env sigma lems)
+      Auto.h_trivial
+	(interp_auto_lemmas ist env sigma lems)
 	(Option.map (List.map (interp_hint_base ist)) l)
   | TacAuto (n,lems,l) ->
       Auto.h_auto (Option.map (interp_int_or_var ist) n)
-      (interp_constr_list ist env sigma lems)
-      (Option.map (List.map (interp_hint_base ist)) l)
+	(interp_auto_lemmas ist env sigma lems)
+	(Option.map (List.map (interp_hint_base ist)) l)
   | TacAutoTDB n -> Dhyp.h_auto_tdb n
   | TacDestructHyp (b,id) -> Dhyp.h_destructHyp b (interp_hyp ist gl id)
   | TacDestructConcl -> Dhyp.h_destructConcl
   | TacSuperAuto (n,l,b1,b2) -> Auto.h_superauto n l b1 b2
   | TacDAuto (n,p,lems) ->
       Auto.h_dauto (Option.map (interp_int_or_var ist) n,p)
-      (interp_constr_list ist env sigma lems)
+      (interp_auto_lemmas ist env sigma lems)
 
   (* Derived basic tactics *)
   | TacSimpleInductionDestruct (isrec,h) ->
@@ -2361,8 +2292,7 @@ and interp_atomic ist gl tac =
   | TacInductionDestruct (isrec,ev,(l,cls)) ->
       let sigma, l =
         list_fold_map (fun sigma (lc,cbo,(ipato,ipats)) ->
-          let sigma,lc =
-            list_fold_map (interp_induction_arg ist gl) sigma lc in
+          let lc = List.map (interp_induction_arg ist gl) lc in
 	  let sigma,cbo =
             Option.fold_map (interp_constr_with_bindings ist env) sigma cbo in
           (sigma,(lc,cbo,
@@ -2410,7 +2340,7 @@ and interp_atomic ist gl tac =
         (Tactics.any_constructor ev (Option.map (interp_tactic ist) t))
   | TacConstructor (ev,n,bl) ->
       let sigma, bl = interp_bindings ist env sigma bl in
-      tclWITHHOLES ev (h_constructor ev (skip_metaid n)) sigma bl
+      tclWITHHOLES ev (h_constructor ev (interp_int_or_var ist n)) sigma bl
 
   (* Conversion *)
   | TacReduce (r,cl) ->
@@ -2553,7 +2483,7 @@ let make_empty_glob_sign () =
 (* Initial call for interpretation *)
 let interp_tac_gen lfun avoid_ids debug t gl =
   interp_tactic { lfun=lfun; avoid_ids=avoid_ids; debug=debug; trace=[] }
-    (intern_tactic {
+    (intern_tactic true {
       ltacvars = (List.map fst lfun, []); ltacrecvars = [];
       gsigma = project gl; genv = pf_env gl } t) gl
 
@@ -2566,18 +2496,18 @@ let interp t = interp_tac_gen [] [] (get_debug()) t
 let eval_ltac_constr gl t =
   interp_ltac_constr
     { lfun=[]; avoid_ids=[]; debug=get_debug(); trace=[] } gl
-    (intern_tactic (make_empty_glob_sign ()) t )
+    (intern_tactic_or_tacarg (make_empty_glob_sign ()) t )
 
 (* Hides interpretation for pretty-print *)
 let hide_interp t ot gl =
   let ist = { ltacvars = ([],[]); ltacrecvars = [];
             gsigma = project gl; genv = pf_env gl } in
-  let te = intern_tactic ist t in
+  let te = intern_tactic true ist t in
   let t = eval_tactic te in
   match ot with
-  | None -> abstract_tactic_expr (TacArg (Tacexp te)) t gl
+  | None -> abstract_tactic_expr (TacArg (dloc,Tacexp te)) t gl
   | Some t' ->
-      abstract_tactic_expr ~dflt:true (TacArg (Tacexp te)) (tclTHEN t t') gl
+      abstract_tactic_expr ~dflt:true (TacArg (dloc,Tacexp te)) (tclTHEN t t') gl
 
 (***************************************************************************)
 (* Substitution at module closing time *)
@@ -2586,25 +2516,25 @@ let subst_quantified_hypothesis _ x = x
 
 let subst_declared_or_quantified_hypothesis _ x = x
 
-let subst_rawconstr_and_expr subst (c,e) =
+let subst_glob_constr_and_expr subst (c,e) =
   assert (e=None); (* e<>None only for toplevel tactics *)
-  (Detyping.subst_rawconstr subst c,None)
+  (Detyping.subst_glob_constr subst c,None)
 
-let subst_rawconstr = subst_rawconstr_and_expr (* shortening *)
+let subst_glob_constr = subst_glob_constr_and_expr (* shortening *)
 
 let subst_binding subst (loc,b,c) =
-  (loc,subst_quantified_hypothesis subst b,subst_rawconstr subst c)
+  (loc,subst_quantified_hypothesis subst b,subst_glob_constr subst c)
 
 let subst_bindings subst = function
   | NoBindings -> NoBindings
-  | ImplicitBindings l -> ImplicitBindings (List.map (subst_rawconstr subst) l)
+  | ImplicitBindings l -> ImplicitBindings (List.map (subst_glob_constr subst) l)
   | ExplicitBindings l -> ExplicitBindings (List.map (subst_binding subst) l)
 
-let subst_raw_with_bindings subst (c,bl) =
-  (subst_rawconstr subst c, subst_bindings subst bl)
+let subst_glob_with_bindings subst (c,bl) =
+  (subst_glob_constr subst c, subst_bindings subst bl)
 
 let subst_induction_arg subst = function
-  | ElimOnConstr c -> ElimOnConstr (subst_raw_with_bindings subst c)
+  | ElimOnConstr c -> ElimOnConstr (subst_glob_with_bindings subst c)
   | ElimOnAnonHyp n as x -> x
   | ElimOnIdent id as x -> x
 
@@ -2645,17 +2575,17 @@ let subst_unfold subst (l,e) =
 let subst_flag subst red =
   { red with rConst = List.map (subst_evaluable subst) red.rConst }
 
-let subst_constr_with_occurrences subst (l,c) = (l,subst_rawconstr subst c)
+let subst_constr_with_occurrences subst (l,c) = (l,subst_glob_constr subst c)
 
-let subst_rawconstr_or_pattern subst (c,p) =
-  (subst_rawconstr subst c,subst_pattern subst p)
+let subst_glob_constr_or_pattern subst (c,p) =
+  (subst_glob_constr subst c,subst_pattern subst p)
 
 let subst_pattern_with_occurrences subst (l,p) =
-  (l,subst_rawconstr_or_pattern subst p)
+  (l,subst_glob_constr_or_pattern subst p)
 
 let subst_redexp subst = function
   | Unfold l -> Unfold (List.map (subst_unfold subst) l)
-  | Fold l -> Fold (List.map (subst_rawconstr subst) l)
+  | Fold l -> Fold (List.map (subst_glob_constr subst) l)
   | Cbv f -> Cbv (subst_flag subst f)
   | Lazy f -> Lazy (subst_flag subst f)
   | Pattern l -> Pattern (List.map (subst_constr_with_occurrences subst) l)
@@ -2663,14 +2593,14 @@ let subst_redexp subst = function
   | (Red _ | Hnf | ExtraRedExpr _ | CbvVm as r) -> r
 
 let subst_raw_may_eval subst = function
-  | ConstrEval (r,c) -> ConstrEval (subst_redexp subst r,subst_rawconstr subst c)
-  | ConstrContext (locid,c) -> ConstrContext (locid,subst_rawconstr subst c)
-  | ConstrTypeOf c -> ConstrTypeOf (subst_rawconstr subst c)
-  | ConstrTerm c -> ConstrTerm (subst_rawconstr subst c)
+  | ConstrEval (r,c) -> ConstrEval (subst_redexp subst r,subst_glob_constr subst c)
+  | ConstrContext (locid,c) -> ConstrContext (locid,subst_glob_constr subst c)
+  | ConstrTypeOf c -> ConstrTypeOf (subst_glob_constr subst c)
+  | ConstrTerm c -> ConstrTerm (subst_glob_constr subst c)
 
 let subst_match_pattern subst = function
-  | Subterm (b,ido,pc) -> Subterm (b,ido,(subst_rawconstr_or_pattern subst pc))
-  | Term pc -> Term (subst_rawconstr_or_pattern subst pc)
+  | Subterm (b,ido,pc) -> Subterm (b,ido,(subst_glob_constr_or_pattern subst pc))
+  | Term pc -> Term (subst_glob_constr_or_pattern subst pc)
 
 let rec subst_match_goal_hyps subst = function
   | Hyp (locs,mp) :: tl ->
@@ -2685,54 +2615,54 @@ let rec subst_atomic subst (t:glob_atomic_tactic_expr) = match t with
   (* Basic tactics *)
   | TacIntroPattern _ | TacIntrosUntil _ | TacIntroMove _ as x -> x
   | TacAssumption as x -> x
-  | TacExact c -> TacExact (subst_rawconstr subst c)
-  | TacExactNoCheck c -> TacExactNoCheck (subst_rawconstr subst c)
-  | TacVmCastNoCheck c -> TacVmCastNoCheck (subst_rawconstr subst c)
+  | TacExact c -> TacExact (subst_glob_constr subst c)
+  | TacExactNoCheck c -> TacExactNoCheck (subst_glob_constr subst c)
+  | TacVmCastNoCheck c -> TacVmCastNoCheck (subst_glob_constr subst c)
   | TacApply (a,ev,cb,cl) ->
-      TacApply (a,ev,List.map (subst_raw_with_bindings subst) cb,cl)
+      TacApply (a,ev,List.map (subst_glob_with_bindings subst) cb,cl)
   | TacElim (ev,cb,cbo) ->
-      TacElim (ev,subst_raw_with_bindings subst cb,
-               Option.map (subst_raw_with_bindings subst) cbo)
-  | TacElimType c -> TacElimType (subst_rawconstr subst c)
-  | TacCase (ev,cb) -> TacCase (ev,subst_raw_with_bindings subst cb)
-  | TacCaseType c -> TacCaseType (subst_rawconstr subst c)
+      TacElim (ev,subst_glob_with_bindings subst cb,
+               Option.map (subst_glob_with_bindings subst) cbo)
+  | TacElimType c -> TacElimType (subst_glob_constr subst c)
+  | TacCase (ev,cb) -> TacCase (ev,subst_glob_with_bindings subst cb)
+  | TacCaseType c -> TacCaseType (subst_glob_constr subst c)
   | TacFix (idopt,n) as x -> x
   | TacMutualFix (b,id,n,l) ->
-      TacMutualFix(b,id,n,List.map (fun (id,n,c) -> (id,n,subst_rawconstr subst c)) l)
+      TacMutualFix(b,id,n,List.map (fun (id,n,c) -> (id,n,subst_glob_constr subst c)) l)
   | TacCofix idopt as x -> x
   | TacMutualCofix (b,id,l) ->
-      TacMutualCofix (b,id, List.map (fun (id,c) -> (id,subst_rawconstr subst c)) l)
-  | TacCut c -> TacCut (subst_rawconstr subst c)
+      TacMutualCofix (b,id, List.map (fun (id,c) -> (id,subst_glob_constr subst c)) l)
+  | TacCut c -> TacCut (subst_glob_constr subst c)
   | TacAssert (b,na,c) ->
-      TacAssert (Option.map (subst_tactic subst) b,na,subst_rawconstr subst c)
+      TacAssert (Option.map (subst_tactic subst) b,na,subst_glob_constr subst c)
   | TacGeneralize cl ->
       TacGeneralize (List.map (on_fst (subst_constr_with_occurrences subst))cl)
-  | TacGeneralizeDep c -> TacGeneralizeDep (subst_rawconstr subst c)
-  | TacLetTac (id,c,clp,b) -> TacLetTac (id,subst_rawconstr subst c,clp,b)
+  | TacGeneralizeDep c -> TacGeneralizeDep (subst_glob_constr subst c)
+  | TacLetTac (id,c,clp,b) -> TacLetTac (id,subst_glob_constr subst c,clp,b)
 
   (* Automation tactics *)
-  | TacTrivial (lems,l) -> TacTrivial (List.map (subst_rawconstr subst) lems,l)
-  | TacAuto (n,lems,l) -> TacAuto (n,List.map (subst_rawconstr subst) lems,l)
+  | TacTrivial (lems,l) -> TacTrivial (List.map (subst_glob_constr subst) lems,l)
+  | TacAuto (n,lems,l) -> TacAuto (n,List.map (subst_glob_constr subst) lems,l)
   | TacAutoTDB n -> TacAutoTDB n
   | TacDestructHyp (b,id) -> TacDestructHyp(b,id)
   | TacDestructConcl -> TacDestructConcl
   | TacSuperAuto (n,l,b1,b2) -> TacSuperAuto (n,l,b1,b2)
-  | TacDAuto (n,p,lems) -> TacDAuto (n,p,List.map (subst_rawconstr subst) lems)
+  | TacDAuto (n,p,lems) -> TacDAuto (n,p,List.map (subst_glob_constr subst) lems)
 
   (* Derived basic tactics *)
   | TacSimpleInductionDestruct (isrec,h) as x -> x
   | TacInductionDestruct (isrec,ev,(l,cls)) ->
       TacInductionDestruct (isrec,ev,(List.map (fun (lc,cbo,ids) ->
 	List.map (subst_induction_arg subst) lc,
-        Option.map (subst_raw_with_bindings subst) cbo, ids) l, cls))
+        Option.map (subst_glob_with_bindings subst) cbo, ids) l, cls))
   | TacDoubleInduction (h1,h2) as x -> x
-  | TacDecomposeAnd c -> TacDecomposeAnd (subst_rawconstr subst c)
-  | TacDecomposeOr c -> TacDecomposeOr (subst_rawconstr subst c)
+  | TacDecomposeAnd c -> TacDecomposeAnd (subst_glob_constr subst c)
+  | TacDecomposeOr c -> TacDecomposeOr (subst_glob_constr subst c)
   | TacDecompose (l,c) ->
       let l = List.map (subst_or_var (subst_inductive subst)) l in
-      TacDecompose (l,subst_rawconstr subst c)
-  | TacSpecialize (n,l) -> TacSpecialize (n,subst_raw_with_bindings subst l)
-  | TacLApply c -> TacLApply (subst_rawconstr subst c)
+      TacDecompose (l,subst_glob_constr subst c)
+  | TacSpecialize (n,l) -> TacSpecialize (n,subst_glob_with_bindings subst l)
+  | TacLApply c -> TacLApply (subst_glob_constr subst c)
 
   (* Context management *)
   | TacClear _ as x -> x
@@ -2751,24 +2681,24 @@ let rec subst_atomic subst (t:glob_atomic_tactic_expr) = match t with
   (* Conversion *)
   | TacReduce (r,cl) -> TacReduce (subst_redexp subst r, cl)
   | TacChange (op,c,cl) ->
-      TacChange (Option.map (subst_rawconstr_or_pattern subst) op,
-        subst_rawconstr subst c, cl)
+      TacChange (Option.map (subst_glob_constr_or_pattern subst) op,
+        subst_glob_constr subst c, cl)
 
   (* Equivalence relations *)
   | TacReflexivity | TacSymmetry _ as x -> x
-  | TacTransitivity c -> TacTransitivity (Option.map (subst_rawconstr subst) c)
+  | TacTransitivity c -> TacTransitivity (Option.map (subst_glob_constr subst) c)
 
   (* Equality and inversion *)
   | TacRewrite (ev,l,cl,by) ->
       TacRewrite (ev,
 		  List.map (fun (b,m,c) ->
-			      b,m,subst_raw_with_bindings subst c) l,
+			      b,m,subst_glob_with_bindings subst c) l,
 		 cl,Option.map (subst_tactic subst) by)
   | TacInversion (DepInversion (k,c,l),hyp) ->
-     TacInversion (DepInversion (k,Option.map (subst_rawconstr subst) c,l),hyp)
+     TacInversion (DepInversion (k,Option.map (subst_glob_constr subst) c,l),hyp)
   | TacInversion (NonDepInversion _,_) as x -> x
   | TacInversion (InversionUsing (c,cl),hyp) ->
-      TacInversion (InversionUsing (subst_rawconstr subst c,cl),hyp)
+      TacInversion (InversionUsing (subst_glob_constr subst c,cl),hyp)
 
   (* For extensions *)
   | TacExtend (_loc,opn,l) ->
@@ -2796,6 +2726,7 @@ and subst_tactic subst (t:glob_tactic_expr) = match t with
   | TacThens (t,tl) ->
       TacThens (subst_tactic subst t, List.map (subst_tactic subst) tl)
   | TacDo (n,tac) -> TacDo (n,subst_tactic subst tac)
+  | TacTimeout (n,tac) -> TacTimeout (n,subst_tactic subst tac)
   | TacTry tac -> TacTry (subst_tactic subst tac)
   | TacInfo tac -> TacInfo (subst_tactic subst tac)
   | TacRepeat tac -> TacRepeat (subst_tactic subst tac)
@@ -2804,7 +2735,7 @@ and subst_tactic subst (t:glob_tactic_expr) = match t with
   | TacFirst l -> TacFirst (List.map (subst_tactic subst) l)
   | TacSolve l -> TacSolve (List.map (subst_tactic subst) l)
   | TacComplete tac -> TacComplete (subst_tactic subst tac)
-  | TacArg a -> TacArg (subst_tacarg subst a)
+  | TacArg (_,a) -> TacArg (dloc,subst_tacarg subst a)
 
 and subst_tactic_fun subst (var,body) = (var,subst_tactic subst body)
 
@@ -2855,7 +2786,7 @@ and subst_genarg subst (x:glob_generic_argument) =
   | SortArgType ->
       in_gen globwit_sort (out_gen globwit_sort x)
   | ConstrArgType ->
-      in_gen globwit_constr (subst_rawconstr subst (out_gen globwit_constr x))
+      in_gen globwit_constr (subst_glob_constr subst (out_gen globwit_constr x))
   | ConstrMayEvalArgType ->
       in_gen globwit_constr_may_eval (subst_raw_may_eval subst (out_gen globwit_constr_may_eval x))
   | QuantHypArgType ->
@@ -2866,10 +2797,10 @@ and subst_genarg subst (x:glob_generic_argument) =
       in_gen globwit_red_expr (subst_redexp subst (out_gen globwit_red_expr x))
   | OpenConstrArgType b ->
       in_gen (globwit_open_constr_gen b)
-        ((),subst_rawconstr subst (snd (out_gen (globwit_open_constr_gen b) x)))
+        ((),subst_glob_constr subst (snd (out_gen (globwit_open_constr_gen b) x)))
   | ConstrWithBindingsArgType ->
       in_gen globwit_constr_with_bindings
-        (subst_raw_with_bindings subst (out_gen globwit_constr_with_bindings x))
+        (subst_glob_with_bindings subst (out_gen globwit_constr_with_bindings x))
   | BindingsArgType ->
       in_gen globwit_bindings
         (subst_bindings subst (out_gen globwit_bindings x))
@@ -2888,11 +2819,6 @@ and subst_genarg subst (x:glob_generic_argument) =
 
 (***************************************************************************)
 (* Tactic registration *)
-
-(* For bad tactic calls *)
-let bad_tactic_args s =
-  anomalylabstrm s
-    (str "Tactic " ++ str s ++ str " called with bad arguments")
 
 (* Declaration of the TAC-DEFINITION object *)
 let add (kn,td) = mactab := Gmap.add kn td !mactab
@@ -2938,7 +2864,7 @@ let subst_md (subst,(local,defs)) =
 let classify_md (local,defs as o) =
   if local then Dispose else Substitute o
 
-let (inMD,outMD) =
+let inMD : bool * (tacdef_kind * glob_tactic_expr) list -> obj =
   declare_object {(default_object "TAC-DEFINITION") with
      cache_function  = cache_md;
      load_function   = load_md;
@@ -2946,12 +2872,22 @@ let (inMD,outMD) =
      subst_function = subst_md;
      classify_function = classify_md}
 
+let rec split_ltac_fun = function
+  | TacFun (l,t) -> (l,t)
+  | t -> ([],t)
+
+let pr_ltac_fun_arg = function
+  | None -> spc () ++ str "_"
+  | Some id -> spc () ++ pr_id id
+
 let print_ltac id =
  try
   let kn = Nametab.locate_tactic id in
-  let t = lookup kn in
-   str "Ltac" ++ spc() ++ pr_qualid id ++ str " :=" ++ spc() ++
-    Pptactic.pr_glob_tactic (Global.env ()) t
+  let l,t = split_ltac_fun (lookup kn) in
+  hv 2 (
+    hov 2 (str "Ltac" ++ spc() ++ pr_qualid id ++
+           prlist pr_ltac_fun_arg l ++ spc () ++ str ":=")
+    ++ spc() ++ Pptactic.pr_glob_tactic (Global.env ()) t)
  with
   Not_found ->
    errorlabstrm "print_ltac"
@@ -2991,7 +2927,7 @@ let add_tacdef local isrec tacl =
   let gtacl =
     List.map2 (fun (_,b,def) (id, qid) ->
       let k = if b then UpdateTac qid else NewTac (Option.get id) in
-      let t = Flags.with_option strict_check (intern_tactic ist) def in
+      let t = Flags.with_option strict_check (intern_tactic_or_tacarg ist) def in
 	(k, t))
       tacl rfun in
   let id0 = fst (List.hd rfun) in
@@ -3009,11 +2945,11 @@ let add_tacdef local isrec tacl =
 (* Other entry points *)
 
 let glob_tactic x =
-  Flags.with_option strict_check (intern_tactic (make_empty_glob_sign ())) x
+  Flags.with_option strict_check (intern_tactic true (make_empty_glob_sign ())) x
 
 let glob_tactic_env l env x =
   Flags.with_option strict_check
-  (intern_tactic
+  (intern_pure_tactic
     { ltacvars = (l,[]); ltacrecvars = []; gsigma = Evd.empty; genv = env })
     x
 
@@ -3025,14 +2961,16 @@ let interp_redexp env sigma r =
 (***************************************************************************)
 (* Embed tactics in raw or glob tactic expr *)
 
-let globTacticIn t = TacArg (TacDynamic (dummy_loc,tactic_in t))
+let globTacticIn t = TacArg (dloc,TacDynamic (dloc,tactic_in t))
 let tacticIn t =
   globTacticIn (fun ist ->
     try glob_tactic (t ist)
-    with e -> raise (AnomalyOnError ("Incorrect tactic expression", e)))
+    with e -> anomalylabstrm "tacticIn"
+      (str "Incorrect tactic expression. Received exception is:" ++
+       Errors.print e))
 
 let tacticOut = function
-  | TacArg (TacDynamic (_,d)) ->
+  | TacArg (_,TacDynamic (_,d)) ->
     if (Dyn.tag d) = "tactic" then
       tactic_out d
     else
@@ -3051,6 +2989,6 @@ let _ = Auto.set_extern_interp
 let _ = Auto.set_extern_intern_tac
   (fun l ->
     Flags.with_option strict_check
-    (intern_tactic {(make_empty_glob_sign()) with ltacvars=(l,[])}))
+    (intern_pure_tactic {(make_empty_glob_sign()) with ltacvars=(l,[])}))
 let _ = Auto.set_extern_subst_tactic subst_tactic
 let _ = Dhyp.set_extern_interp eval_tactic

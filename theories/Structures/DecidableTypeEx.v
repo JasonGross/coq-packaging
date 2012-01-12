@@ -6,8 +6,6 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: DecidableTypeEx.v 12641 2010-01-07 15:32:52Z letouzey $ *)
-
 Require Import DecidableType OrderedType OrderedTypeEx.
 Set Implicit Arguments.
 Unset Strict Implicit.

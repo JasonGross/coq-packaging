@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Operators_Properties.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (************************************************************************)
 (** * Some properties of the operators on relations                     *)
@@ -19,17 +17,17 @@ Require Import Relation_Operators.
 
 Section Properties.
 
-  Implicit Arguments clos_refl_trans [A].
-  Implicit Arguments clos_refl_trans_1n [A].
-  Implicit Arguments clos_refl_trans_n1 [A].
-  Implicit Arguments clos_refl_sym_trans [A].
-  Implicit Arguments clos_refl_sym_trans_1n [A].
-  Implicit Arguments clos_refl_sym_trans_n1 [A].
-  Implicit Arguments clos_trans [A].
-  Implicit Arguments clos_trans_1n [A].
-  Implicit Arguments clos_trans_n1 [A].
-  Implicit Arguments inclusion [A].
-  Implicit Arguments preorder [A].
+  Arguments clos_refl_trans [A] R x _.
+  Arguments clos_refl_trans_1n [A] R x _.
+  Arguments clos_refl_trans_n1 [A] R x _.
+  Arguments clos_refl_sym_trans [A] R _ _.
+  Arguments clos_refl_sym_trans_1n [A] R x _.
+  Arguments clos_refl_sym_trans_n1 [A] R x _.
+  Arguments clos_trans [A] R x _.
+  Arguments clos_trans_1n [A] R x _.
+  Arguments clos_trans_n1 [A] R x _.
+  Arguments inclusion [A] R1 R2.
+  Arguments preorder [A] R.
 
   Variable A : Type.
   Variable R : relation A.

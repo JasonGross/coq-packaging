@@ -59,3 +59,30 @@ Check (fun x:nat*nat => match x with R x y => (x,y) end).
 Local Notation "[ a  # ; ..  # ; b ]" := (a + .. (b + 0) ..).   
 Check [ 0 ].
 Check [ 0 # ; 1 ].
+
+(* Check well-scoping of alpha-renaming of private binders *)
+(* see bug #2248 (thanks to Marc Lasson) *)
+
+Notation "{ q , r | P }" := (fun (p:nat*nat) => let (q, r) := p in P).
+Check (fun p => {q,r| q + r = p}).
+
+(* Check that declarations of empty levels are correctly backtracked *)
+
+Section B.
+Notation "*" := 5 (at level 0) : nat_scope.
+Notation "[ h ] p" := (h + p) (at level 8, p at level 9, h at level 7) : nat_scope.
+End B.
+
+(* Should succeed *)
+Definition n := 5 * 5.
+
+(* Check that lonely notations (here FOO) do not modify the visibility
+   of scoped interpretations (bug #2634 fixed in r14819) *)
+
+Notation "x ++++ y" := (mult x y) (at level 40).
+Notation "x ++++ y" := (plus x y) : A_scope.
+Open Scope A_scope.
+Notation "'FOO' x" := (S x) (at level 40).
+Goal (2 ++++ 3) = 5.
+reflexivity.
+Abort.

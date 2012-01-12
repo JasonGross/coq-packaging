@@ -1,14 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
-
-(*i $Id: BigNumPrelude.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (** * BigNumPrelude *)
 
@@ -102,7 +100,7 @@ Hint Resolve Zlt_gt Zle_ge Z_div_pos: zarith.
   intros b x y (Hx1,Hx2) (Hy1,Hy2);split;auto with zarith.
   apply Zle_trans with ((b-1)*(b-1)).
   apply Zmult_le_compat;auto with zarith.
-  apply Zeq_le;ring.
+  apply Zeq_le; ring.
  Qed.
 
  Lemma sum_mul_carry : forall xh xl yh yl wc cc beta,
@@ -315,7 +313,7 @@ Theorem Zmod_le_first: forall a b, 0 <= a -> 0 < b -> 0 <= a mod b <= a.
   apply  Zdiv_le_lower_bound;auto with zarith.
   replace (2^p) with 0.
   destruct x;compute;intro;discriminate.
-  destruct p;trivial;discriminate z.
+  destruct p;trivial;discriminate.
  Qed.
 
  Lemma div_lt : forall p x y, 0 <= x < y -> x / 2^p < y.
@@ -327,7 +325,7 @@ Theorem Zmod_le_first: forall a b, 0 <= a -> 0 < b -> 0 <= a mod b <= a.
   assert (0 < 2^p);auto with zarith.
   replace (2^p) with 0.
   destruct x;change (0<y);auto with zarith.
-  destruct p;trivial;discriminate z.
+  destruct p;trivial;discriminate.
  Qed.
 
  Theorem Zgcd_div_pos a b:

@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -22,6 +22,8 @@ open Term
 open Declarations
 open Mod_subst
 
+let cst_ord k1 k2 = kn_ord (canonical_con k1) (canonical_con k2)
+
 type context_object =
   | Variable of identifier (* A section variable or a Let definition *)
   | Axiom of constant      (* An axiom or a constant. *)
@@ -34,10 +36,8 @@ struct
   let compare x y =
       match x , y with
       | Variable i1 , Variable i2 -> id_ord i1 i2
-      | Axiom k1 , Axiom k2 -> Pervasives.compare k1 k2
-	          (* spiwack: it would probably be cleaner
-		     to provide a [kn_ord] function *)
-      | Opaque k1 , Opaque k2 -> Pervasives.compare k1 k2
+      | Axiom k1 , Axiom k2 -> cst_ord k1 k2
+      | Opaque k1 , Opaque k2 -> cst_ord k1 k2
       | Variable _ , Axiom _ -> -1
       | Axiom _ , Variable _ -> 1
       | Opaque _ , _ -> -1
@@ -142,7 +142,7 @@ let lookup_constant_in_impl cst fallback =
 let lookup_constant cst =
   try
     let cb = Global.lookup_constant cst in
-    if cb.const_body <> None then cb
+    if constant_has_body cb then cb
     else lookup_constant_in_impl cst (Some cb)
   with Not_found -> lookup_constant_in_impl cst None
 
@@ -211,20 +211,20 @@ let assumptions ?(add_opaque=false) st (* t *) =
     let cb = lookup_constant kn in
     let do_type cst =
       let ctype =
-	match cb.const_type with
+	match cb.Declarations.const_type with
 	| PolymorphicArity (ctx,a) -> mkArity (ctx, Type a.poly_level)
 	| NonPolymorphicType t -> t
       in
 	(s,ContextObjectMap.add cst ctype acc)
     in
     let (s,acc) =
-      if add_opaque && cb.const_body <> None
-	&& (cb.const_opaque || not (Cpred.mem kn knst))
+      if add_opaque && Declarations.constant_has_body cb
+	&& (Declarations.is_opaque cb || not (Cpred.mem kn knst))
       then
 	do_type (Opaque kn)
       else (s,acc)
     in
-      match cb.const_body with
+      match Declarations.body_of_constant cb with
       | None -> do_type (Axiom kn)
       | Some body -> do_constr (Declarations.force body) s acc
 

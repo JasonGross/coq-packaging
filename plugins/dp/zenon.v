@@ -1,6 +1,4 @@
 (*  Copyright 2004 INRIA  *)
-(*  $Id: zenon.v 11996 2009-03-20 01:22:58Z letouzey $  *)
-
 Require Export Classical.
 
 Lemma zenon_nottrue :

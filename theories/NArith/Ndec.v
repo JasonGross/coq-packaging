@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Ndec.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import Bool.
 Require Import Sumbool.
@@ -29,14 +27,14 @@ Proof.
   intros. now apply (Peqb_eq p p').
 Qed.
 
-Lemma Peqb_Pcompare : forall p p', Peqb p p' = true -> Pcompare p p' Eq = Eq.
+Lemma Peqb_Pcompare : forall p p', Peqb p p' = true -> Pos.compare p p' = Eq.
 Proof.
-  intros. now rewrite Pcompare_eq_iff, <- Peqb_eq.
+  intros. now rewrite Pos.compare_eq_iff, <- Peqb_eq.
 Qed.
 
-Lemma Pcompare_Peqb : forall p p', Pcompare p p' Eq = Eq -> Peqb p p' = true.
+Lemma Pcompare_Peqb : forall p p', Pos.compare p p' = Eq -> Peqb p p' = true.
 Proof.
-  intros; now rewrite Peqb_eq, <- Pcompare_eq_iff.
+  intros; now rewrite Peqb_eq, <- Pos.compare_eq_iff.
 Qed.
 
 Lemma Neqb_correct : forall n, Neqb n n = true.

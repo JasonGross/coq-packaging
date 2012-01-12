@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: vernacentries.ml 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (* Concrete syntax of the mathematical vernacular MV V2.6 *)
 
@@ -19,12 +17,9 @@ open Nameops
 open Term
 open Pfedit
 open Tacmach
-open Proof_trees
-open Decl_mode
 open Constrintern
 open Prettyp
 open Printer
-open Tactic_printer
 open Tacinterp
 open Command
 open Goptions
@@ -37,6 +32,7 @@ open Pretyping
 open Redexpr
 open Syntax_def
 open Lemmas
+open Declaremods
 
 (* Pcoq hooks *)
 
@@ -49,7 +45,7 @@ type pcoq_hook = {
   print_check : Environ.env -> Environ.unsafe_judgment -> unit;
   print_eval : Reductionops.reduction_function -> Environ.env -> Evd.evar_map -> constr_expr ->
     Environ.unsafe_judgment -> unit;
-  show_goal : int option -> unit
+  show_goal : goal_reference -> unit
 }
 
 let pcoq = ref None
@@ -66,52 +62,34 @@ let cl_of_qualid = function
 (* "Show" commands *)
 
 let show_proof () =
-  let pts = get_pftreestate () in
-  let cursor = cursor_of_pftreestate pts in
-  let evc = evc_of_pftreestate pts in
-  let (pfterm,meta_types) = extract_open_pftreestate pts in
-  msgnl (str"LOC: " ++
-    prlist_with_sep pr_spc pr_int (List.rev cursor) ++ fnl () ++
-    str"Subgoals" ++ fnl () ++
-    prlist (fun (mv,ty) -> Nameops.pr_meta mv ++ str" -> " ++
-      pr_ltype ty ++ fnl ())
-      meta_types
-    ++ str"Proof: " ++ pr_lconstr (Evarutil.nf_evar evc pfterm))
+  (* spiwack: this would probably be cooler with a bit of polishing. *)
+  let p = Proof_global.give_me_the_proof () in
+  let pprf = Proof.partial_proof p in
+  msgnl (Util.prlist_with_sep Pp.fnl Printer.pr_constr pprf)
 
 let show_node () =
-  let pts = get_pftreestate () in
-  let pf = proof_of_pftreestate pts
-  and cursor = cursor_of_pftreestate pts in
-  msgnl (prlist_with_sep pr_spc pr_int (List.rev cursor) ++ fnl () ++
-         pr_goal (goal_of_proof pf) ++ fnl () ++
-         (match pf.Proof_type.ref with
-            | None -> (str"BY <rule>")
-            | Some(r,spfl) ->
-		(str"BY " ++ pr_rule r ++ fnl () ++
-		 str"  " ++
-		   hov 0 (prlist_with_sep pr_fnl pr_goal
-			    (List.map goal_of_proof spfl)))))
+  (* spiwack: I'm have little clue what this function used to do. I deactivated it, 
+      could, possibly, be cleaned away. (Feb. 2010) *)
+  ()
 
 let show_script () =
-  let pts = get_pftreestate () in
-  let pf = proof_of_pftreestate pts
-  and evc = evc_of_pftreestate pts in
-  msgnl_with !Pp_control.deep_ft (print_treescript evc pf)
+  (* spiwack: show_script is currently not working *)
+  ()
 
 let show_thesis () =
      msgnl (anomaly "TODO" )
 
 let show_top_evars () =
+  (* spiwack: new as of Feb. 2010: shows goal evars in addition to non-goal evars. *)
   let pfts = get_pftreestate () in
-  let gls = top_goal_of_pftreestate pfts in
-  let sigma = project gls in
+  let gls = Proof.V82.subgoals pfts in
+  let sigma = gls.Evd.sigma in
   msg (pr_evars_int 1 (Evarutil.non_instantiated sigma))
+  
 
 let show_prooftree () =
-  let pts = get_pftreestate () in
-  let pf = proof_of_pftreestate pts
-  and evc = evc_of_pftreestate pts in
-  msg (print_proof evc (Global.named_context()) pf)
+  (* Spiwack: proof tree is currently not working *)
+  ()
 
 let print_subgoals () = if_verbose (fun () -> msg (pr_open_subgoals ())) ()
 
@@ -119,7 +97,8 @@ let print_subgoals () = if_verbose (fun () -> msg (pr_open_subgoals ())) ()
 
 let show_intro all =
   let pf = get_pftreestate() in
-  let gl = nth_goal_of_pftreestate 1 pf in
+  let {Evd.it=gls ; sigma=sigma} = Proof.V82.subgoals pf in
+  let gl = {Evd.it=List.hd gls ; sigma = sigma} in
   let l,_= decompose_prod_assum (strip_outer_cast (pf_concl gl)) in
   if all
   then
@@ -131,13 +110,12 @@ let show_intro all =
       msgnl (pr_id (List.hd (Tactics.find_intro_names [n] gl)))
     with Failure "list_last" -> message ""
 
-let id_of_name = function
-  | Names.Anonymous -> id_of_string "x"
-  | Names.Name x -> x
+(** Prepare a "match" template for a given inductive type.
+    For each branch of the match, we list the constructor name
+    followed by enough pattern variables.
+    [Not_found] is raised if the given string isn't the qualid of
+    a known inductive type. *)
 
-
-(* Building of match expression *)
-(* From ide/coq.ml *)
 let make_cases s =
   let qualified_name = Libnames.qualid_of_string s in
   let glob_ref = Nametab.locate qualified_name in
@@ -147,36 +125,31 @@ let make_cases s =
 	    , {Declarations.mind_consnames = carr ; Declarations.mind_nf_lc = tarr }
 	      = Global.lookup_inductive i in
 	Util.array_fold_right2
-	  (fun n t l ->
-	     let (al,_) = Term.decompose_prod t in
-	     let al,_ = Util.list_chop (List.length al - np) al in
+	  (fun consname typ l ->
+	     let al = List.rev (fst (Term.decompose_prod typ)) in
+	     let al = Util.list_skipn np al in
 	     let rec rename avoid = function
 	       | [] -> []
 	       | (n,_)::l ->
-		   let n' = Namegen.next_ident_away_in_goal (id_of_name n) avoid in
+		   let n' = Namegen.next_name_away_in_cases_pattern n avoid in
 		   string_of_id n' :: rename (n'::avoid) l in
-	     let al' = rename [] (List.rev al) in
-	     (string_of_id n :: al') :: l)
+	     let al' = rename [] al in
+	     (string_of_id consname :: al') :: l)
 	  carr tarr []
     | _ -> raise Not_found
 
+(** Textual display of a generic "match" template *)
 
 let show_match id =
-  try
-    let s = string_of_id (snd id) in
-    let patterns = List.rev (make_cases s) in
-    let cases =
-      List.fold_left
-	(fun acc x ->
-	  match x with
-	    | [] -> assert false
-	    | [x] -> "| "^ x  ^ " => \n" ^ acc
-	    | x::l ->
-		"| " ^ List.fold_left (fun acc s ->  acc ^ " " ^ s) x l
-		^ " => \n" ^ acc)
-	"end" patterns in
-    msg (str ("match # with\n" ^ cases))
-  with Not_found -> error "Unknown inductive type."
+  let patterns =
+    try make_cases (string_of_id (snd id))
+    with Not_found -> error "Unknown inductive type."
+  in
+  let pr_branch l =
+    str "| " ++ hov 1 (prlist_with_sep spc str l) ++ str " =>"
+  in
+  msg (v 1 (str "match # with" ++ fnl () ++
+	    prlist_with_sep fnl pr_branch patterns ++ fnl ()))
 
 (* "Print" commands *)
 
@@ -220,18 +193,55 @@ let print_modtype r =
   let (loc,qid) = qualid_of_reference r in
   try
     let kn = Nametab.locate_modtype qid in
-      msgnl (Printmod.print_modtype kn)
-  with
-      Not_found -> msgnl (str"Unknown Module Type " ++ pr_qualid qid)
+    msgnl (Printmod.print_modtype kn)
+  with Not_found ->
+    (* Is there a module of this name ? If yes we display its type *)
+    try
+      let mp = Nametab.locate_module qid in
+      msgnl (Printmod.print_module false mp)
+    with Not_found ->
+      msgnl (str"Unknown Module Type or Module " ++ pr_qualid qid)
 
-let dump_universes s =
+let dump_universes_gen g s =
   let output = open_out s in
+  let output_constraint, close =
+    if Filename.check_suffix s ".dot" || Filename.check_suffix s ".gv" then begin
+      (* the lazy unit is to handle errors while printing the first line *)
+      let init = lazy (Printf.fprintf output "digraph universes {\n") in
+      begin fun kind left right ->
+        let () = Lazy.force init in
+        match kind with
+          | Univ.Lt ->
+            Printf.fprintf output "  \"%s\" -> \"%s\" [style=bold];\n" right left
+          | Univ.Le ->
+            Printf.fprintf output "  \"%s\" -> \"%s\" [style=solid];\n" right left
+          | Univ.Eq ->
+            Printf.fprintf output "  \"%s\" -> \"%s\" [style=dashed];\n" left right
+      end, begin fun () ->
+        if Lazy.lazy_is_val init then Printf.fprintf output "}\n";
+        close_out output
+      end
+    end else begin
+      begin fun kind left right ->
+        let kind = match kind with
+          | Univ.Lt -> "<"
+          | Univ.Le -> "<="
+          | Univ.Eq -> "="
+        in Printf.fprintf output "%s %s %s ;\n" left kind right
+      end, (fun () -> close_out output)
+    end
+  in
   try
-    Univ.dump_universes output (Global.universes ());
-    close_out output;
+    Univ.dump_universes output_constraint g;
+    close ();
     msgnl (str ("Universes written to file \""^s^"\"."))
   with
-      e -> close_out output; raise e
+      e -> close (); raise e
+
+let dump_universes sorted s =
+  let g = Global.universes () in
+  let g = if sorted then Univ.sort_universes g else g in
+  dump_universes_gen g s
 
 (*********************)
 (* "Locate" commands *)
@@ -318,7 +328,7 @@ let start_proof_and_print k l hook =
   print_subgoals ();
   if !pcoq <> None then (Option.get !pcoq).start_proof ()
 
-let vernac_definition (local,boxed,k) (loc,id as lid) def hook =
+let vernac_definition (local,k) (loc,id as lid) def hook =
   if local = Local then Dumpglob.dump_definition lid true "var"
   else Dumpglob.dump_definition lid false "def";
   (match def with
@@ -332,7 +342,7 @@ let vernac_definition (local,boxed,k) (loc,id as lid) def hook =
           | Some r ->
 	      let (evc,env)= get_current_context () in
  		Some (interp_redexp env evc r) in
-	let ce,imps = interp_definition boxed bl red_option c typ_opt in
+	let ce,imps = interp_definition bl red_option c typ_opt in
 	declare_definition id (local,k) ce imps hook)
 
 let vernac_start_proof kind l lettop hook =
@@ -360,14 +370,10 @@ let vernac_end_proof = function
      the theories [??] *)
 
 let vernac_exact_proof c =
-  let pfs = top_of_tree (get_pftreestate()) in
-  let pf = proof_of_pftreestate pfs in
-    if (is_leaf_proof pf) then begin
-      by (Tactics.exact_proof c);
-      save_named true end
-    else
-      errorlabstrm "Vernacentries.ExactProof"
-	(strbrk "Command 'Proof ...' can only be used at the beginning of the proof.")
+  (* spiwack: for simplicity I do not enforce that "Proof proof_term" is
+     called only at the begining of a proof. *)
+    by (Tactics.exact_proof c);
+      save_named true
 
 let vernac_assumption kind l nl=
   let global = fst kind = Global in
@@ -386,7 +392,7 @@ let vernac_record k finite infer struc binders sort nameopt cfs =
 	Dumpglob.dump_definition lid false "constr"; id in
     if Dumpglob.dump () then (
       Dumpglob.dump_definition (snd struc) false "rec";
-      List.iter (fun ((_, x), _) ->
+      List.iter (fun (((_, x), _), _) ->
 	match x with
 	| Vernacexpr.AssumExpr ((loc, Name id), _) -> Dumpglob.dump_definition (loc,id) false "proj"
 	| _ -> ()) cfs);
@@ -409,7 +415,8 @@ let vernac_inductive finite infer indl =
   | [ ( id , bl , c , Class true, Constructors [l]), _ ] ->
       let f =
 	let (coe, ((loc, id), ce)) = l in
-	  ((coe, AssumExpr ((loc, Name id), ce)), [])
+	let coe' = if coe then Some true else None in
+	  (((coe', AssumExpr ((loc, Name id), ce)), None), [])
       in vernac_record (Class true) finite infer id bl c None [f]
   | [ ( id , bl , c , Class true, _), _ ] ->
       Util.error "Definitional classes must have a single method"
@@ -424,15 +431,15 @@ let vernac_inductive finite infer indl =
     let indl = List.map unpack indl in
     do_mutual_inductive indl (recursivity_flag_of_kind finite)
 
-let vernac_fixpoint l b =
+let vernac_fixpoint l =
   if Dumpglob.dump () then
     List.iter (fun ((lid, _, _, _, _), _) -> Dumpglob.dump_definition lid false "def") l;
-  do_fixpoint l b
+  do_fixpoint l
 
-let vernac_cofixpoint l b =
+let vernac_cofixpoint l =
   if Dumpglob.dump () then
     List.iter (fun ((lid, _, _, _), _) -> Dumpglob.dump_definition lid false "def") l;
-  do_cofixpoint l b
+  do_cofixpoint l
 
 let vernac_scheme = Indschemes.do_scheme
 
@@ -585,10 +592,10 @@ let vernac_end_section (loc,_) =
 let vernac_end_segment (_,id as lid) =
   check_no_pending_proofs ();
   match Lib.find_opening_node id with
-  | Lib.OpenedModule (export,_,_) -> vernac_end_module export lid
-  | Lib.OpenedModtype _ -> vernac_end_modtype lid
+  | Lib.OpenedModule (false,export,_,_) -> vernac_end_module export lid
+  | Lib.OpenedModule (true,_,_,_) -> vernac_end_modtype lid
   | Lib.OpenedSection _ -> vernac_end_section lid
-  | _ -> anomaly "No more opened things"
+  | _ -> assert false
 
 (* Libraries *)
 
@@ -608,13 +615,13 @@ let vernac_coercion stre ref qids qidt =
   let target = cl_of_qualid qidt in
   let source = cl_of_qualid qids in
   let ref' = smart_global ref in
-  Class.try_add_new_coercion_with_target ref' stre source target;
+  Class.try_add_new_coercion_with_target ref' stre ~source ~target;
   if_verbose msgnl (pr_global ref' ++ str " is now a coercion")
 
 let vernac_identity_coercion stre id qids qidt =
   let target = cl_of_qualid qidt in
   let source = cl_of_qualid qids in
-  Class.try_add_new_identity_coercion id stre source target
+  Class.try_add_new_identity_coercion id stre ~source ~target
 
 (* Type classes *)
 
@@ -625,32 +632,32 @@ let vernac_instance abst glob sup inst props pri =
 let vernac_context l =
   Classes.context l
 
-let vernac_declare_instance glob id =
-  Classes.declare_instance glob id
+let vernac_declare_instances glob ids =
+  List.iter (fun (id) -> Classes.existing_instance glob id) ids
 
 let vernac_declare_class id =
   Classes.declare_class id
 
 (***********)
 (* Solving *)
+
+let command_focus = Proof.new_focus_kind ()
+let focus_command_cond = Proof.no_cond command_focus
+
+
 let vernac_solve n tcom b =
   if not (refining ()) then
     error "Unknown command of the non proof-editing mode.";
-  Decl_mode.check_not_proof_mode "Unknown proof instruction";
-  begin
-    if b then
-      solve_nth n (Tacinterp.hide_interp tcom (get_end_tac ()))
-    else solve_nth n (Tacinterp.hide_interp tcom None)
-  end;
-  (* in case a strict subtree was completed,
-     go back to the top of the prooftree *)
-  if subtree_solved () then begin
-    Flags.if_verbose msgnl (str "Subgoal proved");
-    make_focus 0;
-    reset_top_of_script ()
-  end;
-  print_subgoals();
-  if !pcoq <> None then (Option.get !pcoq).solve n
+  let p = Proof_global.give_me_the_proof () in
+  Proof.transaction p begin fun () ->
+    solve_nth n (Tacinterp.hide_interp tcom None) ~with_end_tac:b;
+    (* in case a strict subtree was completed,
+       go back to the top of the prooftree *)
+    Proof_global.maximal_unfocus command_focus p;
+    print_subgoals();
+    if !pcoq <> None then (Option.get !pcoq).solve n
+  end
+ 
 
   (* A command which should be a tactic. It has been
      added by Christine to patch an error in the design of the proof
@@ -666,32 +673,15 @@ let vernac_set_end_tac tac =
   if tac <> (Tacexpr.TacId []) then set_end_tac (Tacinterp.interp tac) else ()
     (* TO DO verifier s'il faut pas mettre exist s | TacId s ici*)
 
-(***********************)
-(* Proof Language Mode *)
-
-let vernac_decl_proof () =
-  check_not_proof_mode "Already in Proof Mode";
-  if tree_solved () then
-    error "Nothing left to prove here."
-  else
-    begin
-      Decl_proof_instr.go_to_proof_mode ();
-      print_subgoals ()
-    end
-
-let vernac_return () =
-  match get_current_mode () with
-      Mode_tactic ->
-	Decl_proof_instr.return_from_tactic_mode ();
-	print_subgoals ()
-    | Mode_proof ->
-	error "\"return\" is only used after \"escape\"."
-    | Mode_none ->
-	error "There is no proof to end."
-
-let vernac_proof_instr instr =
-  Decl_proof_instr.proof_instr instr;
-  print_subgoals ()
+let vernac_set_used_variables l =
+  let l = List.map snd l in
+  if not (list_distinct l) then error "Used variables list contains duplicates";
+  let vars = Environ.named_context (Global.env ()) in
+  List.iter (fun id -> 
+    if not (List.exists (fun (id',_,_) -> id = id') vars) then
+      error ("Unknown variable: " ^ string_of_id id))
+    l;
+  set_used_variables l
 
 (*****************************)
 (* Auxiliary file management *)
@@ -706,7 +696,7 @@ let vernac_add_loadpath isrec pdir ldiropt =
   let alias = match ldiropt with
     | None -> Nameops.default_root_prefix
     | Some ldir -> ldir in
-  (if isrec then Mltop.add_rec_path else Mltop.add_path) pdir alias
+  (if isrec then Mltop.add_rec_path else Mltop.add_path) ~unix_path:pdir ~coq_root:alias
 
 let vernac_remove_loadpath path =
   Library.remove_load_path (System.expand_path_macros path)
@@ -764,6 +754,9 @@ let vernac_declare_tactic_definition (local,x,def) =
 let vernac_create_hintdb local id b =
   Auto.create_hint_db local id full_transparent_state b
 
+let vernac_remove_hints local dbs ids =
+  Auto.remove_hints local dbs (List.map Smartlocate.global_with_alias ids)
+
 let vernac_hints local lb h =
   Auto.add_hints local lb (Auto.interp_hints h)
 
@@ -778,11 +771,89 @@ let vernac_declare_implicits local r = function
       Impargs.declare_manual_implicits local (smart_global r) ~enriching:false
 	(List.map (List.map (fun (ex,b,f) -> ex, (b,true,f))) imps)
 
+let vernac_declare_arguments local r l nargs flags =
+  let names = List.map (List.map (fun (id, _,_,_,_) -> id)) l in
+  let names, rest = List.hd names, List.tl names in
+  if List.exists ((<>) names) rest then
+    error "All arguments lists must declare the same names.";
+  if not (Util.list_distinct (List.filter ((<>) Anonymous) names)) then
+    error "Arguments names must be distinct.";
+  let sr = smart_global r in
+  let inf_names =
+    Impargs.compute_implicits_names (Global.env()) (Global.type_of_global sr) in
+  let string_of_name = function Anonymous -> "_" | Name id -> string_of_id id in
+  let rec check li ld = match li, ld with
+    | [], [] -> ()
+    | [], x::_ -> error ("Extra argument " ^ string_of_name x ^ ".")
+    | l, [] -> error ("The following arguments are not declared: " ^
+       (String.concat ", " (List.map string_of_name l)) ^ ".")
+    | _::li, _::ld -> check li ld in
+  if l <> [[]] then
+    List.iter (fun l -> check inf_names l) (names :: rest);
+  (* we interpret _ as the inferred names *)
+  let l = if l = [[]] then l else
+    let name_anons = function
+      | (Anonymous, a,b,c,d), Name id -> Name id, a,b,c,d
+      | x, _ -> x in
+    List.map (fun ns -> List.map name_anons (List.combine ns inf_names)) l in
+  let names_decl = List.map (List.map (fun (id, _,_,_,_) -> id)) l in
+  let some_renaming_specified =
+    try Arguments_renaming.arguments_names sr <> names_decl
+    with Not_found -> false in
+  let some_renaming_specified, implicits =
+    if l = [[]] then false, [[]] else
+    Util.list_fold_map (fun sr il ->
+      let sr', impl = Util.list_fold_map (fun b -> function
+        | (Anonymous, _,_, true, max), Name id -> assert false
+        | (Name x, _,_, true, _), Anonymous ->
+            error ("Argument "^string_of_id x^" cannot be declared implicit.")
+        | (Name iid, _,_, true, max), Name id ->
+           b || iid <> id, Some (ExplByName id, max, false)
+        | (Name iid, _,_, _, _), Name id -> b || iid <> id, None
+        | _ -> b, None)
+        sr (List.combine il inf_names) in
+      sr || sr', Util.list_map_filter (fun x -> x) impl)
+      some_renaming_specified l in
+  if some_renaming_specified then
+    if not (List.mem `Rename flags) then
+      error "To rename arguments the \"rename\" flag must be specified."
+    else Arguments_renaming.rename_arguments local sr names_decl;
+  (* All other infos are in the first item of l *)
+  let l = List.hd l in
+  let some_implicits_specified = implicits <> [[]] in
+  let scopes = List.map (function
+    | (_,_, None,_,_) -> None
+    | (_,_, Some (o, k), _,_) -> 
+        try Some(ignore(Notation.find_scope k); k)
+        with _ -> Some (Notation.find_delimiters_scope o k)) l in
+  let some_scopes_specified = List.exists ((<>) None) scopes in
+  let rargs =
+    Util.list_map_filter (function (n, true) -> Some n | _ -> None)
+      (Util.list_map_i (fun i (_, b, _,_,_) -> i, b) 0 l) in
+  if some_scopes_specified || List.mem `ClearScopes flags then
+    vernac_arguments_scope local r scopes;
+  if not some_implicits_specified && List.mem `DefaultImplicits flags then
+    vernac_declare_implicits local r []
+  else if some_implicits_specified || List.mem `ClearImplicits flags then
+    vernac_declare_implicits local r implicits;
+  if nargs >= 0 && nargs < List.fold_left max 0 rargs then
+    error "The \"/\" option must be placed after the last \"!\".";
+  let rec narrow = function
+    | #Tacred.simpl_flag as x :: tl -> x :: narrow tl
+    | [] -> [] | _ :: tl -> narrow tl in
+  let flags = narrow flags in
+  if rargs <> [] || nargs >= 0 || flags <> [] then
+    match sr with
+    | ConstRef _ as c ->
+       Tacred.set_simpl_behaviour local c (rargs, nargs, flags)
+    | _ -> errorlabstrm "" (strbrk "Modifiers of the behavior of the simpl tactic are relevant for constants only.")
+
 let vernac_reserve bl =
   let sb_decl = (fun (idl,c) ->
     let t = Constrintern.interp_type Evd.empty (Global.env()) c in
-      let t = Detyping.detype false [] [] t in
-        List.iter (fun id -> Reserve.declare_reserved_type id t) idl)
+    let t = Detyping.detype false [] [] t in
+    let t = aconstr_of_glob_constr [] [] t in
+    Reserve.declare_reserved_type idl t)
   in List.iter sb_decl bl
 
 let vernac_generalizable = Implicit_quantifiers.declare_generalizable
@@ -795,6 +866,7 @@ let make_silent_if_not_pcoq b =
 let _ =
   declare_bool_option
     { optsync  = false;
+      optdepr  = false;
       optname  = "silent";
       optkey   = ["Silent"];
       optread  = is_silent;
@@ -803,6 +875,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "implicit arguments";
       optkey   = ["Implicit";"Arguments"];
       optread  = Impargs.is_implicit_args;
@@ -811,6 +884,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "strict implicit arguments";
       optkey   = ["Strict";"Implicit"];
       optread  = Impargs.is_strict_implicit_args;
@@ -819,6 +893,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "strong strict implicit arguments";
       optkey   = ["Strongly";"Strict";"Implicit"];
       optread  = Impargs.is_strongly_strict_implicit_args;
@@ -827,22 +902,16 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "contextual implicit arguments";
       optkey   = ["Contextual";"Implicit"];
       optread  = Impargs.is_contextual_implicit_args;
       optwrite = Impargs.make_contextual_implicit_args }
 
-(* let _ = *)
-(*   declare_bool_option  *)
-(*     { optsync  = true; *)
-(*       optname  = "forceable implicit arguments"; *)
-(*       optkey   = ["Forceable";"Implicit")); *)
-(*       optread  = Impargs.is_forceable_implicit_args; *)
-(*       optwrite = Impargs.make_forceable_implicit_args } *)
-
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "implicit status of reversible patterns";
       optkey   = ["Reversible";"Pattern";"Implicit"];
       optread  = Impargs.is_reversible_pattern_implicit_args;
@@ -851,6 +920,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "maximal insertion of implicit";
       optkey   = ["Maximal";"Implicit";"Insertion"];
       optread  = Impargs.is_maximal_implicit_args;
@@ -859,6 +929,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "automatic introduction of variables";
       optkey   = ["Automatic";"Introduction"];
       optread  = Flags.is_auto_intros;
@@ -867,6 +938,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "coercion printing";
       optkey   = ["Printing";"Coercions"];
       optread  = (fun () -> !Constrextern.print_coercions);
@@ -875,6 +947,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "printing of existential variable instances";
       optkey   = ["Printing";"Existential";"Instances"];
       optread  = (fun () -> !Constrextern.print_evar_arguments);
@@ -882,6 +955,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "implicit arguments printing";
       optkey   = ["Printing";"Implicit"];
       optread  = (fun () -> !Constrextern.print_implicits);
@@ -890,6 +964,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "implicit arguments defensive printing";
       optkey   = ["Printing";"Implicit";"Defensive"];
       optread  = (fun () -> !Constrextern.print_implicits_defensive);
@@ -898,6 +973,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "projection printing using dot notation";
       optkey   = ["Printing";"Projections"];
       optread  = (fun () -> !Constrextern.print_projections);
@@ -906,6 +982,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "notations printing";
       optkey   = ["Printing";"Notations"];
       optread  = (fun () -> not !Constrextern.print_no_symbol);
@@ -914,6 +991,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "raw printing";
       optkey   = ["Printing";"All"];
       optread  = (fun () -> !Flags.raw_print);
@@ -922,38 +1000,57 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
+      optname  = "record printing";
+      optkey   = ["Printing";"Records"];
+      optread  = (fun () -> !Flags.record_print);
+      optwrite = (fun b -> Flags.record_print := b) }
+
+let _ =
+  declare_bool_option
+    { optsync  = true;
+      optdepr  = false;
       optname  = "use of virtual machine inside the kernel";
       optkey   = ["Virtual";"Machine"];
       optread  = (fun () -> Vconv.use_vm ());
       optwrite = (fun b -> Vconv.set_use_vm b) }
 
 let _ =
-  declare_bool_option
+  declare_int_option
     { optsync  = true;
-      optname  = "use of boxed definitions";
-      optkey   = ["Boxed";"Definitions"];
-      optread  = Flags.boxed_definitions;
-      optwrite = (fun b -> Flags.set_boxed_definitions b) }
+      optdepr  = false;
+      optname  = "the level of inling duging functor application";
+      optkey   = ["Inline";"Level"];
+      optread  = (fun () -> Some (Flags.get_inline_level ()));
+      optwrite = (fun o ->
+	           let lev = Option.default Flags.default_inline_level o in
+	           Flags.set_inline_level lev) }
 
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "use of boxed values";
       optkey   = ["Boxed";"Values"];
       optread  = (fun _ -> not (Vm.transp_values ()));
       optwrite = (fun b -> Vm.set_transp_values (not b)) }
 
-let _ =
-  declare_int_option
-    { optsync  = false;
-      optname  = "the undo limit";
-      optkey   = ["Undo"];
-      optread  = Pfedit.get_undo;
-      optwrite = Pfedit.set_undo }
+(* No more undo limit in the new proof engine.
+   The command still exists for compatibility (e.g. with ProofGeneral) *)
 
 let _ =
   declare_int_option
     { optsync  = false;
+      optdepr  = true;
+      optname  = "the undo limit (OBSOLETE)";
+      optkey   = ["Undo"];
+      optread  = (fun _ -> None);
+      optwrite = (fun _ -> ()) }
+
+let _ =
+  declare_int_option
+    { optsync  = false;
+      optdepr  = false;
       optname  = "the hypotheses limit";
       optkey   = ["Hyps";"Limit"];
       optread  = Flags.print_hyps_limit;
@@ -962,6 +1059,7 @@ let _ =
 let _ =
   declare_int_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "the printing depth";
       optkey   = ["Printing";"Depth"];
       optread  = Pp_control.get_depth_boxes;
@@ -970,6 +1068,7 @@ let _ =
 let _ =
   declare_int_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "the printing width";
       optkey   = ["Printing";"Width"];
       optread  = Pp_control.get_margin;
@@ -978,6 +1077,7 @@ let _ =
 let _ =
   declare_bool_option
     { optsync  = true;
+      optdepr  = false;
       optname  = "printing of universes";
       optkey   = ["Printing";"Universes"];
       optread  = (fun () -> !Constrextern.print_universes);
@@ -989,6 +1089,7 @@ let vernac_debug b =
 let _ =
   declare_bool_option
     { optsync  = false;
+      optdepr  = false;
       optname  = "Ltac debug";
       optkey   = ["Ltac";"Debug"];
       optread  = (fun () -> get_debug () <> Tactic_debug.DebugOff);
@@ -1006,7 +1107,7 @@ let vernac_set_opacity local str =
 
 let vernac_set_option locality key = function
   | StringValue s -> set_string_option_value_gen locality key s
-  | IntValue n -> set_int_option_value_gen locality key (Some n)
+  | IntValue n -> set_int_option_value_gen locality key n
   | BoolValue b -> set_bool_option_value_gen locality key b
 
 let vernac_unset_option locality key =
@@ -1046,18 +1147,25 @@ let get_current_context_of_args = function
   | None -> get_current_context ()
 
 let vernac_check_may_eval redexp glopt rc =
-  let (evmap,env) = get_current_context_of_args glopt in
-  let c = interp_constr evmap env rc in
-  let j = Typeops.typing env c in
+  let module P = Pretype_errors in
+  let (sigma, env) = get_current_context_of_args glopt in
+  let sigma', c = interp_open_constr sigma env rc in
+  let j =
+    try
+      Evarutil.check_evars env sigma sigma' c;
+      Arguments_renaming.rename_typing env c
+    with P.PretypeError (_,_,P.UnsolvableImplicit _)
+      | Compat.Loc.Exc_located (_,P.PretypeError (_,_,P.UnsolvableImplicit _)) ->
+      Evarutil.j_nf_evar sigma' (Retyping.get_judgment_of env sigma' c) in
   match redexp with
     | None ->
 	if !pcoq <> None then (Option.get !pcoq).print_check env j
 	else msg (print_judgment env j)
     | Some r ->
-	let redfun = fst (reduction_of_red_expr (interp_redexp env evmap r)) in
+	let redfun = fst (reduction_of_red_expr (interp_redexp env sigma' r)) in
 	if !pcoq <> None
-	then (Option.get !pcoq).print_eval redfun env evmap rc j
-	else msg (print_eval redfun env evmap rc j)
+	then (Option.get !pcoq).print_eval redfun env sigma' rc j
+	else msg (print_eval redfun env sigma' rc j)
 
 let vernac_declare_reduction locality s r =
   declare_red_expr locality s (interp_redexp (Global.env()) Evd.empty r)
@@ -1095,19 +1203,22 @@ let vernac_print = function
   | PrintCoercionPaths (cls,clt) ->
       ppnl (Prettyp.print_path_between (cl_of_qualid cls) (cl_of_qualid clt))
   | PrintCanonicalConversions -> ppnl (Prettyp.print_canonical_projections ())
-  | PrintUniverses None -> pp (Univ.pr_universes (Global.universes ()))
-  | PrintUniverses (Some s) -> dump_universes s
+  | PrintUniverses (b, None) ->
+    let univ = Global.universes () in
+    let univ = if b then Univ.sort_universes univ else univ in
+    pp (Univ.pr_universes univ)
+  | PrintUniverses (b, Some s) -> dump_universes b s
   | PrintHint r -> Auto.print_hint_ref (smart_global r)
   | PrintHintGoal -> Auto.print_applicable_hint ()
   | PrintHintDbName s -> Auto.print_hint_db_by_name s
   | PrintRewriteHintDbName s -> Autorewrite.print_rewrite_hintdb s
   | PrintHintDb -> Auto.print_searchtable ()
   | PrintScopes ->
-      pp (Notation.pr_scopes (Constrextern.without_symbols pr_lrawconstr))
+      pp (Notation.pr_scopes (Constrextern.without_symbols pr_lglob_constr))
   | PrintScope s ->
-      pp (Notation.pr_scope (Constrextern.without_symbols pr_lrawconstr) s)
+      pp (Notation.pr_scope (Constrextern.without_symbols pr_lglob_constr) s)
   | PrintVisibility s ->
-      pp (Notation.pr_visibility (Constrextern.without_symbols pr_lrawconstr) s)
+      pp (Notation.pr_visibility (Constrextern.without_symbols pr_lglob_constr) s)
   | PrintAbout qid -> msg (print_about qid)
   | PrintImplicit qid -> msg (print_impargs qid)
   | PrintAssumptions (o,r) ->
@@ -1145,7 +1256,7 @@ let interp_search_about_item = function
 	    (fun _ -> true) s sc in
 	GlobSearchSubPattern (Pattern.PRef ref)
       with UserError _ ->
-	error ("Unable to interp \""^s^"\" either as a reference or
+	error ("Unable to interp \""^s^"\" either as a reference or \
           	as an identifier component")
 
 let vernac_search s r =
@@ -1169,7 +1280,7 @@ let vernac_locate = function
   | LocateTerm (Genarg.ByNotation (_,ntn,sc)) ->
       ppnl
         (Notation.locate_notation
-          (Constrextern.without_symbols pr_lrawconstr) ntn sc)
+          (Constrextern.without_symbols pr_lglob_constr) ntn sc)
   | LocateLibrary qid -> print_located_library qid
   | LocateModule qid -> print_located_module qid
   | LocateTactic qid -> print_located_tactic qid
@@ -1177,16 +1288,6 @@ let vernac_locate = function
 
 (********************)
 (* Proof management *)
-
-let vernac_goal = function
-  | None -> ()
-  | Some c ->
-      if not (refining()) then begin
-        let unnamed_kind = Lemma (* Arbitrary *) in
-        start_proof_com (Global, Proof unnamed_kind) [None,c] (fun _ _ ->());
-	print_subgoals ()
-      end else
-	error "repeated Goal not permitted in refining mode."
 
 let vernac_abort = function
   | None ->
@@ -1229,48 +1330,58 @@ let vernac_backtrack snum pnum naborts =
   vernac_backto snum;
   Pp.flush_all();
   (* there may be no proof in progress, even if no abort *)
-  (try print_subgoals () with UserError _ -> ())
+  (try print_subgoals () with Proof_global.NoCurrentProof | UserError _ -> ())
 
 
 let vernac_focus gln =
-  check_not_proof_mode "No focussing or Unfocussing in Proof Mode.";
+  let p = Proof_global.give_me_the_proof () in
   match gln with
-    | None -> traverse_nth_goal 1; print_subgoals ()
-    | Some n -> traverse_nth_goal n; print_subgoals ()
+    | None -> Proof.focus focus_command_cond () 1 p; print_subgoals ()
+    | Some n -> Proof.focus focus_command_cond () n p; print_subgoals ()
 
-  (* Reset the focus to the top of the tree *)
+
+  (* Unfocuses one step in the focus stack. *)
 let vernac_unfocus () =
-  check_not_proof_mode "No focussing or Unfocussing in Proof Mode.";
-  make_focus 0; reset_top_of_script (); print_subgoals ()
+  let p = Proof_global.give_me_the_proof () in
+  Proof.unfocus command_focus p; print_subgoals ()
 
-let vernac_go = function
-  | GoTo n -> Pfedit.traverse n;show_node()
-  | GoTop -> Pfedit.reset_top_of_tree ();show_node()
-  | GoNext -> Pfedit.traverse_next_unproven ();show_node()
-  | GoPrev -> Pfedit.traverse_prev_unproven ();show_node()
+(* BeginSubproof / EndSubproof. 
+    BeginSubproof (vernac_subproof) focuses on the first goal, or the goal
+    given as argument.
+    EndSubproof (vernac_end_subproof) unfocuses from a BeginSubproof, provided
+    that the proof of the goal has been completed.
+*)
+let subproof_kind = Proof.new_focus_kind ()
+let subproof_cond = Proof.done_cond subproof_kind
 
-let apply_subproof f occ =
-  let pts = get_pftreestate() in
-  let evc = evc_of_pftreestate pts in
-  let rec aux pts = function
-    | [] -> pts
-    | (n::l) -> aux (Tacmach.traverse n pts) occ in
-  let pts = aux pts (occ@[-1]) in
-  let pf = proof_of_pftreestate pts in
-  f evc (Global.named_context()) pf
+let vernac_subproof gln =
+  let p = Proof_global.give_me_the_proof () in
+  begin match gln with
+  | None -> Proof.focus subproof_cond () 1 p
+  | Some n -> Proof.focus subproof_cond () n p
+  end ;
+  print_subgoals ()
 
-let explain_proof occ =
-  msg (apply_subproof (fun evd _ -> print_treescript evd) occ)
+let vernac_end_subproof () =
+  let p = Proof_global.give_me_the_proof () in
+  Proof.unfocus subproof_kind p ; print_subgoals ()
 
-let explain_tree occ =
-  msg (apply_subproof print_proof occ)
+
+let vernac_bullet (bullet:Proof_global.Bullet.t) =
+  let p = Proof_global.give_me_the_proof () in
+  Proof.transaction p 
+    (fun () -> Proof_global.Bullet.put p bullet);
+  (* Makes the focus visible in emacs by re-printing the goal. *)
+  if !Flags.print_emacs then print_subgoals ()
+
 
 let vernac_show = function
-  | ShowGoal nopt ->
-      if !pcoq <> None then (Option.get !pcoq).show_goal nopt
-      else msg (match nopt with
-	| None -> pr_open_subgoals ()
-	| Some n -> pr_nth_open_subgoal n)
+  | ShowGoal goalref ->
+      if !pcoq <> None then (Option.get !pcoq).show_goal goalref
+      else msg (match goalref with
+	| OpenSubgoals -> pr_open_subgoals ()
+	| NthGoal n -> pr_nth_open_subgoal n
+        | GoalId id -> pr_goal_by_id id)
   | ShowGoalImplicitly None ->
       Constrextern.with_implicits msg (pr_open_subgoals ())
   | ShowGoalImplicitly (Some n) ->
@@ -1285,17 +1396,15 @@ let vernac_show = function
   | ShowIntros all -> show_intro all
   | ShowMatch id -> show_match id
   | ShowThesis -> show_thesis ()
-  | ExplainProof occ -> explain_proof occ
-  | ExplainTree occ -> explain_tree occ
 
 
 let vernac_check_guard () =
   let pts = get_pftreestate () in
-  let pf = proof_of_pftreestate pts in
-  let (pfterm,_) = extract_open_pftreestate pts in
+  let pfterm = List.hd (Proof.partial_proof pts) in
   let message =
     try
-      Inductiveops.control_only_guard (Evd.evar_env (goal_of_proof pf))
+      let { Evd.it=gl ; sigma=sigma } = Proof.V82.top_goal pts in
+      Inductiveops.control_only_guard (Goal.V82.env sigma gl)
 	pfterm;
       (str "The condition holds up to here")
     with UserError(_,s) ->
@@ -1325,8 +1434,8 @@ let interp c = match c with
   | VernacExactProof c -> vernac_exact_proof c
   | VernacAssumption (stre,nl,l) -> vernac_assumption stre l nl
   | VernacInductive (finite,infer,l) -> vernac_inductive finite infer l
-  | VernacFixpoint (l,b) -> vernac_fixpoint l b
-  | VernacCoFixpoint (l,b) -> vernac_cofixpoint l b
+  | VernacFixpoint l -> vernac_fixpoint l
+  | VernacCoFixpoint l -> vernac_cofixpoint l
   | VernacScheme l -> vernac_scheme l
   | VernacCombinedScheme (id, l) -> vernac_combined_scheme id l
 
@@ -1354,20 +1463,12 @@ let interp c = match c with
   | VernacInstance (abst, glob, sup, inst, props, pri) ->
       vernac_instance abst glob sup inst props pri
   | VernacContext sup -> vernac_context sup
-  | VernacDeclareInstance (glob, id) -> vernac_declare_instance glob id
+  | VernacDeclareInstances (glob, ids) -> vernac_declare_instances glob ids
   | VernacDeclareClass id -> vernac_declare_class id
 
   (* Solving *)
   | VernacSolve (n,tac,b) -> vernac_solve n tac b
   | VernacSolveExistential (n,c) -> vernac_solve_existential n c
-
-  (* MMode *)
-
-  | VernacDeclProof -> vernac_decl_proof ()
-  | VernacReturn -> vernac_return ()
-  | VernacProofInstr stp -> vernac_proof_instr stp
-
-  (* /MMode *)
 
   (* Auxiliary file and library management *)
   | VernacRequireFrom (exp,spec,f) -> vernac_require_from exp spec f
@@ -1391,9 +1492,11 @@ let interp c = match c with
   (* Commands *)
   | VernacDeclareTacticDefinition def -> vernac_declare_tactic_definition def
   | VernacCreateHintDb (local,dbname,b) -> vernac_create_hintdb local dbname b
+  | VernacRemoveHints (local,dbnames,ids) -> vernac_remove_hints local dbnames ids
   | VernacHints (local,dbnames,hints) -> vernac_hints local dbnames hints
   | VernacSyntacticDefinition (id,c,l,b) ->vernac_syntactic_definition id c l b
   | VernacDeclareImplicits (local,qid,l) ->vernac_declare_implicits local qid l
+  | VernacArguments (local, qid, l, narg, flags) -> vernac_declare_arguments local qid l narg flags 
   | VernacReserve bl -> vernac_reserve bl
   | VernacGeneralizable (local,gen) -> vernac_generalizable local gen
   | VernacSetOpacity (local,qidl) -> vernac_set_opacity local qidl
@@ -1424,10 +1527,17 @@ let interp c = match c with
   | VernacBacktrack (snum,pnum,naborts) -> vernac_backtrack snum pnum naborts
   | VernacFocus n -> vernac_focus n
   | VernacUnfocus -> vernac_unfocus ()
-  | VernacGo g -> vernac_go g
+  | VernacBullet b -> vernac_bullet b
+  | VernacSubproof n -> vernac_subproof n
+  | VernacEndSubproof -> vernac_end_subproof ()
   | VernacShow s -> vernac_show s
   | VernacCheckGuard -> vernac_check_guard ()
-  | VernacProof tac -> vernac_set_end_tac tac
+  | VernacProof (None, None) -> ()
+  | VernacProof (Some tac, None) -> vernac_set_end_tac tac
+  | VernacProof (None, Some l) -> vernac_set_used_variables l
+  | VernacProof (Some tac, Some l) -> 
+      vernac_set_end_tac tac; vernac_set_used_variables l
+  | VernacProofMode mn -> Proof_global.set_proof_mode mn
   (* Toplevel control *)
   | VernacToplevelControl e -> raise e
 

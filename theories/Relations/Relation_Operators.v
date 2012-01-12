@@ -1,24 +1,24 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Relation_Operators.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
 (************************************************************************)
-(** *                   Bruno Barras, Cristina Cornes                   *)
+(** * Some operators on relations                                       *)
+(************************************************************************)
+(** * Initial authors: Bruno Barras, Cristina Cornes                    *)
 (** *                                                                   *)
-(** * Some of these definitions were taken from :                       *)
+(** * Some of the initial definitions were taken from :                 *)
 (** *    Constructing Recursion Operators in Type Theory                *)
 (** *    L. Paulson  JSC (1986) 2, 325-355                              *)
+(** *                                                                   *)
+(** * Further extensions by Pierre Castéran                             *)
 (************************************************************************)
 
 Require Import Relation_Definitions.
-
-(** * Some operators to build relations *)
 
 (** ** Transitive closure *)
 

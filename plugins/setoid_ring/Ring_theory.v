@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -229,7 +229,7 @@ Section DEFINITIONS.
 
  (** Specification of the power function *)
  Section POWER.
-  Variable Cpow : Set.
+  Variable Cpow : Type.
   Variable Cp_phi : N -> Cpow.
   Variable rpow : R -> Cpow -> R.
 
@@ -589,6 +589,21 @@ Ltac gen_srewrite Rsth Reqe ARth :=
      | progress rewrite (ARsub_def ARth)
      | progress rewrite <- (ARopp_mul_l ARth)
      | progress rewrite <- (ARopp_mul_r Rsth Reqe ARth) ].
+
+Ltac gen_srewrite_sr Rsth Reqe ARth :=
+  repeat first
+     [ gen_reflexivity Rsth
+     | progress rewrite (ARopp_zero Rsth Reqe ARth)
+     | rewrite (ARadd_0_l ARth)
+     | rewrite (ARadd_0_r Rsth ARth)
+     | rewrite (ARmul_1_l ARth)
+     | rewrite (ARmul_1_r Rsth ARth)
+     | rewrite (ARmul_0_l ARth)
+     | rewrite (ARmul_0_r Rsth ARth)
+     | rewrite (ARdistr_l ARth)
+     | rewrite (ARdistr_r Rsth Reqe ARth)
+     | rewrite (ARadd_assoc ARth)
+     | rewrite (ARmul_assoc ARth) ].
 
 Ltac gen_add_push add Rsth Reqe ARth x :=
   repeat (match goal with

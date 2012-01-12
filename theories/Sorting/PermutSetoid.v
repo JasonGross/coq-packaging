@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: PermutSetoid.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import Omega Relations Multiset SetoidList.
 
@@ -344,8 +342,7 @@ Proof.
   rewrite if_eqA_refl in H.
   clear IHl; omega.
   rewrite IHl; intros.
-  specialize (H a0); auto with *.
-  destruct (eqA_dec a a0); simpl; auto with *.
+  specialize (H a0). omega.
 Qed.
 
 (** Permutation is compatible with InA. *)
@@ -396,18 +393,14 @@ Proof.
   apply permut_length_1.
   red; red; intros.
   specialize (P a). simpl in *.
-  rewrite (@if_eqA_rewrite_l a1 a2 a) in P by auto.
-  (** Bug omega: le "set" suivant ne devrait pas etre necessaire *)
-  set (u:= if eqA_dec a2 a then 1 else 0) in *; omega.
+  rewrite (@if_eqA_rewrite_l a1 a2 a) in P by auto. omega.
   right.
   inversion_clear H0; [|inversion H].
   split; auto.
   apply permut_length_1.
   red; red; intros.
   specialize (P a); simpl in *.
-  rewrite (@if_eqA_rewrite_l a1 b2 a) in P by auto.
-  (** Bug omega: idem *)
-  set (u:= if eqA_dec b2 a then 1 else 0) in *; omega.
+  rewrite (@if_eqA_rewrite_l a1 b2 a) in P by auto. omega.
 Qed.
 
 (** Permutation is compatible with length. *)
@@ -492,7 +485,7 @@ Qed.
 
 End Permut_map.
 
-Require Import Permutation TheoryList.
+Require Import Permutation.
 
 Section Permut_permut.
 

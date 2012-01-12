@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: ZArith_dec.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import Sumbool.
 
@@ -38,16 +36,11 @@ Proof.
   intro; apply Zcompare_rect.
 Defined.
 
+Notation Z_eq_dec := Z.eq_dec (only parsing).
+
 Section decidability.
 
   Variables x y : Z.
-
-  (** * Decidability of equality on binary integers *)
-
-  Definition Z_eq_dec : {x = y} + {x <> y}.
-  Proof.
-    decide equality; apply positive_eq_dec.
-  Defined.
 
   (** * Decidability of order on binary integers *)
 

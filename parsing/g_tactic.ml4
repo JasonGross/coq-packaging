@@ -1,122 +1,104 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i camlp4use: "pa_extend.cmo" i*)
-
-(* $Id: g_tactic.ml4 14641 2011-11-06 11:59:10Z herbelin $ *)
-
 open Pp
 open Pcoq
 open Util
 open Tacexpr
-open Rawterm
+open Glob_term
 open Genarg
 open Topconstr
 open Libnames
 open Termops
+open Tok
+open Compat
 
 let all_with delta = make_red_flag [FBeta;FIota;FZeta;delta]
 
 let tactic_kw = [ "->"; "<-" ; "by" ]
-let _ = List.iter (fun s -> Lexer.add_token("",s)) tactic_kw
+let _ = List.iter Lexer.add_keyword tactic_kw
+
+let err () = raise Stream.Failure
 
 (* Hack to parse "(x:=t)" as an explicit argument without conflicts with the *)
 (* admissible notation "(x t)" *)
 let test_lpar_id_coloneq =
   Gram.Entry.of_parser "lpar_id_coloneq"
     (fun strm ->
-      match Stream.npeek 1 strm with
-        | [("","(")] ->
-            (match Stream.npeek 2 strm with
-              | [_; ("IDENT",s)] ->
-                  (match Stream.npeek 3 strm with
-	            | [_; _; ("", ":=")] -> ()
-	            | _ -> raise Stream.Failure)
-	      | _ -> raise Stream.Failure)
-	| _ -> raise Stream.Failure)
+      match get_tok (stream_nth 0 strm) with
+        | KEYWORD "(" ->
+            (match get_tok (stream_nth 1 strm) with
+              | IDENT _ ->
+                  (match get_tok (stream_nth 2 strm) with
+	            | KEYWORD ":=" -> ()
+	            | _ -> err ())
+	      | _ -> err ())
+	| _ -> err ())
 
 (* idem for (x:=t) and (1:=t) *)
 let test_lpar_idnum_coloneq =
   Gram.Entry.of_parser "test_lpar_idnum_coloneq"
     (fun strm ->
-      match Stream.npeek 1 strm with
-        | [("","(")] ->
-            (match Stream.npeek 2 strm with
-              | [_; (("IDENT"|"INT"),_)] ->
-                  (match Stream.npeek 3 strm with
-                    | [_; _; ("", ":=")] -> ()
-                    | _ -> raise Stream.Failure)
-              | _ -> raise Stream.Failure)
-        | _ -> raise Stream.Failure)
+      match get_tok (stream_nth 0 strm) with
+        | KEYWORD "(" ->
+            (match get_tok (stream_nth 1 strm) with
+              | IDENT _ | INT _ ->
+                  (match get_tok (stream_nth 2 strm) with
+                    | KEYWORD ":=" -> ()
+                    | _ -> err ())
+              | _ -> err ())
+        | _ -> err ())
 
 (* idem for (x:t) *)
 let test_lpar_id_colon =
   Gram.Entry.of_parser "lpar_id_colon"
     (fun strm ->
-      match Stream.npeek 1 strm with
-        | [("","(")] ->
-            (match Stream.npeek 2 strm with
-              | [_; ("IDENT",id)] ->
-                  (match Stream.npeek 3 strm with
-                    | [_; _; ("", ":")] -> ()
-                    | _ -> raise Stream.Failure)
-              | _ -> raise Stream.Failure)
-        | _ -> raise Stream.Failure)
+      match get_tok (stream_nth 0 strm) with
+        | KEYWORD "(" ->
+            (match get_tok (stream_nth 1 strm) with
+              | IDENT _ ->
+                  (match get_tok (stream_nth 2 strm) with
+                    | KEYWORD ":" -> ()
+                    | _ -> err ())
+              | _ -> err ())
+        | _ -> err ())
 
 (* idem for (x1..xn:t) [n^2 complexity but exceptional use] *)
 let check_for_coloneq =
   Gram.Entry.of_parser "lpar_id_colon"
     (fun strm ->
       let rec skip_to_rpar p n =
-	match list_last (Stream.npeek n strm) with
-        | ("","(") -> skip_to_rpar (p+1) (n+1)
-        | ("",")") -> if p=0 then n+1 else skip_to_rpar (p-1) (n+1)
-	| ("",".") -> raise Stream.Failure
+	match get_tok (list_last (Stream.npeek n strm)) with
+        | KEYWORD "(" -> skip_to_rpar (p+1) (n+1)
+        | KEYWORD ")" -> if p=0 then n+1 else skip_to_rpar (p-1) (n+1)
+	| KEYWORD "." -> err ()
 	| _ -> skip_to_rpar p (n+1) in
       let rec skip_names n =
-	match list_last (Stream.npeek n strm) with
-        | ("IDENT",_) | ("","_") -> skip_names (n+1)
-	| ("",":") -> skip_to_rpar 0 (n+1) (* skip a constr *)
-	| _ -> raise Stream.Failure in
+	match get_tok (list_last (Stream.npeek n strm)) with
+        | IDENT _ | KEYWORD "_" -> skip_names (n+1)
+	| KEYWORD ":" -> skip_to_rpar 0 (n+1) (* skip a constr *)
+	| _ -> err () in
       let rec skip_binders n =
-	match list_last (Stream.npeek n strm) with
-        | ("","(") -> skip_binders (skip_names (n+1))
-        | ("IDENT",_) | ("","_") -> skip_binders (n+1)
-	| ("",":=") -> ()
-	| _ -> raise Stream.Failure in
-      match Stream.npeek 1 strm with
-      | [("","(")] -> skip_binders 2
-      | _ -> raise Stream.Failure)
-
-let guess_lpar_ipat s strm =
-  match Stream.npeek 1 strm with
-    | [("","(")] ->
-        (match Stream.npeek 2 strm with
-          | [_; ("",("("|"["))] -> ()
-          | [_; ("IDENT",_)] ->
-              (match Stream.npeek 3 strm with
-                | [_; _; ("", s')] when s = s' -> ()
-                | _ -> raise Stream.Failure)
-          | _ -> raise Stream.Failure)
-    | _ -> raise Stream.Failure
-
-let guess_lpar_coloneq =
-  Gram.Entry.of_parser "guess_lpar_coloneq" (guess_lpar_ipat ":=")
-
-let guess_lpar_colon =
-  Gram.Entry.of_parser "guess_lpar_colon" (guess_lpar_ipat ":")
+	match get_tok (list_last (Stream.npeek n strm)) with
+        | KEYWORD "(" -> skip_binders (skip_names (n+1))
+        | IDENT _ | KEYWORD "_" -> skip_binders (n+1)
+	| KEYWORD ":=" -> ()
+	| _ -> err () in
+      match get_tok (stream_nth 0 strm) with
+      | KEYWORD "(" -> skip_binders 2
+      | _ -> err ())
 
 let lookup_at_as_coma =
   Gram.Entry.of_parser "lookup_at_as_coma"
     (fun strm ->
-      match Stream.npeek 1 strm with
-	| [("",(","|"at"|"as"))] -> ()
-	| _ -> raise Stream.Failure)
+      match get_tok (stream_nth 0 strm) with
+	| KEYWORD (","|"at"|"as") -> ()
+	| _ -> err ())
 
 open Constr
 open Prim
@@ -183,8 +165,8 @@ let mkCLambdaN_simple bl c =
 let loc_of_ne_list l = join_loc (fst (List.hd l)) (fst (list_last l))
 
 let map_int_or_var f = function
-  | Rawterm.ArgArg x -> Rawterm.ArgArg (f x)
-  | Rawterm.ArgVar _ as y -> y
+  | Glob_term.ArgArg x -> Glob_term.ArgArg (f x)
+  | Glob_term.ArgVar _ as y -> y
 
 let all_concl_occs_clause = { onhyps=Some[]; concl_occs=all_occurrences_expr }
 
@@ -222,12 +204,12 @@ GEXTEND Gram
   simple_intropattern;
 
   int_or_var:
-    [ [ n = integer  -> Rawterm.ArgArg n
-      | id = identref -> Rawterm.ArgVar id ] ]
+    [ [ n = integer  -> Glob_term.ArgArg n
+      | id = identref -> Glob_term.ArgVar id ] ]
   ;
   nat_or_var:
-    [ [ n = natural  -> Rawterm.ArgArg n
-      | id = identref -> Rawterm.ArgVar id ] ]
+    [ [ n = natural  -> Glob_term.ArgArg n
+      | id = identref -> Glob_term.ArgVar id ] ]
   ;
   (* An identifier or a quotation meta-variable *)
   id_or_meta:
@@ -235,12 +217,6 @@ GEXTEND Gram
 
       (* This is used in quotations *)
       | id = METAIDENT -> MetaId (loc,id) ] ]
-  ;
-  (* A number or a quotation meta-variable *)
-  num_or_meta:
-    [ [ n = integer -> AI n
-      |	id = METAIDENT -> MetaId (loc,id)
-      ] ]
   ;
   open_constr:
     [ [ c = constr -> ((),c) ] ]
@@ -451,7 +427,7 @@ GEXTEND Gram
   ;
   hintbases:
     [ [ "with"; "*" -> None
-      | "with"; l = LIST1 IDENT -> Some l
+      | "with"; l = LIST1 [ x = IDENT -> x] -> Some l
       | -> Some [] ] ]
   ;
   auto_using:
@@ -656,9 +632,9 @@ GEXTEND Gram
       | "exists"; bll = LIST1 opt_bindings SEP "," -> TacSplit (false,true,bll)
       | IDENT "eexists"; bll = LIST1 opt_bindings SEP "," ->
 	  TacSplit (true,true,bll)
-      | IDENT "constructor"; n = num_or_meta; l = with_bindings ->
+      | IDENT "constructor"; n = nat_or_var; l = with_bindings ->
 	  TacConstructor (false,n,l)
-      | IDENT "econstructor"; n = num_or_meta; l = with_bindings ->
+      | IDENT "econstructor"; n = nat_or_var; l = with_bindings ->
 	  TacConstructor (true,n,l)
       | IDENT "constructor"; t = OPT tactic -> TacAnyConstructor (false,t)
       | IDENT "econstructor"; t = OPT tactic -> TacAnyConstructor (true,t)

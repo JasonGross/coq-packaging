@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -8,14 +8,10 @@
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
 
-(*i $Id: Int31.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
 Require Import NaryFunctions.
 Require Import Wf_nat.
 Require Export ZArith.
 Require Export DoubleType.
-
-Unset Boxed Definitions.
 
 (** * 31-bit integers *)
 
@@ -353,16 +349,16 @@ Register div31 as int31 div in "coq_int31" by True.
 Register compare31 as int31 compare in "coq_int31" by True.
 Register addmuldiv31 as int31 addmuldiv in "coq_int31" by True.
 
-Definition gcd31 (i j:int31) :=
-  (fix euler (guard:nat) (i j:int31) {struct guard} :=
-   match guard with
-   | O => In
-   | S p => match j ?= On with
-            | Eq => i
-            | _ => euler p j (let (_, r ) := i/j in r)
-            end
-   end)
-  (2*size)%nat i j.
+Fixpoint euler (guard:nat) (i j:int31) {struct guard} :=
+  match guard with
+    | O => In
+    | S p => match j ?= On with
+               | Eq => i
+               | _ => euler p j (let (_, r ) := i/j in r)
+             end
+  end.
+
+Definition gcd31 (i j:int31) := euler (2*size)%nat i j.
 
 (** Square root functions using newton iteration
     we use a very naive upper-bound on the iteration

@@ -1,13 +1,11 @@
 (* -*- coding: utf-8 -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: RiemannInt.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import Rfunctions.
 Require Import SeqSeries.
@@ -2242,7 +2240,7 @@ Proof.
   unfold RiemannInt_SF in |- *; case (Rle_dec a b); intro.
   eapply StepFun_P17.
   apply StepFun_P1.
-  simpl in |- *; apply StepFun_P1.
+  simpl in |- *; apply StepFun_P1. 
   apply Ropp_eq_compat; eapply StepFun_P17.
   apply StepFun_P1.
   simpl in |- *; apply StepFun_P1.

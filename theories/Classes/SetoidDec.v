@@ -1,7 +1,7 @@
 (* -*- coding: utf-8 -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -13,15 +13,10 @@
    Institution: LRI, CNRS UMR 8623 - University Paris Sud
 *)
 
-(* $Id: SetoidDec.v 14641 2011-11-06 11:59:10Z herbelin $ *)
-
 Set Implicit Arguments.
 Unset Strict Implicit.
 
 Generalizable Variables A B .
-
-Local Notation "'λ'  x .. y , t" := (fun x => .. (fun y => t) ..)
-  (at level 200, x binder, y binder, right associativity).
 
 (** Export notations. *)
 
@@ -95,7 +90,7 @@ Program Instance bool_eqdec : EqDec (eq_setoid bool) :=
   bool_dec.
 
 Program Instance unit_eqdec : EqDec (eq_setoid unit) :=
-  λ x y, in_left.
+  fun x y => in_left.
 
   Next Obligation.
   Proof.
@@ -103,8 +98,9 @@ Program Instance unit_eqdec : EqDec (eq_setoid unit) :=
     reflexivity.
   Qed.
 
-Program Instance prod_eqdec `(! EqDec (eq_setoid A), ! EqDec (eq_setoid B)) : EqDec (eq_setoid (prod A B)) :=
-  λ x y,
+Program Instance prod_eqdec `(! EqDec (eq_setoid A), ! EqDec (eq_setoid B))
+ : EqDec (eq_setoid (prod A B)) :=
+  fun x y =>
     let '(x1, x2) := x in
     let '(y1, y2) := y in
     if x1 == y1 then
@@ -117,8 +113,9 @@ Program Instance prod_eqdec `(! EqDec (eq_setoid A), ! EqDec (eq_setoid B)) : Eq
 (** Objects of function spaces with countable domains like bool
   have decidable equality. *)
 
-Program Instance bool_function_eqdec `(! EqDec (eq_setoid A)) : EqDec (eq_setoid (bool -> A)) :=
-  λ f g,
+Program Instance bool_function_eqdec `(! EqDec (eq_setoid A))
+ : EqDec (eq_setoid (bool -> A)) :=
+  fun f g =>
     if f true == g true then
       if f false == g false then in_left
       else in_right

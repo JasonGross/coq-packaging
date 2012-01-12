@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: coqc.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 (* Afin de rendre Coq plus portable, ce programme Caml remplace le script
    coqc.
@@ -133,7 +131,7 @@ let parse_args () =
     | ("-?"|"-h"|"-H"|"-help"|"--help") :: _ -> usage ()
     | ("-outputstate"|"-inputstate"|"-is"
       |"-load-vernac-source"|"-l"|"-load-vernac-object"
-      |"-load-ml-source"|"-require"|"-load-ml-object"|"-user"
+      |"-load-ml-source"|"-require"|"-load-ml-object"
       |"-init-file"|"-dump-glob"|"-compat"|"-coqlib" as o) :: rem ->
 	begin
 	  match rem with
@@ -153,12 +151,11 @@ let parse_args () =
     | "-R" :: s :: t :: rem -> parse (cfiles,t::s::"-R"::args) rem
 
     | ("-notactics"|"-debug"|"-nolib"
-      |"-debugVM"|"-alltransp"|"-VMno"
       |"-batch"|"-nois"|"-noglob"|"-no-glob"
       |"-q"|"-full"|"-profile"|"-just-parsing"|"-echo" |"-unsafe"|"-quiet"
       |"-silent"|"-m"|"-xml"|"-v7"|"-v8"|"-beautify"|"-strict-implicit"
-      |"-dont-load-proofs"|"-impredicative-set"|"-vm"
-      |"-unboxed-values"|"-unboxed-definitions"|"-draw-vm-instr" as o) :: rem ->
+      |"-dont-load-proofs"|"-load-proofs"|"-force-load-proofs"
+      |"-impredicative-set"|"-vm" as o) :: rem ->
 	parse (cfiles,o::args) rem
 
     | ("-where") :: _ ->
@@ -169,7 +166,7 @@ let parse_args () =
     | ("-config" | "--config") :: _ -> Usage.print_config (); exit 0
 
     | ("-v"|"--version") :: _ ->
-        Usage.version ()
+        Usage.version 0
     | f :: rem ->
 	if Sys.file_exists f then
 	  parse (f::cfiles,args) rem
@@ -195,7 +192,7 @@ let main () =
     end;
     let coqtopname =
       if !image <> "" then !image
-      else Filename.concat (Envars.coqbin ()) (!binary ^ Coq_config.exec_extension)
+      else Filename.concat Envars.coqbin (!binary ^ Coq_config.exec_extension)
     in
       (*  List.iter (compile coqtopname args) cfiles*)
       Unix.handle_unix_error (compile coqtopname args) cfiles

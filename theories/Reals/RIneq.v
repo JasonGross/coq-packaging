@@ -1,13 +1,11 @@
 (* -*- coding: utf-8 -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: RIneq.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (*********************************************************)
 (** * Basic lemmas for the classical real numbers        *)
@@ -1603,7 +1601,7 @@ Lemma pos_INR_nat_of_P : forall p:positive, 0 < INR (nat_of_P p).
 Proof.
   intro; apply lt_0_INR.
   simpl in |- *; auto with real.
-  apply lt_O_nat_of_P.
+  apply nat_of_P_pos.
 Qed.
 Hint Resolve pos_INR_nat_of_P: real.
 
@@ -1712,38 +1710,32 @@ Qed.
 Lemma INR_IZR_INZ : forall n:nat, INR n = IZR (Z_of_nat n).
 Proof.
   simple induction n; auto with real.
-  intros; simpl in |- *; rewrite nat_of_P_o_P_of_succ_nat_eq_succ;
+  intros; simpl in |- *; rewrite nat_of_P_of_succ_nat;
     auto with real.
 Qed.
 
 Lemma plus_IZR_NEG_POS :
   forall p q:positive, IZR (Zpos p + Zneg q) = IZR (Zpos p) + IZR (Zneg q).
 Proof.
-  intros.
-  case (lt_eq_lt_dec (nat_of_P p) (nat_of_P q)).
-  intros [H| H]; simpl in |- *.
-  rewrite nat_of_P_lt_Lt_compare_complement_morphism; simpl in |- *; trivial.
-  rewrite (nat_of_P_minus_morphism q p).
-  rewrite minus_INR; auto with arith; ring.
-  apply ZC2; apply nat_of_P_lt_Lt_compare_complement_morphism; trivial.
-  rewrite (nat_of_P_inj p q); trivial.
-  rewrite Pcompare_refl; simpl in |- *; auto with real.
-  intro H; simpl in |- *.
-  rewrite nat_of_P_gt_Gt_compare_complement_morphism; simpl in |- *;
-    auto with arith.
-  rewrite (nat_of_P_minus_morphism p q).
-  rewrite minus_INR; auto with arith; ring.
-  apply ZC2; apply nat_of_P_lt_Lt_compare_complement_morphism; trivial.
+  intros p q; simpl. rewrite Z.pos_sub_spec.
+  case Pcompare_spec; intros H; simpl.
+  subst. ring.
+  rewrite Pminus_minus by trivial.
+  rewrite minus_INR by (now apply lt_le_weak, Plt_lt).
+  ring.
+  rewrite Pminus_minus by trivial.
+  rewrite minus_INR by (now apply lt_le_weak, Plt_lt).
+  ring.
 Qed.
 
 (**********)
 Lemma plus_IZR : forall n m:Z, IZR (n + m) = IZR n + IZR m.
 Proof.
   intro z; destruct z; intro t; destruct t; intros; auto with real.
-  simpl in |- *; intros; rewrite nat_of_P_plus_morphism; auto with real.
+  simpl; intros; rewrite Pplus_plus; auto with real.
   apply plus_IZR_NEG_POS.
   rewrite Zplus_comm; rewrite Rplus_comm; apply plus_IZR_NEG_POS.
-  simpl in |- *; intros; rewrite nat_of_P_plus_morphism; rewrite plus_INR;
+  simpl; intros; rewrite Pplus_plus; rewrite plus_INR;
     auto with real.
 Qed.
 
@@ -1751,14 +1743,14 @@ Qed.
 Lemma mult_IZR : forall n m:Z, IZR (n * m) = IZR n * IZR m.
 Proof.
   intros z t; case z; case t; simpl in |- *; auto with real.
-  intros t1 z1; rewrite nat_of_P_mult_morphism; auto with real.
-  intros t1 z1; rewrite nat_of_P_mult_morphism; auto with real.
+  intros t1 z1; rewrite Pmult_mult; auto with real.
+  intros t1 z1; rewrite Pmult_mult; auto with real.
   rewrite Rmult_comm.
   rewrite Ropp_mult_distr_l_reverse; auto with real.
   apply Ropp_eq_compat; rewrite mult_comm; auto with real.
-  intros t1 z1; rewrite nat_of_P_mult_morphism; auto with real.
+  intros t1 z1; rewrite Pmult_mult; auto with real.
   rewrite Ropp_mult_distr_l_reverse; auto with real.
-  intros t1 z1; rewrite nat_of_P_mult_morphism; auto with real.
+  intros t1 z1; rewrite Pmult_mult; auto with real.
   rewrite Rmult_opp_opp; auto with real.
 Qed.
 
@@ -1766,7 +1758,7 @@ Lemma pow_IZR : forall z n, pow (IZR z) n = IZR (Zpower z (Z_of_nat n)).
 Proof.
  intros z [|n];simpl;trivial.
  rewrite Zpower_pos_nat.
- rewrite nat_of_P_o_P_of_succ_nat_eq_succ. unfold Zpower_nat;simpl.
+ rewrite nat_of_P_of_succ_nat. unfold Zpower_nat;simpl.
  rewrite mult_IZR.
  induction n;simpl;trivial.
  rewrite mult_IZR;ring[IHn].

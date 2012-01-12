@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -8,15 +8,15 @@
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
 
-(*i $Id: DoubleBase.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
 Set Implicit Arguments.
 
-Require Import ZArith.
+Require Import ZArith Ndigits.
 Require Import BigNumPrelude.
 Require Import DoubleType.
 
 Local Open Scope Z_scope.
+
+Local Infix "<<" := Pos.shiftl_nat (at level 30).
 
 Section DoubleBase.
  Variable w : Type.
@@ -70,13 +70,7 @@ Section DoubleBase.
      end
   end.
 
- Fixpoint double_digits (n:nat) : positive :=
-  match n with
-  | O => w_digits
-  | S n => xO (double_digits n)
-  end.
-
- Definition double_wB n := base (double_digits n).
+ Definition double_wB n := base (w_digits << n).
 
  Fixpoint double_to_Z (n:nat) : word w n -> Z :=
   match n return word w n -> Z with
@@ -167,11 +161,7 @@ Section DoubleBase.
   Variable spec_w_0W  : forall l, [[w_0W l]] = [|l|].
   Variable spec_to_Z  : forall x, 0 <= [|x|] < wB.
   Variable spec_w_compare : forall x y,
-       match w_compare x y with
-       | Eq => [|x|] = [|y|]
-       | Lt => [|x|] < [|y|]
-       | Gt => [|x|] > [|y|]
-       end.
+     w_compare x y = Zcompare [|x|] [|y|].
 
   Lemma wwB_wBwB : wwB = wB^2.
   Proof.
@@ -297,11 +287,10 @@ Section DoubleBase.
   Lemma double_wB_wwB : forall n, double_wB n * double_wB n = double_wB (S n).
   Proof.
    intros n;unfold double_wB;simpl.
-   unfold base;rewrite (Zpos_xO (double_digits n)).
-   replace  (2 * Zpos (double_digits n)) with
-     (Zpos (double_digits n) + Zpos (double_digits n)).
+   unfold base. rewrite Pshiftl_nat_S, (Zpos_xO (_ << _)).
+   replace  (2 * Zpos (w_digits << n)) with
+     (Zpos (w_digits << n) + Zpos (w_digits << n)) by ring.
    symmetry; apply Zpower_exp;intro;discriminate.
-   ring.
   Qed.
 
   Lemma double_wB_pos:
@@ -315,7 +304,7 @@ Section DoubleBase.
   Proof.
   clear spec_w_0 spec_w_1 spec_w_Bm1 w_0 w_1 w_Bm1.
   intros n; elim n; clear n; auto.
-    unfold double_wB, double_digits; auto with zarith.
+    unfold double_wB, "<<"; auto with zarith.
   intros n H1; rewrite <- double_wB_wwB.
   apply Zle_trans with (wB * 1).
     rewrite Zmult_1_r; apply Zle_refl.
@@ -408,35 +397,40 @@ Section DoubleBase.
    intros a b c d H1; apply beta_lex_inv with (1 := H1); auto.
   Qed.
 
+  Ltac comp2ord := match goal with
+   | |- Lt = (?x ?= ?y) => symmetry; change (x < y)
+   | |- Gt = (?x ?= ?y) => symmetry; change (x > y); apply Zlt_gt
+  end.
+
   Lemma spec_ww_compare : forall x y,
-       match ww_compare x y with
-       | Eq => [[x]] = [[y]]
-       | Lt => [[x]] < [[y]]
-       | Gt => [[x]] > [[y]]
-       end.
+    ww_compare x y = Zcompare [[x]] [[y]].
   Proof.
    destruct x as [ |xh xl];destruct y as [ |yh yl];simpl;trivial.
-   generalize (spec_w_compare w_0 yh);destruct (w_compare w_0 yh);
-    intros H;rewrite spec_w_0 in H.
-   rewrite <- H;simpl;rewrite <- spec_w_0;apply spec_w_compare.
-   change 0 with (0*wB+0);pattern 0 at 2;rewrite <- spec_w_0.
+   (* 1st case *)
+   rewrite 2 spec_w_compare, spec_w_0.
+   destruct (Zcompare_spec 0 [|yh|]) as [H|H|H].
+   rewrite <- H;simpl. reflexivity.
+   symmetry. change (0 < [|yh|]*wB+[|yl|]).
+   change 0 with (0*wB+0). rewrite <- spec_w_0 at 2.
    apply wB_lex_inv;trivial.
-   absurd (0 <= [|yh|]). apply Zgt_not_le;trivial.
+   absurd (0 <= [|yh|]). apply Zlt_not_le; trivial.
    destruct (spec_to_Z yh);trivial.
-   generalize (spec_w_compare xh w_0);destruct (w_compare xh w_0);
-    intros H;rewrite spec_w_0 in H.
-   rewrite H;simpl;rewrite <- spec_w_0;apply spec_w_compare.
-   absurd (0 <= [|xh|]). apply Zgt_not_le;apply Zlt_gt;trivial.
+   (* 2nd case *)
+   rewrite 2 spec_w_compare, spec_w_0.
+   destruct (Zcompare_spec [|xh|] 0) as [H|H|H].
+   rewrite H;simpl;reflexivity.
+   absurd (0 <= [|xh|]). apply Zlt_not_le; trivial.
    destruct (spec_to_Z xh);trivial.
-   apply Zlt_gt;change 0 with (0*wB+0);pattern 0 at 2;rewrite <- spec_w_0.
-   apply wB_lex_inv;apply Zgt_lt;trivial.
-
-   generalize (spec_w_compare xh yh);destruct (w_compare xh yh);intros H.
-   rewrite H;generalize (spec_w_compare xl yl);destruct (w_compare xl yl);
-   intros H1;[rewrite H1|apply Zplus_lt_compat_l|apply Zplus_gt_compat_l];
-   trivial.
+   comp2ord.
+   change 0 with (0*wB+0). rewrite <- spec_w_0 at 2.
    apply wB_lex_inv;trivial.
-   apply Zlt_gt;apply wB_lex_inv;apply Zgt_lt;trivial.
+   (* 3rd case *)
+   rewrite 2 spec_w_compare.
+   destruct (Zcompare_spec [|xh|] [|yh|]) as [H|H|H].
+   rewrite H.
+   symmetry. apply Zcompare_plus_compat.
+   comp2ord. apply wB_lex_inv;trivial.
+   comp2ord. apply wB_lex_inv;trivial.
   Qed.
 
 

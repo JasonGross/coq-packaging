@@ -130,3 +130,38 @@ intros f0 Q H.
 setoid_rewrite H.
 tauto.
 Qed.
+
+(** Check proper refreshing of the lemma application for multiple 
+   different instances in a single setoid rewrite. *)
+
+Section mult.
+  Context (fold : forall {A} {B}, (A -> B) -> A -> B).
+  Context (add : forall A, A -> A).
+  Context (fold_lemma : forall {A B f} {eqA : relation B} x, eqA (fold A B f (add A x)) (fold _ _ f x)).
+  Context (ab : forall B, A -> B).
+  Context (anat : forall A, nat -> A).
+
+Goal forall x, (fold _ _ (fun x => ab A x) (add A x) = anat _ (fold _ _ (ab nat) (add _ x))). 
+Proof. intros.
+  setoid_rewrite fold_lemma. 
+  change (fold A A (fun x0 : A => ab A x0) x = anat A (fold A nat (ab nat) x)).
+Abort.
+
+End mult.
+
+(** Current semantics for rewriting with typeclass constraints in the lemma 
+   does not fix the instance at the first unification, use [at], or simply rewrite for 
+   this semantics. *)
+
+Require Import Arith.
+
+Class Foo (A : Type) := {foo_neg : A -> A ; foo_prf : forall x : A, x = foo_neg x}.
+Instance: Foo nat. admit. Defined.
+Instance: Foo bool. admit. Defined.
+
+Goal forall (x : nat) (y : bool), beq_nat (foo_neg x) 0 = foo_neg y.
+Proof. intros. setoid_rewrite <- foo_prf. change (beq_nat x 0 = y). Abort.
+
+Goal forall (x : nat) (y : bool), beq_nat (foo_neg x) 0 = foo_neg y.
+Proof. intros. setoid_rewrite <- @foo_prf at 1. change (beq_nat x 0 = foo_neg y). Abort.
+

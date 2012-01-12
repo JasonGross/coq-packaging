@@ -1,14 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Zgcd_alt.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
-(** * Zgcd_alt : an alternate version of Zgcd, based on Euler's algorithm *)
+(** * Zgcd_alt : an alternate version of Zgcd, based on Euclid's algorithm *)
 
 (**
 Author: Pierre Letouzey
@@ -17,7 +15,7 @@ Author: Pierre Letouzey
 (** The alternate [Zgcd_alt] given here used to be the main [Zgcd]
     function (see file [Znumtheory]), but this main [Zgcd] is now
     based on a modern binary-efficient algorithm. This earlier
-    version, based on Euler's algorithm of iterated modulo, is kept
+    version, based on Euclid's algorithm of iterated modulo, is kept
     here due to both its intrinsic interest and its use as reference
     point when proving gcd on Int31 numbers *)
 

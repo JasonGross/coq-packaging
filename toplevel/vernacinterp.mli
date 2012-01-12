@@ -1,18 +1,14 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: vernacinterp.mli 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
-(*i*)
 open Tacexpr
-(*i*)
 
-(* Interpretation of extended vernac phrases. *)
+(** Interpretation of extended vernac phrases. *)
 
 val disable_drop : exn -> exn
 

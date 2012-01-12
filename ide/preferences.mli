@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: preferences.mli 14641 2011-11-06 11:59:10Z herbelin $ i*)
+type project_behavior = Ignore_args | Append_args | Subst_args
 
 type pref =
     {
@@ -22,6 +22,9 @@ type pref =
       mutable auto_save_delay : int;
       mutable auto_save_name : string * string;
 
+      mutable read_project : project_behavior;
+      mutable project_file_name : string;
+
       mutable encoding_use_locale : bool;
       mutable encoding_use_utf8 : bool;
       mutable encoding_manual : string;
@@ -29,11 +32,11 @@ type pref =
       mutable automatic_tactics : string list;
       mutable cmd_print : string;
 
-      mutable modifier_for_navigation : Gdk.Tags.modifier list;
-      mutable modifier_for_templates : Gdk.Tags.modifier list;
-      mutable modifier_for_tactics : Gdk.Tags.modifier list;
-      mutable modifier_for_display : Gdk.Tags.modifier list;
-      mutable modifiers_valid : Gdk.Tags.modifier list;
+      mutable modifier_for_navigation : string;
+      mutable modifier_for_templates : string;
+      mutable modifier_for_tactics : string;
+      mutable modifier_for_display : string;
+      mutable modifiers_valid : string;
 
       mutable cmd_browse : string;
       mutable cmd_editor : string;

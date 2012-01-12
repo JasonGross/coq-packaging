@@ -1,18 +1,14 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: Ring_abstract.v 14641 2011-11-06 11:59:10Z herbelin $ *)
-
 Require Import LegacyRing_theory.
 Require Import Quote.
 Require Import Ring_normalize.
-
-Unset Boxed Definitions.
 
 Section abstract_semi_rings.
 

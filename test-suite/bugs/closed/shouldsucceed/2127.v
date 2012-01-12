@@ -6,6 +6,3 @@
 Module A.
 Hint Rewrite sym_equal using apply refl_equal : foo.
 End A.
-
-
-

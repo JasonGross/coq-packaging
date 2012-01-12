@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: cooking.mli 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 open Names
 open Term
@@ -14,7 +12,7 @@ open Declarations
 open Environ
 open Univ
 
-(*s Cooking the constants. *)
+(** {6 Cooking the constants. } *)
 
 type work_list = identifier array Cmap.t * identifier array Mindmap.t
 
@@ -24,11 +22,10 @@ type recipe = {
   d_modlist : work_list }
 
 val cook_constant :
-  env -> recipe ->
-    constr_substituted option * constant_type * constraints * bool * bool
-  * bool
+  env -> recipe -> constant_def * constant_type * constraints
 
-(*s Utility functions used in module [Discharge]. *)
+
+(** {6 Utility functions used in module [Discharge]. } *)
 
 val expmod_constr : work_list -> constr -> constr
 

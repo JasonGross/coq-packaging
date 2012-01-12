@@ -202,6 +202,13 @@ try apply H.
 unfold ID; apply H0.
 Qed.
 
+(* Test hyp in "apply -> ... in hyp" is correctly instantiated by Ltac *)
+
+Goal (True <-> False) -> True -> False.
+intros Heq H.
+match goal with [ H : True |- _ ] => apply -> Heq in H end.
+Abort.
+
 (* Test coercion below product and on non meta-free terms in with bindings *)
 (* Cf wishes #1408 from E. Makarov *)
 
@@ -326,13 +333,12 @@ exact (refl_equal 4).
 Qed.
 
 (* From 12612, descent in conjunctions is more powerful *)
-(* The following, which was failing badly in bug 1980, is now accepted
-   (even if somehow surprising) *)
+(* The following, which was failing badly in bug 1980, is now
+   properly rejected, as descend in conjunctions builds an
+   ill-formed elimination from Prop to Type. *)
 
 Goal True.
-eapply ex_intro.
-instantiate (2:=fun _ :True => True).
-instantiate (1:=I).
+Fail eapply ex_intro.
 exact I.
 Qed.
 
@@ -391,3 +397,21 @@ intro x;
 apply x.
 
 *)
+
+Section A.
+
+Variable map : forall (T1 T2 : Type) (f : T1 -> T2) (t11 t12 : T1),
+  identity (f t11) (f t12).
+
+Variable mapfuncomp : forall (X Y Z : Type) (f : X -> Y) (g : Y -> Z) (x x' : X),
+  identity (map Y Z g (f x) (f x')) (map X Z (fun x0 : X => g (f x0)) x x').
+
+Goal forall X:Type, forall Y:Type, forall f:X->Y, forall x : X, forall x' : X, 
+  forall g : Y -> X,
+  let gf := (fun x : X => g (f x)) : X -> X in
+   identity (map Y X g (f x) (f x')) (map X X gf x x').
+intros.
+apply mapfuncomp.
+Abort.
+
+End A.

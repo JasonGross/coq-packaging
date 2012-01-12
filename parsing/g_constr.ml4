@@ -1,26 +1,23 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i camlp4use: "pa_extend.cmo" i*)
-
-(* $Id: g_constr.ml4 14641 2011-11-06 11:59:10Z herbelin $ *)
-
 open Pp
 open Pcoq
 open Constr
 open Prim
-open Rawterm
+open Glob_term
 open Term
 open Names
 open Libnames
 open Topconstr
-
 open Util
+open Tok
+open Compat
 
 let constr_kw =
   [ "forall"; "fun"; "match"; "fix"; "cofix"; "with"; "in"; "for";
@@ -28,7 +25,7 @@ let constr_kw =
     "Prop"; "Set"; "Type"; ".("; "_"; "..";
     "`{"; "`("; "{|"; "|}" ]
 
-let _ = List.iter (fun s -> Lexer.add_token("",s)) constr_kw
+let _ = List.iter Lexer.add_keyword constr_kw
 
 let mk_cast = function
     (c,(_,None)) -> c
@@ -36,7 +33,7 @@ let mk_cast = function
 
 let binders_of_lidents l =
   List.map (fun (loc, id) ->
-    LocalRawAssum ([loc, Name id], Default Rawterm.Explicit,
+    LocalRawAssum ([loc, Name id], Default Glob_term.Explicit,
 		  CHole (loc, Some (Evd.BinderType (Name id))))) l
 
 let mk_fixb (id,bl,ann,body,(loc,tyc)) =
@@ -66,60 +63,49 @@ let mk_fix(loc,kw,id,dcls) =
 let mk_single_fix (loc,kw,dcl) =
   let (id,_,_,_,_) = dcl in mk_fix(loc,kw,id,[dcl])
 
+let err () = raise Stream.Failure
+
 (* Hack to parse "(x:=t)" as an explicit argument without conflicts with the *)
 (* admissible notation "(x t)" *)
 let lpar_id_coloneq =
   Gram.Entry.of_parser "test_lpar_id_coloneq"
     (fun strm ->
-      match Stream.npeek 1 strm with
-        | [("","(")] ->
-            (match Stream.npeek 2 strm with
-	      | [_; ("IDENT",s)] ->
-                  (match Stream.npeek 3 strm with
-                    | [_; _; ("", ":=")] ->
-                        Stream.junk strm; Stream.junk strm; Stream.junk strm;
+      match get_tok (stream_nth 0 strm) with
+        | KEYWORD "(" ->
+            (match get_tok (stream_nth 1 strm) with
+	      | IDENT s ->
+                  (match get_tok (stream_nth 2 strm) with
+                    | KEYWORD ":=" ->
+                        stream_njunk 3 strm;
                         Names.id_of_string s
-	            | _ -> raise Stream.Failure)
-              | _ -> raise Stream.Failure)
-        | _ -> raise Stream.Failure)
+	            | _ -> err ())
+              | _ -> err ())
+        | _ -> err ())
 
 let impl_ident_head =
   Gram.Entry.of_parser "impl_ident_head"
     (fun strm ->
-      match Stream.npeek 1 strm with
-	| [(_,"{")] ->
-	    (match Stream.npeek 2 strm with
-	      | [_;("IDENT",("wf"|"struct"|"measure"))] ->
-		  raise Stream.Failure
-	      | [_;("IDENT",s)] ->
-		  Stream.junk strm; Stream.junk strm;
+      match get_tok (stream_nth 0 strm) with
+	| KEYWORD "{" ->
+	    (match get_tok (stream_nth 1 strm) with
+	      | IDENT ("wf"|"struct"|"measure") -> err ()
+	      | IDENT s ->
+		  stream_njunk 2 strm;
 		  Names.id_of_string s
-	      | _ -> raise Stream.Failure)
-	| _ -> raise Stream.Failure)
+	      | _ -> err ())
+	| _ -> err ())
 
 let ident_colon =
   Gram.Entry.of_parser "ident_colon"
     (fun strm ->
-      match Stream.npeek 1 strm with
-	| [("IDENT",s)] ->
-            (match Stream.npeek 2 strm with
-              | [_; ("", ":")] ->
-                  Stream.junk strm; Stream.junk strm;
+      match get_tok (stream_nth 0 strm) with
+	| IDENT s ->
+            (match get_tok (stream_nth 1 strm) with
+              | KEYWORD ":" ->
+                  stream_njunk 2 strm;
                   Names.id_of_string s
-              | _ -> raise Stream.Failure)
-        | _ -> raise Stream.Failure)
-
-let ident_with =
-  Gram.Entry.of_parser "ident_with"
-    (fun strm ->
-      match Stream.npeek 1 strm with
-      | [("IDENT",s)] ->
-          (match Stream.npeek 2 strm with
-          | [_; ("", "with")] ->
-              Stream.junk strm; Stream.junk strm;
-              Names.id_of_string s
-          | _ -> raise Stream.Failure)
-      | _ -> raise Stream.Failure)
+              | _ -> err ())
+        | _ -> err ())
 
 let aliasvar = function CPatAlias (loc, _, id) -> Some (loc,Name id) | _ -> None
 
@@ -147,9 +133,9 @@ GEXTEND Gram
     [ [ c = lconstr -> c ] ]
   ;
   sort:
-    [ [ "Set"  -> RProp Pos
-      | "Prop" -> RProp Null
-      | "Type" -> RType None ] ]
+    [ [ "Set"  -> GProp Pos
+      | "Prop" -> GProp Null
+      | "Type" -> GType None ] ]
   ;
   lconstr:
     [ [ c = operconstr LEVEL "200" -> c ] ]
@@ -215,7 +201,7 @@ GEXTEND Gram
     [ [ "fun" -> () ] ]
   ;
   record_declaration:
-    [ [ fs = LIST1 record_field_declaration SEP ";" -> CRecord (loc, None, fs)
+    [ [ fs = LIST0 record_field_declaration SEP ";" -> CRecord (loc, None, fs)
 (*       | c = lconstr; "with"; fs = LIST1 record_field_declaration SEP ";" -> *)
 (* 	  CRecord (loc, Some c, fs) *)
     ] ]
@@ -227,7 +213,7 @@ GEXTEND Gram
   binder_constr:
     [ [ forall; bl = open_binders; ","; c = operconstr LEVEL "200" ->
           mkCProdN loc bl c
-      | lambda; bl = open_binders; [ "=>" | "," ]; c = operconstr LEVEL "200" ->
+      | lambda; bl = open_binders; "=>"; c = operconstr LEVEL "200" ->
           mkCLambdaN loc bl c
       | "let"; id=name; bl = binders; ty = type_cstr; ":=";
         c1 = operconstr LEVEL "200"; "in"; c2 = operconstr LEVEL "200" ->
@@ -334,14 +320,17 @@ GEXTEND Gram
       [ p = pattern; "|"; pl = LIST1 pattern SEP "|" -> CPatOr (loc,p::pl) ]
     | "99" RIGHTA [ ]
     | "10" LEFTA
+      [ p = pattern; "as"; id = ident ->
+	  CPatAlias (loc, p, id) ]
+    | "9" RIGHTA
       [ p = pattern; lp = LIST1 NEXT ->
         (match p with
           | CPatAtom (_, Some r) -> CPatCstr (loc, r, lp)
           | _ -> Util.user_err_loc
               (cases_pattern_expr_loc p, "compound_pattern",
                Pp.str "Constructor expected."))
-      | p = pattern; "as"; id = ident ->
-	  CPatAlias (loc, p, id) ]
+      |"@"; r = Prim.reference; lp = LIST1 NEXT ->
+        CPatCstrExpl (loc, r, lp) ]
     | "1" LEFTA
       [ c = pattern; "%"; key=IDENT -> CPatDelimiters (loc,key,c) ]
     | "0"

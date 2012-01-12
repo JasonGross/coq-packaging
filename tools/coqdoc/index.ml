@@ -1,13 +1,10 @@
-(* -*- compile-command: "make -C ../.. bin/coqdoc" -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: index.ml 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 open Filename
 open Lexing
@@ -238,18 +235,20 @@ let type_name = function
 let prepare_entry s = function
   | Notation ->
       (* We decode the encoding done in Dumpglob.cook_notation of coqtop *)
-      (* Encoded notations have the form section:sc:x_'++'_x where: *)
-      (* - the section, if any, ends with a "." *)
-      (* - the scope can be empty *)
-      (* - tokens are separated with "_" *)
-      (* - non-terminal symbols are conventionally represented by "x" *)
-      (* - terminals are enclosed within simple quotes *)
-      (* - existing simple quotes (that necessarily are parts of terminals) *)
-      (*   are doubled *)
+      (* Encoded notations have the form section:sc:x_'++'_x where:      *)
+      (* - the section, if any, ends with a "."                          *)
+      (* - the scope can be empty                                        *)
+      (* - tokens are separated with "_"                                 *)
+      (* - non-terminal symbols are conventionally represented by "x"    *)
+      (* - terminals are enclosed within simple quotes                   *)
+      (* - existing simple quotes (that necessarily are parts of         *)
+      (*   terminals) are doubled                                        *)
       (*   (as a consequence, when a terminal contains "_" or "x", these *)
       (*   necessarily appear enclosed within non-doubled simple quotes) *)
-      (*   Example: "x ' %x _% y %'x %'_' z" is encoded as *)
-      (*     "x_''''_'%x'_'_%'_x_'%''x'_'%''_'''_x" *)
+      (* - non-printable characters < 32 are left encoded so that they   *)
+      (*   are human-readable in index files                             *)
+      (* Example: "x ' %x _% y %'x %'_' z" is encoded as                 *)
+      (*   "x_''''_'%x'_'_%'_x_'%''x'_'%''_'''_x"                        *)
       let err () = eprintf "Invalid notation in globalization file\n"; exit 1 in
       let h = try String.index_from s 0 ':' with _ -> err () in
       let i = try String.index_from s (h+1) ':' with _ -> err () in
@@ -268,10 +267,10 @@ let prepare_entry s = function
 	  | _ -> assert false)
 	end
 	else
-	  if s.[!j] = '\'' then begin
-	    if (!j = l || s.[!j+1] <> '\'') then quoted := false
-	    else (ntn.[!k] <- s.[!j]; incr k; incr j)
-	  end else begin
+	  if s.[!j] = '\'' then
+	    if (!j = l || s.[!j+1] = '_') then quoted := false
+	    else (incr j; ntn.[!k] <- s.[!j]; incr k)
+	  else begin
 	    ntn.[!k] <- s.[!j];
 	    incr k
 	  end;
@@ -324,8 +323,27 @@ let type_of_string = function
   | "sec" -> Section
   | s -> raise (Invalid_argument ("type_of_string:" ^ s))
 
-let read_glob f =
+let ill_formed_glob_file f =
+  eprintf "Warning: ill-formed file %s (links will not be available)\n" f
+let outdated_glob_file f =
+  eprintf "Warning: %s not consistent with corresponding .v file (links will not be available)\n" f
+
+let correct_file vfile f c =
+  let s = input_line c in
+  if String.length s < 7 || String.sub s 0 7 <> "DIGEST " then
+    (ill_formed_glob_file f; false)
+  else
+    let s = String.sub s 7 (String.length s - 7) in
+    match vfile, s with
+    | None, "NO" -> true
+    | Some _, "NO" -> ill_formed_glob_file f; false
+    | None, _ -> ill_formed_glob_file f; false
+    | Some vfile, s ->
+        s = Digest.to_hex (Digest.file vfile) || (outdated_glob_file f; false)
+
+let read_glob vfile f =
   let c = open_in f in
+  if correct_file vfile f c then
   let cur_mod = ref "" in
   try
     while true do

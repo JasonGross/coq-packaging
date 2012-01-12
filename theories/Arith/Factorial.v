@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Factorial.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Import Plus.
 Require Import Mult.
@@ -15,13 +13,13 @@ Open Local Scope nat_scope.
 
 (** Factorial *)
 
-Boxed Fixpoint fact (n:nat) : nat :=
+Fixpoint fact (n:nat) : nat :=
   match n with
     | O => 1
     | S n => S n * fact n
   end.
 
-Arguments Scope fact [nat_scope].
+Arguments fact n%nat.
 
 Lemma lt_O_fact : forall n:nat, 0 < fact n.
 Proof.

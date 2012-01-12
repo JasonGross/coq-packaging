@@ -6,8 +6,6 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: Int.v 12363 2009-09-28 15:04:07Z letouzey $ *)
-
 (** * An light axiomatization of integers (used in FSetAVL). *)
 
 (** We define a signature for an integer datatype based on [Z].
@@ -29,7 +27,7 @@ Module Type Int.
   Parameter int : Set.
 
   Parameter i2z : int -> Z.
-  Arguments Scope i2z [ Int_scope ].
+  Arguments i2z _%I.
 
   Parameter _0 : int.
   Parameter _1 : int.
@@ -222,10 +220,10 @@ Module MoreInt (I:Int).
       | (?x \/ ?y) => let ex := p2ep x with ey := p2ep y in constr:(EPor ex ey)
       | (~ ?x) => let ex := p2ep x in constr:(EPneg ex)
       | (eq (A:=Z) ?x ?y) => let ex := z2ez x with ey := z2ez y in constr:(EPeq ex ey)
-      | (?x<?y)%Z => let ex := z2ez x with ey := z2ez y in constr:(EPlt ex ey)
-      | (?x<=?y)%Z => let ex := z2ez x with ey := z2ez y in constr:(EPle ex ey)
-      | (?x>?y)%Z => let ex := z2ez x with ey := z2ez y in constr:(EPgt ex ey)
-      | (?x>=?y)%Z => let ex := z2ez x with ey := z2ez y in constr:(EPge ex ey)
+      | (?x < ?y)%Z => let ex := z2ez x with ey := z2ez y in constr:(EPlt ex ey)
+      | (?x <= ?y)%Z => let ex := z2ez x with ey := z2ez y in constr:(EPle ex ey)
+      | (?x > ?y)%Z => let ex := z2ez x with ey := z2ez y in constr:(EPgt ex ey)
+      | (?x >= ?y)%Z => let ex := z2ez x with ey := z2ez y in constr:(EPge ex ey)
       | ?x =>  constr:(EPraw x)
     end.
 

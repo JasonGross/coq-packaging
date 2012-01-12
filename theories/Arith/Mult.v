@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: Mult.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 Require Export Plus.
 Require Export Minus.
@@ -177,19 +175,22 @@ Qed.
 Lemma mult_S_lt_compat_l : forall n m p, m < p -> S n * m < S n * p.
 Proof.
   induction n; intros; simpl in *.
-    rewrite <- 2! plus_n_O; assumption.
+    rewrite <- 2 plus_n_O; assumption.
     auto using plus_lt_compat.
 Qed.
 
 Hint Resolve mult_S_lt_compat_l: arith.
 
+Lemma mult_lt_compat_l : forall n m p, n < m -> 0 < p -> p * n < p * m.
+Proof.
+ intros m n p H Hp. destruct p. elim (lt_irrefl _ Hp).
+ now apply mult_S_lt_compat_l.
+Qed.
+
 Lemma mult_lt_compat_r : forall n m p, n < m -> 0 < p -> n * p < m * p.
 Proof.
-  intros m n p H H0.
-  induction p.
-  elim (lt_irrefl _ H0).
-  rewrite mult_comm.
-  replace (n * S p) with (S p * n); auto with arith.
+  intros m n p H Hp. destruct p. elim (lt_irrefl _ Hp).
+  rewrite (mult_comm m), (mult_comm n). now apply mult_S_lt_compat_l.
 Qed.
 
 Lemma mult_S_le_reg_l : forall n m p, S n * m <= S n * p -> m <= p.

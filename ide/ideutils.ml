@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: ideutils.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 
 open Preferences
@@ -18,11 +16,11 @@ exception Forbidden
 let status = GMisc.statusbar ()
 
 let push_info,pop_info =
-  let status_context = status#new_context "Messages" in
+  let status_context = status#new_context ~name:"Messages" in
     (fun s -> ignore (status_context#push s)),status_context#pop
 
 let flash_info =
-  let flash_context = status#new_context "Flash" in
+  let flash_context = status#new_context ~name:"Flash" in
     (fun ?(delay=5000) s -> flash_context#flash ~delay s)
 
 
@@ -31,20 +29,10 @@ let set_location = ref  (function s -> failwith "not ready")
 
 let pbar = GRange.progress_bar ~pulse_step:0.2 ()
 
-(* On a Win32 application with no console, writing to stderr raise
-   a Sys_error "bad file descriptor" *)
-let safe_prerr_endline msg = try prerr_endline msg with _ -> ()
-
-let debug = Flags.debug
+let debug = ref (false)
 
 let prerr_endline s =
-  if !debug then try (prerr_endline s;flush stderr) with _ -> ()
-let prerr_string s =
-  if !debug then try (prerr_string s;flush stderr) with _ -> ()
-
-let lib_ide_file f =
-  let coqlib = Envars.coqlib () in
-  Filename.concat (Filename.concat coqlib "ide") f
+  if !debug then try prerr_endline s;flush stderr with _ -> ()
 
 let get_insert input_buffer = input_buffer#get_iter_at_mark `INSERT
 
@@ -102,7 +90,7 @@ let try_convert s =
   try
     do_convert s
   with _ ->
-    "(* Fatal error: wrong encoding in input.
+    "(* Fatal error: wrong encoding in input. \
 Please choose a correct encoding in the preference panel.*)";;
 
 
@@ -152,26 +140,6 @@ let set_highlight_timer f =
 	revert_timer :=
 	Some (GMain.Timeout.add ~ms:2000
 		~callback:(fun () -> f (); highlight_timer := None; true))
-
-
-(* Get back the standard coq out channels *)
-let init_stdout,read_stdout,clear_stdout =
-  let out_buff = Buffer.create 100 in
-  let out_ft = Format.formatter_of_buffer out_buff in
-  let deep_out_ft = Format.formatter_of_buffer out_buff in
-  let _ = Pp_control.set_gp deep_out_ft Pp_control.deep_gp in
-  (fun () ->
-    Pp_control.std_ft := out_ft;
-    Pp_control.err_ft := out_ft;
-    Pp_control.deep_ft := deep_out_ft;
-),
-  (fun () -> Format.pp_print_flush out_ft ();
-     let r = Buffer.contents out_buff in
-     prerr_endline "Output from Coq is: "; prerr_endline r;
-     Buffer.clear out_buff; r),
-  (fun () ->
-     Format.pp_print_flush out_ft (); Buffer.clear out_buff)
-
 
 let last_dir = ref ""
 
@@ -310,7 +278,7 @@ let run_command f c =
   (Unix.close_process_full (cin,cout,cerr),  Buffer.contents result)
 
 let browse f url =
-  let com = Flags.subst_command_placeholder !current.cmd_browse url in
+  let com = Minilib.subst_command_placeholder !current.cmd_browse url in
   let s = Sys.command com in
   if s = 127 then
     f ("Could not execute\n\""^com^
@@ -318,78 +286,45 @@ let browse f url =
 
 let doc_url () =
   if !current.doc_url = use_default_doc_url || !current.doc_url = "" then
-    if Sys.file_exists
-      (String.sub Coq_config.localwwwrefman 7
-	(String.length Coq_config.localwwwrefman - 7))
-    then
-      Coq_config.localwwwrefman
-    else
-      Coq_config.wwwrefman
+    let addr = List.fold_left Filename.concat (Coq_config.docdir) ["html";"refman";"index.html"] in
+    if Sys.file_exists addr then "file://"^addr else Coq_config.wwwrefman
   else !current.doc_url
 
 let url_for_keyword =
   let ht = Hashtbl.create 97 in
-  lazy (
-  begin try
-    let cin =
-      try open_in (lib_ide_file "index_urls.txt")
+    lazy (
+      begin try
+	let cin =
+	  try let index_urls = Filename.concat (List.find
+            (fun x -> Sys.file_exists (Filename.concat x "index_urls.txt"))
+	    Minilib.xdg_config_dirs) "index_urls.txt" in
+	    open_in index_urls
+	  with Not_found ->
+	    let doc_url = doc_url () in
+	    let n = String.length doc_url in
+	      if n > 8 && String.sub doc_url 0 7 = "file://" then
+		open_in (String.sub doc_url 7 (n-7) ^ "index_urls.txt")
+	      else
+		raise Exit
+	in
+	  try while true do
+	    let s = input_line cin in
+	      try
+		let i = String.index s ',' in
+		let k = String.sub s 0 i in
+		let u = String.sub s (i + 1) (String.length s - i - 1) in
+		  Hashtbl.add ht k u
+	      with _ ->
+		Minilib.safe_prerr_endline "Warning: Cannot parse documentation index file."
+	  done with End_of_file ->
+	    close_in cin
       with _ ->
-	let doc_url = doc_url () in
-	let n = String.length doc_url in
-	if n > 8 && String.sub doc_url 0 7 = "file://" then
-	  open_in (String.sub doc_url 7 (n-7) ^ "index_urls.txt")
-	else
-	  raise Exit
-    in
-    try while true do
-      let s = input_line cin in
-      try
-	let i = String.index s ',' in
-	let k = String.sub s 0 i in
-	let u = String.sub s (i + 1) (String.length s - i - 1) in
-	Hashtbl.add ht k u
-      with _ ->
-	Printf.eprintf "Warning: Cannot parse documentation index file.\n";
-	flush stderr
-    done with End_of_file ->
-      close_in cin
-  with _ ->
-    Printf.eprintf "Warning: Cannot find documentation index file.\n";
-    flush stderr
-  end;
-  Hashtbl.find ht : string -> string)
-
+	Minilib.safe_prerr_endline "Warning: Cannot find documentation index file."
+      end;
+      Hashtbl.find ht : string -> string)
 
 let browse_keyword f text =
   try let u = Lazy.force url_for_keyword text in browse f (doc_url() ^ u)
   with Not_found -> f ("No documentation found for \""^text^"\".\n")
 
-
-(*
-  checks if two file names refer to the same (existing) file by
-  comparing their device and inode.
-  It seems that under Windows, inode is always 0, so we cannot
-  accurately check if
-
-*)
-(* Optimised for partial application (in case many candidates must be
-   compared to f1). *)
-let same_file f1 =
-  try
-    let s1 = Unix.stat f1 in
-    (fun f2 ->
-      try
-        let s2 = Unix.stat f2 in
-        s1.Unix.st_dev = s2.Unix.st_dev &&
-          if Sys.os_type = "Win32" then f1 = f2
-          else s1.Unix.st_ino = s2.Unix.st_ino
-      with
-          Unix.Unix_error _ -> false)
-  with
-      Unix.Unix_error _ -> (fun _ -> false)
-
-let absolute_filename f =
-  if Filename.is_relative f then
-    Filename.concat (Sys.getcwd ()) f
-  else f
-
+let absolute_filename f = Minilib.correct_path f (Sys.getcwd ())

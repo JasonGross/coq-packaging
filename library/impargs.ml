@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: impargs.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Util
 open Names
@@ -159,7 +157,7 @@ let is_flexible_reference env bound depth f =
     | Rel n -> (* since local definitions have been expanded *) false
     | Const kn ->
         let cb = Environ.lookup_constant kn env in
-        cb.const_body <> None & not cb.const_opaque
+	(match cb.const_body with Def _ -> true | _ -> false)
     | Var id ->
         let (_,value,_) = Environ.lookup_named id env in value <> None
     | Ind _ | Construct _ -> false
@@ -247,6 +245,10 @@ let compute_implicits_flags env f all t =
 let compute_auto_implicits env flags enriching t =
   if enriching then compute_implicits_flags env flags true t
   else compute_implicits_gen false false false true true env t
+
+let compute_implicits_names env t =
+  let _, impls = compute_implicits_gen false false false false true env t in
+  List.map fst impls
 
 (* Extra information about implicit arguments *)
 
@@ -439,9 +441,6 @@ let merge_impls (cond,oldimpls) (_,newimpls) =
     | Some (_, Manual, _) -> orig
     | _ -> ni) oldimpls newimpls)@usersuffiximpls
 
-let merge_impls_list oldimpls newimpls =
-  merge_impls oldimpls newimpls
-
 (* Caching implicits *)
 
 type implicit_interactive_request =
@@ -458,7 +457,18 @@ type implicit_discharge_request =
 let implicits_table = ref Refmap.empty
 
 let implicits_of_global ref =
-  try Refmap.find ref !implicits_table with Not_found -> [DefaultImpArgs,[]]
+  try
+    let l = Refmap.find ref !implicits_table in
+    try
+      let rename_l = Arguments_renaming.arguments_names ref in
+      let rename imp name = match imp, name with
+       | Some (_, x,y), Name id -> Some (id, x,y)
+       | _ -> imp in
+      List.map2 (fun (t, il) rl -> t, List.map2 rename il rl) l rename_l
+    with Not_found -> l
+    | Invalid_argument _ ->
+        anomaly "renamings list and implicits list have different lenghts"
+  with Not_found -> [DefaultImpArgs,[]]
 
 let cache_implicits_decl (ref,imps) =
   implicits_table := Refmap.add ref imps !implicits_table
@@ -496,18 +506,23 @@ let discharge_implicits (_,(req,l)) =
   match req with
   | ImplLocal -> None
   | ImplInteractive (ref,flags,exp) ->
+    (try
       let vars = section_segment_of_reference ref in
       let ref' = if isVarRef ref then ref else pop_global_reference ref in
       let extra_impls = impls_of_context vars in
       let l' = [ref', List.map (add_section_impls vars extra_impls) (snd (List.hd l))] in
       Some (ImplInteractive (ref',flags,exp),l')
+    with Not_found -> (* ref not defined in this section *) Some (req,l))
   | ImplConstant (con,flags) ->
+    (try
       let con' = pop_con con in
       let vars = section_segment_of_constant con in
       let extra_impls = impls_of_context vars in
       let l' = [ConstRef con',List.map (add_section_impls vars extra_impls) (snd (List.hd l))] in
 	Some (ImplConstant (con',flags),l')
+    with Not_found -> (* con not defined in this section *) Some (req,l))
   | ImplMutualInductive (kn,flags) ->
+    (try
       let l' = List.map (fun (gr, l) ->
 	let vars = section_segment_of_reference gr in
 	let extra_impls = impls_of_context vars in
@@ -515,6 +530,7 @@ let discharge_implicits (_,(req,l)) =
 	 List.map (add_section_impls vars extra_impls) l)) l
       in
 	Some (ImplMutualInductive (pop_kn kn,flags),l')
+    with Not_found -> (* ref not defined in this section *) Some (req,l))
 
 let rebuild_implicits (req,l) =
   match req with
@@ -553,7 +569,11 @@ let rebuild_implicits (req,l) =
 let classify_implicits (req,_ as obj) =
   if req = ImplLocal then Dispose else Substitute obj
 
-let (inImplicits, _) =
+type implicits_obj =
+    implicit_discharge_request *
+      (global_reference * implicits_list list) list
+
+let inImplicits : implicits_obj -> obj =
   declare_object {(default_object "IMPLICITS") with
     cache_function = cache_implicits;
     load_function = load_implicits;
@@ -592,6 +612,8 @@ let declare_mib_implicits kn =
 
 (* Declare manual implicits *)
 type manual_explicitation = Topconstr.explicitation * (bool * bool * bool)
+
+type manual_implicits = manual_explicitation list
 
 let compute_implicits_with_manual env typ enriching l =
   let _,autoimpls = compute_auto_implicits env !implicit_args enriching typ in
