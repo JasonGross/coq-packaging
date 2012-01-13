@@ -46,4 +46,4 @@ DYN: usr/lib/coq/plugins/rtauto/rtauto_plugin.cmxs
 DYN: usr/lib/coq/plugins/setoid_ring/newring_plugin.cmxs
 DYN: usr/lib/coq/plugins/micromega/micromega_plugin.cmxs
 DYN: usr/lib/coq/plugins/quote/quote_plugin.cmxs
-DYN: usr/lib/coq/plugins/decl_mode/decl_mode_plugin.cma
+DYN: usr/lib/coq/plugins/decl_mode/decl_mode_plugin.cmxs
