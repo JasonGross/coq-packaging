@@ -1,0 +1,31 @@
+From: Stephane Glondu <steph@glondu.net>
+Date: Sat, 14 Jan 2012 01:24:30 +0100
+Subject: coq_micromega.ml: fix order of recursive calls to rconstant
+
+Some tests were failing on architectures without native code because
+the evaluation order of arguments in a function call is not the same
+on bytecode, leading to different behaviours for the psatzl tactic.
+---
+ plugins/micromega/coq_micromega.ml |    8 ++++++--
+ 1 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/plugins/micromega/coq_micromega.ml b/plugins/micromega/coq_micromega.ml
+index 1ad49bb..543ab1b 100644
+--- a/plugins/micromega/coq_micromega.ml
++++ b/plugins/micromega/coq_micromega.ml
+@@ -991,8 +991,12 @@ struct
+         else raise ParseError
+     | App(op,args) -> 
+ 	begin
+-	  try 
+-	    (assoc_const   op rconst_assoc) (rconstant args.(0)) (rconstant args.(1))
++	  try
++            (* the evaluation order is important in the following *)
++            let f = assoc_const op rconst_assoc in
++            let a = rconstant args.(0) in
++            let b = rconstant args.(1) in
++            f a b
+ 	  with
+ 	      ParseError -> 
+ 		match op with
+-- 
