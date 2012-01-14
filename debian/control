@@ -29,10 +29,10 @@ Depends:
  ${shlibs:Depends},
  ${misc:Depends}
 Provides: coq-${F:CoqABI}
-Recommends: coqide | proofgeneral-coq
+Recommends: coqide | proofgeneral
 Suggests:
  ocaml-nox,
- proofgeneral-coq,
+ proofgeneral,
  ledit | readline-editor,
  libcoq-ocaml-dev,
  why (>= 2.19),
@@ -48,7 +48,7 @@ Description: proof assistant for higher-order logic (toplevel and compiler)
  .
  A graphical interface for Coq is provided in the coqide package.
  Coq can also be used with ProofGeneral, which allows proofs to be
- edited using emacs and xemacs. This requires the proofgeneral-coq
+ edited using emacs and xemacs. This requires the proofgeneral
  package to be installed.
 
 Package: coqide
