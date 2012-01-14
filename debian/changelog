@@ -1,3 +1,11 @@
+coq (8.4~beta+dfsg-2) experimental; urgency=low
+
+  * Fix a typo that caused decl_mode_plugin.cmxs not being installed,
+    making coqtop.opt useless
+  * Fix an ordering issue that was causing a test to fail in bytecode
+
+ -- Stéphane Glondu <glondu@debian.org>  Sat, 14 Jan 2012 11:11:48 +0100
+
 coq (8.4~beta+dfsg-1) experimental; urgency=low
 
   * New upstream beta release
