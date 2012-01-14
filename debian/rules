@@ -82,7 +82,7 @@ override_dh_auto_install:
 
 .PHONY: override_dh_install
 override_dh_install:
-	dh_install --list-missing
+	dh_install --fail-missing
 	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
 
 .PHONY: override_dh_gencontrol
