@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: constrintern.ml 14656 2011-11-16 08:46:31Z herbelin $ *)
+(* $Id: constrintern.ml 15072 2012-03-20 17:36:33Z herbelin $ *)
 
 open Pp
 open Util
@@ -693,8 +693,9 @@ let apply_scope_env (ids,unb,_,scopes) = function
   | [] -> (ids,unb,None,scopes), []
   | sc::scl -> (ids,unb,sc,scopes), scl
 
-let rec simple_adjust_scopes n = function
-  | [] -> if n=0 then [] else None :: simple_adjust_scopes (n-1) []
+let rec simple_adjust_scopes n scopes =
+  if n=0 then [] else match scopes with
+  | [] -> None :: simple_adjust_scopes (n-1) []
   | sc::scopes -> sc :: simple_adjust_scopes (n-1) scopes
 
 let find_remaining_constructor_scopes pl1 pl2 (ind,j as cstr) =
@@ -770,9 +771,6 @@ let message_redundant_alias (id1,id2) =
    ("Alias variable "^(string_of_id id1)^" is merged with "^(string_of_id id2))
 
 (* Expanding notations *)
-
-let error_invalid_pattern_notation loc =
-  user_err_loc (loc,"",str "Invalid notation for pattern.")
 
 let chop_aconstr_constructor loc (ind,k) args =
   if List.length args = 0 then (* Tolerance for a @id notation *) args else

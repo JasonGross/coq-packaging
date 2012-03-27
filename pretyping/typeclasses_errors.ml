@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: typeclasses_errors.ml 14641 2011-11-06 11:59:10Z herbelin $ i*)
+(*i $Id: typeclasses_errors.ml 15025 2012-03-09 14:27:07Z glondu $ i*)
 
 (*i*)
 open Names
@@ -47,7 +47,7 @@ let unsatisfiable_constraints env evd ev =
       raise (TypeClassError (env, UnsatisfiableConstraints (evd, None)))
   | Some ev ->
       let loc, kind = Evd.evar_source ev evd in
-	raise (Stdpp.Exc_located (loc, TypeClassError
+	raise (Compat.Exc_located (loc, TypeClassError
 	  (env, UnsatisfiableConstraints (evd, Some (ev, kind)))))
 
 let mismatched_ctx_inst env c n m = typeclass_error env (MismatchedContextInstance (c, n, m))
@@ -55,5 +55,5 @@ let mismatched_ctx_inst env c n m = typeclass_error env (MismatchedContextInstan
 let rec unsatisfiable_exception exn =
   match exn with
   | TypeClassError (_, UnsatisfiableConstraints _) -> true
-  | Stdpp.Exc_located(_, e) -> unsatisfiable_exception e
+  | Compat.Exc_located(_, e) -> unsatisfiable_exception e
   | _ -> false

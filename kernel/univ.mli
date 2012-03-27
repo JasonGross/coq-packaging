@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: univ.mli 14641 2011-11-06 11:59:10Z herbelin $ i*)
+(*i $Id: univ.mli 15019 2012-03-02 17:27:18Z letouzey $ i*)
 
 (* Universes. *)
 
@@ -77,6 +77,10 @@ val subst_large_constraints :
   (universe * universe) list -> universe -> universe
 
 val no_upper_constraints : universe -> constraints -> bool
+
+(** Is u mentionned in v (or equals to v) ? *)
+
+val univ_depends : universe -> universe -> bool
 
 (*s Pretty-printing of universes. *)
 

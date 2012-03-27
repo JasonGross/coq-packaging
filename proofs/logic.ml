@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: logic.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
+(* $Id: logic.ml 15025 2012-03-09 14:27:07Z glondu $ *)
 
 open Pp
 open Util
@@ -48,7 +48,7 @@ exception RefinerError of refiner_error
 open Pretype_errors
 
 let rec catchable_exception = function
-  | Stdpp.Exc_located(_,e) -> catchable_exception e
+  | Compat.Exc_located(_,e) -> catchable_exception e
   | LtacLocated(_,e) -> catchable_exception e
   | Util.UserError _ | TypeError _
   | RefinerError _ | Indrec.RecursionSchemeError _

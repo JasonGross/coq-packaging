@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: coqide.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
+(* $Id: coqide.ml 15023 2012-03-08 22:35:31Z pboutill $ *)
 
 open Preferences
 open Vernacexpr
@@ -1267,14 +1267,14 @@ object(self)
           | l when List.mem `MOD1 l ->
               let k = GdkEvent.Key.keyval k in
                 if GdkKeysyms._Return=k
-                then ignore(
+                then let _ =
                   if (input_buffer#insert_interactive "\n") then
                     begin
                       let i= self#get_insert#backward_word_start in
                         prerr_endline "active_kp_hf: Placing cursor";
                         self#process_until_iter_or_error i
-                    end);
-                true
+                    end in
+		     true else false
           | l when List.mem `CONTROL l ->
               let k = GdkEvent.Key.keyval k in
                 if GdkKeysyms._Break=k

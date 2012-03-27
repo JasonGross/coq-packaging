@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pretype_errors.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
+(* $Id: pretype_errors.ml 15025 2012-03-09 14:27:07Z glondu $ *)
 
 open Util
 open Stdpp
@@ -45,7 +45,7 @@ exception PretypeError of env * pretype_error
 
 let precatchable_exception = function
   | Util.UserError _ | TypeError _ | PretypeError _
-  | Stdpp.Exc_located(_,(Util.UserError _ | TypeError _ |
+  | Compat.Exc_located(_,(Util.UserError _ | TypeError _ |
     Nametab.GlobalizationError _ | PretypeError _)) -> true
   | _ -> false
 

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: topconstr.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
+(* $Id: topconstr.ml 15072 2012-03-20 17:36:33Z herbelin $ *)
 
 (*i*)
 open Pp
@@ -901,6 +901,12 @@ let names_of_local_assums bl =
 
 let names_of_local_binders bl =
   List.flatten (List.map (function LocalRawAssum(l,_,_)->l|LocalRawDef(l,_)->[l]) bl)
+
+(**********************************************************************)
+(* Miscellaneous *)
+
+let error_invalid_pattern_notation loc =
+  user_err_loc (loc,"",str "Invalid notation for pattern.")
 
 (**********************************************************************)
 (* Functions on constr_expr *)
