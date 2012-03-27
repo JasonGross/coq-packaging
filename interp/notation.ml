@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: notation.ml 14820 2011-12-18 22:11:32Z herbelin $ *)
+(* $Id: notation.ml 14882 2012-01-05 23:44:40Z herbelin $ *)
 
 (*i*)
 open Util

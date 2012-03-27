@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: vernac.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
+(* $Id: vernac.ml 15025 2012-03-09 14:27:07Z glondu $ *)
 
 (* Parsing of vernacular. *)
 
@@ -41,14 +41,14 @@ let raise_with_file file exc =
     match re with
       | Error_in_file (_, (b,f,loc), e) when loc <> dummy_loc ->
           ((b, f, loc), e)
-      | Stdpp.Exc_located (loc, e) when loc <> dummy_loc ->
+      | Compat.Exc_located (loc, e) when loc <> dummy_loc ->
           ((false,file, loc), e)
-      | Stdpp.Exc_located (_, e) | e -> ((false,file,cmdloc), e)
+      | Compat.Exc_located (_, e) | e -> ((false,file,cmdloc), e)
   in
   raise (Error_in_file (file, inner, disable_drop inex))
 
 let real_error = function
-  | Stdpp.Exc_located (_, e) -> e
+  | Compat.Exc_located (_, e) -> e
   | Error_in_file (_, _, e) -> e
   | e -> e
 
@@ -206,7 +206,9 @@ let rec vernac_com interpfun (loc,com) =
 
     | VernacFail v ->
 	if not !just_parsing then begin try
-	  interp v; raise HasNotFailed
+	  (* If the command actually works, ignore its effects on the state *)
+	  States.with_state_protection
+	    (fun v -> interp v; raise HasNotFailed) v
 	with e -> match real_error e with
 	  | HasNotFailed ->
 	      errorlabstrm "Fail" (str "The command has not failed !")
