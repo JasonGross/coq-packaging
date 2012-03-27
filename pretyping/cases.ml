@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: cases.ml 14675 2011-11-17 22:19:34Z herbelin $ *)
+(* $Id: cases.ml 15025 2012-03-09 14:27:07Z glondu $ *)
 
 open Util
 open Names
@@ -100,7 +100,7 @@ let rec list_try_compile f = function
   | h::t ->
       try f h
       with UserError _ | TypeError _ | PretypeError _
-	| Stdpp.Exc_located (_,(UserError _ | TypeError _ | PretypeError _)) ->
+	| Compat.Exc_located (_,(UserError _ | TypeError _ | PretypeError _)) ->
 	    list_try_compile f t
 
 let force_name =

@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: recdef.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
+(* $Id: recdef.ml 15069 2012-03-20 14:06:07Z herbelin $ *)
 
 open Term
 open Termops
@@ -51,7 +51,8 @@ open Genarg
 
 
 let compute_renamed_type gls c =
-  rename_bound_vars_as_displayed [] (pf_type_of gls c)
+  rename_bound_vars_as_displayed (*no avoid*) [] (*no rels*) []
+    (pf_type_of gls c)
 
 let qed () = Lemmas.save_named true
 let defined () = Lemmas.save_named false

@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: topconstr.mli 14641 2011-11-06 11:59:10Z herbelin $ i*)
+(*i $Id: topconstr.mli 15072 2012-03-20 17:36:33Z herbelin $ i*)
 
 (*i*)
 open Pp
@@ -282,3 +282,7 @@ val ntn_loc :
   Util.loc -> constr_notation_substitution -> string -> (int * int) list
 val patntn_loc :
   Util.loc -> cases_pattern_notation_substitution -> string -> (int * int) list
+
+(** For cases pattern parsing errors *)
+
+val error_invalid_pattern_notation : Util.loc -> 'a

@@ -7,7 +7,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: cpretty.mll 14641 2011-11-06 11:59:10Z herbelin $ i*)
+(*i $Id: cpretty.mll 14868 2011-12-26 17:07:24Z herbelin $ i*)
 
 (*s Utility functions for the scanners *)
 
@@ -309,7 +309,12 @@ let thm_token =
 
 let prf_token =
   "Next" space+ "Obligation"
-  | "Proof" (space* "." | space+ "with")
+  | "Proof" (space* "." | space+ "with" | space+ "using")
+
+let immediate_prf_token =
+  (* Approximation of a proof term, if not in the prf_token case *)
+  (* To be checked after prf_token *)
+  "Proof" space* [^ '.' 'w' 'u']
 
 let def_token =
   "Definition"
@@ -384,7 +389,8 @@ let commands =
   | ("Hypothesis" | "Hypotheses")
   | "End"
 
-let end_kw = "Qed" | "Defined" | "Save" | "Admitted" | "Abort"
+let end_kw =
+  immediate_prf_token | "Qed" | "Defined" | "Save" | "Admitted" | "Abort"
 
 let extraction =
   "Extraction"
@@ -607,7 +613,7 @@ and coq = parse
   | prf_token
       { let eol =
 	  if not !Cdglobals.gallina then
-	    begin backtrack lexbuf; body_bol lexbuf end
+	    begin backtrack lexbuf; body lexbuf end
 	  else
 	    let s = lexeme lexbuf in
 	    let eol =

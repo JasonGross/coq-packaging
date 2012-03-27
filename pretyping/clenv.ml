@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: clenv.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
+(* $Id: clenv.ml 15069 2012-03-20 14:06:07Z herbelin $ *)
 
 open Pp
 open Util
@@ -145,9 +145,6 @@ let mk_clenv_from_n gls n (c,cty) =
   mk_clenv_from_env (Global.env_of_context gls.it.evar_hyps) gls.sigma n (c, cty)
 
 let mk_clenv_from gls = mk_clenv_from_n gls None
-
-let mk_clenv_rename_from_n gls n (c,t) =
-  mk_clenv_from_n gls n (c,rename_bound_vars_as_displayed [] t)
 
 let mk_clenv_type_of gls t = mk_clenv_from gls (t,pf_type_of gls t)
 
@@ -460,8 +457,8 @@ let make_clenv_binding_gen hyps_only n env sigma (c,t) = function
       let clause = mk_clenv_from_env env sigma n (c,t) in
       clenv_constrain_dep_args hyps_only largs clause
   | ExplicitBindings lbind ->
-      let clause = mk_clenv_from_env env sigma n 
-	(c,rename_bound_vars_as_displayed [] t) 
+      let clause = mk_clenv_from_env env sigma n
+	(c,rename_bound_vars_as_displayed [] [] t)
       in clenv_match_args lbind clause
   | NoBindings ->
       mk_clenv_from_env env sigma n (c,t)

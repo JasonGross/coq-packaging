@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: ppvernac.ml 14657 2011-11-16 08:46:33Z herbelin $ *)
+(* $Id: ppvernac.ml 15025 2012-03-09 14:27:07Z glondu $ *)
 
 open Pp
 open Names
@@ -781,7 +781,7 @@ let rec pr_vernac = function
       (if i = 1 then mt() else int i ++ str ": ") ++
       pr_raw_tactic tac
       ++ (try if deftac & Pfedit.get_end_tac() <> None then str ".." else mt ()
-      with UserError _|Stdpp.Exc_located _ -> mt())
+      with UserError _|Compat.Exc_located _ -> mt())
 
   | VernacSolveExistential (i,c) ->
       str"Existential " ++ int i ++ pr_lconstrarg c

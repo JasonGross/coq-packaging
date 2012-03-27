@@ -8,7 +8,7 @@
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
 
-(* $Id: class_tactics.ml4 14641 2011-11-06 11:59:10Z herbelin $ *)
+(* $Id: class_tactics.ml4 15025 2012-03-09 14:27:07Z glondu $ *)
 
 open Pp
 open Util
@@ -219,7 +219,7 @@ let e_possible_resolve db_list local_db gl =
 
 let rec catchable = function
   | Refiner.FailError _ -> true
-  | Stdpp.Exc_located (_, e) -> catchable e
+  | Compat.Exc_located (_, e) -> catchable e
   | e -> Logic.catchable_exception e
 
 let is_dep gl gls =
