@@ -1,8 +1,11 @@
-coq (8.3.pl4+dfsg-1) UNRELEASED; urgency=low
+coq (8.3.pl4+dfsg-1) unstable; urgency=low
 
   * New upstream release
+  * Replace proofgeneral-coq by proofgeneral in dependencies
+  * Switch debian/copyright to format 1.0
+  * Bump Standards-Version to 3.9.3
 
- -- Stéphane Glondu <glondu@debian.org>  Tue, 27 Mar 2012 07:50:16 +0200
+ -- Stéphane Glondu <glondu@debian.org>  Tue, 27 Mar 2012 07:59:07 +0200
 
 coq (8.3.pl3+dfsg-2) unstable; urgency=low
 
