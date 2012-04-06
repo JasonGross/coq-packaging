@@ -1,3 +1,9 @@
+coq (8.4~beta+dfsg-4) experimental; urgency=low
+
+  * Recompile with camlp5 6.05 (no changes)
+
+ -- Stéphane Glondu <glondu@debian.org>  Fri, 06 Apr 2012 10:04:06 +0200
+
 coq (8.4~beta+dfsg-3) experimental; urgency=low
 
   * Replace proofgeneral-coq by proofgeneral in dependencies
