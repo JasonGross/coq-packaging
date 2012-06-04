@@ -23,8 +23,12 @@ open Equality
 open Compat
 
 (**********************************************************************)
-(* replace, discriminate, injection, simplify_eq                      *)
+(* admit, replace, discriminate, injection, simplify_eq               *)
 (* cutrewrite, dependent rewrite                                      *)
+
+TACTIC EXTEND admit
+  [ "admit" ] -> [ admit_as_an_axiom ]
+END
 
 let replace_in_clause_maybe_by (sigma1,c1) c2 in_hyp tac =
   Refiner.tclWITHHOLES false
@@ -760,4 +764,16 @@ TACTIC EXTEND is_hyp
   [ match kind_of_term x with
     | Var _ -> tclIDTAC
     | _ -> tclFAIL 0 (str "Not a variable or hypothesis") ]
+END
+
+
+(* Command to grab the evars left unresolved at the end of a proof. *)
+(* spiwack: I put it in extratactics because it is somewhat tied with
+   the semantics of the LCF-style tactics, hence with the classic tactic
+   mode. *)
+VERNAC COMMAND EXTEND GrabEvars
+[ "Grab" "Existential" "Variables" ] ->
+  [ let p = Proof_global.give_me_the_proof () in
+    Proof.V82.grab_evars p;
+    Flags.if_verbose (fun () -> Pp.msg (Printer.pr_open_subgoals ())) () ]
 END

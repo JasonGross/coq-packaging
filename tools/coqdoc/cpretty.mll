@@ -306,7 +306,12 @@ let thm_token =
 
 let prf_token =
   "Next" space+ "Obligation"
-  | "Proof" (space* "." | space+ "with")
+  | "Proof" (space* "." | space+ "with" | space+ "using")
+
+let immediate_prf_token =
+  (* Approximation of a proof term, if not in the prf_token case *)
+  (* To be checked after prf_token *)
+  "Proof" space* [^ '.' 'w' 'u']
 
 let def_token =
   "Definition"
@@ -382,7 +387,8 @@ let commands =
   | ("Hypothesis" | "Hypotheses")
   | "End"
 
-let end_kw = "Qed" | "Defined" | "Save" | "Admitted" | "Abort"
+let end_kw =
+  immediate_prf_token | "Qed" | "Defined" | "Save" | "Admitted" | "Abort"
 
 let extraction =
   "Extraction"
@@ -504,7 +510,7 @@ rule coq_bol = parse
 	output_indented_keyword s lexbuf;
 	let eol= body lexbuf in
 	if eol then coq_bol lexbuf else coq lexbuf }
-  | space* notation_kw space*
+  | space* notation_kw
       {	let s = lexeme lexbuf in
 	output_indented_keyword s lexbuf;
 	let eol= start_notation_string lexbuf in
@@ -605,7 +611,7 @@ and coq = parse
   | prf_token
       { let eol =
 	  if not !Cdglobals.gallina then
-	    begin backtrack lexbuf; body_bol lexbuf end
+	    begin backtrack lexbuf; body lexbuf end
 	  else
 	    let s = lexeme lexbuf in
 	    let eol =
@@ -631,7 +637,7 @@ and coq = parse
 	  Output.ident s (lexeme_start lexbuf);
 	let eol = body lexbuf in
 	  if eol then coq_bol lexbuf else coq lexbuf }
-  | notation_kw space*
+  | notation_kw
       { let s = lexeme lexbuf in
 	Output.ident s (lexeme_start lexbuf);
 	let eol= start_notation_string lexbuf in
@@ -1096,7 +1102,7 @@ and body = parse
 	     if eol
 	     then begin if not !Cdglobals.parse_comments then Output.line_break(); body_bol lexbuf end
 	     else body lexbuf }
-  | "where" space*
+  | "where" 
       { Tokens.flush_sublexer();
         Output.ident (lexeme lexbuf) (lexeme_start lexbuf);
 	start_notation_string lexbuf }
@@ -1120,6 +1126,8 @@ and body = parse
         body lexbuf }
 
 and start_notation_string = parse
+  | space { Tokens.flush_sublexer(); Output.char (lexeme_char lexbuf 0);
+	    start_notation_string lexbuf }
   | '"' (* a true notation *)
       { Output.sublexer '"' (lexeme_start lexbuf);
         notation_string lexbuf;

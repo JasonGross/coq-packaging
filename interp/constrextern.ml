@@ -140,14 +140,18 @@ let extern_evar loc n l =
 let debug_global_reference_printer =
   ref (fun _ -> failwith "Cannot print a global reference")
 
+let in_debugger = ref false
+
 let set_debug_global_reference_printer f =
   debug_global_reference_printer := f
 
 let extern_reference loc vars r =
-  try Qualid (loc,shortest_qualid_of_global vars r)
-  with Not_found ->
-    (* happens in debugger *)
+  if !in_debugger then
+    (* Debugger does not have the tables of global reference at hand *)
     !debug_global_reference_printer loc r
+  else
+    Qualid (loc,shortest_qualid_of_global vars r)
+
 
 (************************************************************************)
 (* Equality up to location (useful for translator v8) *)
@@ -344,7 +348,7 @@ let rec extern_cases_pattern_in_scope (scopes:local_scopes) vars pat =
       let args = List.map (extern_cases_pattern_in_scope scopes vars) args in
       let p =
 	try
-          if !Flags.raw_print then raise Exit;
+          if !in_debugger || !Flags.raw_print then raise Exit;
 	  let projs = Recordops.lookup_projections (fst cstrsp) in
 	  let rec ip projs args acc =
 	    match projs with
@@ -447,6 +451,7 @@ let is_needed_for_correct_partial_application tail imp =
 (* Implicit args indexes are in ascending order *)
 (* inctx is useful only if there is a last argument to be deduced from ctxt *)
 let explicitize loc inctx impl (cf,f) args =
+  let impl = if !Constrintern.parsing_explicit then [] else impl in
   let n = List.length args in
   let rec exprec q = function
     | a::args, imp::impl when is_status_implicit imp ->
@@ -482,7 +487,9 @@ let explicitize loc inctx impl (cf,f) args =
 	if args = [] then f else CApp (loc, (None, f), args)
 
 let extern_global loc impl f =
-  if impl <> [] & List.for_all is_status_implicit impl then
+  if not !Constrintern.parsing_explicit &&
+     impl <> [] && List.for_all is_status_implicit impl
+  then
     CAppExpl (loc, (None, f), [])
   else
     CRef f
@@ -491,7 +498,7 @@ let extern_app loc inctx impl (cf,f) args =
   if args = [] (* maybe caused by a hidden coercion *) then
     extern_global loc impl f
   else
-  if
+  if not !Constrintern.parsing_explicit &&
     ((!Flags.raw_print or
       (!print_implicits & not !print_implicits_explicit_args)) &
      List.exists is_status_implicit impl)
@@ -761,7 +768,7 @@ and factorize_prod scopes vars aty c =
 and factorize_lambda inctx scopes vars aty c =
   try
     if !Flags.raw_print or !print_no_symbol then raise No_match;
-    ([],extern_symbol scopes vars c (uninterp_notations c))
+    ([],extern_symbol (Some Notation.type_scope,snd scopes) vars c (uninterp_notations c))
   with No_match -> match c with
   | GLambda (loc,na,bk,ty,c)
       when same aty (extern_typ scopes vars (anonymize_if_reserved na ty))
@@ -889,21 +896,30 @@ let extern_glob_type vars c =
 
 let loc = dummy_loc (* for constr and pattern, locations are lost *)
 
-let extern_constr_gen at_top scopt env t =
-  let avoid = if at_top then ids_of_context env else [] in
-  let r = Detyping.detype at_top avoid (names_of_rel_context env) t in
+let extern_constr_gen goal_concl_style scopt env t =
+  (* "goal_concl_style" means do alpha-conversion using the "goal" convention *)
+  (* i.e.: avoid using the names of goal/section/rel variables and the short *)
+  (* names of global definitions of current module when computing names for *)
+  (* bound variables. *)
+  (* Not "goal_concl_style" means do alpha-conversion avoiding only *)
+  (* those goal/section/rel variables that occurs in the subterm under *)
+  (* consideration; see namegen.ml for further details *)
+  let avoid = if goal_concl_style then ids_of_context env else [] in
+  let rel_env_names = names_of_rel_context env in
+  let r = Detyping.detype goal_concl_style avoid rel_env_names t in
   let vars = vars_of_env env in
   extern false (scopt,[]) vars r
 
-let extern_constr_in_scope at_top scope env t =
-  extern_constr_gen at_top (Some scope) env t
+let extern_constr_in_scope goal_concl_style scope env t =
+  extern_constr_gen goal_concl_style (Some scope) env t
 
-let extern_constr at_top env t =
-  extern_constr_gen at_top None env t
+let extern_constr goal_concl_style env t =
+  extern_constr_gen goal_concl_style None env t
 
-let extern_type at_top env t =
-  let avoid = if at_top then ids_of_context env else [] in
-  let r = Detyping.detype at_top avoid (names_of_rel_context env) t in
+let extern_type goal_concl_style env t =
+  let avoid = if goal_concl_style then ids_of_context env else [] in
+  let rel_env_names = names_of_rel_context env in
+  let r = Detyping.detype goal_concl_style avoid rel_env_names t in
   extern_glob_type (vars_of_env env) r
 
 let extern_sort s = extern_glob_sort (detype_sort s)

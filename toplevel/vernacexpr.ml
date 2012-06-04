@@ -114,8 +114,6 @@ type hints_expr =
   | HintsTransparency of reference list * bool
   | HintsConstructors of reference list
   | HintsExtern of int * constr_expr option * raw_tactic_expr
-  | HintsDestruct of identifier *
-      int * (bool,unit) location * constr_expr * raw_tactic_expr
 
 type search_restriction =
   | SearchInside of reference list
@@ -300,7 +298,6 @@ type vernac_expr =
   | VernacRestoreState of string
 
   (* Resetting *)
-  | VernacRemoveName of lident
   | VernacResetName of lident
   | VernacResetInitial
   | VernacBack of int
@@ -318,7 +315,7 @@ type vernac_expr =
       (explicitation * bool * bool) list list
   | VernacArguments of locality_flag * reference or_by_notation * 
       ((name * bool * (loc * string) option * bool * bool) list) list *
-      int * [ `SimplDontExposeCase | `SimplNeverUnfold | `Rename
+      int * [ `SimplDontExposeCase | `SimplNeverUnfold | `Rename | `ExtraScopes
             | `ClearImplicits | `ClearScopes | `DefaultImplicits ] list
   | VernacArgumentsScope of locality_flag * reference or_by_notation *
       scope_name option list
@@ -346,13 +343,12 @@ type vernac_expr =
   | VernacAbort of lident option
   | VernacAbortAll
   | VernacRestart
-  | VernacSuspend
-  | VernacResume of lident option
   | VernacUndo of int
   | VernacUndoTo of int
   | VernacBacktrack of int*int*int
   | VernacFocus of int option
   | VernacUnfocus
+  | VernacUnfocused
   | VernacBullet of bullet
   | VernacSubproof of int option
   | VernacEndSubproof
@@ -367,6 +363,26 @@ type vernac_expr =
   | VernacExtend of string * raw_generic_argument list
 
 and located_vernac_expr = loc * vernac_expr
+
+
+(** Categories of [vernac_expr] *)
+
+let rec strip_vernac = function
+  | VernacTime c | VernacTimeout(_,c) | VernacFail c -> strip_vernac c
+  | c -> c (* TODO: what about VernacList ? *)
+
+let rec is_navigation_vernac = function
+  | VernacResetInitial
+  | VernacResetName _
+  | VernacBacktrack _
+  | VernacBackTo _
+  | VernacBack _ -> true
+  | c -> is_deep_navigation_vernac c
+
+and is_deep_navigation_vernac = function
+  | VernacTime c | VernacTimeout (_,c) | VernacFail c -> is_navigation_vernac c
+  | VernacList l -> List.exists (fun (_,c) -> is_navigation_vernac c) l
+  | _ -> false
 
 (* Locating errors raised just after the dot is parsed but before the
    interpretation phase *)

@@ -73,8 +73,9 @@ let show_node () =
   ()
 
 let show_script () =
-  (* spiwack: show_script is currently not working *)
-  ()
+  let prf = Pfedit.get_current_proof_name () in
+  let cmds = Backtrack.get_script prf in
+  msgnl (Util.prlist_with_sep Pp.fnl Ppvernac.pr_vernac cmds)
 
 let show_thesis () =
      msgnl (anomaly "TODO" )
@@ -91,7 +92,16 @@ let show_prooftree () =
   (* Spiwack: proof tree is currently not working *)
   ()
 
-let print_subgoals () = if_verbose (fun () -> msg (pr_open_subgoals ())) ()
+let enable_goal_printing = ref true
+
+let print_subgoals () =
+  if !enable_goal_printing && is_verbose ()
+  then msg (pr_open_subgoals ())
+
+let try_print_subgoals () =
+  Pp.flush_all();
+  try print_subgoals () with Proof_global.NoCurrentProof | UserError _ -> ()
+
 
   (* Simulate the Intro(s) tactic *)
 
@@ -341,7 +351,7 @@ let vernac_definition (local,k) (loc,id as lid) def hook =
           | None -> None
           | Some r ->
 	      let (evc,env)= get_current_context () in
- 		Some (interp_redexp env evc r) in
+ 		Some (snd (interp_redexp env evc r)) in
 	let ce,imps = interp_definition bl red_option c typ_opt in
 	declare_definition id (local,k) ce imps hook)
 
@@ -357,14 +367,21 @@ let vernac_start_proof kind l lettop hook =
 	(str "Let declarations can only be used in proof editing mode.");
   start_proof_and_print (Global, Proof kind) l hook
 
+let qed_display_script = ref true
+
 let vernac_end_proof = function
-  | Admitted -> admit ()
+  | Admitted ->
+    Backtrack.mark_unreachable [Pfedit.get_current_proof_name ()];
+    admit ()
   | Proved (is_opaque,idopt) ->
-    if not !Flags.print_emacs then if_verbose show_script ();
-    match idopt with
+    let prf = Pfedit.get_current_proof_name () in
+    if is_verbose () && !qed_display_script then (show_script (); msg (fnl()));
+    begin match idopt with
     | None -> save_named is_opaque
     | Some ((_,id),None) -> save_anonymous is_opaque id
     | Some ((_,id),Some kind) -> save_anonymous_with_strength kind is_opaque id
+    end;
+    Backtrack.mark_unreachable [prf]
 
   (* A stupid macro that should be replaced by ``Exact c. Save.'' all along
      the theories [??] *)
@@ -723,28 +740,14 @@ let vernac_chdir = function
 (********************)
 (* State management *)
 
-let abort_refine f x =
-  if Pfedit.refining() then delete_all_proofs ();
-  f x
-  (* used to be: error "Must save or abort current goal first" *)
+let vernac_write_state file =
+  Pfedit.delete_all_proofs ();
+  States.extern_state file
 
-let vernac_write_state file = abort_refine States.extern_state file
+let vernac_restore_state file =
+  Pfedit.delete_all_proofs ();
+  States.intern_state file
 
-let vernac_restore_state file = abort_refine States.intern_state file
-
-
-(*************)
-(* Resetting *)
-
-let vernac_reset_name id = abort_refine Lib.reset_name id
-
-let vernac_reset_initial () = abort_refine Lib.reset_initial ()
-
-let vernac_back n = Lib.back n
-
-let vernac_backto n = Lib.reset_label n
-
-(* see also [vernac_backtrack] which combines undoing and resetting *)
 (************)
 (* Commands *)
 
@@ -772,8 +775,10 @@ let vernac_declare_implicits local r = function
 	(List.map (List.map (fun (ex,b,f) -> ex, (b,true,f))) imps)
 
 let vernac_declare_arguments local r l nargs flags =
+  let extra_scope_flag = List.mem `ExtraScopes flags in
   let names = List.map (List.map (fun (id, _,_,_,_) -> id)) l in
   let names, rest = List.hd names, List.tl names in
+  let scopes = List.map (List.map (fun (_,_, s, _,_) -> s)) l in
   if List.exists ((<>) names) rest then
     error "All arguments lists must declare the same names.";
   if not (Util.list_distinct (List.filter ((<>) Anonymous) names)) then
@@ -782,14 +787,26 @@ let vernac_declare_arguments local r l nargs flags =
   let inf_names =
     Impargs.compute_implicits_names (Global.env()) (Global.type_of_global sr) in
   let string_of_name = function Anonymous -> "_" | Name id -> string_of_id id in
-  let rec check li ld = match li, ld with
-    | [], [] -> ()
-    | [], x::_ -> error ("Extra argument " ^ string_of_name x ^ ".")
-    | l, [] -> error ("The following arguments are not declared: " ^
+  let rec check li ld ls = match li, ld, ls with
+    | [], [], [] -> ()
+    | [], Anonymous::ld, (Some _)::ls when extra_scope_flag -> check li ld ls
+    | [], _::_, (Some _)::ls when extra_scope_flag ->
+       error "Extra notation scopes can be set on anonymous arguments only"
+    | [], x::_, _ -> error ("Extra argument " ^ string_of_name x ^ ".")
+    | l, [], _ -> error ("The following arguments are not declared: " ^
        (String.concat ", " (List.map string_of_name l)) ^ ".")
-    | _::li, _::ld -> check li ld in
+    | _::li, _::ld, _::ls -> check li ld ls 
+    | _ -> assert false in
   if l <> [[]] then
-    List.iter (fun l -> check inf_names l) (names :: rest);
+    List.iter2 (fun l -> check inf_names l) (names :: rest) scopes;
+  (* we take extra scopes apart, and we check they are consistent *)
+  let l, scopes = 
+    let scopes, rest = List.hd scopes, List.tl scopes in
+    if List.exists (List.exists ((<>) None)) rest then
+      error "Notation scopes can be given only once";
+    if not extra_scope_flag then l, scopes else
+    let l, _ = List.split (List.map (list_chop (List.length inf_names)) l) in
+    l, scopes in
   (* we interpret _ as the inferred names *)
   let l = if l = [[]] then l else
     let name_anons = function
@@ -822,10 +839,10 @@ let vernac_declare_arguments local r l nargs flags =
   let l = List.hd l in
   let some_implicits_specified = implicits <> [[]] in
   let scopes = List.map (function
-    | (_,_, None,_,_) -> None
-    | (_,_, Some (o, k), _,_) -> 
+    | None -> None
+    | Some (o, k) -> 
         try Some(ignore(Notation.find_scope k); k)
-        with _ -> Some (Notation.find_delimiters_scope o k)) l in
+        with _ -> Some (Notation.find_delimiters_scope o k)) scopes in
   let some_scopes_specified = List.exists ((<>) None) scopes in
   let rargs =
     Util.list_map_filter (function (n, true) -> Some n | _ -> None)
@@ -952,6 +969,7 @@ let _ =
       optkey   = ["Printing";"Existential";"Instances"];
       optread  = (fun () -> !Constrextern.print_evar_arguments);
       optwrite = (:=) Constrextern.print_evar_arguments }
+
 let _ =
   declare_bool_option
     { optsync  = true;
@@ -1095,6 +1113,15 @@ let _ =
       optread  = (fun () -> get_debug () <> Tactic_debug.DebugOff);
       optwrite = vernac_debug }
 
+let _ =
+  declare_bool_option
+    { optsync  = true;
+      optdepr  = false;
+      optname  = "explicitly parsing implicit arguments";
+      optkey   = ["Parsing";"Explicit"];
+      optread  = (fun () -> !Constrintern.parsing_explicit);
+      optwrite = (fun b ->  Constrintern.parsing_explicit := b) }
+
 let vernac_set_opacity local str =
   let glob_ref r =
     match smart_global r with
@@ -1150,6 +1177,7 @@ let vernac_check_may_eval redexp glopt rc =
   let module P = Pretype_errors in
   let (sigma, env) = get_current_context_of_args glopt in
   let sigma', c = interp_open_constr sigma env rc in
+  let sigma' = Evarconv.consider_remaining_unif_problems env sigma' in
   let j =
     try
       Evarutil.check_evars env sigma sigma' c;
@@ -1162,13 +1190,14 @@ let vernac_check_may_eval redexp glopt rc =
 	if !pcoq <> None then (Option.get !pcoq).print_check env j
 	else msg (print_judgment env j)
     | Some r ->
-	let redfun = fst (reduction_of_red_expr (interp_redexp env sigma' r)) in
+        let (sigma',r_interp) = interp_redexp env sigma' r in
+	let redfun = fst (reduction_of_red_expr r_interp) in
 	if !pcoq <> None
 	then (Option.get !pcoq).print_eval redfun env sigma' rc j
 	else msg (print_eval redfun env sigma' rc j)
 
 let vernac_declare_reduction locality s r =
-  declare_red_expr locality s (interp_redexp (Global.env()) Evd.empty r)
+  declare_red_expr locality s (snd (interp_redexp (Global.env()) Evd.empty r))
 
   (* The same but avoiding the current goal context if any *)
 let vernac_global_check c =
@@ -1286,15 +1315,54 @@ let vernac_locate = function
   | LocateTactic qid -> print_located_tactic qid
   | LocateFile f -> locate_file f
 
+(****************)
+(* Backtracking *)
+
+(** NB: these commands are now forbidden in non-interactive use,
+    e.g. inside VernacLoad, VernacList, ... *)
+
+let vernac_backto lbl =
+  try
+    let lbl' = Backtrack.backto lbl in
+    if lbl <> lbl' then
+      Pp.msg_warning
+	(str "Actually back to state "++ Pp.int lbl' ++ str ".");
+    try_print_subgoals ()
+  with Backtrack.Invalid -> error "Invalid backtrack."
+
+let vernac_back n =
+  try
+    let extra = Backtrack.back n in
+    if extra <> 0 then
+      Pp.msg_warning
+	(str "Actually back by " ++ Pp.int (extra+n) ++ str " steps.");
+    try_print_subgoals ()
+  with Backtrack.Invalid -> error "Invalid backtrack."
+
+let vernac_reset_name id =
+  try Backtrack.reset_name id; try_print_subgoals ()
+  with Backtrack.Invalid -> error "Invalid Reset."
+
+let vernac_reset_initial () = Backtrack.reset_initial ()
+
+(* For compatibility with ProofGeneral: *)
+
+let vernac_backtrack snum pnum naborts =
+  Backtrack.backtrack snum pnum naborts;
+  try_print_subgoals ()
+
+
 (********************)
 (* Proof management *)
 
 let vernac_abort = function
   | None ->
+      Backtrack.mark_unreachable [Pfedit.get_current_proof_name ()];
       delete_current_proof ();
       if_verbose message "Current goal aborted";
       if !pcoq <> None then (Option.get !pcoq).abort ""
   | Some id ->
+      Backtrack.mark_unreachable [snd id];
       delete_proof id;
       let s = string_of_id (snd id) in
       if_verbose message ("Goal "^s^" aborted");
@@ -1302,48 +1370,44 @@ let vernac_abort = function
 
 let vernac_abort_all () =
   if refining() then begin
+    Backtrack.mark_unreachable (Pfedit.get_all_proof_names ());
     delete_all_proofs ();
     message "Current goals aborted"
   end else
     error "No proof-editing in progress."
 
-let vernac_restart () = restart_proof(); print_subgoals ()
-
-  (* Proof switching *)
-
-let vernac_suspend = suspend_proof
-
-let vernac_resume = function
-  | None -> resume_last_proof ()
-  | Some id -> resume_proof id
+let vernac_restart () =
+  Backtrack.mark_unreachable [Pfedit.get_current_proof_name ()];
+  restart_proof(); print_subgoals ()
 
 let vernac_undo n =
-  undo n;
+  let d = Pfedit.current_proof_depth () - n in
+  Backtrack.mark_unreachable ~after:d [Pfedit.get_current_proof_name ()];
+  Pfedit.undo n; print_subgoals ()
+
+let vernac_undoto n =
+  Backtrack.mark_unreachable ~after:n [Pfedit.get_current_proof_name ()];
+  Pfedit.undo_todepth n;
   print_subgoals ()
-
-(* backtrack with [naborts] abort, then undo_todepth to [pnum], then
-   back-to state number [snum]. This allows to backtrack proofs and
-   state with one command (easier for proofgeneral). *)
-let vernac_backtrack snum pnum naborts =
-  for i = 1 to naborts do vernac_abort None done;
-  undo_todepth pnum;
-  vernac_backto snum;
-  Pp.flush_all();
-  (* there may be no proof in progress, even if no abort *)
-  (try print_subgoals () with Proof_global.NoCurrentProof | UserError _ -> ())
-
 
 let vernac_focus gln =
   let p = Proof_global.give_me_the_proof () in
-  match gln with
-    | None -> Proof.focus focus_command_cond () 1 p; print_subgoals ()
-    | Some n -> Proof.focus focus_command_cond () n p; print_subgoals ()
-
+  let n = match gln with None -> 1 | Some n -> n in
+  Proof.focus focus_command_cond () n p; print_subgoals ()
 
   (* Unfocuses one step in the focus stack. *)
 let vernac_unfocus () =
   let p = Proof_global.give_me_the_proof () in
   Proof.unfocus command_focus p; print_subgoals ()
+
+(* Checks that a proof is fully unfocused. Raises an error if not. *)
+let vernac_unfocused () =
+  let p = Proof_global.give_me_the_proof () in
+  if Proof.unfocused p then
+    msg (str"The proof is indeed fully unfocused.")
+  else
+    error "The proof is not fully unfocused."
+
 
 (* BeginSubproof / EndSubproof. 
     BeginSubproof (vernac_subproof) focuses on the first goal, or the goal
@@ -1483,7 +1547,6 @@ let interp c = match c with
   | VernacRestoreState s -> vernac_restore_state s
 
   (* Resetting *)
-  | VernacRemoveName id -> Lib.remove_name id
   | VernacResetName id -> vernac_reset_name id
   | VernacResetInitial -> vernac_reset_initial ()
   | VernacBack n -> vernac_back n
@@ -1520,13 +1583,12 @@ let interp c = match c with
   | VernacAbort id -> vernac_abort id
   | VernacAbortAll -> vernac_abort_all ()
   | VernacRestart -> vernac_restart ()
-  | VernacSuspend -> vernac_suspend ()
-  | VernacResume id -> vernac_resume id
   | VernacUndo n -> vernac_undo n
-  | VernacUndoTo n -> undo_todepth n
+  | VernacUndoTo n -> vernac_undoto n
   | VernacBacktrack (snum,pnum,naborts) -> vernac_backtrack snum pnum naborts
   | VernacFocus n -> vernac_focus n
   | VernacUnfocus -> vernac_unfocus ()
+  | VernacUnfocused -> vernac_unfocused ()
   | VernacBullet b -> vernac_bullet b
   | VernacSubproof n -> vernac_subproof n
   | VernacEndSubproof -> vernac_end_subproof ()

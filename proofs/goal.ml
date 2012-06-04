@@ -163,8 +163,8 @@ module Refinable = struct
   (* spiwack: it is not very fine grain since it solves all typeclasses holes, 
       not only those containing the current goal, or a given term. But it
       seems to fit our needs so far. *)
-  let resolve_typeclasses ?onlyargs ?split ?(fail=false) () env rdefs _ _ =
-    rdefs:=Typeclasses.resolve_typeclasses ?onlyargs ?split ~fail env !rdefs;
+  let resolve_typeclasses ?filter ?split ?(fail=false) () env rdefs _ _ =
+    rdefs:=Typeclasses.resolve_typeclasses ?filter ?split ~fail env !rdefs;
     ()
 
 
@@ -563,7 +563,7 @@ module V82 = struct
     let new_sigma = Evd.add Evd.empty evk new_evi in
     { Evd.it = build evk ; sigma = new_sigma }
 
-  (* Used by the typeclasses *)
+  (* Used by the compatibility layer and typeclasses *)
   let nf_evar sigma gl =
     let evi = content sigma gl in
     let evi = Evarutil.nf_evar_info sigma evi in
