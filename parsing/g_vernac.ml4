@@ -143,7 +143,7 @@ let test_plurial_form_types = function
 (* Gallina declarations *)
 GEXTEND Gram
   GLOBAL: gallina gallina_ext thm_token def_body of_type_with_opt_coercion
-    typeclass_constraint record_field decl_notation rec_definition;
+    record_field decl_notation rec_definition;
 
   gallina:
       (* Definition, Theorem, Variable, Axiom, ... *)
@@ -656,6 +656,7 @@ GEXTEND Gram
       | IDENT "clear"; IDENT "implicits" -> [`ClearImplicits]
       | IDENT "clear"; IDENT "scopes" -> [`ClearScopes]
       | IDENT "rename" -> [`Rename]
+      | IDENT "extra"; IDENT "scopes" -> [`ExtraScopes]
       | IDENT "clear"; IDENT "scopes"; IDENT "and"; IDENT "implicits" ->
           [`ClearImplicits; `ClearScopes]
       | IDENT "clear"; IDENT "implicits"; IDENT "and"; IDENT "scopes" ->
@@ -927,7 +928,6 @@ GEXTEND Gram
 
 (* Resetting *)
       | IDENT "Reset"; id = identref -> VernacResetName id
-      | IDENT "Delete"; id = identref -> VernacRemoveName id
       | IDENT "Reset"; IDENT "Initial" -> VernacResetInitial
       | IDENT "Back" -> VernacBack 1
       | IDENT "Back"; n = natural -> VernacBack n

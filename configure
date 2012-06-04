@@ -6,10 +6,10 @@
 # 
 ##################################
 
-VERSION=8.4beta
+VERSION=8.4beta2
 VOMAGIC=08400
 STATEMAGIC=58400
-DATE="December 2011"
+DATE=`LC_ALL=C LANG=C date +"%B %Y"`
 
 # Create the bin/ directory if non-existent
 test -d bin || mkdir bin
@@ -292,7 +292,7 @@ case $DATEPGM in
     "") echo "I can't find the program \"date\" in your path."
         echo "Please give me the current date"
 	read COMPILEDATE;;
-    *)  COMPILEDATE=`date +"%h %d %Y %H:%M:%S"`;;
+    *)  COMPILEDATE=`LC_ALL=C LANG=C date +"%h %d %Y %H:%M:%S"`;;
 esac
 
 # Architecture
@@ -388,7 +388,7 @@ fi
 
 if [ "$browser_spec" = "no" ]; then
     case $ARCH in
-        win32) BROWSER='C:\PROGRA~1\INTERN~1\IEXPLORE %s' ;;
+        win32) BROWSER='start %s' ;;
 	Darwin) BROWSER='open %s' ;;
         *) BROWSER='firefox -remote "OpenURL(%s,new-tab)" || firefox %s &' ;;
     esac
@@ -445,16 +445,16 @@ esac
 CAMLVERSION=`"$bytecamlc" -version`
 
 case $CAMLVERSION in
-    1.*|2.*|3.0*)
+    1.*|2.*|3.0*|3.10*|3.11.[01])
 	echo "Your version of Objective-Caml is $CAMLVERSION."
 	if [ "$force_caml_version" = "yes" ]; then
 	    echo "*Warning* You are compiling Coq with an outdated version of Objective-Caml."
 	else
-	    echo "          You need Objective-Caml 3.10.0 or later."
+	    echo "          You need Objective-Caml 3.11.2 or later."
 	    echo "          Configuration script failed!"
 	    exit 1
 	fi;;
-    3.1*)
+    3.11.2|3.12*)
 	CAMLP4COMPAT="-loc loc" 
 	echo "You have Objective-Caml $CAMLVERSION. Good!";;
     *)
@@ -742,7 +742,7 @@ case $ARCH$CYGWIN in
 	 bindir_def=${W32PREF}bin
 	 libdir_def=${W32PREF}lib
 	 configdir_def=${W32PREF}config
-	 datadir_def=${W32PREF}data
+	 datadir_def=${W32PREF}share
 	 mandir_def=${W32PREF}man
 	 docdir_def=${W32PREF}doc
 	 emacslib_def=${W32PREF}emacs
@@ -795,10 +795,15 @@ case $libdir_spec in
     *) LIBDIR_OPTION="None";;
 esac
 
-case $configdir_spec/$local in
-    yes/*) CONFIGDIR=$configdir;;
-    */true) CONFIGDIR=$COQTOP/ide
-        configdir_spec=yes;;
+case $configdir_spec/$prefix_spec/$local in
+    yes/*/*) CONFIGDIR=$configdir;;
+    */yes/*) configdir_spec=yes
+	case $ARCH in
+	    win32) CONFIGDIR=$prefix/config;;
+            *) CONFIGDIR=$prefix/etc/xdg/coq;;
+	esac;;
+    */*/true) CONFIGDIR=$COQTOP/ide
+    configdir_spec=yes;;
     *)  printf "Where should I install the Coqide configuration files [$configdir_def]? "
         read CONFIGDIR
 	case $CONFIGDIR in

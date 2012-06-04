@@ -546,7 +546,7 @@ let depth_of_quantified_hypothesis red h gl =
 	  str".")
 
 let intros_until_gen red h g =
-  tclDO (depth_of_quantified_hypothesis red h g) intro g
+  tclDO (depth_of_quantified_hypothesis red h g) (if red then introf else intro) g
 
 let intros_until_id id = intros_until_gen true (NamedHyp id)
 let intros_until_n_gen red n = intros_until_gen red (AnonHyp n)
@@ -2498,11 +2498,17 @@ let abstract_generalize ?(generalize_vars=true) ?(force_dep=false) id gl =
 				   tclMAP (fun id -> 
 				     tclTRY (generalize_dep ~with_let:true (mkVar id))) vars] gl) gl
 
+let rec compare_upto_variables x y =
+  if (isVar x || isRel x) && (isVar y || isRel y) then true
+  else compare_constr compare_upto_variables x y
+
 let specialize_eqs id gl =
   let env = pf_env gl in
   let ty = pf_get_hyp_typ gl id in
   let evars = ref (project gl) in
-  let unif env evars c1 c2 = Evarconv.e_conv env evars c2 c1 in
+  let unif env evars c1 c2 = 
+    compare_upto_variables c1 c2 && Evarconv.e_conv env evars c1 c2 
+  in
   let rec aux in_eqs ctx acc ty =
     match kind_of_term ty with
     | Prod (na, t, b) -> 

@@ -1,17 +1,5 @@
-<!DOCTYPE html 
-     PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-15"/>
-<link rel="stylesheet" href="css/context.css" type="text/css"/>
-<title>The Coq Standard Library</title>
-</head>
-
-<body>
-
-<H1>The Coq Standard Library</H1>
+<h1>The Coq Standard Library</h1>
 
 <p>Here is a short description of the Coq standard library, which is
 distributed with the system.
@@ -68,6 +56,7 @@ through the <tt>Require Import</tt> command.</p>
     theories/Logic/Epsilon.v
     theories/Logic/IndefiniteDescription.v
     theories/Logic/FunctionalExtensionality.v
+    theories/Logic/ExtensionalityFacts.v
   </dd>
     
   <dt> <b>Structures</b>:
@@ -184,6 +173,8 @@ through the <tt>Require Import</tt> command.</p>
     theories/ZArith/Zpow_def.v
     theories/ZArith/Zpow_alt.v
     theories/ZArith/Zpower.v
+    theories/ZArith/ZOdiv_def.v
+    theories/ZArith/ZOdiv.v
     theories/ZArith/Zdiv.v
     theories/ZArith/Zquot.v
     theories/ZArith/Zeuclid.v
@@ -414,6 +405,16 @@ through the <tt>Require Import</tt> command.</p>
     theories/Lists/ListTactics.v
   </dd>
 
+  <dt> <b>Vectors</b>:
+    Dependent datastructures storing their length
+  </dt>
+  <dd>
+    theories/Vectors/Fin.v
+    theories/Vectors/VectorDef.v
+    theories/Vectors/VectorSpec.v
+    (theories/Vectors/Vector.v)
+  </dd>
+
   <dt> <b>Sorting</b>:
     Axiomatizations of sorts
   </dt>
@@ -454,7 +455,9 @@ through the <tt>Require Import</tt> command.</p>
     theories/MSets/MSetEqProperties.v
     theories/MSets/MSetWeakList.v
     theories/MSets/MSetList.v
+    theories/MSets/MSetGenTree.v
     theories/MSets/MSetAVL.v
+    theories/MSets/MSetRBT.v
     theories/MSets/MSetPositive.v
     theories/MSets/MSetToFiniteSet.v
     (theories/MSets/MSets.v)
@@ -576,4 +579,11 @@ through the <tt>Require Import</tt> command.</p>
     theories/Program/Combinators.v
   </dd>
 
+  <dt> <b>Unicode</b>:
+    Unicode-based notations
+  </dt>
+  <dd>
+    theories/Unicode/Utf8_core.v
+    theories/Unicode/Utf8.v
+  </dd>
 </dl>

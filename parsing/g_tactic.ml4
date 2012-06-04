@@ -348,7 +348,7 @@ GEXTEND Gram
       | IDENT "lazy"; s = strategy_flag -> Lazy s
       | IDENT "compute"; delta = delta_flag -> Cbv (all_with delta)
       | IDENT "vm_compute" -> CbvVm
-      | IDENT "unfold"; ul = LIST1 unfold_occ -> Unfold ul
+      | IDENT "unfold"; ul = LIST1 unfold_occ SEP "," -> Unfold ul
       | IDENT "fold"; cl = LIST1 constr -> Fold cl
       | IDENT "pattern"; pl = LIST1 pattern_occ SEP"," -> Pattern pl
       | s = IDENT -> ExtraRedExpr s ] ]
@@ -597,21 +597,18 @@ GEXTEND Gram
 
       (* Automation tactic *)
       | IDENT "trivial"; lems = auto_using; db = hintbases ->
-	  TacTrivial (lems,db)
-      | IDENT "auto"; n = OPT int_or_var; lems = auto_using; db = hintbases ->
-	  TacAuto (n,lems,db)
+          TacTrivial (Off,lems,db)
+      | IDENT "info_trivial"; lems = auto_using; db = hintbases ->
+          TacTrivial (Info,lems,db)
+      | IDENT "debug"; IDENT "trivial"; lems = auto_using; db = hintbases ->
+          TacTrivial (Debug,lems,db)
 
-(* Obsolete since V8.0
-      | IDENT "autotdb"; n = OPT natural -> TacAutoTDB n
-      | IDENT "cdhyp"; id = identref -> TacDestructHyp (true,id)
-      | IDENT "dhyp";  id = identref -> TacDestructHyp (false,id)
-      | IDENT "dconcl"  -> TacDestructConcl
-      | IDENT "superauto"; l = autoargs -> TacSuperAuto l
-*)
-      | IDENT "auto"; IDENT "decomp"; p = OPT natural;
-          lems = auto_using -> TacDAuto (None,p,lems)
-      | IDENT "auto"; n = OPT int_or_var; IDENT "decomp"; p = OPT natural;
-          lems = auto_using -> TacDAuto (n,p,lems)
+      | IDENT "auto"; n = OPT int_or_var; lems = auto_using; db = hintbases ->
+          TacAuto (Off,n,lems,db)
+      | IDENT "info_auto"; n = OPT int_or_var; lems = auto_using;
+          db = hintbases -> TacAuto (Info,n,lems,db)
+      | IDENT "debug"; IDENT "auto"; n = OPT int_or_var; lems = auto_using;
+          db = hintbases -> TacAuto (Debug,n,lems,db)
 
       (* Context management *)
       | IDENT "clear"; "-"; l = LIST1 id_or_meta -> TacClear (true, l)

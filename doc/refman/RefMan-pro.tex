@@ -34,9 +34,6 @@ isomorphism} \cite{How80,Bar91,Gir89,Hue89}, \Coq~ stores proofs as
 terms of {\sc Cic}. Those terms are called {\em proof
   terms}\index{Proof term}.
 
-It is possible to edit several proofs in parallel: see Section
-\ref{Resume}.
-
 \ErrMsg When one attempts to use a proof editing command out of the
 proof editing mode, \Coq~ raises the error message : \errindex{No focused
   proof}.
@@ -174,35 +171,6 @@ proof was edited.
 \end{Variants}
 
 %%%%
-\subsection[\tt Suspend.]{\tt Suspend.\comindex{Suspend}}
-
-This command applies in proof editing mode. It switches back to the
-\Coq\ toplevel, but without canceling the current proofs.
-
-%%%%
-\subsection[\tt Resume.]{\tt Resume.\comindex{Resume}\label{Resume}}
-
-This commands switches back to the editing of the last edited proof.
-
-\begin{ErrMsgs}
-\item \errindex{No proof-editing in progress}
-\end{ErrMsgs}
-
-\begin{Variants}
-
-\item {\tt Resume {\ident}.}
-
-  Restarts the editing of the proof named {\ident}. This can be used
-  to navigate between currently edited proofs.
-
-\end{Variants}
-
-\begin{ErrMsgs}
-\item \errindex{No such proof}
-\end{ErrMsgs}
-
-
-%%%%
 \subsection[\tt Existential {\num} := {\term}.]{\tt Existential  {\num} := {\term}.\comindex{Existential}
 \label{Existential}}
 
@@ -216,7 +184,14 @@ existential variables remain. To instantiate existential variables
 during proof edition, you should use the tactic {\tt instantiate}.
 
 \SeeAlso {\tt instantiate (\num:= \term).} in Section~\ref{instantiate}.
+\SeeAlso {\tt Grab Existential Variables.} below.
 
+\subsection[\tt Grab Existential Variables.]{\tt Grab Existential Variables.\comindex{Grab Existential Variables}
+\label{GrabEvars}}
+
+This command can be run when a proof has no more goal to be solved but has remaining
+uninstantiated existential variables. It takes every uninstantiated existential variable
+and turns it into a goal.
 
 %%%%%%%%
 \section{Navigation in the proof tree}
@@ -259,7 +234,45 @@ This focuses the attention on the $\num^{th}$ subgoal to prove.
 \end{Variant}
 
 \subsection[\tt Unfocus.]{\tt Unfocus.\comindex{Unfocus}}
-Turns off the focus mode.
+This command restores to focus the goal that were suspended by the
+last {\tt Focus} command.
+
+\subsection[\tt Unfocused.]{\tt Unfocused.\comindex{Unfocused}}
+Succeeds in the proof is fully unfocused, fails is there are some
+goals out of focus.
+
+\subsection[\tt \{ \textrm{and} \}]{\tt \{ \textrm{and} \}\comindex{\{}\comindex{\}}}
+The command {\tt \{} (without a terminating period) focuses on the
+first goal, much like {\tt Focus.} does, however, the subproof can
+only be unfocused when it has been fully solved (\emph{i.e.} when
+there is no focused goal left). Unfocusing is then handled by {\tt \}}
+(again, without a terminating period). See also example in next section.
+
+\subsection[Bullets]{Bullets\comindex{+ (command)}\comindex{- (command)}\comindex{* (command)}\index{Bullets}}
+Alternatively to {\tt \{} and {\tt \}}, proofs can be structured with
+bullets. The use of a bullet for the first time focuses on the first
+goal, the same bullet cannot be used again until the subproof in
+completed, then it focuses on the next goal. Different bullets can be
+used to nest levels. The scope of bullet does not go beyond enclosing
+{\tt \{} and {\tt \}}, so bullets can be reused as further nesting
+level provided they are delimited by these. Available bullets are
+{\tt -}, {\tt +} and {\tt *} (without a terminating period).
+
+The following example script illustrates all these features:
+\begin{coq_example*}
+Goal (((True/\True)/\True)/\True)/\True.
+Proof.
+  split.
+  - split.
+    + split.
+      * { split.
+         - trivial.
+         - trivial.
+        }
+      * trivial.
+    + trivial.
+  - trivial.
+\end{coq_example*}
 
 
 \section{Requesting information}

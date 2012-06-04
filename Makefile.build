@@ -318,7 +318,7 @@ $(COQIDEOPT): $(LINKIDEOPT) | $(COQTOPOPT)
 	$(STRIP) $@
 
 $(COQIDEBYTE): $(LINKIDE) | $(COQTOPBYTE)
-	$(SHOW)'OCAMLOPT -o $@'
+	$(SHOW)'OCAMLC -o $@'
 	$(HIDE)$(OCAMLC) $(COQIDEFLAGS) $(BYTEFLAGS) -o $@ unix.cma threads.cma lablgtk.cma gtkThread.cmo\
 		str.cma $(COQRUNBYTEFLAGS) $(LINKIDE)
 
@@ -446,7 +446,7 @@ noreal: logic arith bool zarith qarith lists sets fsets relations \
 # 3) plugins
 ###########################################################################
 
-.PHONY: plugins omega micromega ring setoid_ring nsatz dp xml extraction
+.PHONY: plugins omega micromega ring setoid_ring nsatz xml extraction
 .PHONY: field fourier funind cc subtac rtauto pluginsopt
 
 plugins: $(PLUGINSVO)
@@ -455,7 +455,6 @@ micromega: $(MICROMEGAVO) $(MICROMEGACMA) $(CSDPCERT)
 ring: $(RINGVO) $(RINGCMA)
 setoid_ring: $(NEWRINGVO) $(NEWRINGCMA)
 nsatz: $(NSATZVO) $(NSATZCMA)
-dp: $(DPCMA)
 xml: $(XMLVO) $(XMLCMA)
 extraction: $(EXTRACTIONCMA)
 field: $(FIELDVO) $(FIELDCMA)
@@ -623,7 +622,7 @@ INSTALLCMI = $(sort \
 
 install-library:
 	$(MKDIR) $(FULLCOQLIB)
-	$(INSTALLSH) $(FULLCOQLIB) $(LIBFILES) $(PLUGINS) $(PLUGINSOPT)
+	$(INSTALLSH) $(FULLCOQLIB) $(LIBFILES) $(PLUGINS)
 	$(MKDIR) $(FULLCOQLIB)/states
 	$(INSTALLLIB) states/*.coq $(FULLCOQLIB)/states
 	$(MKDIR) $(FULLCOQLIB)/user-contrib
@@ -632,7 +631,7 @@ install-library:
 	$(INSTALLSH)  $(FULLCOQLIB) $(INSTALLCMI)
 ifeq ($(BEST),opt)
 	$(INSTALLLIB) $(LIBCOQRUN) $(FULLCOQLIB)
-	$(INSTALLSH)  $(FULLCOQLIB) $(CONFIG:.cmo=.cmx) $(CONFIG:.cmo=.o) $(LINKCMO:.cma=.cmxa) $(LINKCMO:.cma=.a)
+	$(INSTALLSH)  $(FULLCOQLIB) $(CONFIG:.cmo=.cmx) $(CONFIG:.cmo=.o) $(LINKCMO:.cma=.cmxa) $(LINKCMO:.cma=.a) $(PLUGINSOPT)
 endif
 # csdpcert is not meant to be directly called by the user; we install
 # it with libraries
@@ -643,11 +642,14 @@ endif
 
 install-library-light:
 	$(MKDIR) $(FULLCOQLIB)
-	$(INSTALLSH) $(FULLCOQLIB) $(LIBFILESLIGHT) $(INITPLUGINS) $(INITPLUGINSOPT)
+	$(INSTALLSH) $(FULLCOQLIB) $(LIBFILESLIGHT) $(INITPLUGINS)
 	$(MKDIR) $(FULLCOQLIB)/states
 	$(INSTALLLIB) states/*.coq $(FULLCOQLIB)/states
 	rm -f $(FULLCOQLIB)/revision
 	-$(INSTALLLIB) revision $(FULLCOQLIB)
+ifeq ($(BEST),opt)
+	$(INSTALLSH)  $(FULLCOQLIB) $(INITPLUGINSOPT)
+endif
 
 install-coq-info: install-coq-manpages install-emacs install-latex
 

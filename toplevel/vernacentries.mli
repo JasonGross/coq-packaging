@@ -23,13 +23,6 @@ val show_node : unit -> unit
    in the context of the current goal, as for instance in pcoq *)
 val get_current_context_of_args : int option -> Evd.evar_map * Environ.env
 
-(*i
-
-(** this function is used to analyse the extra arguments in search commands.
-   It is used in pcoq. *) (*i anciennement: inside_outside i*)
-val interp_search_restriction : search_restriction -> dir_path list * bool
-i*)
-
 type pcoq_hook = {
   start_proof : unit -> unit;
   solve : int -> unit;
@@ -44,20 +37,26 @@ type pcoq_hook = {
 
 val set_pcoq_hook : pcoq_hook -> unit
 
-(** This function makes sure that the function given in argument is preceded
-   by a command aborting all proofs if necessary.
-   It is used in pcoq. *)
-val abort_refine : ('a -> unit) -> 'a -> unit;;
+(** The main interpretation function of vernacular expressions *)
 
 val interp : Vernacexpr.vernac_expr -> unit
 
-val vernac_reset_name : identifier Util.located -> unit
+(** Print subgoals when the verbose flag is on.
+    Meant to be used inside vernac commands from plugins. *)
 
-val vernac_backtrack : int -> int -> int -> unit
-
-(* Print subgoals when the verbose flag is on. Meant to be used inside
-    vernac commands from plugins. *)
 val print_subgoals : unit -> unit
+
+(** The printing of goals via [print_subgoals] or during
+    [interp] can be controlled by the following flag.
+    Used for instance by coqide, since it has its own
+    goal-fetching mechanism. *)
+
+val enable_goal_printing : bool ref
+
+(** Should Qed try to display the proof script ?
+    True by default, but false in ProofGeneral and coqIDE *)
+
+val qed_display_script : bool ref
 
 (** Prepare a "match" template for a given inductive type.
     For each branch of the match, we list the constructor name
