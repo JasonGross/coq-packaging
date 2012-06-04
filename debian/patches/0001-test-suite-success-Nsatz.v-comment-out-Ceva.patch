@@ -5,7 +5,7 @@ Subject: test-suite/success/Nsatz.v: comment out Ceva
 This lemma uses too much memory for many buildds...
 ---
  test-suite/success/Nsatz.v |    2 ++
- 1 files changed, 2 insertions(+), 0 deletions(-)
+ 1 file changed, 2 insertions(+)
 
 diff --git a/test-suite/success/Nsatz.v b/test-suite/success/Nsatz.v
 index d316e4a..d783b2a 100644

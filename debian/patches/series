@@ -1,3 +1,1 @@
-0001-Add-distclean-back-to-test-suite-Makefile.patch
-0002-coq_micromega.ml-fix-order-of-recursive-calls-to-rco.patch
-0003-test-suite-success-Nsatz.v-comment-out-Ceva.patch
+0001-test-suite-success-Nsatz.v-comment-out-Ceva.patch
