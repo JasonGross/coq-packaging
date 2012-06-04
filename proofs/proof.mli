@@ -114,11 +114,17 @@ exception CannotUnfocusThisWay
      is not met. *)
 val unfocus : 'a focus_kind -> proof -> unit
 
+(* [unfocused p] returns [true] when [p] is fully unfocused. *)
+val unfocused : proof -> bool
+
 (* [get_at_focus k] gets the information stored at the closest focus point
     of kind [k].
     Raises [NoSuchFocus] if there is no focus point of kind [k]. *)
 exception NoSuchFocus
 val get_at_focus : 'a focus_kind -> proof -> 'a
+
+(* [is_last_focus k] check if the most recent focus is of kind [k] *)
+val is_last_focus : 'a focus_kind -> proof -> bool
 
 (* returns [true] if there is no goal under focus. *)
 val no_focused_goal : proof -> bool
@@ -126,8 +132,6 @@ val no_focused_goal : proof -> bool
 (*** Function manipulation proof extra informations ***)
 
 val get_proof_info : proof -> Store.t
-
-val set_proof_info : Store.t -> proof -> unit
 
 (* Sets the section variables assumed by the proof *)
 val set_used_variables : Sign.section_context -> proof -> unit
@@ -151,7 +155,7 @@ val run_tactic : Environ.env -> unit Proofview.tactic -> proof -> unit
    a focusing command and a tactic. Transactions are such that if
    any of the atomic action fails, the whole transaction fails.
 
-   During a transaction, the undo visible undo stack is constituted only
+   During a transaction, the visible undo stack is constituted only
    of the actions performed done during the transaction.
 
    [transaction p f] can be called on an [f] using, itself, [transaction p].*)
@@ -177,6 +181,10 @@ module V82 : sig
   
   (* returns the existential variable used to start the proof *)
   val top_evars : proof -> Evd.evar list
+
+  (* Turns the unresolved evars into goals.
+     Raises [UnfinishedProof] if there are still unsolved goals. *)
+  val grab_evars : proof -> unit
 
   (* Implements the Existential command *)
   val instantiate_evar : int -> Topconstr.constr_expr -> proof -> unit

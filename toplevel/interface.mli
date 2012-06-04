@@ -15,6 +15,8 @@ type verbose = bool
 
 (** The type of coqtop goals *)
 type goal = {
+  goal_id : string;
+  (** Unique goal identifier *)
   goal_hyp : string list;
   (** List of hypotheses *)
   goal_ccl : string;
@@ -62,6 +64,35 @@ type option_state = Goptionstyp.option_state = {
   (** The current value of the option *)
 }
 
+type search_constraint =
+(** Whether the name satisfies a regexp (uses Ocaml Str syntax) *)
+| Name_Pattern of string
+(** Whether the object type satisfies a pattern *)
+| Type_Pattern of string
+(** Whether some subtype of object type satisfies a pattern *)
+| SubType_Pattern of string
+(** Whether the object pertains to a module *)
+| In_Module of string list
+(** Bypass the Search blacklist *)
+| Include_Blacklist
+
+(** A list of search constraints; the boolean flag is set to [false] whenever
+    the flag should be negated. *)
+type search_flags = (search_constraint * bool) list
+
+type search_answer = {
+  search_answer_full_path : string list;
+  search_answer_base_name : string;
+  search_answer_type : string;
+}
+
+type coq_info = {
+  coqtop_version : string;
+  protocol_version : string;
+  release_date : string;
+  compile_date : string;
+}
+
 (** * Coq answers to CoqIde *)
 
 type location = (int * int) option (* start and end of the error *)
@@ -69,19 +100,3 @@ type location = (int * int) option (* start and end of the error *)
 type 'a value =
   | Good of 'a
   | Fail of (location * string)
-
-(** * The structure that coqtop should implement *)
-
-type handler = {
-  interp : raw * verbose * string -> string;
-  rewind : int -> int;
-  goals : unit -> goals option;
-  evars : unit -> evar list option;
-  hints : unit -> (hint list * hint) option;
-  status : unit -> status;
-  get_options : unit -> (option_name * option_state) list;
-  set_options : (option_name * option_value) list -> unit;
-  inloadpath : string -> bool;
-  mkcases : string -> string list list;
-  handle_exn : exn -> location * string;
-}

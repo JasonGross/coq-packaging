@@ -13,11 +13,15 @@
 val short_version : unit -> string
 val version : unit -> string
 
-(** * Initial checks by launching test coqtop processes *)
+(** * Launch a test coqtop processes, ask for a correct coqtop if it fails.
+    @return the list of arguments that coqtop did not understand
+    (the files probably ..). This command may terminate coqide in
+    case of trouble.  *)
+val filter_coq_opts : string list -> string list
 
-val filter_coq_opts : string list -> bool * string list
-
-(** A mock coqtop launch, checking in particular that initial.coq is found *)
+(** Launch a coqtop with the user args in order to be sure that it works,
+    checking in particular that initial.coq is found. This command
+    may terminate coqide in case of trouble *)
 val check_connection : string list -> unit
 
 (** * The structure describing a coqtop sub-process *)

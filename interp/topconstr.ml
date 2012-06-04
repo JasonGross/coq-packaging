@@ -239,7 +239,7 @@ let compare_recursive_parts found f (iterator,subc) =
   | GLambda (_,Name x,_,t_x,c), GLambda (_,Name y,_,t_y,term)
   | GProd (_,Name x,_,t_x,c), GProd (_,Name y,_,t_y,term) ->
       (* We found a binding position where it differs *)
-      check_is_hole y t_x;
+      check_is_hole x t_x;
       check_is_hole y t_y;
       !diff = None && (diff := Some (x,y,None); aux c term)
   | _ ->
@@ -564,8 +564,11 @@ let match_opt f sigma t1 t2 = match (t1,t2) with
   | _ -> raise No_match
 
 let match_names metas (alp,sigma) na1 na2 = match (na1,na2) with
-  | (Name id1,Name id2) when List.mem id2 (fst metas) ->
-      alp, bind_env alp sigma id2 (GVar (dummy_loc,id1))
+  | (_,Name id2) when List.mem id2 (fst metas) ->
+      let rhs = match na1 with
+      | Name id1 -> GVar (dummy_loc,id1)
+      | Anonymous -> GHole (dummy_loc,Evd.InternalHole) in
+      alp, bind_env alp sigma id2 rhs
   | (Name id1,Name id2) -> (id1,id2)::alp,sigma
   | (Anonymous,Anonymous) -> alp,sigma
   | _ -> raise No_match
@@ -920,6 +923,12 @@ let names_of_local_assums bl =
 
 let names_of_local_binders bl =
   List.flatten (List.map (function LocalRawAssum(l,_,_)->l|LocalRawDef(l,_)->[l]) bl)
+
+(**********************************************************************)
+(* Miscellaneous *)
+
+let error_invalid_pattern_notation loc =
+  user_err_loc (loc,"",str "Invalid notation for pattern.")
 
 (**********************************************************************)
 (* Functions on constr_expr *)

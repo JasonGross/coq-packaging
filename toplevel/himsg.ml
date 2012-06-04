@@ -31,7 +31,6 @@ open Evd
 
 let pr_lconstr c = quote (pr_lconstr c)
 let pr_lconstr_env e c = quote (pr_lconstr_env e c)
-let pr_lconstr_env_at_top e c = quote (pr_lconstr_env_at_top e c)
 let pr_ljudge_env e c = let v,t = pr_ljudge_env e c in (quote v,quote t)
 
 let pr_db env i =
@@ -696,8 +695,14 @@ let explain_no_instance env (_,id) l =
   str "applied to arguments" ++ spc () ++
     prlist_with_sep pr_spc (pr_lconstr_env env) l
 
+let is_goal_evar evi = match evi.evar_source with (_, GoalEvar) -> true | _ -> false
+
 let pr_constraints printenv env evm =
   let evm = Evd.undefined_evars (Evarutil.nf_evar_map_undefined evm) in
+  let evm = fold_undefined 
+    (fun ev evi evm' -> 
+       if is_goal_evar evi then Evd.remove evm' ev else evm') evm evm
+  in
   let l = Evd.to_list evm in
   let (ev, evi) = List.hd l in
     if List.for_all (fun (ev', evi') ->
@@ -819,8 +824,12 @@ let error_ill_formed_constructor env id c v nparams nargs =
    else
      mt()) ++ str "."
 
+let pr_ltype_using_barendregt_convention_env env c =
+  (* Use goal_concl_style as an approximation of Barendregt's convention (?) *)
+  quote (pr_goal_concl_style_env env c)
+
 let error_bad_ind_parameters env c n v1 v2  =
-  let pc = pr_lconstr_env_at_top env c in
+  let pc = pr_ltype_using_barendregt_convention_env env c in
   let pv1 = pr_lconstr_env env v1 in
   let pv2 = pr_lconstr_env env v2 in
   str "Last occurrence of " ++ pv2 ++ str " must have " ++ pv1 ++
@@ -978,7 +987,8 @@ let explain_pattern_matching_error env = function
 
 let explain_reduction_tactic_error = function
   | Tacred.InvalidAbstraction (env,c,(env',e)) ->
-      str "The abstracted term" ++ spc () ++ pr_lconstr_env_at_top env c ++
+      str "The abstracted term" ++ spc () ++
+      quote (pr_goal_concl_style_env env c) ++
       spc () ++ str "is not well typed." ++ fnl () ++
       explain_type_error env' Evd.empty e
 

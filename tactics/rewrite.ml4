@@ -257,7 +257,7 @@ let decompose_applied_relation env sigma flags orig (c,l) left2right =
   let ctype = Typing.type_of env sigma c' in
   let find_rel ty =
     let eqclause = Clenv.make_clenv_binding_env_apply env sigma None (c',ty) l in
-    let (equiv, args) = decompose_app_rel env sigma (Clenv.clenv_type eqclause) in
+    let (equiv, args) = decompose_app_rel env eqclause.evd (Clenv.clenv_type eqclause) in
     let c1 = args.(0) and c2 = args.(1) in 
     let ty1, ty2 =
       Typing.type_of env eqclause.evd c1, Typing.type_of env eqclause.evd c2
@@ -1343,7 +1343,7 @@ type glob_constr_with_bindings_sign = interp_sign * glob_constr_and_expr with_bi
 let pr_glob_constr_with_bindings_sign _ _ _ (ge : glob_constr_with_bindings_sign) = Printer.pr_glob_constr (fst (fst (snd ge)))
 let pr_glob_constr_with_bindings _ _ _ (ge : glob_constr_with_bindings) = Printer.pr_glob_constr (fst (fst ge))
 let pr_constr_expr_with_bindings prc _ _ (ge : constr_expr_with_bindings) = prc (fst ge)
-let interp_glob_constr_with_bindings ist gl c = (ist, c)
+let interp_glob_constr_with_bindings ist gl c = Tacmach.project gl , (ist, c)
 let glob_glob_constr_with_bindings ist l = Tacinterp.intern_constr_with_bindings ist l
 let subst_glob_constr_with_bindings s c = subst_glob_with_bindings s c
 
@@ -1365,7 +1365,7 @@ ARGUMENT EXTEND glob_constr_with_bindings
 END
 
 let _ =
-  (Genarg.create_arg "strategy" :
+  (Genarg.create_arg None "strategy" :
       ((strategy, Genarg.tlevel) Genarg.abstract_argument_type *
 	  (strategy, Genarg.glevel) Genarg.abstract_argument_type *
 	  (strategy, Genarg.rlevel) Genarg.abstract_argument_type))
@@ -1374,7 +1374,7 @@ let _ =
 
 let pr_strategy _ _ _ (s : strategy) = Pp.str "<strategy>"
 
-let interp_strategy ist gl c = c
+let interp_strategy ist gl c = project gl , c
 let glob_strategy ist l = l
 let subst_strategy evm l = l
 
@@ -1405,10 +1405,11 @@ ARGUMENT EXTEND rewstrategy TYPED AS strategy
   | [ "choice" rewstrategy(h) rewstrategy(h') ] -> [ Strategies.choice h h' ]
   | [ "old_hints" preident(h) ] -> [ Strategies.old_hints h ]
   | [ "hints" preident(h) ] -> [ Strategies.hints h ]
-  | [ "terms" constr_list(h) ] -> [ fun env avoid t ty cstr evars -> 
+  | [ "terms" constr_list(h) ] -> [ fun env avoid t ty cstr evars ->
       Strategies.lemmas rewrite_unif_flags (interp_constr_list env (goalevars evars) h) env avoid t ty cstr evars ]
-  | [ "eval" red_expr(r) ] -> [ fun env avoid t ty cstr evars -> 
-      Strategies.reduce (Tacinterp.interp_redexp env (goalevars evars) r) env avoid t ty cstr evars ]
+  | [ "eval" red_expr(r) ] -> [ fun env avoid t ty cstr evars ->
+      let (sigma,r_interp) = Tacinterp.interp_redexp env (goalevars evars) r in
+      Strategies.reduce r_interp env avoid t ty cstr (sigma,cstrevars evars) ]
   | [ "fold" constr(c) ] -> [ Strategies.fold c ]
 END
 
@@ -1424,6 +1425,8 @@ let clsubstitute o c =
 	match cl with
 	  | Some id when is_tac id -> tclIDTAC
 	  | _ -> cl_rewrite_clause c o all_occurrences cl)
+
+open Extraargs
 
 TACTIC EXTEND substitute
 | [ "substitute" orient(o) glob_constr_with_bindings(c) ] -> [ clsubstitute o c ]
@@ -1536,7 +1539,7 @@ let declare_relation ?(binders=[]) a aeq n refl symm trans =
 type 'a binders_argtype = (local_binder list, 'a) Genarg.abstract_argument_type
 
 let _, _, rawwit_binders =
- (Genarg.create_arg "binders" :
+ (Genarg.create_arg None "binders" :
     Genarg.tlevel binders_argtype *
     Genarg.glevel binders_argtype *
     Genarg.rlevel binders_argtype)
@@ -1867,7 +1870,8 @@ let setoid_proof gl ty fn fallback =
   let env = pf_env gl in
     try
       let rel, args = decompose_app_rel env (project gl) (pf_concl gl) in
-      let evm, car = project gl, pf_type_of gl args.(0) in
+      let evm = project gl in
+      let car = pi3 (List.hd (fst (Reduction.dest_prod env (Typing.type_of env evm rel)))) in
 	fn env evm car rel gl
     with e ->
       try fallback gl
