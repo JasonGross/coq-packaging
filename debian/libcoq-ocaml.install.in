@@ -13,7 +13,6 @@ usr/lib/coq/plugins/syntax/ascii_syntax_plugin.cma
 usr/lib/coq/plugins/funind/recdef_plugin.cma
 usr/lib/coq/plugins/nsatz/nsatz_plugin.cma
 usr/lib/coq/plugins/xml/xml_plugin.cma
-usr/lib/coq/plugins/dp/dp_plugin.cma
 usr/lib/coq/plugins/romega/romega_plugin.cma
 usr/lib/coq/plugins/firstorder/ground_plugin.cma
 usr/lib/coq/plugins/subtac/subtac_plugin.cma
@@ -37,7 +36,6 @@ DYN: usr/lib/coq/plugins/syntax/ascii_syntax_plugin.cmxs
 DYN: usr/lib/coq/plugins/funind/recdef_plugin.cmxs
 DYN: usr/lib/coq/plugins/nsatz/nsatz_plugin.cmxs
 DYN: usr/lib/coq/plugins/xml/xml_plugin.cmxs
-DYN: usr/lib/coq/plugins/dp/dp_plugin.cmxs
 DYN: usr/lib/coq/plugins/romega/romega_plugin.cmxs
 DYN: usr/lib/coq/plugins/firstorder/ground_plugin.cmxs
 DYN: usr/lib/coq/plugins/subtac/subtac_plugin.cmxs
