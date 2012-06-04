@@ -1,3 +1,9 @@
+coq (8.4~gamma0+really8.4beta2+dfsg-1) UNRELEASED; urgency=low
+
+  * New upstream beta release
+
+ -- Stéphane Glondu <glondu@debian.org>  Mon, 04 Jun 2012 12:26:18 +0200
+
 coq (8.4~beta+dfsg-4) experimental; urgency=low
 
   * Recompile with camlp5 6.05 (no changes)
