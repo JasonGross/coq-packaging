@@ -1,3 +1,9 @@
+coq (8.3.pl4+dfsg-2) unstable; urgency=low
+
+  * Recompile with camlp5 6.06 (no changes)
+
+ -- Stéphane Glondu <glondu@debian.org>  Wed, 06 Jun 2012 07:35:26 +0200
+
 coq (8.3.pl4+dfsg-1) unstable; urgency=low
 
   * New upstream release
