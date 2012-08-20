@@ -1,4 +1,4 @@
 version=3
 
-opts=uversionmangle=s/pl/.pl/,dversionmangle=s/\+dfsg\d*$// \
-        http://coq.inria.fr/download distrib/[^/]+/files/coq-(.*)\.tar\.gz
+opts=dversionmangle=s/dfsg$// \
+        http://coq.inria.fr/download .*/coq-(.*)\.tar\.gz

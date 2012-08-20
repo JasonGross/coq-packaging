@@ -16,10 +16,10 @@ Only coqdoc-generated documentation of the standard library is shipped
 in main. The full documentation is shipped in non-free (as coq-doc
 package).
 
-The script debian/purify_tarball removes non-DFSG content from an
-upstream tarball. It should be run first when packaging a new upstream
-version. The suffix "+dfsg" is used to being appended to upstream
-version (the script will do it for you).
+The git-import-orig tool automatically filters out problematic files,
+thanks to the configuration in debian/gbp.conf. It is suggested to
+append the "dfsg" suffix to the upstream version to make repackaging
+explicit.
 
 
 Patch system
@@ -53,4 +53,4 @@ to ../coq.cache, and debian/rules will detect its presence and rsync
 from there instead of really compiling Coq...
 
 
- -- Stéphane Glondu <glondu@debian.org>, Mon, 31 May 2010 15:30:50 +0200
+ -- Stéphane Glondu <glondu@debian.org>, Mon, 20 Aug 2012 18:20:18 +0200
