@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -359,7 +359,16 @@ let read_glob vfile f =
 		Scanf.sscanf s "R%d:%d %s %s %s %s"
 		  (fun loc1 loc2 lib_dp sp id ty ->
 		    for loc=loc1 to loc2 do
-		      add_ref !cur_mod loc lib_dp sp id (type_of_string ty)
+		      add_ref !cur_mod loc lib_dp sp id (type_of_string ty);
+
+                      (* Also add an entry for each module mentioned in [lib_dp],
+                       * to use in interpolation. *)
+                      ignore (List.fold_right (fun thisPiece priorPieces ->
+                                                let newPieces = match priorPieces with
+                                                                | "" -> thisPiece
+                                                                | _ -> thisPiece ^ "." ^ priorPieces in
+                                                add_ref !cur_mod loc "" "" newPieces Library;
+                                                newPieces) (Str.split (Str.regexp_string ".") lib_dp) "")
 		    done)
 	       with _ -> ())
 	  | _ ->

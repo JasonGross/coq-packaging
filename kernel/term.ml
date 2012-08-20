@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -264,6 +264,7 @@ let destMeta c = match kind_of_term c with
   | _ -> invalid_arg "destMeta"
 
 let isMeta c = match kind_of_term c with Meta _ -> true | _ -> false
+let isMetaOf mv c = match kind_of_term c with Meta mv' -> mv = mv' | _ -> false
 
 (* Destructs a variable *)
 let destVar c = match kind_of_term c with

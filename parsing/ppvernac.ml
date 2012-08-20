@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -58,7 +58,11 @@ let pr_module = Libnames.pr_reference
 
 let pr_import_module = Libnames.pr_reference
 
-let sep_end () = str"."
+let sep_end = function
+  | VernacBullet _
+  | VernacSubproof None
+  | VernacEndSubproof -> str""
+  | _ -> str"."
 
 (* Warning: [pr_raw_tactic] globalises and fails if globalisation fails *)
 
@@ -372,7 +376,8 @@ let pr_syntax_modifier = function
   | SetAssoc RightA -> str"right associativity"
   | SetAssoc NonA -> str"no associativity"
   | SetEntryType (x,typ) -> str x ++ spc() ++ pr_set_entry_type typ
-  | SetOnlyParsing -> str"only parsing"
+  | SetOnlyParsing Flags.Current -> str"only parsing"
+  | SetOnlyParsing v -> str("compat \"" ^ Flags.pr_version v ^ "\"")
   | SetFormat s -> str"format " ++ pr_located qs s
 
 let pr_syntax_modifiers = function
@@ -478,7 +483,7 @@ let rec pr_vernac = function
   (* Control *)
   | VernacList l ->
       hov 2 (str"[" ++ spc() ++
-             prlist (fun v -> pr_located pr_vernac v ++ sep_end () ++ fnl()) l
+             prlist (fun v -> pr_located pr_vernac v ++ sep_end (snd v) ++ fnl()) l
              ++ spc() ++ str"]")
   | VernacLoad (f,s) -> str"Load" ++ if f then (spc() ++ str"Verbose"
   ++ spc()) else spc()  ++ qs s
@@ -780,7 +785,8 @@ let rec pr_vernac = function
       hov 2
         (pr_locality local ++ str"Notation " ++ pr_lident id ++ spc () ++
 	 prlist (fun x -> spc() ++ pr_id x) ids ++ str":=" ++ pr_constrarg c ++
-         pr_syntax_modifiers (if onlyparsing then [SetOnlyParsing] else []))
+         pr_syntax_modifiers
+	   (match onlyparsing with None -> [] | Some v -> [SetOnlyParsing v]))
   | VernacDeclareImplicits (local,q,[]) ->
       hov 2 (pr_section_locality local ++ str"Implicit Arguments" ++ spc() ++ 
 	pr_smart_global q)
@@ -860,8 +866,8 @@ let rec pr_vernac = function
       | Some r0 ->
           hov 2 (str"Eval" ++ spc() ++
           pr_red_expr (pr_constr,pr_lconstr,pr_smart_global, pr_constr) r0 ++
-          spc() ++ str"in" ++ spc () ++ pr_constr c)
-      | None -> hov 2 (str"Check" ++ spc() ++ pr_constr c)
+          spc() ++ str"in" ++ spc () ++ pr_lconstr c)
+      | None -> hov 2 (str"Check" ++ spc() ++ pr_lconstr c)
       in
       (if io = None then mt() else int (Option.get io) ++ str ": ") ++
       pr_mayeval r c
@@ -970,4 +976,4 @@ and pr_extend s cl =
 
 in pr_vernac
 
-let pr_vernac v = make_pr_vernac pr_constr_expr pr_lconstr_expr v ++ sep_end ()
+let pr_vernac v = make_pr_vernac pr_constr_expr pr_lconstr_expr v ++ sep_end v

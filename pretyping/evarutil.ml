@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -144,6 +144,11 @@ let noccur_evar evd evk c =
   | _ -> iter_constr occur_rec c
   in
   try occur_rec c; true with Occur -> false
+
+let normalize_evar evd ev =
+  match kind_of_term (whd_evar evd (mkEvar ev)) with
+  | Evar (evk,args) -> (evk,args)
+  | _ -> assert false
 
 (**********************)
 (* Creating new metas *)
@@ -1591,6 +1596,8 @@ let rec invert_definition conv_algo choose env evd (evk,argsv as ev) rhs =
 	  let ty = get_type_of env' !evdref t in
 	  let (evd,evar'',ev'') =
              materialize_evar (evar_define conv_algo) env' !evdref k ev ty in
+          (* materialize_evar may instantiate ev' by another evar; adjust it *)
+          let (evk',args' as ev') = normalize_evar evd ev' in
 	  let evd =
 	     (* Try to project (a restriction of) the left evar ... *)
 	    try
@@ -1772,44 +1779,50 @@ let evars_of_term c =
   in
   evrec Intset.empty c
 
-(* spiwack: a few functions to gather the existential variables
-   that occur in the types of goals present or past. *)
-let add_evars_of_evars_of_term acc evm c =
-  let evars = evars_of_term c in
-  Intset.fold begin fun e r ->
-    let body = (Evd.find evm e).evar_body in
-    let subevars =
-      match body with
-      | Evar_empty -> None
-      | Evar_defined c' -> Some (evars_of_term c')
-    in
-    Intmap.add e subevars r
-  end evars acc
+(* spiwack: a few functions to gather evars on which goals depend. *)
+let queue_set q is_dependent set =
+  Intset.iter (fun a -> Queue.push (is_dependent,a) q) set
+let queue_term q is_dependent c =
+  queue_set q is_dependent (evars_of_term c)
 
-let evars_of_evars_of_term = add_evars_of_evars_of_term Intmap.empty
-
-let add_evars_of_evars_in_type acc evm e =
+let process_dependent_evar q acc evm is_dependent e =
   let evi = Evd.find evm e in
-  let acc_with_concl = add_evars_of_evars_of_term acc evm evi.evar_concl in
-  let hyps = Environ.named_context_of_val evi.evar_hyps in
-  List.fold_left begin fun r (_,b,t) ->
-    let r = add_evars_of_evars_of_term r evm t in
+  (* Queues evars appearing in the types of the goal (conclusion, then
+     hypotheses), they are all dependent. *)
+  queue_term q true evi.evar_concl;
+  List.iter begin fun (_,b,t) ->
+    queue_term q true t;
     match b with
-    | None -> r
-    | Some b -> add_evars_of_evars_of_term r evm b
-  end acc_with_concl hyps
+    | None -> ()
+    | Some b -> queue_term q true b
+  end (Environ.named_context_of_val evi.evar_hyps);
+  match evi.evar_body with
+  | Evar_empty ->
+      if is_dependent then Intmap.add e None acc else acc
+  | Evar_defined b ->
+      let subevars = evars_of_term b in
+      (* evars appearing in the definition of an evar [e] are marked
+         as dependent when [e] is dependent itself: if [e] is a
+         non-dependent goal, then, unless they are reach from another
+         path, these evars are just other non-dependent goals. *)
+      queue_set q is_dependent subevars;
+      if is_dependent then Intmap.add e (Some subevars) acc else acc
 
-let rec add_evars_of_evars_in_types_of_set acc evm s =
-  Intset.fold begin fun e r ->
-    let r = add_evars_of_evars_in_type r evm e in
-    match (Evd.find evm e).evar_body with
-    | Evar_empty -> r
-    | Evar_defined b -> add_evars_of_evars_in_types_of_set r evm (evars_of_term b)
-  end s acc
+let gather_dependent_evars q evm =
+  let acc = ref Intmap.empty in
+  while not (Queue.is_empty q) do
+    let (is_dependent,e) = Queue.pop q in
+    (* checks if [e] has already been added to [!acc] *)
+    begin if not (Intmap.mem e !acc) then
+        acc := process_dependent_evar q !acc evm is_dependent e  
+    end
+  done;
+  !acc
 
-let evars_of_evars_in_types_of_list evm l =
-  let set_of_l = List.fold_left (fun x y -> Intset.add y x) Intset.empty l in
-  add_evars_of_evars_in_types_of_set Intmap.empty evm set_of_l
+let gather_dependent_evars evm l =
+  let q = Queue.create () in
+  List.iter (fun a -> Queue.add (false,a) q) l;
+  gather_dependent_evars q evm
 
 (* /spiwack *)
 

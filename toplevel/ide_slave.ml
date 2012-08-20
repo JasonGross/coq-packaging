@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -132,13 +132,13 @@ let hyp_next_tac sigma env (id,_,ast) =
     ("exact "^id_s),("exact "^id_s^".\n");
     ("generalize "^id_s),("generalize "^id_s^".\n");
     ("absurd <"^id_s^">"),("absurd "^type_s^".\n")
-  ] @ (if Hipattern.is_equality_type ast then [
+  ] @ [
     ("discriminate "^id_s),("discriminate "^id_s^".\n");
     ("injection "^id_s),("injection "^id_s^".\n")
-  ] else []) @ (if Hipattern.is_equality_type (snd (Reductionops.splay_prod env sigma ast)) then [
+  ] @ [
     ("rewrite "^id_s),("rewrite "^id_s^".\n");
     ("rewrite <- "^id_s),("rewrite <- "^id_s^".\n")
-  ] else []) @ [
+  ] @ [
     ("elim "^id_s), ("elim "^id_s^".\n");
     ("inversion "^id_s), ("inversion "^id_s^".\n");
     ("inversion clear "^id_s), ("inversion_clear "^id_s^".\n")
@@ -150,11 +150,11 @@ let concl_next_tac sigma concl =
     "intro";
     "intros";
     "intuition"
-  ] @ (if Hipattern.is_equality_type (Goal.V82.concl sigma concl) then [
+  ] @ [
     "reflexivity";
     "discriminate";
     "symmetry"
-  ] else []) @ [
+  ] @ [
     "assumption";
     "omega";
     "ring";
@@ -180,19 +180,21 @@ let process_goal sigma g =
   let process_hyp h_env d acc =
     let d = Term.map_named_declaration (Reductionops.nf_evar sigma) d in
     (string_of_ppcmds (pr_var_decl h_env d)) :: acc in
-(*           (string_of_ppcmds (pr_var_decl h_env d), hyp_next_tac sigma h_env d)::acc in *)
   let hyps =
     List.rev (Environ.fold_named_context process_hyp env ~init: []) in
   { Interface.goal_hyp = hyps; Interface.goal_ccl = ccl; Interface.goal_id = id; }
-(*         hyps,(ccl,concl_next_tac sigma g)) *)
 
 let goals () =
   try
     let pfts = Proof_global.give_me_the_proof () in
-    let { Evd.it = all_goals ; sigma = sigma } = Proof.V82.subgoals pfts in
-    let fg = List.map (process_goal sigma) all_goals in
-    let { Evd.it = bgoals ; sigma = sigma } = Proof.V82.background_subgoals pfts in
-    let bg = List.map (process_goal sigma) bgoals in
+    let (goals, zipper, sigma) = Proof.proof pfts in
+    let fg = List.map (process_goal sigma) goals in
+    let map_zip (lg, rg) =
+      let lg = List.map (process_goal sigma) lg in
+      let rg = List.map (process_goal sigma) rg in
+      (lg, rg)
+    in
+    let bg = List.map map_zip zipper in
     Some { Interface.fg_goals = fg; Interface.bg_goals = bg; }
   with Proof_global.NoCurrentProof -> None
 
@@ -231,16 +233,23 @@ let status () =
       and display the other parts (opened sections and modules) *)
   let path =
     let l = Names.repr_dirpath (Lib.cwd ()) in
-    let l = snd (Util.list_sep_last l) in
-    if l = [] then None
-    else Some (Names.string_of_dirpath (Names.make_dirpath l))
+    List.rev_map Names.string_of_id l
   in
   let proof =
-    try
-      Some (Names.string_of_id (Pfedit.get_current_proof_name ()))
+    try Some (Names.string_of_id (Proof_global.get_current_proof_name ()))
     with _ -> None
   in
-  { Interface.status_path = path; Interface.status_proofname = proof }
+  let allproofs =
+    let l = Proof_global.get_all_proof_names () in
+    List.map Names.string_of_id l
+  in
+  {
+    Interface.status_path = path;
+    Interface.status_proofname = proof;
+    Interface.status_allproofs = allproofs;
+    Interface.status_statenum = Lib.current_command_label ();
+    Interface.status_proofnum = Pfedit.current_proof_depth ();
+  }
 
 (** This should be elsewhere... *)
 let search flags =

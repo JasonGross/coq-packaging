@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -64,7 +64,8 @@ let start_proof id str hyps c ?init_tac ?compute_guard hook =
   let goals = [ (Global.env_of_context hyps , c) ] in
   let init_tac = Option.map Proofview.V82.tactic init_tac in
   Proof_global.start_proof id str goals ?compute_guard hook;
-  Option.iter Proof_global.run_tactic init_tac
+  try Option.iter Proof_global.run_tactic init_tac
+  with e -> Proof_global.discard_current (); raise e
 
 let restart_proof () = undo_todepth 1
 

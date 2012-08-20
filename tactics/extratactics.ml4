@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -766,6 +766,12 @@ TACTIC EXTEND is_hyp
     | _ -> tclFAIL 0 (str "Not a variable or hypothesis") ]
 END
 
+TACTIC EXTEND is_fix
+| [ "is_fix" constr(x) ] ->
+  [ match kind_of_term x with
+    | Fix _ -> Tacticals.tclIDTAC
+    | _ -> Tacticals.tclFAIL 0 (Pp.str "not a fix definition") ]
+END;;
 
 (* Command to grab the evars left unresolved at the end of a proof. *)
 (* spiwack: I put it in extratactics because it is somewhat tied with

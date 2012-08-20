@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -205,7 +205,8 @@ let rec check_same_type ty1 ty2 =
   | CLetIn(_,(_,na1),a1,b1), CLetIn(_,(_,na2),a2,b2) when na1=na2 ->
       check_same_type a1 a2;
       check_same_type b1 b2
-  | CAppExpl(_,r1,al1), CAppExpl(_,r2,al2) when r1=r2 ->
+  | CAppExpl(_,(proj1,r1),al1), CAppExpl(_,(proj2,r2),al2) when proj1=proj2 ->
+      check_same_ref r1 r2;
       List.iter2 check_same_type al1 al2
   | CApp(_,(_,e1),al1), CApp(_,(_,e2),al2) ->
       check_same_type e1 e2;
@@ -249,7 +250,7 @@ and check_same_fix_binder bl1 bl2 =
           check_same_binder ([na1],default_binder_kind,def1) ([na2],default_binder_kind,def2)
       | _ -> failwith "not same binder") bl1 bl2
 
-let same c d = try check_same_type c d; true with _ -> false
+let is_same_type c d = try let () = check_same_type c d in true with Failure _ -> false
 
 (**********************************************************************)
 (* mapping patterns to cases_pattern_expr                                *)
@@ -293,7 +294,7 @@ let make_notation_gen loc ntn mknot mkprim destprim l =
   if has_curly_brackets ntn
   then expand_curly_brackets loc mknot ntn l
   else match ntn,List.map destprim l with
-    (* Special case to avoid writing "- 3" for e.g. (Zopp 3) *)
+    (* Special case to avoid writing "- 3" for e.g. (Z.opp 3) *)
     | "- _", [Some (Numeral p)] when Bigint.is_strictly_pos p ->
         mknot (loc,ntn,([mknot (loc,"( _ )",l)]))
     | _ ->
@@ -662,12 +663,12 @@ let rec extern inctx scopes vars r =
 
   | GProd (loc,na,bk,t,c) ->
       let t = extern_typ scopes vars (anonymize_if_reserved na t) in
-      let (idl,c) = factorize_prod scopes (add_vname vars na) t c in
+      let (idl,c) = factorize_prod scopes (add_vname vars na) na bk t c in
       CProdN (loc,[(dummy_loc,na)::idl,Default bk,t],c)
 
   | GLambda (loc,na,bk,t,c) ->
       let t = extern_typ scopes vars (anonymize_if_reserved na t) in
-      let (idl,c) = factorize_lambda inctx scopes (add_vname vars na) t c in
+      let (idl,c) = factorize_lambda inctx scopes (add_vname vars na) na bk t c in
       CLambdaN (loc,[(dummy_loc,na)::idl,Default bk,t],c)
 
   | GCases (loc,sty,rtntypopt,tml,eqns) ->
@@ -753,30 +754,25 @@ and extern_typ (_,scopes) =
 
 and sub_extern inctx (_,scopes) = extern inctx (None,scopes)
 
-and factorize_prod scopes vars aty c =
-  try
-    if !Flags.raw_print or !print_no_symbol then raise No_match;
-    ([],extern_symbol scopes vars c (uninterp_notations c))
-  with No_match -> match c with
-  | GProd (loc,(Name id as na),bk,ty,c)
-      when same aty (extern_typ scopes vars (anonymize_if_reserved na ty))
-	& not (occur_var_constr_expr id aty) (* avoid na in ty escapes scope *)
-	-> let (nal,c) = factorize_prod scopes (Idset.add id vars) aty c in
-           ((loc,Name id)::nal,c)
-  | c -> ([],extern_typ scopes vars c)
+and factorize_prod scopes vars na bk aty c =
+  let c = extern_typ scopes vars c in
+  match na, c with
+  | Name id, CProdN (loc,[nal,Default bk',ty],c)
+      when bk = bk' && is_same_type aty ty
+      & not (occur_var_constr_expr id ty) (* avoid na in ty escapes scope *) ->
+      nal,c
+  | _ ->
+      [],c
 
-and factorize_lambda inctx scopes vars aty c =
-  try
-    if !Flags.raw_print or !print_no_symbol then raise No_match;
-    ([],extern_symbol (Some Notation.type_scope,snd scopes) vars c (uninterp_notations c))
-  with No_match -> match c with
-  | GLambda (loc,na,bk,ty,c)
-      when same aty (extern_typ scopes vars (anonymize_if_reserved na ty))
-	& not (occur_name na aty) (* To avoid na in ty' escapes scope *)
-	-> let (nal,c) =
-	     factorize_lambda inctx scopes (add_vname vars na) aty c in
-           ((loc,na)::nal,c)
-  | c -> ([],sub_extern inctx scopes vars c)
+and factorize_lambda inctx scopes vars na bk aty c =
+  let c = sub_extern inctx scopes vars c in
+  match c with
+  | CLambdaN (loc,[nal,Default bk',ty],c)
+      when bk = bk' && is_same_type aty ty
+      & not (occur_name na ty) (* avoid na in ty escapes scope *) ->
+      nal,c
+  | _ ->
+      [],c
 
 and extern_local_binder scopes vars = function
     [] -> ([],[],[])
@@ -790,7 +786,7 @@ and extern_local_binder scopes vars = function
       let ty = extern_typ scopes vars (anonymize_if_reserved na ty) in
       (match extern_local_binder scopes (name_fold Idset.add na vars) l with
           (assums,ids,LocalRawAssum(nal,k,ty')::l)
-            when same ty ty' &
+            when is_same_type ty ty' &
               match na with Name id -> not (occur_var_constr_expr id ty')
                 | _ -> true ->
               (na::assums,na::ids,

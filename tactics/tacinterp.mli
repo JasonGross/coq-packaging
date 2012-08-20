@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -123,6 +123,7 @@ val interp_ltac_constr : interp_sign -> goal sigma -> glob_tactic_expr ->
   Evd.evar_map * constr
 
 (** Interprets redexp arguments *)
+val dump_glob_red_expr : raw_red_expr -> unit
 val interp_redexp : Environ.env -> Evd.evar_map -> raw_red_expr -> Evd.evar_map * red_expr
 
 (** Interprets tactic expressions *)

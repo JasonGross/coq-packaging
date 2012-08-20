@@ -1,12 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ConstructiveEpsilon.v 14628 2011-11-03 23:22:45Z herbelin $ i*)
+(*i $Id: ConstructiveEpsilon.v 15714 2012-08-08 18:54:37Z herbelin $ i*)
 
 (** This provides with a proof of the constructive form of definite
 and indefinite descriptions for Sigma^0_1-formulas (hereafter called
@@ -112,7 +112,7 @@ of our searching algorithm. *)
 
 Let R (x y : nat) : Prop := x = S y /\ ~ P y.
 
-Notation Local acc x := (Acc R x).
+Local Notation acc x := (Acc R x).
 
 Lemma P_implies_acc : forall x : nat, P x -> acc x.
 Proof.

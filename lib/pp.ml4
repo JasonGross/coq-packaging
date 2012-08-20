@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -157,6 +157,17 @@ let close () = [< 'Ppcmd_close_box >]
 let tclose () = [< 'Ppcmd_close_tbox >]
 
 let (++) = Stream.iapp
+
+let rec eval_ppcmds l =
+  let rec aux l =
+    try
+      let a = match Stream.next l with
+      | Ppcmd_box (b,s) -> Ppcmd_box (b,eval_ppcmds s)
+      | a -> a in
+      let rest = aux l in
+      a :: rest
+    with Stream.Failure -> [] in
+  Stream.of_list (aux l)
 
 (* In new syntax only double quote char is escaped by repeating it *)
 let rec escape_string s =

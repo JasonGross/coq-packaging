@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -388,15 +388,12 @@ let explain_unsolvability = function
       strbrk " (several distinct possible instances found)"
 
 let explain_typeclass_resolution env evi k =
-  match k with
-  | GoalEvar | InternalHole | ImplicitArg _ ->
-      (match Typeclasses.class_of_constr evi.evar_concl with
-      | Some c ->
-	  let env = Evd.evar_env evi in
-	    fnl () ++ str "Could not find an instance for " ++
-	      pr_lconstr_env env evi.evar_concl ++
-	      pr_ne_context_of (str " in environment:"++ fnl ()) (str ".") env
-      | None -> mt())
+  match Typeclasses.class_of_constr evi.evar_concl with
+  | Some c ->
+    let env = Evd.evar_env evi in
+      fnl () ++ str "Could not find an instance for " ++
+      pr_lconstr_env env evi.evar_concl ++
+      pr_ne_context_of (str " in environment:"++ fnl ()) (str ".") env
   | _ -> mt()
 
 let explain_unsolvable_implicit env evi k explain =
@@ -698,12 +695,8 @@ let explain_no_instance env (_,id) l =
 let is_goal_evar evi = match evi.evar_source with (_, GoalEvar) -> true | _ -> false
 
 let pr_constraints printenv env evm =
-  let evm = Evd.undefined_evars (Evarutil.nf_evar_map_undefined evm) in
-  let evm = fold_undefined 
-    (fun ev evi evm' -> 
-       if is_goal_evar evi then Evd.remove evm' ev else evm') evm evm
-  in
   let l = Evd.to_list evm in
+  assert(l <> []);
   let (ev, evi) = List.hd l in
     if List.for_all (fun (ev', evi') ->
       eq_named_context_val evi.evar_hyps evi'.evar_hyps) l
@@ -719,18 +712,23 @@ let pr_constraints printenv env evm =
       pr_evar_map None evm
 
 let explain_unsatisfiable_constraints env evd constr =
-  let evm = Evarutil.nf_evar_map evd in
-  let undef = Evd.undefined_evars evm in
+  let evm = Evd.undefined_evars (Evarutil.nf_evar_map_undefined evd) in
+  (* Remove goal evars *)
+  let undef = fold_undefined 
+    (fun ev evi evm' -> 
+       if is_goal_evar evi then Evd.remove evm' ev else evm') evm evm
+  in
   match constr with
   | None ->
       str"Unable to satisfy the following constraints:" ++ fnl() ++
 	pr_constraints true env undef
   | Some (ev, k) ->
-      explain_unsolvable_implicit env (Evd.find evm ev) k None ++ fnl () ++
-	if List.length (Evd.to_list undef) > 1 then
-	  str"With the following constraints:" ++ fnl() ++
-	    pr_constraints false env (Evd.remove undef ev)
-	else mt ()
+      explain_typeclass_resolution env (Evd.find evm ev) k ++ fnl () ++
+	(let remaining = Evd.remove undef ev in
+	   if Evd.has_undefined remaining then
+	     str"With the following constraints:" ++ fnl() ++
+	       pr_constraints false env remaining
+	   else mt ())
 
 let explain_mismatched_contexts env c i j =
   str"Mismatched contexts while declaring instance: " ++ brk (1,1) ++
@@ -995,6 +993,11 @@ let explain_reduction_tactic_error = function
 let explain_ltac_call_trace (nrep,last,trace,loc) =
   let calls =
     (nrep,last) :: List.rev (List.map(fun(n,_,ck)->(n,ck))trace) in
+  let tacexpr_differ te te' =
+    (* NB: The following comparison may raise an exception
+       since a tacexpr may embed a functional part via a TacExtend *)
+    try te <> te' with Invalid_argument _ -> false
+  in
   let pr_call (n,ck) =
     (match ck with
        | Proof_type.LtacNotationCall s -> quote (str s)
@@ -1006,11 +1009,11 @@ let explain_ltac_call_trace (nrep,last,trace,loc) =
 	   (Pptactic.pr_glob_tactic (Global.env())
 	      (Tacexpr.TacAtom (dummy_loc,te)))
 	   ++ (match !otac with
-		 | Some te' when (Obj.magic te' <> te) ->
-		     strbrk " (expanded to " ++ quote
-		       (Pptactic.pr_tactic (Global.env())
-			  (Tacexpr.TacAtom (dummy_loc,te')))
-		     ++ str ")"
+		 | Some te' when tacexpr_differ (Obj.magic te') te ->
+		   strbrk " (expanded to " ++ quote
+		     (Pptactic.pr_tactic (Global.env())
+			(Tacexpr.TacAtom (dummy_loc,te')))
+		   ++ str ")"
 		 | _ -> mt ())
        | Proof_type.LtacConstrInterp (c,(vars,unboundvars)) ->
 	   let filter =

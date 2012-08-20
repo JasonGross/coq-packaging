@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -27,7 +27,7 @@ Section WfLexicographic_Product.
     forall x:A,
       Acc leA x ->
       (forall x0:A, clos_trans A leA x0 x -> well_founded (leB x0)) ->
-      forall y:B x, Acc (leB x) y -> Acc LexProd (existS B x y).
+      forall y:B x, Acc (leB x) y -> Acc LexProd (existT B x y).
   Proof.
     induction 1 as [x _ IHAcc]; intros H2 y.
     induction 1 as [x0 H IHAcc0]; intros.
@@ -60,7 +60,7 @@ Section WfLexicographic_Product.
     well_founded leA ->
     (forall x:A, well_founded (leB x)) -> well_founded LexProd.
   Proof.
-    intros wfA wfB; unfold well_founded in |- *.
+    intros wfA wfB; unfold well_founded.
     destruct a.
     apply acc_A_B_lexprod; auto with sets; intros.
     red in wfB.
@@ -94,7 +94,7 @@ Section Wf_Symmetric_Product.
   Lemma wf_symprod :
     well_founded leA -> well_founded leB -> well_founded Symprod.
   Proof.
-    red in |- *.
+    red.
     destruct a.
     apply Acc_symprod; auto with sets.
   Defined.
@@ -161,7 +161,7 @@ Section Swap.
 
   Lemma wf_swapprod : well_founded R -> well_founded SwapProd.
   Proof.
-    red in |- *.
+    red.
     destruct a; intros.
     apply Acc_swapprod; auto with sets.
   Defined.

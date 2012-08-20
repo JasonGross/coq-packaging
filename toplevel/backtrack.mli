@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -18,6 +18,11 @@
     stack *)
 
 val mark_command : Vernacexpr.vernac_expr -> unit
+
+(** Is this history stack active (i.e. nonempty) ?
+    The stack is currently inactive when compiling files (coqc). *)
+
+val is_active : unit -> bool
 
 (** The [Invalid] exception is raised when one of the following function
     tries to empty the history stack, or reach an unknown states, etc.
@@ -76,7 +81,7 @@ val mark_unreachable : ?after:int -> Names.identifier list -> unit
 
 (** Parse the history stack for printing the script of a proof *)
 
-val get_script : Names.identifier -> Vernacexpr.vernac_expr list
+val get_script : Names.identifier -> (Vernacexpr.vernac_expr * int) list
 
 
 (** For debug purpose, a dump of the history *)
@@ -86,6 +91,7 @@ type info = {
   nproofs : int;
   prfname : Names.identifier option;
   prfdepth : int;
+  ngoals : int;
   cmd : Vernacexpr.vernac_expr;
   mutable reachable : bool;
 }
