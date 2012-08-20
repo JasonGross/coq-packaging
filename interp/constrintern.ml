@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -259,8 +259,9 @@ let pr_scope_stack = function
 
 let error_inconsistent_scope loc id scopes1 scopes2 =
   user_err_loc (loc,"set_var_scope",
-    pr_id id ++ str " is used both in " ++
-    pr_scope_stack scopes1 ++ strbrk " and in " ++ pr_scope_stack scopes2)
+    pr_id id ++ str " is here used in " ++
+    pr_scope_stack scopes2 ++ strbrk " while it was elsewhere used in " ++
+    pr_scope_stack scopes1)
 
 let error_expect_constr_notation_type loc id =
   user_err_loc (loc,"",
@@ -274,17 +275,17 @@ let error_expect_binder_notation_type loc id =
 let set_var_scope loc id istermvar env ntnvars =
   try
     let idscopes,typ = List.assoc id ntnvars in
-    if !idscopes <> None &
-      (* scopes have no effect on the interpretation of identifiers, hence
-         we can tolerate having a variable occurring several times in
-         different scopes: *) typ <> NtnInternTypeIdent &
-      make_current_scope (Option.get !idscopes)
-      <> make_current_scope (env.tmp_scope,env.scopes) then
-	error_inconsistent_scope loc id
-	  (make_current_scope (Option.get !idscopes))
-	  (make_current_scope (env.tmp_scope,env.scopes))
-    else
-      idscopes := Some (env.tmp_scope,env.scopes);
+    if istermvar then
+      (* scopes have no effect on the interpretation of identifiers *)
+      if !idscopes = None then
+        idscopes := Some (env.tmp_scope,env.scopes)
+      else
+        if make_current_scope (Option.get !idscopes)
+          <> make_current_scope (env.tmp_scope,env.scopes)
+        then
+	  error_inconsistent_scope loc id
+	    (make_current_scope (Option.get !idscopes))
+	    (make_current_scope (env.tmp_scope,env.scopes));
     match typ with
     | NtnInternTypeBinder ->
 	if istermvar then error_expect_binder_notation_type loc id
@@ -1682,7 +1683,7 @@ let interp_rawcontext_gen understand_type understand_judgment env bl =
 		(push_rel d env, d::params, succ n, impls)
 	  | Some b ->
 	      let c = understand_judgment env b in
-	      let d = (na, Some c.uj_val, c.uj_type) in
+	      let d = (na, Some c.uj_val, Termops.refresh_universes c.uj_type) in
 		(push_rel d env, d::params, succ n, impls))
       (env,[],1,[]) (List.rev bl)
   in (env, par), impls

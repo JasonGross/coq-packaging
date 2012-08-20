@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -2185,8 +2185,8 @@ let main files =
           "Oops, problem while fetching coq status."
         | Interface.Good status ->
           let path = match status.Interface.status_path with
-          | None -> ""
-          | Some p -> " in " ^ p
+          | [] | _ :: [] -> "" (* Drop the topmost level, usually "Top" *)
+          | _ :: l -> " in " ^ String.concat "." l
           in
           let name = match status.Interface.status_proofname with
           | None -> ""
@@ -2449,13 +2449,13 @@ let main files =
 	  try configure ~apply:update_notebook_pos ()
 	  with _ -> flash_info "Cannot save preferences"
 	end;
-	reset_revert_timer ()) ~stock:`PREFERENCES;
+	reset_revert_timer ()) ~accel:"<Ctrl>," ~stock:`PREFERENCES;
       (* GAction.add_action "Save preferences" ~label:"_Save preferences" ~callback:(fun _ -> save_pref ()); *) ];
     GAction.add_actions view_actions [
       GAction.add_action "View" ~label:"_View";
-      GAction.add_action "Previous tab" ~label:"_Previous tab" ~accel:("<SHIFT>Left") ~stock:`GO_BACK
+      GAction.add_action "Previous tab" ~label:"_Previous tab" ~accel:("<ALT>Left") ~stock:`GO_BACK
         ~callback:(fun _ -> session_notebook#previous_page ());
-      GAction.add_action "Next tab" ~label:"_Next tab" ~accel:("<SHIFT>Right") ~stock:`GO_FORWARD
+      GAction.add_action "Next tab" ~label:"_Next tab" ~accel:("<ALT>Right") ~stock:`GO_FORWARD
         ~callback:(fun _ -> session_notebook#next_page ());
       GAction.add_toggle_action "Show Toolbar" ~label:"Show _Toolbar"
         ~active:(!current.show_toolbar) ~callback:
@@ -2624,6 +2624,7 @@ let main files =
     Coqide_ui.ui_m#insert_action_group windows_actions 0;
     Coqide_ui.ui_m#insert_action_group help_actions 0;
     w#add_accel_group Coqide_ui.ui_m#get_accel_group ;
+    GtkMain.Rc.parse_string "gtk-can-change-accels = 1";
     if Coq_config.gtk_platform <> `QUARTZ
     then vbox#pack (Coqide_ui.ui_m#get_widget "/CoqIde MenuBar");
     let tbar = GtkButton.Toolbar.cast ((Coqide_ui.ui_m#get_widget "/CoqIde ToolBar")#as_widget)

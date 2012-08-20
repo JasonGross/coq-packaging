@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -562,6 +562,22 @@ let intern_typed_pattern ist p =
 let intern_typed_pattern_with_occurrences ist (l,p) =
   (l,intern_typed_pattern ist p)
 
+(* This seems fairly hacky, but it's the first way I've found to get proper
+   globalization of [unfold].  --adamc *)
+let dump_glob_red_expr = function
+  | Unfold occs -> List.iter (fun (_, r) ->
+    try
+      Dumpglob.add_glob (loc_of_or_by_notation Libnames.loc_of_reference r)
+	(Smartlocate.smart_global r)
+    with _ -> ()) occs
+  | Cbv grf | Lazy grf ->
+    List.iter (fun r ->
+      try
+        Dumpglob.add_glob (loc_of_or_by_notation Libnames.loc_of_reference r)
+	  (Smartlocate.smart_global r)
+      with _ -> ()) grf.rConst
+  | _ -> ()
+
 let intern_red_expr ist = function
   | Unfold l -> Unfold (List.map (intern_unfold ist) l)
   | Fold l -> Fold (List.map (intern_constr ist) l)
@@ -707,10 +723,11 @@ let rec intern_atomic lf ist x =
 	               intern_constr_with_occurrences ist c,
                        intern_name lf ist na) cl)
   | TacGeneralizeDep c -> TacGeneralizeDep (intern_constr ist c)
-  | TacLetTac (na,c,cls,b) ->
+  | TacLetTac (na,c,cls,b,eqpat) ->
       let na = intern_name lf ist na in
       TacLetTac (na,intern_constr ist c,
-                 (clause_app (intern_hyp_location ist) cls),b)
+                 (clause_app (intern_hyp_location ist) cls),b,
+		 (Option.map (intern_intro_pattern lf ist) eqpat))
 
   (* Automation tactics *)
   | TacTrivial (d,lems,l) -> TacTrivial (d,List.map (intern_constr ist) lems,l)
@@ -721,12 +738,12 @@ let rec intern_atomic lf ist x =
   (* Derived basic tactics *)
   | TacSimpleInductionDestruct (isrec,h) ->
       TacSimpleInductionDestruct (isrec,intern_quantified_hypothesis ist h)
-  | TacInductionDestruct (ev,isrec,(l,cls)) ->
-      TacInductionDestruct (ev,isrec,(List.map (fun (lc,cbo,(ipato,ipats)) ->
-	      (List.map (intern_induction_arg ist) lc,
-               Option.map (intern_constr_with_bindings ist) cbo,
+  | TacInductionDestruct (ev,isrec,(l,el,cls)) ->
+      TacInductionDestruct (ev,isrec,(List.map (fun (c,(ipato,ipats)) ->
+	      (intern_induction_arg ist c,
                (Option.map (intern_intro_pattern lf ist) ipato,
 	        Option.map (intern_intro_pattern lf ist) ipats))) l,
+               Option.map (intern_constr_with_bindings ist) el,
                Option.map (clause_app (intern_hyp_location ist)) cls))
   | TacDoubleInduction (h1,h2) ->
       let h1 = intern_quantified_hypothesis ist h1 in
@@ -759,6 +776,7 @@ let rec intern_atomic lf ist x =
 
   (* Conversion *)
   | TacReduce (r,cl) ->
+      dump_glob_red_expr r;
       TacReduce (intern_red_expr ist r, clause_app (intern_hyp_location ist) cl)
   | TacChange (None,c,cl) ->
       TacChange (None,
@@ -2384,18 +2402,18 @@ and interp_atomic ist gl tac =
       tclTHEN
 	(tclEVARS sigma)
 	(h_generalize_dep c_interp)
-  | TacLetTac (na,c,clp,b) ->
+  | TacLetTac (na,c,clp,b,eqpat) ->
       let clp = interp_clause ist gl clp in
       if clp = nowhere then
-        (* We try to fully-typechect the term *)
+        (* We try to fully-typecheck the term *)
 	let (sigma,c_interp) = pf_interp_constr ist gl c in
 	tclTHEN
 	  (tclEVARS sigma)
-          (h_let_tac b (interp_fresh_name ist env na) c_interp clp)
+          (h_let_tac b (interp_fresh_name ist env na) c_interp clp eqpat)
       else
         (* We try to keep the pattern structure as much as possible *)
         h_let_pat_tac b (interp_fresh_name ist env na)
-          (interp_pure_open_constr ist env sigma c) clp
+          (interp_pure_open_constr ist env sigma c) clp eqpat
 
   (* Automation tactics *)
   | TacTrivial (debug,lems,l) ->
@@ -2410,17 +2428,17 @@ and interp_atomic ist gl tac =
   (* Derived basic tactics *)
   | TacSimpleInductionDestruct (isrec,h) ->
       h_simple_induction_destruct isrec (interp_quantified_hypothesis ist h)
-  | TacInductionDestruct (isrec,ev,(l,cls)) ->
+  | TacInductionDestruct (isrec,ev,(l,el,cls)) ->
       let sigma, l =
-        list_fold_map (fun sigma (lc,cbo,(ipato,ipats)) ->
-          let lc = List.map (interp_induction_arg ist gl) lc in
-	  let sigma,cbo =
-            Option.fold_map (interp_constr_with_bindings ist env) sigma cbo in
-          (sigma,(lc,cbo,
+        list_fold_map (fun sigma (c,(ipato,ipats)) ->
+          let c = interp_induction_arg ist gl c in
+          (sigma,(c,
             (Option.map (interp_intro_pattern ist gl) ipato,
 	     Option.map (interp_intro_pattern ist gl) ipats)))) sigma l in
+      let sigma,el =
+        Option.fold_map (interp_constr_with_bindings ist env) sigma el in
       let cls = Option.map (interp_clause ist gl) cls in
-      tclWITHHOLES ev (h_induction_destruct isrec ev) sigma (l,cls)
+      tclWITHHOLES ev (h_induction_destruct isrec ev) sigma (l,el,cls)
   | TacDoubleInduction (h1,h2) ->
       let h1 = interp_quantified_hypothesis ist h1 in
       let h2 = interp_quantified_hypothesis ist h2 in
@@ -2839,7 +2857,8 @@ let rec subst_atomic subst (t:glob_atomic_tactic_expr) = match t with
   | TacGeneralize cl ->
       TacGeneralize (List.map (on_fst (subst_constr_with_occurrences subst))cl)
   | TacGeneralizeDep c -> TacGeneralizeDep (subst_glob_constr subst c)
-  | TacLetTac (id,c,clp,b) -> TacLetTac (id,subst_glob_constr subst c,clp,b)
+  | TacLetTac (id,c,clp,b,eqpat) ->
+    TacLetTac (id,subst_glob_constr subst c,clp,b,eqpat)
 
   (* Automation tactics *)
   | TacTrivial (d,lems,l) -> TacTrivial (d,List.map (subst_glob_constr subst) lems,l)
@@ -2847,10 +2866,10 @@ let rec subst_atomic subst (t:glob_atomic_tactic_expr) = match t with
 
   (* Derived basic tactics *)
   | TacSimpleInductionDestruct (isrec,h) as x -> x
-  | TacInductionDestruct (isrec,ev,(l,cls)) ->
-      TacInductionDestruct (isrec,ev,(List.map (fun (lc,cbo,ids) ->
-	List.map (subst_induction_arg subst) lc,
-        Option.map (subst_glob_with_bindings subst) cbo, ids) l, cls))
+  | TacInductionDestruct (isrec,ev,(l,el,cls)) ->
+      let l' = List.map (fun (c,ids) -> subst_induction_arg subst c, ids) l in
+      let el' = Option.map (subst_glob_with_bindings subst) el in
+      TacInductionDestruct (isrec,ev,(l',el',cls))
   | TacDoubleInduction (h1,h2) as x -> x
   | TacDecomposeAnd c -> TacDecomposeAnd (subst_glob_constr subst c)
   | TacDecomposeOr c -> TacDecomposeOr (subst_glob_constr subst c)

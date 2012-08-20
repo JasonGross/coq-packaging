@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -108,11 +108,14 @@ type 'id gclause =
 let nowhere = {onhyps=Some[]; concl_occs=no_occurrences_expr}
 
 type 'constr induction_clause =
-  ('constr with_bindings induction_arg list * 'constr with_bindings option *
-   (intro_pattern_expr located option * intro_pattern_expr located option))
+    'constr with_bindings induction_arg *
+    (intro_pattern_expr located option (* eqn:... *)
+    * intro_pattern_expr located option) (* as ... *)
 
 type ('constr,'id) induction_clause_list =
-    'constr induction_clause list * 'id gclause option
+    'constr induction_clause list
+    * 'constr with_bindings option (* using ... *)
+    * 'id gclause option (* in ... *)
 
 type multi =
   | Precisely of int
@@ -160,7 +163,8 @@ type ('constr,'pat,'cst,'ind,'ref,'id,'tac,'lev) gen_atomic_tactic_expr =
   | TacAssert of 'tac option * intro_pattern_expr located option * 'constr
   | TacGeneralize of ('constr with_occurrences * name) list
   | TacGeneralizeDep of 'constr
-  | TacLetTac of name * 'constr * 'id gclause * letin_flag
+  | TacLetTac of name * 'constr * 'id gclause * letin_flag *
+      intro_pattern_expr located option
 
   (* Derived basic tactics *)
   | TacSimpleInductionDestruct of rec_flag * quantified_hypothesis

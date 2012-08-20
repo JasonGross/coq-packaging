@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -579,8 +579,8 @@ let choose_less_dependent_instance evk evd term args =
   let evi = Evd.find_undefined evd evk in
   let subst = make_pure_subst evi args in
   let subst' = List.filter (fun (id,c) -> eq_constr c term) subst in
-  if subst' = [] then error "Too complex unification problem." else
-  Evd.define evk (mkVar (fst (List.hd subst'))) evd
+  if subst' = [] then evd, false else
+  Evd.define evk (mkVar (fst (List.hd subst'))) evd, true
 
 let apply_on_subterm f c t =
   let rec applyrec (k,c as kc) t =
@@ -733,12 +733,12 @@ let apply_conversion_problem_heuristic ts env evd pbty t1 t2 =
       & array_for_all (fun a -> eq_constr a term2 or isEvar a) args1 ->
       (* The typical kind of constraint coming from pattern-matching return
          type inference *)
-      choose_less_dependent_instance evk1 evd term2 args1, true
+    choose_less_dependent_instance evk1 evd term2 args1
   | (Rel _|Var _), Evar (evk2,args2) when l1 = [] & l2 = []
       & array_for_all (fun a -> eq_constr a term1 or isEvar a) args2 ->
       (* The typical kind of constraint coming from pattern-matching return
          type inference *)
-      choose_less_dependent_instance evk2 evd term1 args2, true
+    choose_less_dependent_instance evk2 evd term1 args2
   | Evar (evk1,args1), Evar (evk2,args2) when evk1 = evk2 ->
       let f env evd pbty x y = (evd,is_trans_fconv pbty ts env evd x y) in
       solve_refl ~can_drop:true f env evd evk1 args1 args2, true
@@ -818,14 +818,30 @@ let solve_unconstrained_impossible_cases evd =
     | _,ImpossibleCase -> Evd.define evk (j_type (coq_unit_judge ())) evd'
     | _ -> evd') evd evd
 
+
 let consider_remaining_unif_problems ?(ts=full_transparent_state) env evd =
   let evd = solve_unconstrained_evars_with_canditates evd in
-  let (evd,pbs) = extract_all_conv_pbs evd in
-  let heuristic_solved_evd = List.fold_left
-    (fun evd (pbty,env,t1,t2) ->
+  let rec aux evd pbs progress stuck =
+    match pbs with
+    | (pbty,env,t1,t2 as pb) :: pbs ->
       let evd', b = apply_conversion_problem_heuristic ts env evd pbty t1 t2 in
-	if b then evd' else Pretype_errors.error_cannot_unify env evd (t1, t2))
-    evd pbs in
+	if b then 
+	  let (evd', rest) = extract_all_conv_pbs evd' in
+	    if rest = [] then aux evd' pbs true stuck
+	    else (* Unification got actually stuck, postpone *)
+	      aux evd pbs progress (pb :: stuck)
+	else Pretype_errors.error_cannot_unify env evd (t1, t2)
+    | _ -> 
+	if progress then aux evd stuck false []
+	else 
+	  match stuck with
+	  | [] -> (* We're finished *) evd
+	  | (pbty,env,t1,t2) :: _ ->
+	      (* There remains stuck problems *)
+	      Pretype_errors.error_cannot_unify env evd (t1, t2)
+  in
+  let (evd,pbs) = extract_all_conv_pbs evd in
+  let heuristic_solved_evd = aux evd pbs false [] in
   check_problems_are_solved env heuristic_solved_evd;
   solve_unconstrained_impossible_cases heuristic_solved_evd
 

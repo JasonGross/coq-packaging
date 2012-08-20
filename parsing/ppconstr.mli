@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -82,8 +82,9 @@ val default_term_pr : term_pr
 (** The modular constr printer.
     [modular_constr_pr pr s p t] prints the head of the term [t] and calls
     [pr] on its subterms.
-    [s] is typically {!Pp.mt} and [p] is [lsimple] for "constr" printers and [ltop]
-    for "lconstr" printers (spiwack: we might need more specification here).
+    [s] is typically {!Pp.mt} and [p] is [lsimpleconstr] for "constr" printers
+    and [ltop] for "lconstr" printers (spiwack: we might need more
+    specification here).
     We can make a new modular constr printer by overriding certain branches,
     for instance if we want to build a printer which prints "Prop" as "Omega"
     instead we can proceed as follows:
@@ -94,7 +95,7 @@ val default_term_pr : term_pr
     taking its fixpoint. *)
 
 type precedence
-val lsimple : precedence
+val lsimpleconstr : precedence
 val ltop : precedence
 val modular_constr_pr :
                ((unit->std_ppcmds) -> precedence -> constr_expr -> std_ppcmds) ->

@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -34,6 +34,15 @@ open Term
 (* Type of a proof. *)
 type proof
 
+(* Returns a stylised view of a proof for use by, for instance,
+   ide-s. *)
+(* spiwack: the type of [proof] will change as we push more refined
+   functions to ide-s. This would be better than spawning a new nearly
+   identical function everytime. Hence the generic name. *)
+(* In this version: returns the focused goals, a representation of the
+   focus stack (the number of goals at each level) and the underlying
+   evar_map *)
+val proof : proof -> Goal.goal list * (Goal.goal list * Goal.goal list) list * Evd.evar_map
 
 (*** General proof functions ***)
 

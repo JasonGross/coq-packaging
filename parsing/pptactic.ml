@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -338,11 +338,15 @@ let pr_bindings prlc prc = pr_bindings_gen false prlc prc
 let pr_with_bindings prlc prc (c,bl) =
   hov 1 (prc c ++ pr_bindings prlc prc bl)
 
+let pr_as_ipat pat = str "as " ++ pr_intro_pattern pat
+let pr_eqn_ipat pat = str "eqn:" ++ pr_intro_pattern pat
+
 let pr_with_induction_names = function
   | None, None -> mt ()
-  | eqpat, ipat ->
-      spc () ++ hov 1 (str "as" ++ pr_opt pr_intro_pattern eqpat ++
-                       pr_opt pr_intro_pattern ipat)
+  | Some eqpat, None -> spc () ++ hov 1 (pr_eqn_ipat eqpat)
+  | None, Some ipat -> spc () ++ hov 1 (pr_as_ipat ipat)
+  | Some eqpat, Some ipat ->
+    spc () ++ hov 1 (pr_as_ipat ipat ++ spc () ++ pr_eqn_ipat eqpat)
 
 let pr_as_intro_pattern ipat =
   spc () ++ hov 1 (str "as" ++ spc () ++ pr_intro_pattern ipat)
@@ -693,12 +697,13 @@ and pr_atom1 = function
   | TacGeneralizeDep c ->
       hov 1 (str "generalize" ++ spc () ++ str "dependent" ++
              pr_constrarg c)
-  | TacLetTac (na,c,cl,true) when cl = nowhere ->
+  | TacLetTac (na,c,cl,true,_) when cl = nowhere ->
       hov 1 (str "pose" ++ pr_pose pr_lconstr pr_constr na c)
-  | TacLetTac (na,c,cl,b) ->
+  | TacLetTac (na,c,cl,b,e) ->
       hov 1 ((if b then str "set" else str "remember") ++
              (if b then pr_pose pr_lconstr else pr_pose_as_style)
 	        pr_constr na c ++
+             pr_opt (fun p -> pr_eqn_ipat p ++ spc ()) e ++
              pr_clauses (Some b) pr_ident cl)
 (*  | TacInstantiate (n,c,ConclLocation ()) ->
       hov 1 (str "instantiate" ++ spc() ++
@@ -714,14 +719,14 @@ and pr_atom1 = function
   | TacSimpleInductionDestruct (isrec,h) ->
       hov 1 (str "simple " ++ str (if isrec then "induction" else "destruct")
              ++ pr_arg pr_quantified_hypothesis h)
-  | TacInductionDestruct (isrec,ev,(l,cl)) ->
+  | TacInductionDestruct (isrec,ev,(l,el,cl)) ->
       hov 1 (str (with_evars ev (if isrec then "induction" else "destruct")) ++
              spc () ++
-             prlist_with_sep pr_comma (fun (h,e,ids) ->
-	       prlist_with_sep spc (pr_induction_arg pr_lconstr pr_constr) h ++
-	       pr_with_induction_names ids ++
-               pr_opt pr_eliminator e) l ++
-               pr_opt_no_spc (pr_clauses None pr_ident) cl)
+             prlist_with_sep pr_comma (fun (h,ids) ->
+	       pr_induction_arg pr_lconstr pr_constr h ++
+	       pr_with_induction_names ids) l ++
+             pr_opt pr_eliminator el ++
+	     pr_opt_no_spc (pr_clauses None pr_ident) cl)
   | TacDoubleInduction (h1,h2) ->
       hov 1
         (str "double induction" ++
@@ -911,7 +916,7 @@ let rec pr_tac inherited tac =
   | TacSolve tl ->
       str "solve" ++ spc () ++ pr_seq_body (pr_tac ltop) tl, llet
   | TacComplete t ->
-      str "complete" ++ spc () ++ pr_tac (lcomplete,E) t, lcomplete
+      pr_tac (lcomplete,E) t, lcomplete
   | TacId l ->
       str "idtac" ++ prlist (pr_arg (pr_message_token pr_ident)) l, latom
   | TacAtom (loc,TacAlias (_,s,l,_)) ->

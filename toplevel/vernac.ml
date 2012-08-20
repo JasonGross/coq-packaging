@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -25,6 +25,30 @@ open Compat
 exception DuringCommandInterp of Util.loc * exn
 
 exception HasNotFailed
+
+(* When doing Load on a file, two behaviors are possible:
+
+   - either the history stack is grown by only one command,
+     the "Load" itself. This is mandatory for command-counting
+     interfaces (CoqIDE).
+
+   - either each individual sub-commands in the file is added
+     to the history stack. This allows commands like Show Script
+     to work across the loaded file boundary (cf. bug #2820).
+
+   The best of the two could probably be combined someday,
+   in the meanwhile we use a flag. *)
+
+let atomic_load = ref true
+
+let _ =
+  Goptions.declare_bool_option
+    { Goptions.optsync  = true;
+      Goptions.optdepr  = false;
+      Goptions.optname  = "atomic registration of commands in a Load";
+      Goptions.optkey   = ["Atomic";"Load"];
+      Goptions.optread  = (fun () -> !atomic_load);
+      Goptions.optwrite = ((:=) atomic_load) }
 
 (* Specifies which file is read. The intermediate file names are
    discarded here. The Drop exception becomes an error. We forget
@@ -272,8 +296,14 @@ and read_vernac_file verbosely s =
     else Flags.silently Vernacentries.interp
   in
   let checknav loc cmd =
-    if is_navigation_vernac cmd then
+    if is_navigation_vernac cmd && not (is_reset cmd) then
 	user_error loc "Navigation commands forbidden in files"
+  in
+  let end_inner_command cmd =
+    if !atomic_load || is_reset cmd then
+      Lib.mark_end_of_command () (* for Reset in coqc or coqtop -l *)
+    else
+      Backtrack.mark_command cmd; (* for Show Script, cf bug #2820 *)
   in
   let (in_chan, fname, input) =
     open_file_twice_if verbosely s in
@@ -281,7 +311,9 @@ and read_vernac_file verbosely s =
     (* we go out of the following infinite loop when a End_of_input is
      * raised, which means that we raised the end of the file being loaded *)
     while true do
-      vernac_com interpfun checknav (parse_sentence input);
+      let loc_ast = parse_sentence input in
+      vernac_com interpfun checknav loc_ast;
+      end_inner_command (snd loc_ast);
       pp_flush ()
     done
   with e ->   (* whatever the exception *)
@@ -324,6 +356,7 @@ let load_vernac verb file =
   chan_beautify :=
     if !Flags.beautify_file then open_out (file^beautify_suffix) else stdout;
   try
+    Lib.mark_end_of_command (); (* in case we're still in coqtop init *)
     read_vernac_file verb file;
     if !Flags.beautify_file then close_out !chan_beautify;
   with e ->

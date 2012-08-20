@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -276,13 +276,19 @@ let rec pp_hints_path = function
   | PathEmpty -> str"Ø"
   | PathEpsilon -> str"ε"
 
-let rec subst_hints_path subst hp =
-  match hp with
-  | PathAtom PathAny -> hp
-  | PathAtom (PathHints grs) -> 
+let subst_path_atom subst p =
+  match p with
+  | PathAny -> p
+  | PathHints grs ->
     let gr' gr = fst (subst_global subst gr) in
     let grs' = list_smartmap gr' grs in
-      if grs' == grs then hp else PathAtom (PathHints grs')
+      if grs' == grs then p else PathHints grs'
+
+let rec subst_hints_path subst hp =
+  match hp with
+  | PathAtom p ->
+    let p' = subst_path_atom subst p in
+      if p' == p then hp else PathAtom p'
   | PathStar p -> let p' = subst_hints_path subst p in
       if p' == p then hp else PathStar p'
   | PathSeq (p, q) ->
@@ -386,7 +392,7 @@ module Hint_db = struct
     let db = if db.use_dn && rebuild then rebuild_db st' db else db
     in addkv k (next_hint_id db) v db
 
-  let add_list l db = List.fold_right add_one l db
+  let add_list l db = List.fold_left (fun db k -> add_one k db) db l
 
   let remove_sdl p sdl = list_smartfilter p sdl 
   let remove_he st p (sl1, sl2, dn as he) =
@@ -672,9 +678,10 @@ let subst_autohint (subst,(local,name,hintlist as obj)) =
 	  let tac' = !forward_subst_tactic subst tac in
 	  if tac==tac' then data.code else Extern tac'
     in
+    let name' = subst_path_atom subst data.name in
     let data' =
-      if data.pat==pat' && data.code==code' then data
-      else { data with pat = pat'; code = code' }
+      if data.pat==pat' && data.name == name' && data.code==code' then data
+      else { data with pat = pat'; name = name'; code = code' }
     in
     if k' == k && data' == data then hint else (k',data')
   in
@@ -848,6 +855,7 @@ let interp_hints h =
   | HintsConstructors lqid ->
       let constr_hints_of_ind qid =
         let ind = global_inductive_with_alias qid in
+	Dumpglob.dump_reference (fst (qualid_of_reference qid)) "<>" (string_of_reference qid) "ind";
         list_tabulate (fun i -> let c = (ind,i+1) in
 			 None, true, PathHints [ConstructRef c], mkConstruct c)
 	  (nconstructors ind) in

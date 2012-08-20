@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -39,6 +39,10 @@ val comments : ((int * int) * string) list ref
 (** {6 Concatenation. } *)
 
 val (++) : std_ppcmds -> std_ppcmds -> std_ppcmds
+
+(** {6 Evaluation. } *)
+
+val eval_ppcmds : std_ppcmds -> std_ppcmds
 
 (** {6 Derived commands. } *)
 
