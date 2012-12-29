@@ -1,8 +1,11 @@
-coq (8.4pl1dfsg-1) UNRELEASED; urgency=low
+coq (8.4pl1dfsg-1) experimental; urgency=low
 
   * New upstream release
+    - 0002-Fix-use-of-HASNATDYNLINK-in-coq_makefile-output.patch
+      has been merged upstream
+    - add ocaml-findlib to Build-Depends
 
- -- Stéphane Glondu <glondu@debian.org>  Sat, 29 Dec 2012 10:58:46 +0100
+ -- Stéphane Glondu <glondu@debian.org>  Sat, 29 Dec 2012 15:56:53 +0100
 
 coq (8.4dfsg-2) experimental; urgency=low
 
