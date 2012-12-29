@@ -12,6 +12,7 @@ Build-Depends:
  dh-ocaml (>= 0.9.5~),
  ocaml-nox (>= 3.11.1-3~),
  ocaml-best-compilers,
+ ocaml-findlib,
  camlp5 (>= 5.12-2~),
  liblablgtk2-ocaml-dev (>= 2.14),
  texlive-latex-extra,
