@@ -6,18 +6,37 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-IFDEF QUARTZ THEN
-external gtk_mac_init : (string -> unit) -> (unit -> bool) -> unit
-  = "caml_gtk_mac_init"
+let _ = Coqide.ignore_break ()
+let _ = GtkMain.Main.init ()
 
-external gtk_mac_ready :  ([> Gtk.widget ] as 'a) Gtk.obj -> ([> Gtk.widget ] as 'a) Gtk.obj ->
-                          ([> Gtk.widget ] as 'a) Gtk.obj -> unit
-  = "caml_gtk_mac_ready"
-END
+(* We handle Gtk warning messages ourselves :
+   - on win32, we don't want them to end on a non-existing console
+   - we display critical messages via pop-ups *)
 
-let initmac () = IFDEF QUARTZ THEN gtk_mac_init Coqide.do_load Coqide.forbid_quit_to_save ELSE () END
+let catch_gtk_messages () =
+  let all_levels =
+    [`FLAG_RECURSION;`FLAG_FATAL;`ERROR;`CRITICAL;`WARNING;
+     `MESSAGE;`INFO;`DEBUG]
+  in
+  let handler ~level msg =
+    let header = "Coqide internal error: " in
+    let level_is tag = (level land Glib.Message.log_level tag) <> 0 in
+    if level_is `ERROR then
+      let () = GToolbox.message_box ~title:"Error" (header ^ msg) in
+      Coqide.crash_save 1
+    else if level_is `CRITICAL then
+      GToolbox.message_box ~title:"Error" (header ^ msg)
+    else if level_is `DEBUG || Sys.os_type = "Win32" then
+      Ideutils.prerr_endline msg (* no-op unless in debug mode *)
+    else
+      Printf.eprintf "%s\n" msg
+  in
+  let catch domain =
+    ignore (Glib.Message.set_log_handler ~domain ~levels:all_levels handler)
+  in
+  List.iter catch ["GLib";"Gtk";"Gdk";"Pango"]
 
-let macready x y z = IFDEF QUARTZ THEN gtk_mac_ready x#as_widget y#as_widget z#as_widget ELSE ()  END
+let () = catch_gtk_messages ()
 
 (* On win32, we add the directory of coqide to the PATH at launch-time
    (this used to be done in a .bat script). *)
@@ -33,12 +52,18 @@ let set_win32_path () =
 *)
 
 let reroute_stdout_stderr () =
+  (* We anticipate a bit the argument parsing and look for -debug *)
+  let debug = List.mem "-debug" (Array.to_list Sys.argv) in
+  Ideutils.debug := debug;
   let out_descr =
-    if !Ideutils.debug then
-      Unix.descr_of_out_channel (snd (Filename.open_temp_file "coqide_" ".log"))
+    if debug then
+      let (name,chan) = Filename.open_temp_file "coqide_" ".log" in
+      Coqide.logfile := Some name;
+      Unix.descr_of_out_channel chan
     else
       snd (Unix.pipe ())
   in
+  Unix.set_close_on_exec out_descr;
   Unix.dup2 out_descr Unix.stdout;
   Unix.dup2 out_descr Unix.stderr
 
@@ -64,10 +89,17 @@ let () =
   reroute_stdout_stderr ()
 END
 
+IFDEF QUARTZ THEN
+  let osx = GosxApplication.osxapplication ()
+
+  let _ =
+    osx#connect#ns_application_open_file ~callback:(fun x -> Coqide.do_load x; true) in
+  let _ =
+    osx#connect#ns_application_block_termination ~callback:Coqide.forbid_quit_to_save in
+  ()
+END
+
 let () =
-  Coqide.ignore_break ();
-  ignore (GtkMain.Main.init ());
-  initmac () ;
   (try
      let gtkrcdir = List.find
        (fun x -> Sys.file_exists (Filename.concat x "coqide-gtk2rc"))
@@ -82,13 +114,6 @@ let () =
   end;
 (*    GtkData.AccelGroup.set_default_mod_mask
       (Some [`CONTROL;`SHIFT;`MOD1;`MOD3;`MOD4]);*)
-    ignore (
-	     Glib.Message.set_log_handler ~domain:"Gtk" ~levels:[`ERROR;`FLAG_FATAL;
-								 `WARNING;`CRITICAL]
-	       (fun ~level msg ->
-		  if level land Glib.Message.log_level `WARNING <> 0
-		  then Printf.eprintf "Warning: %s\n" msg
-		  else failwith ("Coqide internal error: " ^ msg)));
   let argl = Array.to_list Sys.argv in
   let argl = Coqide.read_coqide_args argl in
   let files = Coq.filter_coq_opts (List.tl argl) in
@@ -96,9 +121,18 @@ let () =
   Coq.check_connection args;
   Coqide.sup_args := args;
   Coqide.main files;
-    if !Coq_config.with_geoproof then ignore (Thread.create Coqide.check_for_geoproof_input ());
-    macready (Coqide_ui.ui_m#get_widget "/CoqIde MenuBar") (Coqide_ui.ui_m#get_widget "/CoqIde MenuBar/Edit/Prefs")
-             (Coqide_ui.ui_m#get_widget "/CoqIde MenuBar/Help/Abt");
+    if !Coq_config.with_geoproof then ignore (Thread.create Coqide.check_for_geoproof_input ())
+
+IFDEF QUARTZ THEN
+  let () =
+    GtkosxApplication.Application.set_menu_bar osx#as_osxapplication (GtkMenu.MenuShell.cast (Coqide_ui.ui_m#get_widget "/CoqIde MenuBar")#as_widget) in
+  let () =
+    GtkosxApplication.Application.insert_app_menu_item osx#as_osxapplication (Coqide_ui.ui_m#get_widget "/CoqIde MenuBar/Edit/Prefs")#as_widget 1 in
+  let () =
+    GtkosxApplication.Application.set_help_menu osx#as_osxapplication (Some (GtkMenu.MenuItem.cast (Coqide_ui.ui_m#get_widget "/CoqIde MenuBar/Help")#as_widget)) in
+  osx#ready ()
+END
+
     while true do
       try
 	GtkThread.main ()

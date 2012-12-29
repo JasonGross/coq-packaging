@@ -63,16 +63,18 @@ let no_start   = ref false
 
 let is_ocaml4 = Coq_config.caml_version.[0] <> '3'
 
+(* Since the .cma are given with their relative paths (e.g. "lib/clib.cma"),
+   we only need to include directories mentionned in the temp main ml file
+   below (for accessing the corresponding .cmi). *)
+
 let src_dirs =
-  [ []; ["kernel";"byterun"]; [ "config" ]; [ "toplevel" ] ]
+  [ []; ["lib"]; ["toplevel"]; ["kernel";"byterun"]; ]
 
 let includes () =
-  (if !Flags.boot then [] (* the include flags are given on the cmdline *)
-   else
-      let coqlib = Envars.coqlib () in
-      let mkdir d = "\"" ^ List.fold_left Filename.concat coqlib d ^ "\"" in
-      let camlp4incl = ["-I"; "\"" ^ Envars.camlp4lib () ^ "\""] in
-      List.fold_right (fun d l -> "-I" :: mkdir d :: l)	src_dirs camlp4incl)
+  let coqlib = if !Flags.boot then "." else Envars.coqlib () in
+  let mkdir d = "\"" ^ List.fold_left Filename.concat coqlib d ^ "\"" in
+  (List.fold_right (fun d l -> "-I" :: mkdir d :: l) src_dirs [])
+  @ ["-I"; "\"" ^ Envars.camlp4lib () ^ "\""]
   @ (if is_ocaml4 then ["-I"; "+compiler-libs"] else [])
 
 (* Transform bytecode object file names in native object file names *)
@@ -242,8 +244,7 @@ let declare_loading_string () =
 
 (* create a temporary main file to link *)
 let create_tmp_main_file modules =
-  let main_name = Filename.temp_file "coqmain" ".ml" in
-  let oc = open_out main_name in
+  let main_name,oc = Filename.open_temp_file "coqmain" ".ml" in
   try
     (* Add the pre-linked modules *)
     output_string oc "List.iter Mltop.add_known_module [\"";
@@ -290,10 +291,10 @@ let main () =
       []
   in
   (* the list of the loaded modules *)
-  let main_file = Filename.quote (create_tmp_main_file modules) in
+  let main_file = create_tmp_main_file modules in
   try
-    let args =
-      options @ (includes ()) @ copts @ tolink @ dynlink @ [ main_file ] in
+    let args = options @ includes () @ copts @ tolink @ dynlink in
+    let args = args @ [ Filename.quote main_file ] in
       (* add topstart.cmo explicitly because we shunted ocamlmktop wrapper *)
     let args = if !top then args @ [ "topstart.cmo" ] else args in
       (* Now, with the .cma, we MUST use the -linkall option *)

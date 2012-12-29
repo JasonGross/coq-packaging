@@ -250,7 +250,9 @@ and check_same_fix_binder bl1 bl2 =
           check_same_binder ([na1],default_binder_kind,def1) ([na2],default_binder_kind,def2)
       | _ -> failwith "not same binder") bl1 bl2
 
-let is_same_type c d = try let () = check_same_type c d in true with Failure _ -> false
+let is_same_type c d =
+  try let () = check_same_type c d in true
+  with Failure _ | Invalid_argument _ -> false
 
 (**********************************************************************)
 (* mapping patterns to cases_pattern_expr                                *)
@@ -374,11 +376,12 @@ and extern_symbol_pattern (tmp_scope,scopes as allscopes) vars t = function
   | (keyrule,pat,n as _rule)::rules ->
     try
       match t,n with
-      | PatCstr (loc,(ind,_),l,na), n when n = Some 0 or n = None or 
-	 n = Some(fst(Global.lookup_inductive ind)).Declarations.mind_nparams ->
+      | PatCstr (loc,(ind,_),l,na), n when (n = Some 0 or n = None or
+	 n = Some(fst(Global.lookup_inductive ind)).Declarations.mind_nparams)
+          && (match keyrule with SynDefRule _ -> true | _ -> false) ->
         (* Abbreviation for the constructor name only *)
 	(match keyrule with
-        | NotationRule (sc,ntn) -> raise No_match
+        | NotationRule _ -> assert false
         | SynDefRule kn ->
 	    let qid = Qualid (loc, shortest_qualid_of_syndef vars kn) in
 	    let l = List.map (extern_cases_pattern_in_scope allscopes vars) l in

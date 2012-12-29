@@ -41,13 +41,8 @@ object
   val mutable read_only : bool
   val mutable filename : string option
   val mutable stats : Unix.stats option
-  val mutable detached_views : GWindow.window list
   method without_auto_complete : 'a 'b. ('a -> 'b) -> 'a -> 'b
   method set_auto_complete : bool -> unit
-
-  method kill_detached_views : unit -> unit
-  method add_detached_view : GWindow.window -> unit
-  method remove_detached_view : GWindow.window -> unit
 
   method filename : string option
   method stats :  Unix.stats option
@@ -104,7 +99,10 @@ type viewable_script =
     }
 
 let kill_session s =
-  s.analyzed_view#kill_detached_views ();
+  (* To close the detached views of this script, we call manually
+     [destroy] on it, triggering some callbacks in [detach_view].
+     In a more modern lablgtk, rather use the page-removed signal ? *)
+  s.script#destroy ();
   Coq.kill_coqtop !(s.toplvl)
 
 let build_session s =
@@ -442,6 +440,7 @@ let remove_tags (buffer:GText.buffer) from upto =
       Tags.Script.proof_decl; Tags.Script.qed ]
 
 (** Cut a part of the buffer in sentences and tag them.
+    Invariant: either this slice ends the buffer, or it ends with ".".
     May raise [Coq_lex.Unterminated] when the zone ends with
     an unterminated sentence. *)
 
@@ -480,14 +479,18 @@ let is_char s c = s#char = Char.code c
 
 (** Search backward the first character of a sentence, starting at [iter]
     and going at most up to [soi] (meant to be the end of the locked zone).
-    Raise [Not_found] when no proper sentence start has been found,
-    in particular when the final "." of the locked zone is followed
-    by a non-blank character outside the locked zone. This non-blank
-    character will be signaled as erroneous in [tag_on_insert] below. *)
+    Raise [StartError] when no proper sentence start has been found.
+    A character following a ending "." is considered as a sentence start
+    only if this character is a blank. In particular, when a final "."
+    at the end of the locked zone isn't followed by a blank, then this
+    non-blank character will be signaled as erroneous in [tag_on_insert] below.
+*)
+
+exception StartError
 
 let grab_sentence_start (iter:GText.iter) soi =
   let cond iter =
-    if iter#compare soi < 0 then raise Not_found;
+    if iter#compare soi < 0 then raise StartError;
     let prev = iter#backward_char in
     is_sentence_end prev &&
       (not (is_char prev '.') ||
@@ -509,42 +512,35 @@ let rec grab_ending_dot (start:GText.iter) =
 
 (** Retag a zone that has been edited *)
 
-let tag_on_insert =
-  (* possible race condition here : editing two buffers with a timedelta smaller
-   * than 1.5s might break the error recovery mechanism. *)
-  let skip_last = ref (ref true) in (* ref to the mutable flag created on last call *)
-  fun buffer ->
-    try
-      (* the start of the non-locked zone *)
-      let soi = buffer#get_iter_at_mark (`NAME "start_of_input") in
-      (* the inserted zone is between [prev_insert] and [insert] *)
-      let insert = buffer#get_iter_at_mark `INSERT in
-      let prev_insert = buffer#get_iter_at_mark (`NAME "prev_insert") in
-      (* [prev_insert] is normally always before [insert] even when deleting.
-	 Let's check this nonetheless *)
-      let prev_insert =
-	if insert#compare prev_insert < 0 then insert else prev_insert
-      in
-      let start = grab_sentence_start prev_insert soi in
-      (** The status of "{" "}" as sentence delimiters is too fragile.
-	  We retag up to the next "." instead. *)
-      let stop = grab_ending_dot insert in
-      let skip_curr = ref true in (* shall the callback be skipped ? by default yes*)
-      (!skip_last) := true; (* skip the previously created callback *)
-      skip_last := skip_curr;
-      try split_slice_lax buffer start stop
-      with Coq_lex.Unterminated ->
-        skip_curr := false;
-	let callback () =
-	  if not !skip_curr then begin
-	    try split_slice_lax buffer start buffer#end_iter
-	    with Coq_lex.Unterminated -> ()
-	  end; false
-	in
-	ignore (Glib.Timeout.add ~ms:1500 ~callback)
-    with Not_found ->
-      let err_pos = buffer#get_iter_at_mark (`NAME "start_of_input") in
-      buffer#apply_tag Tags.Script.error ~start:err_pos ~stop:err_pos#forward_char
+let tag_on_insert buffer =
+  (* the start of the non-locked zone *)
+  let soi = buffer#get_iter_at_mark (`NAME "start_of_input") in
+  (* the inserted zone is between [prev_insert] and [insert] *)
+  let insert = buffer#get_iter_at_mark `INSERT in
+  let prev = buffer#get_iter_at_mark (`NAME "prev_insert") in
+  (* [prev] is normally always before [insert] even when deleting.
+     Let's check this nonetheless *)
+  let prev, insert =
+    if insert#compare prev < 0 then insert, prev else prev, insert
+  in
+  try
+    let start = grab_sentence_start prev soi in
+    (** The status of "{" "}" as sentence delimiters is too fragile.
+	We retag up to the next "." instead. *)
+    let stop = grab_ending_dot insert in
+    try split_slice_lax buffer start stop
+    with Coq_lex.Unterminated ->
+      (* This shouldn't happen frequently. Either:
+         - we are at eof, with indeed an unfinished sentence.
+         - we have just inserted an opening of comment or string.
+         - the inserted text ends with a "." that interacts with the "."
+         found by [grab_ending_dot] to form a non-ending "..".
+         In any case, we retag up to eof, since this isn't that costly. *)
+      if not stop#is_end then
+        try split_slice_lax buffer start buffer#end_iter
+        with Coq_lex.Unterminated -> ()
+  with StartError ->
+    buffer#apply_tag Tags.Script.error ~start:soi ~stop:soi#forward_char
 
 let force_retag buffer =
   try split_slice_lax buffer buffer#start_iter buffer#end_iter
@@ -591,7 +587,6 @@ object(self)
   val mutable stats = None
   val mutable last_modification_time = 0.
   val mutable last_auto_save_time = 0.
-  val mutable detached_views = []
   val mutable find_forward_instead_of_backward = false
 
   val mutable auto_complete_on = !current.auto_complete
@@ -606,14 +601,6 @@ object(self)
     let y = f x in
     self#set_auto_complete old;
     y
-  method add_detached_view (w:GWindow.window) =
-    detached_views <- w::detached_views
-  method remove_detached_view (w:GWindow.window) =
-    detached_views <- List.filter (fun e -> w#misc#get_oid<>e#misc#get_oid) detached_views
-
-  method kill_detached_views () =
-    List.iter (fun w -> w#destroy ()) detached_views;
-    detached_views <- []
 
   method filename = filename
   method stats = stats
@@ -820,7 +807,7 @@ object(self)
     begin
       let menu_callback = if !current.contextual_menus_on_goal then
           (fun s () -> ignore (self#insert_this_phrase_on_success
-                                 true true false ("progress "^s) s))
+				 true true false ("progress "^s) s))
         else
           (fun _ _ -> ()) in
       try
@@ -1007,6 +994,7 @@ object(self)
       if stop#starts_line then
         input_buffer#insert ~iter:stop insertphrase
       else input_buffer#insert ~iter:stop ("\n"^insertphrase);
+      tag_on_insert input_buffer;
       let start = self#get_start_of_input in
       input_buffer#move_mark ~where:stop (`NAME "start_of_input");
       input_buffer#apply_tag (safety_tag safe) ~start ~stop;
@@ -1231,7 +1219,7 @@ object(self)
       (List.exists
          (fun p ->
            self#insert_this_phrase_on_success true false false
-             ("progress "^p^".\n") (p^".\n")) l)
+             ("progress "^p^".") (p^".")) l)
 
   method active_keypress_handler k =
     let state = GdkEvent.Key.state k in
@@ -1382,23 +1370,15 @@ object(self)
     );
     ignore (input_buffer#connect#begin_user_action
 	      ~callback:(fun () ->
-		           let here = input_buffer#get_iter_at_mark `INSERT in
-			   input_buffer#move_mark (`NAME "prev_insert") here
-	      )
+                let where = self#get_insert in
+                input_buffer#move_mark (`NAME "prev_insert") ~where;
+                let start = self#get_start_of_input in
+                let stop = input_buffer#end_iter in
+                input_buffer#remove_tag Tags.Script.error ~start ~stop)
     );
     ignore (input_buffer#connect#end_user_action
               ~callback:(fun () ->
                 last_modification_time <- Unix.time ();
-                let r = input_view#visible_rect in
-                let stop =
-                  input_view#get_iter_at_location
-                    ~x:(Gdk.Rectangle.x r + Gdk.Rectangle.width r)
-                    ~y:(Gdk.Rectangle.y r + Gdk.Rectangle.height r)
-                in
-                input_buffer#remove_tag
-                  Tags.Script.error
-                  ~start:self#get_start_of_input
-                  ~stop;
                 tag_on_insert input_buffer
               )
     );
@@ -1794,6 +1774,8 @@ let forbid_quit_to_save () =
 	    | `NO | `DELETE_EVENT -> false
 	end
 	else false)
+
+let logfile = ref None
 
 let main files =
 
@@ -2354,7 +2336,7 @@ let main files =
   let tactic_shortcut s sc = GAction.add_action s ~label:("_"^s)
     ~accel:(!current.modifier_for_tactics^sc)
     ~callback:(do_if_active (fun a -> a#insert_command
-			       ("progress "^s^".\n") (s^".\n"))) in
+			       ("progress "^s^".") (s^"."))) in
   let query_callback command _ =
     let word = get_current_word () in
     if not (word = "") then
@@ -2380,6 +2362,24 @@ let main files =
       match key with
 	|Some ac -> GAction.add_action name ~label ~callback ~accel:(!current.modifier_for_templates^ac)
 	|None -> GAction.add_action name ~label ~callback ?accel:None
+  in
+  let detach_view _ =
+    (* Open a separate window containing the current buffer *)
+    let trm = session_notebook#current_term in
+    let w = GWindow.window ~show:true
+      ~width:(!current.window_width*2/3)
+      ~height:(!current.window_height*2/3)
+      ~position:`CENTER
+      ~title:(if trm.filename = "" then "*scratch*" else trm.filename)
+      ()
+    in
+    let sb = GBin.scrolled_window ~packing:w#add ()
+    in
+    let nv = GText.view ~buffer:trm.script#buffer ~packing:sb#add ()
+    in
+    nv#misc#modify_font !current.text_font;
+    (* If the buffer in the main window is closed, destroy this detached view *)
+    ignore (trm.script#connect#destroy ~callback:w#destroy)
   in
     GAction.add_actions file_actions [
       GAction.add_action "File" ~label:"_File";
@@ -2568,33 +2568,7 @@ let main files =
     ];
     GAction.add_actions windows_actions [
       GAction.add_action "Windows" ~label:"_Windows";
-      GAction.add_action "Detach View" ~label:"Detach _View"
-	~callback:(fun _ -> do_if_not_computing "detach view"
-		     (function {script=v;analyzed_view=av} ->
-			let w = GWindow.window ~show:true
-			  ~width:(!current.window_width*2/3)
-			  ~height:(!current.window_height*2/3)
-			  ~position:`CENTER
-			  ~title:(match av#filename with
-				    | None -> "*Unnamed*"
-				    | Some f -> f)
-			  ()
-			in
-			let sb = GBin.scrolled_window
-			  ~packing:w#add ()
-			in
-			let nv = GText.view
-			  ~buffer:v#buffer
-			  ~packing:sb#add
-			  ()
-			in
-			  nv#misc#modify_font
-			    !current.text_font;
-			  ignore (w#connect#destroy
-				    ~callback:
-				    (fun () -> av#remove_detached_view w));
-			  av#add_detached_view w)
-		     [session_notebook#current_term]);
+      GAction.add_action "Detach View" ~label:"Detach _View" ~callback:detach_view
     ];
     GAction.add_actions help_actions [
       GAction.add_action "Help" ~label:"_Help";
@@ -2846,12 +2820,17 @@ let main files =
      \n-------------------\
      \n"
   in
+  let display_log_file (b:GText.buffer) =
+    if !debug then
+      let file = match !logfile with None -> "stderr" | Some f -> f in
+      b#insert ("Debug mode is on, log file is "^file)
+  in
   let initial_about (b:GText.buffer) =
     let initial_string =
       "Welcome to CoqIDE, an Integrated Development Environment for Coq\n"
     in
     let coq_version = Coq.short_version () in
-    b#insert ~iter:b#start_iter "\n\n";
+    display_log_file b;
     if Glib.Utf8.validate ("You are running " ^ coq_version) then
       b#insert ~iter:b#start_iter ("You are running " ^ coq_version);
     if Glib.Utf8.validate initial_string then
@@ -2881,8 +2860,8 @@ let main files =
     then b#insert about_full_string;
     let coq_version = Coq.version () in
     if Glib.Utf8.validate coq_version
-    then b#insert coq_version
-
+    then b#insert coq_version;
+    display_log_file b;
   in
   (* Remove default pango menu for textviews *)
   w#show ();
