@@ -6,7 +6,7 @@
 # 
 ##################################
 
-VERSION=8.4
+VERSION=8.4pl1
 VOMAGIC=08400
 STATEMAGIC=58400
 DATE=`LC_ALL=C LANG=C date +"%B %Y"`
@@ -35,37 +35,36 @@ usage () {
     printf "\tSet installation directory to <dir>\n"
     echo "-local"
     printf "\tSet installation directory to the current source tree\n"
-    echo "-coqrunbyteflags"
+    echo "-coqrunbyteflags <flags>"
     printf "\tSet link flags for VM-dependent bytecode (coqtop)\n"
-    echo "-coqtoolsbyteflags"
+    echo "-coqtoolsbyteflags <flags>"
     printf "\tSet link flags for VM-independant bytecode (coqdep, coqdoc, ...)\n"
     echo "-custom"
     printf "\tGenerate all bytecode executables with -custom (not recommended)\n"
-    echo "-src"
+    echo "-src <dir>"
     printf "\tSpecifies the source directory\n"
-    echo "-bindir"
-    echo "-libdir"
-    echo "-configdir"
-    echo "-datadir"
-    echo "-mandir"
-    echo "-docdir"
+    echo "-bindir <dir>"
+    echo "-libdir <dir>"
+    echo "-configdir <dir>"
+    echo "-datadir <dir>"
+    echo "-mandir <dir>"
+    echo "-docdir <dir>"
     printf "\tSpecifies where to install bin/lib/config/data/man/doc files resp.\n"
-    echo "-emacslib"
-    echo "-emacs"
+    echo "-emacslib <dir>"
     printf "\tSpecifies where emacs files are to be installed\n"
-    echo "-coqdocdir"
+    echo "-coqdocdir <dir>"
     printf "\tSpecifies where Coqdoc style files are to be installed\n"
-    echo "-camldir"
+    echo "-camldir <dir>"
     printf "\tSpecifies the path to the OCaml library\n"
-    echo "-lablgtkdir"
+    echo "-lablgtkdir <dir>"
     printf "\tSpecifies the path to the Lablgtk library\n"
     echo "-usecamlp5"
     printf "\tSpecifies to use camlp5 instead of camlp4\n"
     echo "-usecamlp4"
     printf "\tSpecifies to use camlp4 instead of camlp5\n"
-    echo "-camlp5dir"
+    echo "-camlp5dir <dir>"
     printf "\tSpecifies where to look for the Camlp5 library and tells to use it\n"
-    echo "-arch"
+    echo "-arch <arch>"
     printf "\tSpecifies the architecture\n"
     echo "-opt"
     printf "\tSpecifies whether or not to use OCaml *.opt optimized compilers\n"
@@ -163,8 +162,7 @@ while : ; do
     -coqtoolsbyteflags|--coqtoolsbyteflags) coqtoolsbyteflags_spec=yes
                                             coqtoolsbyteflags="$2"
                                             shift;;
-    -custom|--custom) custom_spec=yes
-                      shift;;
+    -custom|--custom) custom_spec=yes;;
     -src|--src) src_spec=yes
                 COQSRC="$2"
 	        shift;;
@@ -191,6 +189,7 @@ while : ; do
 			  shift;;
     -emacs |--emacs) emacs_spec=yes
 		     emacs="$2"
+                     printf "Warning: obsolete -emacs option\n"
 		     shift;;
     -coqdocdir|--coqdocdir) coqdocdir_spec=yes
 	              coqdocdir="$2"
@@ -595,16 +594,13 @@ fi
 # OS dependent libraries
 
 OSDEPLIBS="-cclib -lunix"
-case $ARCH,$CYGWIN in
+case $ARCH in
   sun4*) OS=`uname -r`
 	case $OS in
 	   5*) OS="Sun Solaris $OS"
 	       OSDEPLIBS="$OSDEPLIBS -cclib -lnsl -cclib -lsocket";;
 	   *) OS="Sun OS $OS"
         esac;;
-  win32,yes) OS="Win32 (Cygwin)"
-	 cflags="-mno-cygwin $cflags";;
-  win32,*) OS="Win32 (MinGW)";;
 esac
 
 # lablgtk2 and CoqIDE
@@ -627,14 +623,30 @@ if [ "$coqide_spec" = "yes" -a "$COQIDE" = "no" ]; then
 else
     case $lablgtkdir_spec in
 	no)
-            if lablgtkdir=$(ocamlfind query lablgtk2 2> /dev/null); then
-                lablgtkdir_spec=yes
-	    elif [ -f "${CAMLLIB}/lablgtk2/glib.mli" ]; then
+            if lablgtkdirtmp=$(ocamlfind query lablgtk2 2> /dev/null); then
+                if [ -f "$lablgtkdirtmp/glib.cmi" -a -f "$lablgtkdirtmp/glib.mli" ]; then
+                    lablgtkdirfoundmsg="LabelGtk2 found by ocamlfind"
+                    lablgtkdir=$lablgtkdirtmp
+                    LABLGTKLIB=$lablgtkdir # Pour le message utilisateur
+                else
+	            echo "Headers missings in Lablgtk2 found by ocamlfind (glib.cmi/glib.mli not found)."
+                fi
+            fi
+            if [ "$lablgtkdir" = "" -a -f "${CAMLLIB}/lablgtk2/glib.mli" -a -f "${CAMLLIB}/glib.mli" ]; then
+	        lablgtkdirfoundmsg="LablGtk2 found in ocaml lib directory"
 		lablgtkdir=${CAMLLIB}/lablgtk2
+                LABLGTKLIB=+lablgtk2 # Pour le message utilisateur
 	    fi;;
 	yes)
-	    if [ ! -f "$lablgtkdir/glib.mli" ]; then
-		echo "Incorrect LablGtk2 library (glib.mli not found)."
+	    if [ ! -d "$lablgtkdir" ]; then
+                echo "$lablgtkdir is not a valid directory."
+		echo "Configuration script failed!"
+		exit 1
+	    elif [ -f "$lablgtkdir/glib.cmi" -a -f "$lablgtkdir/glib.mli" ]; then
+                lablgtkdirfoundmsg="LablGtk2 directory found"
+                LABLGTKLIB=$lablgtkdir # Pour le message utilisateur
+            else
+		echo "Headers missing in LablGtk2 library (glib.cmi/glib.mli not found)."
 		echo "Configuration script failed!"
 		exit 1
 	    fi;;
@@ -643,22 +655,20 @@ else
 	echo "LablGtk2 not found: CoqIde will not be available."
 	COQIDE=no
     elif [ -z "`grep -w convert_with_fallback "$lablgtkdir/glib.mli"`" ]; then
-	echo "LablGtk2 found but too old: CoqIde will not be available."
+	echo "$lablgtkdirfoundmsg but too old: CoqIde will not be available."
 	COQIDE=no;
     elif [ "$coqide_spec" = "yes" -a "$COQIDE" = "byte" ]; then 
-	echo "LablGtk2 found, bytecode CoqIde will be used as requested."
+	echo "$lablgtkdirfoundmsg, bytecode CoqIde will be used as requested."
 	COQIDE=byte
     elif [ ! -f "${CAMLLIB}/threads/threads.cmxa" ]; then 
-	echo "LablGtk2 found, no native threads: bytecode CoqIde will be available."
+	echo "$lablgtkdirfoundmsg, no native threads: bytecode CoqIde will be available."
 	COQIDE=byte
     else
-        echo "LablGtk2 found, native threads: native CoqIde will be available."
+        echo "$lablgtkdirfoundmsg, native threads: native CoqIde will be available."
 	COQIDE=opt
-        if [ "$nomacintegration_spec" = "no" ] && pkg-config --exists gtk-mac-integration;
+        if [ "$nomacintegration_spec" = "no" ] && lablgtkosxdir=$(ocamlfind query lablgtkosx 2> /dev/null);
         then
-            cflags=$cflags" `pkg-config --cflags gtk-mac-integration`"
-	    IDEARCHFLAGS='-ccopt "`pkg-config --libs gtk-mac-integration`"'
-	    IDEARCHFILE=ide/ide_mac_stubs.o
+            IDEARCHFLAGS=lablgtkosx.cmxa
 	    IDEARCHDEF=QUARTZ
 	elif [ "$ARCH" = "win32" ];
         then
@@ -671,14 +681,12 @@ fi
 
 case $COQIDE in
     byte|opt)
-        case $lablgtkdir_spec in
-            no)  LABLGTKLIB=+lablgtk2                   # Pour le message
-                 LABLGTKINCLUDES="-I $LABLGTKLIB";;     # Pour le makefile
-            yes) LABLGTKLIB=$lablgtkdir               # Pour le message
-                 LABLGTKINCLUDES="-I $LABLGTKLIB";; # Pour le makefile
-        esac;;
-    no) LABLGTKINCLUDES="";;
+        LABLGTKINCLUDES="-I $LABLGTKLIB";;
+    no)
+        LABLGTKINCLUDES="";;
 esac
+
+[ x$lablgtkosxdir = x ] || LABLGTKINCLUDES="$LABLGTKINCLUDES -I $lablgtkosxdir"
 
 # strip command
 

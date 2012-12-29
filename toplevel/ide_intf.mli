@@ -77,7 +77,7 @@ type handler = {
   evars : unit -> evar list option;
   hints : unit -> (hint list * hint) option;
   status : unit -> status;
-  search : search_flags -> search_answer list;
+  search : search_flags -> string coq_object list;
   get_options : unit -> (option_name * option_state) list;
   set_options : (option_name * option_value) list -> unit;
   inloadpath : string -> bool;
@@ -104,7 +104,7 @@ val of_call : 'a call -> xml
 val to_call : xml -> 'a call
 
 val of_answer : 'a call -> 'a value -> xml
-val to_answer : xml -> 'a value
+val to_answer : xml -> 'a call -> 'a value
 
 (** * Debug printing *)
 

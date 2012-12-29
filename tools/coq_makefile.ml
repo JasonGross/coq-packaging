@@ -222,7 +222,7 @@ let install (vfiles,(mlifiles,ml4files,mlfiles,mllibfiles,mlpackfiles),_,sds) in
       print "\n";
     end;
     print "install:";
-    if (not_empty cmxsfiles) then print "$(if ifeq '$(HASNATDYNLINK)' 'true',install-natdynlink)";
+    if (not_empty cmxsfiles) then print "$(if $(HASNATDYNLINK_OR_EMPTY),install-natdynlink)";
     print "\n";
     if not_empty vfiles then install_include_by_root "VOFILES" vfiles inc;
     if (not_empty cmofiles) then
@@ -291,18 +291,18 @@ let implicit () =
     print "%.cmo: %.ml4\n\t$(CAMLC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<\n\n";
     print "%.cmx: %.ml4\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $(PP) -impl $<\n\n";
     print "%.ml4.d: %.ml4\n";
-    print "\t$(OCAMLDEP) -slash $(OCAMLLIBS) $(PP) -impl \"$<\" > \"$@\" || ( RV=$$?; rm -f \"$@\"; exit $${RV} )\n\n" in
+    print "\t$(COQDEP) -slash $(OCAMLLIBS) \"$<\" > \"$@\" || ( RV=$$?; rm -f \"$@\"; exit $${RV} )\n\n" in
   let ml_rules () =
     print "%.cmo: %.ml\n\t$(CAMLC) $(ZDEBUG) $(ZFLAGS) $<\n\n";
     print "%.cmx: %.ml\n\t$(CAMLOPTC) $(ZDEBUG) $(ZFLAGS) $<\n\n";
     print "%.ml.d: %.ml\n";
     print "\t$(OCAMLDEP) -slash $(OCAMLLIBS) \"$<\" > \"$@\" || ( RV=$$?; rm -f \"$@\"; exit $${RV} )\n\n" in
   let cmxs_rules () =
+    print "%.cmxs: %.cmxa\n\t$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -linkall -shared -o $@ $<\n\n";
     print "%.cmxs: %.cmx\n\t$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -shared -o $@ $<\n\n" in
   let mllib_rules () =
     print "%.cma: | %.mllib\n\t$(CAMLLINK) $(ZDEBUG) $(ZFLAGS) -a -o $@ $^\n\n";
     print "%.cmxa: | %.mllib\n\t$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -a -o $@ $^\n\n";
-    print "%.cmxs: %.cmxa\n\t$(CAMLOPTLINK) $(ZDEBUG) $(ZFLAGS) -linkall -shared -o $@ $<\n\n";
     print "%.mllib.d: %.mllib\n";
     print "\t$(COQDEP) -slash $(COQLIBS) -c \"$<\" > \"$@\" || ( RV=$$?; rm -f \"$@\"; exit $${RV} )\n\n" in
   let mlpack_rules () =
@@ -411,7 +411,7 @@ let parameters () =
   print "# DSTROOT to specify a prefix to install path.\n\n";
   print "# Here is a hack to make $(eval $(shell works:\n";
   print "define donewline\n\n\nendef\n";
-  print "includecmdwithout@ = $(eval $(subst @,$(donewline),$(shell { $(1) | tr '\\n' '@'; })))\n";
+  print "includecmdwithout@ = $(eval $(subst @,$(donewline),$(shell { $(1) | tr -d '\\r' | tr '\\n' '@'; })))\n";
   print "$(call includecmdwithout@,$(COQBIN)coqtop -config)\n\n"
 
 let include_dirs (inc_i,inc_r) =
@@ -543,14 +543,18 @@ let main_targets vfiles (mlifiles,ml4files,mlfiles,mllibfiles,mlpackfiles) other
       print "CMXSFILES=$(CMXFILES:.cmx=.cmxs) $(CMXAFILES:.cmxa=.cmxs)\n";
       classify_files_by_root "CMXSFILES" (l1@l2) inc;
   end;
-  print "\n";
+  print "ifeq '$(HASNATDYNLINK)' 'true'\n";
+  print "HASNATDYNLINK_OR_EMPTY := yes\n";
+  print "else\n";
+  print "HASNATDYNLINK_OR_EMPTY :=\n";
+  print "endif\n\n";
   section "Definition of the toplevel targets.";
   print "all: ";
   if !some_vfile then print "$(VOFILES) ";
   if !some_mlfile || !some_ml4file || !some_mlpackfile then print "$(CMOFILES) ";
   if !some_mllibfile then print "$(CMAFILES) ";
   if !some_mlfile || !some_ml4file || !some_mllibfile || !some_mlpackfile
-  then print "$(if ifeq '$(HASNATDYNLINK)' 'true',$(CMXSFILES)) ";
+  then print "$(if $(HASNATDYNLINK_OR_EMPTY),$(CMXSFILES)) ";
   print_list "\\\n  " other_targets; print "\n\n";
   if !some_mlifile then
     begin

@@ -127,25 +127,25 @@ let hyp_next_tac sigma env (id,_,ast) =
   let id_s = Names.string_of_id id in
   let type_s = string_of_ppcmds (pr_ltype_env env ast) in
   [
-    ("clear "^id_s),("clear "^id_s^".\n");
-    ("apply "^id_s),("apply "^id_s^".\n");
-    ("exact "^id_s),("exact "^id_s^".\n");
-    ("generalize "^id_s),("generalize "^id_s^".\n");
-    ("absurd <"^id_s^">"),("absurd "^type_s^".\n")
+    ("clear "^id_s),("clear "^id_s^".");
+    ("apply "^id_s),("apply "^id_s^".");
+    ("exact "^id_s),("exact "^id_s^".");
+    ("generalize "^id_s),("generalize "^id_s^".");
+    ("absurd <"^id_s^">"),("absurd "^type_s^".")
   ] @ [
-    ("discriminate "^id_s),("discriminate "^id_s^".\n");
-    ("injection "^id_s),("injection "^id_s^".\n")
+    ("discriminate "^id_s),("discriminate "^id_s^".");
+    ("injection "^id_s),("injection "^id_s^".")
   ] @ [
-    ("rewrite "^id_s),("rewrite "^id_s^".\n");
-    ("rewrite <- "^id_s),("rewrite <- "^id_s^".\n")
+    ("rewrite "^id_s),("rewrite "^id_s^".");
+    ("rewrite <- "^id_s),("rewrite <- "^id_s^".")
   ] @ [
-    ("elim "^id_s), ("elim "^id_s^".\n");
-    ("inversion "^id_s), ("inversion "^id_s^".\n");
-    ("inversion clear "^id_s), ("inversion_clear "^id_s^".\n")
+    ("elim "^id_s), ("elim "^id_s^".");
+    ("inversion "^id_s), ("inversion "^id_s^".");
+    ("inversion clear "^id_s), ("inversion_clear "^id_s^".")
   ]
 
 let concl_next_tac sigma concl =
-  let expand s = (s,s^".\n") in
+  let expand s = (s,s^".") in
   List.map expand ([
     "intro";
     "intros";
@@ -312,16 +312,26 @@ let search flags =
   in
   let ans = ref [] in
   let print_function ref env constr =
-    let name = Names.string_of_id (Nametab.basename_of_global ref) in
-    let make_path = Names.string_of_id in
-    let path =
-      List.rev_map make_path (Names.repr_dirpath (Nametab.dirpath_of_global ref))
-    in
-    let answer = {
-      Interface.search_answer_full_path = path;
-      Interface.search_answer_base_name = name;
-      Interface.search_answer_type = string_of_ppcmds (pr_lconstr_env env constr);
-    } in
+     let fullpath = repr_dirpath (Nametab.dirpath_of_global ref) in
+     let qualid = Nametab.shortest_qualid_of_global Idset.empty ref in
+     let (shortpath, basename) = Libnames.repr_qualid qualid in
+     let shortpath = repr_dirpath shortpath in
+     (* [shortpath] is a suffix of [fullpath] and we're looking for the missing
+        prefix *)
+     let rec prefix full short accu = match full, short with
+     | _, [] ->
+       let full = List.rev_map string_of_id full in
+       (full, accu)
+     | _ :: full, m :: short ->
+       prefix full short (string_of_id m :: accu)
+     | _ -> assert false
+     in
+     let (prefix, qualid) = prefix fullpath shortpath [string_of_id basename] in
+     let answer = {
+       Interface.coq_object_prefix = prefix;
+       Interface.coq_object_qualid = qualid;
+       Interface.coq_object_object = string_of_ppcmds (pr_lconstr_env env constr);
+     } in
     ans := answer :: !ans;
   in
   let () = Search.gen_filtered_search filter_function print_function in
@@ -432,6 +442,9 @@ let loop () =
           let () = pr_debug ("--> " ^ Ide_intf.pr_full_value q r) in
           Ide_intf.of_answer q r
         with
+	| Xml_parser.Error (Xml_parser.Empty, _) ->
+	  pr_debug ("End of input, exiting");
+	  exit 0
         | Xml_parser.Error (err, loc) ->
           let msg = "Syntax error in query: " ^ Xml_parser.error_msg err in
           fail msg
