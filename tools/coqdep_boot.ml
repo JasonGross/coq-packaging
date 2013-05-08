@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: coqdep_boot.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Coqdep_common
 
@@ -22,6 +20,8 @@ let rec parse = function
   | "-natdynlink" :: "no" :: ll -> option_natdynlk := false; parse ll
   | "-c" :: ll -> option_c := true; parse ll
   | "-boot" :: ll -> parse ll (* We're already in boot mode by default *)
+  | "-mldep" :: ocamldep :: ll ->
+      option_mldep := Some ocamldep; option_c := true; parse ll
   | "-I" :: r :: ll ->
        (* To solve conflict (e.g. same filename in kernel and checker)
           we allow to state an explicit order *)

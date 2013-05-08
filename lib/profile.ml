@@ -1,17 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: profile.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
-
-open Gc
-
 let word_length = Sys.word_size / 8
-let int_size = Sys.word_size - 1
 
 let float_of_time t = float_of_int t /. 100.
 let time_of_float f = int_of_float (f *. 100.)
@@ -265,7 +260,7 @@ let time_overhead_B_C () =
       let _dw = dummy_spent_alloc () in
       let _dt = get_time () in
       ()
-    with _ -> assert false
+    with e when e <> Sys.Break -> assert false
   done;
   let after = get_time () in
   let beforeloop =  get_time () in
@@ -354,7 +349,6 @@ let close_profile print =
 	end
     | _ -> failwith "Inconsistency"
 
-let append_profile () = close_profile false
 let print_profile () = close_profile true
 
 let declare_profile name =
@@ -396,7 +390,7 @@ let profile1 e f a =
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
     r
-  with exn ->
+  with reraise ->
     let dw = spent_alloc () in
     let dt = get_time () - t in
     e.tottime <- e.tottime + dt; e.owntime <- e.owntime + dt;
@@ -409,7 +403,7 @@ let profile1 e f a =
     if not (p==e) then
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
-    raise exn
+    raise reraise
 
 let profile2 e f a b =
   let dw = spent_alloc () in
@@ -438,7 +432,7 @@ let profile2 e f a b =
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
     r
-  with exn ->
+  with reraise ->
     let dw = spent_alloc () in
     let dt = get_time () - t in
     e.tottime <- e.tottime + dt; e.owntime <- e.owntime + dt;
@@ -451,7 +445,7 @@ let profile2 e f a b =
     if not (p==e) then
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
-    raise exn
+    raise reraise
 
 let profile3 e f a b c =
   let dw = spent_alloc () in
@@ -480,7 +474,7 @@ let profile3 e f a b c =
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
     r
-  with exn ->
+  with reraise ->
     let dw = spent_alloc () in
     let dt = get_time () - t in
     e.tottime <- e.tottime + dt; e.owntime <- e.owntime + dt;
@@ -493,7 +487,7 @@ let profile3 e f a b c =
     if not (p==e) then
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
-    raise exn
+    raise reraise
 
 let profile4 e f a b c d =
   let dw = spent_alloc () in
@@ -522,7 +516,7 @@ let profile4 e f a b c d =
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
     r
-  with exn ->
+  with reraise ->
     let dw = spent_alloc () in
     let dt = get_time () - t in
     e.tottime <- e.tottime + dt; e.owntime <- e.owntime + dt;
@@ -535,7 +529,7 @@ let profile4 e f a b c d =
     if not (p==e) then
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
-    raise exn
+    raise reraise
 
 let profile5 e f a b c d g =
   let dw = spent_alloc () in
@@ -564,7 +558,7 @@ let profile5 e f a b c d g =
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
     r
-  with exn ->
+  with reraise ->
     let dw = spent_alloc () in
     let dt = get_time () - t in
     e.tottime <- e.tottime + dt; e.owntime <- e.owntime + dt;
@@ -577,7 +571,7 @@ let profile5 e f a b c d g =
     if not (p==e) then
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
-    raise exn
+    raise reraise
 
 let profile6 e f a b c d g h =
   let dw = spent_alloc () in
@@ -606,7 +600,7 @@ let profile6 e f a b c d g h =
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
     r
-  with exn ->
+  with reraise ->
     let dw = spent_alloc () in
     let dt = get_time () - t in
     e.tottime <- e.tottime + dt; e.owntime <- e.owntime + dt;
@@ -619,7 +613,7 @@ let profile6 e f a b c d g h =
     if not (p==e) then
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
-    raise exn
+    raise reraise
 
 let profile7 e f a b c d g h i =
   let dw = spent_alloc () in
@@ -648,7 +642,7 @@ let profile7 e f a b c d g h i =
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
     r
-  with exn ->
+  with reraise ->
     let dw = spent_alloc () in
     let dt = get_time () - t in
     e.tottime <- e.tottime + dt; e.owntime <- e.owntime + dt;
@@ -661,7 +655,7 @@ let profile7 e f a b c d g h i =
     if not (p==e) then
       (match !stack with [] -> assert false | _::s -> stack := s);
     last_alloc := get_alloc ();
-    raise exn
+    raise reraise
 
 (* Some utilities to compute the logical and physical sizes and depth
    of ML objects *)

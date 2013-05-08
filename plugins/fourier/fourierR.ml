@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: fourierR.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 
 
@@ -31,17 +29,23 @@ qui donne le coefficient d'un terme du calcul des constructions,
 qui est zéro si le terme n'y est pas.
 *)
 
-type flin = {fhom:(constr , rational)Hashtbl.t;
+module Constrhash = Hashtbl.Make
+  (struct type t = constr
+	  let equal = eq_constr
+	  let hash = hash_constr
+   end)
+
+type flin = {fhom: rational Constrhash.t;
              fcste:rational};;
 
-let flin_zero () = {fhom=Hashtbl.create 50;fcste=r0};;
+let flin_zero () = {fhom=Constrhash.create 50;fcste=r0};;
 
-let flin_coef f x = try (Hashtbl.find f.fhom x) with _-> r0;;
+let flin_coef f x = try (Constrhash.find f.fhom x) with Not_found -> r0;;
 
 let flin_add f x c =
     let cx = flin_coef f x in
-    Hashtbl.remove f.fhom x;
-    Hashtbl.add f.fhom x (rplus cx c);
+    Constrhash.remove f.fhom x;
+    Constrhash.add f.fhom x (rplus cx c);
     f
 ;;
 let flin_add_cste f c =
@@ -53,20 +57,20 @@ let flin_one () = flin_add_cste (flin_zero()) r1;;
 
 let flin_plus f1 f2 =
     let f3 = flin_zero() in
-    Hashtbl.iter (fun x c -> let _=flin_add f3 x c in ()) f1.fhom;
-    Hashtbl.iter (fun x c -> let _=flin_add f3 x c in ()) f2.fhom;
+    Constrhash.iter (fun x c -> let _=flin_add f3 x c in ()) f1.fhom;
+    Constrhash.iter (fun x c -> let _=flin_add f3 x c in ()) f2.fhom;
     flin_add_cste (flin_add_cste f3 f1.fcste) f2.fcste;
 ;;
 
 let flin_minus f1 f2 =
     let f3 = flin_zero() in
-    Hashtbl.iter (fun x c -> let _=flin_add f3 x c in ()) f1.fhom;
-    Hashtbl.iter (fun x c -> let _=flin_add f3 x (rop c) in ()) f2.fhom;
+    Constrhash.iter (fun x c -> let _=flin_add f3 x c in ()) f1.fhom;
+    Constrhash.iter (fun x c -> let _=flin_add f3 x (rop c) in ()) f2.fhom;
     flin_add_cste (flin_add_cste f3 f1.fcste) (rop f2.fcste);
 ;;
 let flin_emult a f =
     let f2 = flin_zero() in
-    Hashtbl.iter (fun x c -> let _=flin_add f2 x (rmult a c) in ()) f.fhom;
+    Constrhash.iter (fun x c -> let _=flin_add f2 x (rmult a c) in ()) f.fhom;
     flin_add_cste f2 (rmult a f.fcste);
 ;;
 
@@ -137,10 +141,12 @@ let rec flin_of_constr c =
 	     (try (let a=(rational_of_constr args.(0)) in
                      try (let b = (rational_of_constr args.(1)) in
 			    (flin_add_cste (flin_zero()) (rmult a b)))
-		     with _-> (flin_add (flin_zero())
+		     with e when Errors.noncritical e ->
+                       (flin_add (flin_zero())
 				 args.(1)
 				 a))
-	      with _-> (flin_add (flin_zero())
+	      with e when Errors.noncritical e ->
+                (flin_add (flin_zero())
 			  args.(0)
 			  (rational_of_constr args.(1))))
 	 | "Rinv"->
@@ -150,7 +156,8 @@ let rec flin_of_constr c =
 	     (let b=(rational_of_constr args.(1)) in
 		try (let a = (rational_of_constr args.(0)) in
 		       (flin_add_cste (flin_zero()) (rdiv a b)))
-		with _-> (flin_add (flin_zero())
+		with e when Errors.noncritical e ->
+                  (flin_add (flin_zero())
 		            args.(0)
                             (rinv b)))
          |_->assert false)
@@ -160,14 +167,15 @@ let rec flin_of_constr c =
               |"R0" -> flin_zero ()
               |_-> assert false)
   |_-> assert false)
-  with _ -> flin_add (flin_zero())
+  with e when Errors.noncritical e ->
+    flin_add (flin_zero())
                      c
 	             r1
 ;;
 
 let flin_to_alist f =
     let res=ref [] in
-    Hashtbl.iter (fun x c -> res:=(c,x)::(!res)) f;
+    Constrhash.iter (fun x c -> res:=(c,x)::(!res)) f;
     !res
 ;;
 
@@ -256,17 +264,17 @@ let ineq1_of_constr (h,t) =
 
 let fourier_lineq lineq1 =
    let nvar=ref (-1) in
-   let hvar=Hashtbl.create 50 in (* la table des variables des inéquations *)
+   let hvar=Constrhash.create 50 in (* la table des variables des inéquations *)
    List.iter (fun f ->
-		Hashtbl.iter (fun x _ -> if not (Hashtbl.mem hvar x) then begin
+		Constrhash.iter (fun x _ -> if not (Constrhash.mem hvar x) then begin
 				nvar:=(!nvar)+1;
-				Hashtbl.add hvar x (!nvar)
+				Constrhash.add hvar x (!nvar)
 			      end)
                   f.hflin.fhom)
              lineq1;
    let sys= List.map (fun h->
                let v=Array.create ((!nvar)+1) r0 in
-               Hashtbl.iter (fun x c -> v.(Hashtbl.find hvar x)<-c)
+               Constrhash.iter (fun x c -> v.(Constrhash.find hvar x)<-c)
                   h.hflin.fhom;
                ((Array.to_list v)@[rop h.hflin.fcste],h.hstrict))
              lineq1 in
@@ -490,13 +498,13 @@ let rec fourier gl=
 	    |_->assert false)
         |_->assert false
       in tac gl)
-     with _ ->
+     with e when Errors.noncritical e ->
     (* les hypothèses *)
     let hyps = List.map (fun (h,t)-> (mkVar h,t))
                         (list_of_sign (pf_hyps gl)) in
     let lineq =ref [] in
     List.iter (fun h -> try (lineq:=(ineq1_of_constr h)@(!lineq))
-		        with _ -> ())
+		        with e when Errors.noncritical e -> ())
               hyps;
     (* lineq = les inéquations découlant des hypothèses *)
     if !lineq=[] then Util.error "No inequalities";

@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: proof_search.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Term
 open Util
@@ -49,6 +47,7 @@ let pruning = ref true
 
 let opt_pruning=
   {optsync=true;
+   optdepr=false;
    optname="Rtauto Pruning";
    optkey=["Rtauto";"Pruning"];
    optread=(fun () -> !pruning);
@@ -510,8 +509,8 @@ let pp_gl gl= cut () ++
 
 let pp =
   function
-      Incomplete(gl,ctx) -> msgnl (pp_gl gl)
-    | _ -> msg (str "<complete>")
+      Incomplete(gl,ctx) -> pp_gl gl ++ fnl ()
+    | _ -> str "<complete>"
 
 let pp_info () =
   let count_info =

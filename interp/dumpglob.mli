@@ -1,19 +1,18 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: dumpglob.mli 14641 2011-11-06 11:59:10Z herbelin $ *)
-
-
 val open_glob_file : string -> unit
 val close_glob_file : unit -> unit
 
+val start_dump_glob : string -> unit
+val end_dump_glob : unit -> unit
+
 val dump : unit -> bool
-val multi_dump : unit -> bool
 
 val noglob : unit -> unit
 val dump_to_stdout : unit -> unit

@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: index.mli 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 open Cdglobals
 
@@ -36,10 +34,11 @@ val type_name : entry_type -> string
 type index_entry =
   | Def of string * entry_type
   | Ref of coq_module * string * entry_type
-  | Mod of coq_module * string
 
+(* Find what symbol coqtop said is located at loc in the source file *)
 val find : coq_module -> loc -> index_entry
 
+(* Find what data is referred to by some string in some coq module *)
 val find_string : coq_module -> string -> index_entry
 
 val add_module : coq_module -> unit
@@ -54,7 +53,7 @@ val add_external_library : string -> coq_module -> unit
 
 (*s Read globalizations from a file (produced by coqc -dump-glob) *)
 
-val read_glob : string -> unit
+val read_glob : Digest.t option -> string -> unit
 
 (*s Indexes *)
 

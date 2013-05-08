@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *   The HELM Project         /   The EU MoWGLI Project       *)
 (*         *   University of Bologna                                    *)
@@ -349,7 +349,7 @@ let acic_of_cic_context' computeinnertypes seed ids_to_terms constr_to_ids
          if computeinnertypes then
 try
           Acic.CicHash.find terms_to_types tt
-with _ ->
+with e when e <> Sys.Break ->
 (*CSC: Warning: it really happens, for example in Ring_theory!!! *)
 Pp.ppnl (Pp.(++) (Pp.str "BUG: this subterm was not visited during the double-type-inference: ") (Printer.pr_lconstr tt)) ; assert false
          else

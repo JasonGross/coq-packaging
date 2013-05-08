@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: autorewrite.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Equality
 open Hipattern
@@ -19,7 +17,7 @@ open Tactics
 open Term
 open Termops
 open Util
-open Rawterm
+open Glob_term
 open Vernacinterp
 open Tacexpr
 open Mod_subst
@@ -36,7 +34,7 @@ let subst_hint subst hint =
   let typ' = subst_mps subst hint.rew_type in
   let pat' = subst_mps subst hint.rew_pat in
   let t' = Tacinterp.subst_tactic subst hint.rew_tac in
-    if hint.rew_lemma == cst' && hint.rew_tac == t' then hint else
+    if hint.rew_lemma == cst' && hint.rew_type == typ' && hint.rew_tac == t' then hint else
       { hint with
 	rew_lemma = cst'; rew_type = typ';
 	rew_pat = pat';	rew_tac = t' }
@@ -119,7 +117,7 @@ let autorewrite ?(conds=Naive) tac_main lbas =
        tclTHEN tac
         (one_base (fun dir c tac ->
 	  let tac = tac, conds in
-	    general_rewrite dir all_occurrences false ~tac c)
+	    general_rewrite dir all_occurrences true false ~tac c)
 	  tac_main bas))
       tclIDTAC lbas))
 
@@ -132,16 +130,16 @@ let autorewrite_multi_in ?(conds=Naive) idl tac_main lbas : tactic =
   let to_be_cleared = ref false in
    fun dir cstr tac gl ->
     let last_hyp_id =
-     match (Environ.named_context_of_val gl.Evd.it.Evd.evar_hyps) with
+     match Tacmach.pf_hyps gl with
         (last_hyp_id,_,_)::_ -> last_hyp_id
       | _ -> (* even the hypothesis id is missing *)
              error ("No such hypothesis: " ^ (string_of_id !id) ^".")
     in
-    let gl' = general_rewrite_in dir all_occurrences ~tac:(tac, conds) false !id cstr false gl in
-    let gls = (fst gl').Evd.it in
+    let gl' = general_rewrite_in dir all_occurrences true ~tac:(tac, conds) false !id cstr false gl in
+    let gls = gl'.Evd.it in
     match gls with
        g::_ ->
-        (match Environ.named_context_of_val g.Evd.evar_hyps with
+        (match Environ.named_context_of_val (Goal.V82.hyps gl'.Evd.sigma g) with
             (lastid,_,_)::_ ->
               if last_hyp_id <> lastid then
                begin
@@ -210,8 +208,14 @@ let auto_multi_rewrite_with ?(conds=Naive) tac_main lbas cl gl =
 
 (* Functions necessary to the library object declaration *)
 let cache_hintrewrite (_,(rbase,lrl)) =
-  let base = try find_base rbase with _ -> HintDN.empty in
-  let max = try fst (Util.list_last (HintDN.find_all base)) with _ -> 0 in
+  let base =
+    try find_base rbase
+    with e when Errors.noncritical e -> HintDN.empty
+  in
+  let max =
+    try fst (Util.list_last (HintDN.find_all base))
+    with e when Errors.noncritical e -> 0
+  in
   let lrl = HintDN.map (fun (i,h) -> (i + max, h)) lrl in
     rewtab:=Stringmap.add rbase (HintDN.union lrl base) !rewtab
 
@@ -225,7 +229,7 @@ let classify_hintrewrite x = Libobject.Substitute x
 
 
 (* Declaration of the Hint Rewrite library object *)
-let (inHintRewrite,_)=
+let inHintRewrite : string * HintDN.t -> Libobject.obj =
   Libobject.declare_object {(Libobject.default_object "HINT_REWRITE") with
     Libobject.cache_function = cache_hintrewrite;
     Libobject.load_function = (fun _ -> cache_hintrewrite);
@@ -248,9 +252,9 @@ type hypinfo = {
 
 let evd_convertible env evd x y =
   try
-    ignore(Unification.w_unify true env Reduction.CONV x y evd); true 
+    ignore(Unification.w_unify ~flags:Unification.elim_flags env evd Reduction.CONV x y); true 
   (* try ignore(Evarconv.the_conv_x env x y evd); true *)
-  with _ -> false
+  with e when Errors.noncritical e -> false
 
 let decompose_applied_relation metas env sigma c ctype left2right =
   let find_rel ty =

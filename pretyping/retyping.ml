@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: retyping.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Util
 open Term
@@ -32,12 +30,12 @@ let rec subst_type env sigma typ = function
 (* et sinon on substitue *)
 
 let sort_of_atomic_type env sigma ft args =
-  let rec concl_of_arity env ar =
-    match kind_of_term (whd_betadeltaiota env sigma ar) with
-    | Prod (na, t, b) -> concl_of_arity (push_rel (na,None,t) env) b
-    | Sort s -> s
-    | _ -> decomp_sort env sigma (subst_type env sigma ft (Array.to_list args))
-  in concl_of_arity env ft
+  let rec concl_of_arity env ar args =
+    match kind_of_term (whd_betadeltaiota env sigma ar), args with
+    | Prod (na, t, b), h::l -> concl_of_arity (push_rel (na,Some h,t) env) b l
+    | Sort s, [] -> s
+    | _ -> anomaly "Not a sort"
+  in concl_of_arity env ft (Array.to_list args)
 
 let type_of_var env id =
   try let (_,_,ty) = lookup_named id env in ty
@@ -48,8 +46,8 @@ let retype ?(polyprop=true) sigma =
   let rec type_of env cstr=
     match kind_of_term cstr with
     | Meta n ->
-          (try strip_outer_cast (Evd.meta_ftype sigma n).Evd.rebus
-           with Not_found -> anomaly ("type_of: unknown meta " ^ string_of_int n))
+      (try strip_outer_cast (Evd.meta_ftype sigma n).Evd.rebus
+       with Not_found -> anomaly ("type_of: unknown meta " ^ string_of_int n))
     | Rel n ->
         let (_,_,ty) = lookup_rel n env in
         lift n ty
@@ -129,10 +127,13 @@ let retype ?(polyprop=true) sigma =
     match kind_of_term c with
     | Ind ind ->
       let (_,mip) = lookup_mind_specif env ind in
-      Inductive.type_of_inductive_knowing_parameters ~polyprop env mip argtyps
+	(try Inductive.type_of_inductive_knowing_parameters
+	       ~polyprop env mip argtyps
+	 with Reduction.NotArity -> anomaly "type_of: Not an arity")
     | Const cst ->
       let t = constant_type env cst in
-      Typeops.type_of_constant_knowing_parameters env t argtyps
+	(try Typeops.type_of_constant_knowing_parameters env t argtyps
+	 with Reduction.NotArity -> anomaly "type_of: Not an arity")
     | Var id -> type_of_var env id
     | Construct cstr -> type_of_constructor env cstr
     | _ -> assert false

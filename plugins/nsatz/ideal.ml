@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -237,7 +237,8 @@ open Format
 
 let getvar lv i =
   try (nth lv i)
-  with _ -> (fold_left (fun r x -> r^" "^x) "lv= " lv)
+  with e when Errors.noncritical e ->
+    (fold_left (fun r x -> r^" "^x) "lv= " lv)
     ^" i="^(string_of_int i)
 
 let string_of_pol zeroP hdP tlP coefterm monterm string_of_coef
@@ -363,7 +364,7 @@ let stringPcut p =
   nsP2:=10;
   let res =
     if (length p)> !nsP2
-    then (stringP [hd p])^" + "^(string_of_int (length p))^" termes"
+    then (stringP [hd p])^" + "^(string_of_int (length p))^" terms"
     else  stringP p in
   (*Polynomesrec.nsP1:= max_int;*)
   nsP2:= max_int;
@@ -590,7 +591,7 @@ let coefpoldep = Hashtbl.create 51
 (* coef of q in p = sum_i c_i*q_i *)
 let coefpoldep_find p q =
   try (Hashtbl.find coefpoldep (p.num,q.num))
-  with _ -> []
+  with Not_found -> []
 
 let coefpoldep_remove p q =
   Hashtbl.remove coefpoldep (p.num,q.num)
@@ -992,7 +993,7 @@ let pbuchf pq p lp0=
 		    coefpoldep_remove a q;
 		    coefpoldep_set a q c) lca !poldep;
 		  let a0 = a in
-		  info ("\nnew polynomials: "^(stringPcut (ppol a0))^"\n");
+		  info ("\nnew polynomial: "^(stringPcut (ppol a0))^"\n");
 		  let ct = coef1 (* contentP a0 *) in
 		  (*info ("content: "^(string_of_coef ct)^"\n");*)
 		  poldep:=addS a0 lp;

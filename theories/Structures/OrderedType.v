@@ -6,8 +6,6 @@
 (*         *       GNU Lesser General Public License Version 2.1       *)
 (***********************************************************************)
 
-(* $Id: OrderedType.v 12732 2010-02-10 22:46:59Z letouzey $ *)
-
 Require Export SetoidList Morphisms OrdersTac.
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -21,6 +19,10 @@ Inductive Compare (X : Type) (lt eq : X -> X -> Prop) (x y : X) : Type :=
   | LT : lt x y -> Compare lt eq x y
   | EQ : eq x y -> Compare lt eq x y
   | GT : lt y x -> Compare lt eq x y.
+
+Arguments LT [X lt eq x y] _.
+Arguments EQ [X lt eq x y] _.
+Arguments GT [X lt eq x y] _.
 
 Module Type MiniOrderedType.
 
@@ -106,19 +108,21 @@ Module OrderedTypeFacts (Import O: OrderedType).
   Lemma lt_total : forall x y, lt x y \/ eq x y \/ lt y x.
   Proof. intros; destruct (compare x y); auto. Qed.
 
-  Module OrderElts <: Orders.TotalOrder.
-  Definition t := t.
-  Definition eq := eq.
-  Definition lt := lt.
-  Definition le x y := lt x y \/ eq x y.
-  Definition eq_equiv := eq_equiv.
-  Definition lt_strorder := lt_strorder.
-  Definition lt_compat := lt_compat.
-  Definition lt_total := lt_total.
-  Lemma le_lteq : forall x y, le x y <-> lt x y \/ eq x y.
-  Proof. unfold le; intuition. Qed.
-  End OrderElts.
-  Module OrderTac := !MakeOrderTac OrderElts.
+  Module TO.
+   Definition t := t.
+   Definition eq := eq.
+   Definition lt := lt.
+   Definition le x y := lt x y \/ eq x y.
+  End TO.
+  Module IsTO.
+   Definition eq_equiv := eq_equiv.
+   Definition lt_strorder := lt_strorder.
+   Definition lt_compat := lt_compat.
+   Definition lt_total := lt_total.
+   Lemma le_lteq x y : TO.le x y <-> lt x y \/ eq x y.
+   Proof. reflexivity. Qed.
+  End IsTO.
+  Module OrderTac := !MakeOrderTac TO IsTO.
   Ltac order := OrderTac.order.
 
   Lemma le_eq x y z : ~lt x y -> eq y z -> ~lt x z. Proof. order. Qed.
@@ -143,7 +147,7 @@ Module OrderedTypeFacts (Import O: OrderedType).
 
   Lemma elim_compare_eq :
    forall x y : t,
-   eq x y -> exists H : eq x y, compare x y = EQ _ H.
+   eq x y -> exists H : eq x y, compare x y = EQ H.
   Proof.
    intros; case (compare x y); intros H'; try (exfalso; order).
    exists H'; auto.
@@ -151,7 +155,7 @@ Module OrderedTypeFacts (Import O: OrderedType).
 
   Lemma elim_compare_lt :
    forall x y : t,
-   lt x y -> exists H : lt x y, compare x y = LT _ H.
+   lt x y -> exists H : lt x y, compare x y = LT H.
   Proof.
    intros; case (compare x y); intros H'; try (exfalso; order).
    exists H'; auto.
@@ -159,7 +163,7 @@ Module OrderedTypeFacts (Import O: OrderedType).
 
   Lemma elim_compare_gt :
    forall x y : t,
-   lt y x -> exists H : lt y x, compare x y = GT _ H.
+   lt y x -> exists H : lt y x, compare x y = GT H.
   Proof.
    intros; case (compare x y); intros H'; try (exfalso; order).
    exists H'; auto.
@@ -318,16 +322,13 @@ Module KeyOrderedType(O:OrderedType).
   Hint Immediate eqk_sym eqke_sym.
 
   Global Instance eqk_equiv : Equivalence eqk.
-  Proof. split; eauto. Qed.
+  Proof. constructor; eauto. Qed.
 
   Global Instance eqke_equiv : Equivalence eqke.
   Proof. split; eauto. Qed.
 
   Global Instance ltk_strorder : StrictOrder ltk.
-  Proof.
-   split; eauto.
-   intros (x,e); compute; apply (StrictOrder_Irreflexive x).
-  Qed.
+  Proof. constructor; eauto. intros x; apply (irreflexivity (x:=fst x)). Qed.
 
   Global Instance ltk_compat : Proper (eqk==>eqk==>iff) ltk.
   Proof.

@@ -1,3 +1,63 @@
+coq (8.4pl2dfsg-1) UNRELEASED; urgency=low
+
+  * New upstream release
+
+ -- Stéphane Glondu <glondu@debian.org>  Wed, 08 May 2013 17:47:25 +0200
+
+coq (8.4pl1dfsg-1) experimental; urgency=low
+
+  * New upstream release
+    - 0002-Fix-use-of-HASNATDYNLINK-in-coq_makefile-output.patch
+      has been merged upstream
+    - add ocaml-findlib to Build-Depends
+
+ -- Stéphane Glondu <glondu@debian.org>  Sat, 29 Dec 2012 15:56:53 +0100
+
+coq (8.4dfsg-2) experimental; urgency=low
+
+  * Upstream bugfix: Fix use of $(HASNATDYNLINK) in coq_makefile output
+
+ -- Stéphane Glondu <glondu@debian.org>  Sat, 22 Sep 2012 12:43:13 +0200
+
+coq (8.4dfsg-1) experimental; urgency=low
+
+  * New upstream release
+
+ -- Stéphane Glondu <glondu@debian.org>  Mon, 20 Aug 2012 18:33:45 +0200
+
+coq (8.4~gamma0+really8.4beta2+dfsg-1) experimental; urgency=low
+
+  * New upstream beta release
+
+ -- Stéphane Glondu <glondu@debian.org>  Tue, 05 Jun 2012 07:38:25 +0200
+
+coq (8.4~beta+dfsg-4) experimental; urgency=low
+
+  * Recompile with camlp5 6.05 (no changes)
+
+ -- Stéphane Glondu <glondu@debian.org>  Fri, 06 Apr 2012 10:04:06 +0200
+
+coq (8.4~beta+dfsg-3) experimental; urgency=low
+
+  * Replace proofgeneral-coq by proofgeneral in dependencies
+  * Disable a test that uses too much memory, causing random FTBFS
+
+ -- Stéphane Glondu <glondu@debian.org>  Sun, 15 Jan 2012 12:37:23 +0100
+
+coq (8.4~beta+dfsg-2) experimental; urgency=low
+
+  * Fix a typo that caused decl_mode_plugin.cmxs not being installed,
+    making coqtop.opt useless
+  * Fix an ordering issue that was causing a test to fail in bytecode
+
+ -- Stéphane Glondu <glondu@debian.org>  Sat, 14 Jan 2012 11:11:48 +0100
+
+coq (8.4~beta+dfsg-1) experimental; urgency=low
+
+  * New upstream beta release
+
+ -- Stéphane Glondu <glondu@debian.org>  Thu, 12 Jan 2012 18:53:08 +0100
+
 coq (8.3.pl4+dfsg-2) unstable; urgency=low
 
   * Recompile with camlp5 6.06 (no changes)

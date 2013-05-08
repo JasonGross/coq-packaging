@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -173,7 +173,7 @@ let rec equal p q =
 			       then failwith "raté")
 		    p1;
 		  true)
-	     with _ -> false)
+	     with e when Errors.noncritical e -> false)
     | (_,_) -> false
 
 (* normalize polynomial: remove head zeros, coefficients are normalized
@@ -282,11 +282,10 @@ let rec multx n v p =
           p2.(i+n)<-p1.(i);
         done;
         Prec (x,p2)
-    |_ -> if p = (Pint coef0) then (Pint coef0)
+    |_ -> if equal p (Pint coef0) then (Pint coef0)
        else (let p2=Array.create (n+1) (Pint coef0) in
                p2.(n)<-p;
                Prec (v,p2))
-
 
 (* product *)
 let rec multP p q =
@@ -525,7 +524,7 @@ let div_pol_rat p q=
 		   q x in
          (* degueulasse, mais c 'est pour enlever un warning *)
          if s==s then true else true)
-    with _ -> false
+    with e when Errors.noncritical e -> false
 
 (***********************************************************************
   5. Pseudo-division and gcd with subresultants.

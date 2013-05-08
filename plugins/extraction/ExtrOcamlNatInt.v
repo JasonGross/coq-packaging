@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -8,11 +8,15 @@
 
 (** Extraction of [nat] into Ocaml's [int] *)
 
-Require Import Arith Even Div2 EqNat MinMax Euclid.
+Require Import Arith Even Div2 EqNat Euclid.
 Require Import ExtrOcamlBasic.
 
 (** Disclaimer: trying to obtain efficient certified programs
     by extracting [nat] into [int] is definitively *not* a good idea:
+
+    - This is just a syntactic adaptation, many things can go wrong,
+    such as name captures (e.g. if you have a constant named "int"
+    in your development, or a module named "Pervasives"). See bug #2878.
 
     - Since [int] is bounded while [nat] is (theoretically) infinite,
     you have to make sure by yourself that your program will not
@@ -34,18 +38,18 @@ Require Import ExtrOcamlBasic.
 (** Mapping of [nat] into [int]. The last string corresponds to
     a [nat_case], see documentation of [Extract Inductive]. *)
 
-Extract Inductive nat => int [ "0" "succ" ]
+Extract Inductive nat => int [ "0" "Pervasives.succ" ]
  "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
 
 (** Efficient (but uncertified) versions for usual [nat] functions *)
 
 Extract Constant plus => "(+)".
-Extract Constant pred => "fun n -> max 0 (n-1)".
-Extract Constant minus => "fun n m -> max 0 (n-m)".
+Extract Constant pred => "fun n -> Pervasives.max 0 (n-1)".
+Extract Constant minus => "fun n m -> Pervasives.max 0 (n-m)".
 Extract Constant mult => "( * )".
-Extract Inlined Constant max => max.
-Extract Inlined Constant min => min.
-Extract Inlined Constant nat_beq => "(=)".
+Extract Inlined Constant max => "Pervasives.max".
+Extract Inlined Constant min => "Pervasives.min".
+(*Extract Inlined Constant nat_beq => "(=)".*)
 Extract Inlined Constant EqNat.beq_nat => "(=)".
 Extract Inlined Constant EqNat.eq_nat_decide => "(=)".
 

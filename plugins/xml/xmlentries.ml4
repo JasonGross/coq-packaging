@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *   The HELM Project         /   The EU MoWGLI Project       *)
 (*         *   University of Bologna                                    *)
@@ -13,8 +13,6 @@
 (************************************************************************)
 
 (*i camlp4deps: "parsing/grammar.cma" i*)
-
-(* $Id: xmlentries.ml4 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Util;;
 open Vernacinterp;;

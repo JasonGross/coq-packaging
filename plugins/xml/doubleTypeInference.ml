@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2010     *)
 (*   \VV/  **************************************************************)
 (*    //   *   The HELM Project         /   The EU MoWGLI Project       *)
 (*         *   University of Bologna                                    *)
@@ -27,7 +27,7 @@ let cprop =
 ;;
 
 let whd_betadeltaiotacprop env _evar_map ty =
- let module R = Rawterm in
+ let module R = Glob_term in
  let module C = Closure in
  let module CR = C.RedFlags in
  (*** CProp is made Opaque ***)
@@ -147,7 +147,8 @@ let double_type_of env sigma cstr expectedty subterms_to_types =
 (*CSC: universes.                                                        *)
 (try
         Typeops.judge_of_type u
- with _ -> (* Successor of a non universe-variable universe anomaly *)
+ with e when e <> Sys.Break ->
+ (* Successor of a non universe-variable universe anomaly *)
  (Pp.ppnl (Pp.str "Warning: universe refresh performed!!!") ; flush stdout ) ;
   Typeops.judge_of_type (Termops.new_univ ())
 )
