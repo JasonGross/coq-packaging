@@ -1,12 +1,17 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: pre_env.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
+(* Created by Benjamin Grégoire out of environ.ml for better
+   modularity in the design of the bytecode virtual evaluation
+   machine, Dec 2005 *)
+(* Bug fix by Jean-Marc Notin *)
+
+(* This file defines the type of kernel environments *)
 
 open Util
 open Names
@@ -85,7 +90,7 @@ let push_rel d env =
 
 let lookup_rel_val n env =
   try List.nth env.env_rel_val (n - 1)
-  with _ -> raise Not_found
+  with e when Errors.noncritical e -> raise Not_found
 
 let env_of_rel n env =
   { env with

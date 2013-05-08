@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: LegacyRing.v 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 Require Export Bool.
 Require Export LegacyRing_theory.
@@ -21,7 +19,7 @@ Declare ML Module "ring_plugin".
 
 Definition BoolTheory :
   Ring_Theory xorb andb true false (fun b:bool => b) eqb.
-split; simpl in |- *.
+split; simpl.
 destruct n; destruct m; reflexivity.
 destruct n; destruct m; destruct p; reflexivity.
 destruct n; destruct m; reflexivity.
@@ -30,7 +28,7 @@ destruct n; reflexivity.
 destruct n; reflexivity.
 destruct n; reflexivity.
 destruct n; destruct m; destruct p; reflexivity.
-destruct x; destruct y; reflexivity || simpl in |- *; tauto.
+destruct x; destruct y; reflexivity || simpl; tauto.
 Defined.
 
 Add Legacy Ring bool xorb andb true false (fun b:bool => b) eqb BoolTheory

@@ -1,15 +1,13 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: undo.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
-
-open GText
 open Ideutils
+open GText
 type action =
   | Insert of string * int * int (* content*pos*length *)
   | Delete of string * int * int (* content*pos*length *)

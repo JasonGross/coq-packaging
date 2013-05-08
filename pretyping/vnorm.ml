@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: vnorm.ml 15029 2012-03-13 14:47:00Z herbelin $ i*)
 
 open Names
 open Declarations
@@ -46,7 +44,7 @@ let invert_tag cst tag reloc_tbl =
 let find_rectype_a env c =
   let (t, l) =
     let t = whd_betadeltaiota env c in
-    try destApp t with _ -> (t,[||]) in
+    try destApp t with e when Errors.noncritical e -> (t,[||]) in
   match kind_of_term t with
   | Ind ind -> (ind, l)
   | _ -> raise Not_found
@@ -178,7 +176,10 @@ and nf_stk env c t stk  =
       nf_stk env (mkApp(c,args)) t stk
   | Zfix (f,vargs) :: stk ->
       let fa, typ = nf_fix_app env f vargs in
-      let _,_,codom = try decompose_prod env typ with _ -> exit 120 in
+      let _,_,codom =
+        try decompose_prod env typ
+        with e when Errors.noncritical e -> exit 120
+      in
       nf_stk env (mkApp(fa,[|c|])) (subst1 c codom) stk
   | Zswitch sw :: stk ->
       let (mind,_ as ind),allargs = find_rectype_a env t in
@@ -208,7 +209,10 @@ and nf_predicate env ind mip params v pT =
   | Vfun f, Prod _ ->
       let k = nb_rel env in
       let vb = body_of_vfun k f in
-      let name,dom,codom = try decompose_prod env pT with _ -> exit 121 in
+      let name,dom,codom =
+        try decompose_prod env pT
+        with e when Errors.noncritical e -> exit 121
+      in
       let dep,body =
 	nf_predicate (push_rel (name,None,dom) env) ind mip params vb codom in
       dep, mkLambda(name,dom,body)
@@ -230,7 +234,10 @@ and nf_args env vargs t =
   let args =
     Array.init len
       (fun i ->
-	let _,dom,codom = try decompose_prod env !t with _ -> exit 123 in
+	let _,dom,codom =
+          try decompose_prod env !t
+          with e when Errors.noncritical e -> exit 123
+        in
 	let c = nf_val env (arg vargs i) dom in
 	t := subst1 c codom; c) in
   !t,args
@@ -241,7 +248,10 @@ and nf_bargs env b t =
   let args =
     Array.init len
       (fun i ->
-	let _,dom,codom = try decompose_prod env !t with _ -> exit 124 in
+	let _,dom,codom =
+          try decompose_prod env !t
+          with e when Errors.noncritical e -> exit 124
+        in
 	let c = nf_val env (bfield b i) dom in
 	t := subst1 c codom; c) in
   args
@@ -251,7 +261,7 @@ and nf_fun env f typ =
   let vb = body_of_vfun k f in
   let name,dom,codom =
     try decompose_prod env typ
-    with _ ->
+    with e when Errors.noncritical e ->
       raise (Type_errors.TypeError(env,Type_errors.ReferenceVariables typ))
   in
   let body = nf_val (push_rel (name,None,dom) env) vb codom in

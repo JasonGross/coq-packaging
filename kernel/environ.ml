@@ -1,12 +1,24 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: environ.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
+(* Author: Jean-Christophe Filliâtre as part of the rebuilding of Coq
+   around a purely functional abstract type-checker, Aug 1999 *)
+(* Cleaning and lightening of the kernel by Bruno Barras, Nov 2001 *)
+(* Flag for predicativity of Set by Hugo Herbelin in Oct 2003 *)
+(* Support for virtual machine by Benjamin Grégoire in Oct 2004 *)
+(* Support for retroknowledge by Arnaud Spiwack in May 2007 *)
+(* Support for assumption dependencies by Arnaud Spiwack in May 2007 *)
+
+(* Miscellaneous maintenance by Bruno Barras, Hugo Herbelin, Jean-Marc
+   Notin, Matthieu Sozeau *)
+
+(* This file defines the type of environments on which the
+   type-checker works, together with simple related functions *)
 
 open Util
 open Names
@@ -97,7 +109,7 @@ let lookup_named id env = Sign.lookup_named id env.env_named_context
 let lookup_named_val id (ctxt,_) = Sign.lookup_named id ctxt
 
 let eq_named_context_val c1 c2 =
-   c1 == c2 || named_context_of_val c1 = named_context_of_val c2
+   c1 == c2 || named_context_equal (named_context_of_val c1) (named_context_of_val c2)
 
 (* A local const is evaluable if it is defined  *)
 
@@ -158,10 +170,10 @@ exception NotEvaluableConst of const_evaluation_result
 
 let constant_value env kn =
   let cb = lookup_constant kn env in
-  if cb.const_opaque then raise (NotEvaluableConst Opaque);
   match cb.const_body with
-    | Some l_body -> Declarations.force l_body
-    | None -> raise (NotEvaluableConst NoBody)
+    | Def l_body -> Declarations.force l_body
+    | OpaqueDef _ -> raise (NotEvaluableConst Opaque)
+    | Undef _ -> raise (NotEvaluableConst NoBody)
 
 let constant_opt_value env cst =
   try Some (constant_value env cst)
@@ -183,14 +195,9 @@ let add_mind kn mib env =
   { env with env_globals = new_globals }
 
 (* Universe constraints *)
-let set_universes g env =
-  if env.env_stratification.env_universes == g then env
-  else
-    { env with env_stratification =
-      { env.env_stratification with env_universes = g } }
 
 let add_constraints c env =
-  if c == Constraint.empty then
+  if is_empty_constraint c then
     env
   else
     let s = env.env_stratification in

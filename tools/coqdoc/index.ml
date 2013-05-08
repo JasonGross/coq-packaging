@@ -1,13 +1,10 @@
-(* -*- compile-command: "make -C ../.. bin/coqdoc" -*- *)
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: index.ml 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 open Filename
 open Lexing
@@ -38,16 +35,17 @@ type entry_type =
 type index_entry =
   | Def of string * entry_type
   | Ref of coq_module * string * entry_type
-  | Mod of coq_module * string
 
 let current_type : entry_type ref = ref Library
 let current_library = ref ""
   (** refers to the file being parsed *)
 
-(** [deftable] stores only definitions and is used to interpolate idents
-    inside comments, which are not globalized otherwise. *)
-
+(** [deftable] stores only definitions and is used to build the index *)
 let deftable = Hashtbl.create 97
+
+(** [byidtable] is used to interpolate idents inside comments, which are not
+    globalized otherwise. *)
+let byidtable = Hashtbl.create 97
 
 (** [reftable] stores references and definitions *)
 let reftable = Hashtbl.create 97
@@ -62,25 +60,25 @@ let full_ident sp id =
   else ""
 
 let add_def loc1 loc2 ty sp id =
+  let fullid = full_ident sp id in
+  let def = Def (fullid, ty) in
   for loc = loc1 to loc2 do
-    Hashtbl.add reftable (!current_library, loc) (Def (full_ident sp id, ty))
+    Hashtbl.add reftable (!current_library, loc) def
   done;
-  Hashtbl.add deftable id (Ref (!current_library, full_ident sp id, ty))
+  Hashtbl.add deftable !current_library (fullid, ty);
+  Hashtbl.add byidtable id (!current_library, fullid, ty)
 
 let add_ref m loc m' sp id ty =
+  let fullid = full_ident sp id in
   if Hashtbl.mem reftable (m, loc) then ()
-  else Hashtbl.add reftable (m, loc) (Ref (m', full_ident sp id, ty));
+  else Hashtbl.add reftable (m, loc) (Ref (m', fullid, ty));
   let idx = if id = "<>" then m' else id in
-    if Hashtbl.mem deftable idx then ()
-    else Hashtbl.add deftable idx (Ref (m', full_ident sp id, ty))
-
-let add_mod m loc m' id =
-  Hashtbl.add reftable (m, loc) (Mod (m', id));
-  Hashtbl.add deftable m (Mod (m', id))
+    if Hashtbl.mem byidtable idx then ()
+    else Hashtbl.add byidtable idx (m', fullid, ty)
 
 let find m l = Hashtbl.find reftable (m, l)
 
-let find_string m s = Hashtbl.find deftable s
+let find_string m s = let (m,s,t) = Hashtbl.find byidtable s in Ref (m,s,t)
 
 (*s Manipulating path prefixes *)
 
@@ -238,18 +236,20 @@ let type_name = function
 let prepare_entry s = function
   | Notation ->
       (* We decode the encoding done in Dumpglob.cook_notation of coqtop *)
-      (* Encoded notations have the form section:sc:x_'++'_x where: *)
-      (* - the section, if any, ends with a "." *)
-      (* - the scope can be empty *)
-      (* - tokens are separated with "_" *)
-      (* - non-terminal symbols are conventionally represented by "x" *)
-      (* - terminals are enclosed within simple quotes *)
-      (* - existing simple quotes (that necessarily are parts of terminals) *)
-      (*   are doubled *)
+      (* Encoded notations have the form section:sc:x_'++'_x where:      *)
+      (* - the section, if any, ends with a "."                          *)
+      (* - the scope can be empty                                        *)
+      (* - tokens are separated with "_"                                 *)
+      (* - non-terminal symbols are conventionally represented by "x"    *)
+      (* - terminals are enclosed within simple quotes                   *)
+      (* - existing simple quotes (that necessarily are parts of         *)
+      (*   terminals) are doubled                                        *)
       (*   (as a consequence, when a terminal contains "_" or "x", these *)
       (*   necessarily appear enclosed within non-doubled simple quotes) *)
-      (*   Example: "x ' %x _% y %'x %'_' z" is encoded as *)
-      (*     "x_''''_'%x'_'_%'_x_'%''x'_'%''_'''_x" *)
+      (* - non-printable characters < 32 are left encoded so that they   *)
+      (*   are human-readable in index files                             *)
+      (* Example: "x ' %x _% y %'x %'_' z" is encoded as                 *)
+      (*   "x_''''_'%x'_'_%'_x_'%''x'_'%''_'''_x"                        *)
       let err () = eprintf "Invalid notation in globalization file\n"; exit 1 in
       let h = try String.index_from s 0 ':' with _ -> err () in
       let i = try String.index_from s (h+1) ':' with _ -> err () in
@@ -268,10 +268,10 @@ let prepare_entry s = function
 	  | _ -> assert false)
 	end
 	else
-	  if s.[!j] = '\'' then begin
-	    if (!j = l || s.[!j+1] <> '\'') then quoted := false
-	    else (ntn.[!k] <- s.[!j]; incr k; incr j)
-	  end else begin
+	  if s.[!j] = '\'' then
+	    if (!j = l || s.[!j+1] = '_') then quoted := false
+	    else (incr j; ntn.[!k] <- s.[!j]; incr k)
+	  else begin
 	    ntn.[!k] <- s.[!j];
 	    incr k
 	  end;
@@ -290,11 +290,8 @@ let all_entries () =
     let l = try Hashtbl.find bt t with Not_found -> [] in
       Hashtbl.replace bt t ((s,m) :: l)
   in
-  let classify (m,_) e = match e with
-    | Def (s,t) -> add_g s m t; add_bt t s m
-    | Ref _ | Mod _ -> ()
-  in
-    Hashtbl.iter classify reftable;
+  let classify m (s,t) = (add_g s m t; add_bt t s m) in
+    Hashtbl.iter classify deftable;
     Hashtbl.iter (fun id m -> add_g id m Library; add_bt Library id m) modules;
     { idx_name = "global";
       idx_entries = sort_entries !gl;
@@ -324,8 +321,27 @@ let type_of_string = function
   | "sec" -> Section
   | s -> raise (Invalid_argument ("type_of_string:" ^ s))
 
-let read_glob f =
+let ill_formed_glob_file f =
+  eprintf "Warning: ill-formed file %s (links will not be available)\n" f
+let outdated_glob_file f =
+  eprintf "Warning: %s not consistent with corresponding .v file (links will not be available)\n" f
+
+let correct_file vfile f c =
+  let s = input_line c in
+  if String.length s < 7 || String.sub s 0 7 <> "DIGEST " then
+    (ill_formed_glob_file f; false)
+  else
+    let s = String.sub s 7 (String.length s - 7) in
+    match vfile, s with
+    | None, "NO" -> true
+    | Some _, "NO" -> ill_formed_glob_file f; false
+    | None, _ -> ill_formed_glob_file f; false
+    | Some vfile, s ->
+        s = Digest.to_hex (Digest.file vfile) || (outdated_glob_file f; false)
+
+let read_glob vfile f =
   let c = open_in f in
+  if correct_file vfile f c then
   let cur_mod = ref "" in
   try
     while true do
@@ -341,7 +357,16 @@ let read_glob f =
 		Scanf.sscanf s "R%d:%d %s %s %s %s"
 		  (fun loc1 loc2 lib_dp sp id ty ->
 		    for loc=loc1 to loc2 do
-		      add_ref !cur_mod loc lib_dp sp id (type_of_string ty)
+		      add_ref !cur_mod loc lib_dp sp id (type_of_string ty);
+
+                      (* Also add an entry for each module mentioned in [lib_dp],
+                       * to use in interpolation. *)
+                      ignore (List.fold_right (fun thisPiece priorPieces ->
+                                                let newPieces = match priorPieces with
+                                                                | "" -> thisPiece
+                                                                | _ -> thisPiece ^ "." ^ priorPieces in
+                                                add_ref !cur_mod loc "" "" newPieces Library;
+                                                newPieces) (Str.split (Str.regexp_string ".") lib_dp) "")
 		    done)
 	       with _ -> ())
 	  | _ ->

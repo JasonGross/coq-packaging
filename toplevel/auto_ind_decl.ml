@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(*i $Id: auto_ind_decl.ml 14641 2011-11-06 11:59:10Z herbelin $ i*)
 
 (* This file is about the automatic generation of schemes about
    decidable equality, created by Vincent Siles, Oct 2007 *)
@@ -79,6 +77,25 @@ let sumbool = Coqlib.build_coq_sumbool
 
 let andb = fun _ -> (Coqlib.build_bool_type()).Coqlib.andb
 
+let induct_on c =
+  new_induct false
+    [Tacexpr.ElimOnConstr (Evd.empty,(c,Glob_term.NoBindings))]
+    None (None,None) None
+
+let destruct_on_using c id =
+  new_destruct false
+    [Tacexpr.ElimOnConstr (Evd.empty,(c,Glob_term.NoBindings))]
+    None
+    (None,Some (dl,Genarg.IntroOrAndPattern [
+                                    [dl,Genarg.IntroAnonymous];
+                                    [dl,Genarg.IntroIdentifier id]]))
+    None
+
+let destruct_on c =
+  new_destruct false
+    [Tacexpr.ElimOnConstr (Evd.empty,(c,Glob_term.NoBindings))]
+    None (None,None) None
+
 (* reconstruct the inductive with the correct deBruijn indexes *)
 let mkFullInd ind n =
   let mib = Global.lookup_mind (fst ind) in
@@ -94,7 +111,7 @@ let mkFullInd ind n =
 
 let check_bool_is_defined () =
   try let _ = Global.type_of_global Coqlib.glob_bool in ()
-  with _ -> raise (UndefinedCst "bool")
+  with e when Errors.noncritical e -> raise (UndefinedCst "bool")
 
 let beq_scheme_kind_aux = ref (fun _ -> failwith "Undefined")
 
@@ -287,8 +304,9 @@ let destruct_ind c =
     try let u,v =  destApp c in
           let indc = destInd u in
             indc,v
-    with _-> let indc = destInd c in
-            indc,[||]
+    with e when Errors.noncritical e ->
+      let indc = destInd c in
+      indc,[||]
 
 (*
   In the following, avoid is the list of names to avoid.
@@ -312,8 +330,9 @@ let do_replace_lb lb_scheme_key aavoid narg gls p q =
             else error ("Var "^(string_of_id s)^" seems unknown.")
       )
     in mkVar (find 1)
-  with _ -> (* if this happen then the args have to be already declared as a
-              Parameter*)
+  with e when Errors.noncritical e ->
+      (* if this happen then the args have to be already declared as a
+         Parameter*)
       (
         let mp,dir,lbl = repr_con (destConst v) in
           mkConst (make_con mp dir (mk_label (
@@ -329,13 +348,12 @@ let do_replace_lb lb_scheme_key aavoid narg gls p q =
         with Not_found ->
           (* spiwack: the format of this error message should probably
 	              be improved. *)
-          let err_msg = msg_with Format.str_formatter
+          let err_msg = string_of_ppcmds
 	                              (str "Leibniz->boolean:" ++
                                        str "You have to declare the" ++
 				       str "decidability over " ++
 				       Printer.pr_constr type_of_pq ++
-				       str " first.");
-	                Format.flush_str_formatter ()
+				       str " first.")
           in
           error err_msg
     in let lb_args = Array.append (Array.append
@@ -360,8 +378,9 @@ let do_replace_bl bl_scheme_key ind gls aavoid narg lft rgt =
             else error ("Var "^(string_of_id s)^" seems unknown.")
       )
     in mkVar (find 1)
-  with _ -> (* if this happen then the args have to be already declared as a
-              Parameter*)
+  with e when Errors.noncritical e ->
+      (* if this happen then the args have to be already declared as a
+         Parameter*)
       (
         let mp,dir,lbl = repr_con (destConst v) in
           mkConst (make_con mp dir (mk_label (
@@ -378,7 +397,7 @@ let do_replace_bl bl_scheme_key ind gls aavoid narg lft rgt =
         else (
           let u,v = try  destruct_ind tt1
           (* trick so that the good sequence is returned*)
-                with _ -> ind,[||]
+                with e when Errors.noncritical e -> ind,[||]
           in if u = ind
              then (Equality.replace t1 t2)::(Auto.default_auto)::(aux q1 q2)
              else (
@@ -387,13 +406,12 @@ let do_replace_bl bl_scheme_key ind gls aavoid narg lft rgt =
                with Not_found ->
 		 (* spiwack: the format of this error message should probably
 	                     be improved. *)
-		 let err_msg = msg_with Format.str_formatter
+		 let err_msg = string_of_ppcmds
 	                                (str "boolean->Leibniz:" ++
                                          str "You have to declare the" ++
 			   	         str "decidability over " ++
 				         Printer.pr_constr tt1 ++
-				         str " first.");
- 	                       Format.flush_str_formatter ()
+				         str " first.")
 		 in
 		 error err_msg
                in let bl_args =
@@ -412,17 +430,19 @@ let do_replace_bl bl_scheme_key ind gls aavoid narg lft rgt =
     | ([],[]) -> []
     | _ -> error "Both side of the equality must have the same arity."
   in
-  let (ind1,ca1) = try destApp lft with
-    _ -> error "replace failed."
-  and (ind2,ca2) = try destApp rgt with
-    _ -> error "replace failed."
+  let (ind1,ca1) =
+    try destApp lft with e when Errors.noncritical e -> error "replace failed."
+  and (ind2,ca2) =
+    try destApp rgt with e when Errors.noncritical e -> error "replace failed."
   in
-  let (sp1,i1) = try destInd ind1 with
-    _ -> (try fst (destConstruct ind1) with _ ->
-                error "The expected type is an inductive one.")
-  and (sp2,i2) = try destInd ind2 with
-    _ -> (try fst (destConstruct ind2)  with _ ->
-                error "The expected type is an inductive one.")
+  let (sp1,i1) =
+    try destInd ind1 with e when Errors.noncritical e ->
+      try fst (destConstruct ind1) with e when Errors.noncritical e ->
+        error "The expected type is an inductive one."
+  and (sp2,i2) =
+    try destInd ind2 with e when Errors.noncritical e ->
+      try fst (destConstruct ind2) with e when Errors.noncritical e ->
+        error "The expected type is an inductive one."
   in
     if (sp1 <> sp2) || (i1 <> i2)
       then (error "Eq should be on the same type")
@@ -513,17 +533,9 @@ let compute_bl_tact bl_scheme_key ind lnamesparrec nparrec gsig =
       avoid := freshz::(!avoid);
       tclTHENSEQ [ intros_using fresh_first_intros;
                      intro_using freshn ;
-                     new_induct false [ (Tacexpr.ElimOnConstr ((mkVar freshn),
-                                        Rawterm.NoBindings))]
-                                None
-                                (None,None)
-		                None;
+                     induct_on (mkVar freshn);
                      intro_using freshm;
-                     new_destruct false [ (Tacexpr.ElimOnConstr ((mkVar freshm),
-                                    Rawterm.NoBindings))]
-                                None
-                                (None,None)
-		                None;
+                     destruct_on (mkVar freshm);
                      intro_using freshz;
                      intros;
                      tclTRY (
@@ -541,7 +553,7 @@ repeat ( apply andb_prop in z;let z1:= fresh "Z" in destruct z as [z1 z]).
                            in
                             avoid := fresht::(!avoid);
                             (new_destruct false [Tacexpr.ElimOnConstr
-                                      ((mkVar freshz,Rawterm.NoBindings))]
+                                      (Evd.empty,((mkVar freshz,Glob_term.NoBindings)))]
                                   None
                                   (None, Some (dl,Genarg.IntroOrAndPattern [[
                                     dl,Genarg.IntroIdentifier fresht;
@@ -551,7 +563,7 @@ repeat ( apply andb_prop in z;let z1:= fresh "Z" in destruct z as [z1 z]).
   Ci a1 ... an = Ci b1 ... bn
  replace bi with ai; auto || replace bi with ai by  apply typeofbi_prod ; auto
 *)
-                    fun gls-> let gl = (gls.Evd.it).Evd.evar_concl in
+                    fun gls-> let gl = pf_concl gls in
                       match (kind_of_term gl) with
                       | App (c,ca) -> (
                         match (kind_of_term c) with
@@ -583,7 +595,7 @@ let make_bl_scheme mind =
   let nparrec = mib.mind_nparams_rec in
   let lnonparrec,lnamesparrec =
     context_chop (nparams-nparrec) mib.mind_params_ctxt in
-  [|Pfedit.build_by_tactic
+  [|Pfedit.build_by_tactic (Global.env())
     (compute_bl_goal ind lnamesparrec nparrec)
     (compute_bl_tact (!bl_scheme_kind_aux()) ind lnamesparrec nparrec)|]
 
@@ -651,30 +663,22 @@ let compute_lb_tact lb_scheme_key ind lnamesparrec nparrec gsig =
       avoid := freshz::(!avoid);
       tclTHENSEQ [ intros_using fresh_first_intros;
                      intro_using freshn ;
-                     new_induct false [Tacexpr.ElimOnConstr
-                                    ((mkVar freshn),Rawterm.NoBindings)]
-                                None
-                                (None,None)
-		                None;
+                     induct_on (mkVar freshn);
                      intro_using freshm;
-                     new_destruct false [Tacexpr.ElimOnConstr
-                                    ((mkVar freshm),Rawterm.NoBindings)]
-                                None
-                                (None,None)
-		                None;
+                     destruct_on (mkVar freshm);
                      intro_using freshz;
                      intros;
                      tclTRY (
                       tclORELSE reflexivity (Equality.discr_tac false None)
                      );
-                     Equality.inj [] false (mkVar freshz,Rawterm.NoBindings);
+                     Equality.inj [] false (mkVar freshz,Glob_term.NoBindings);
 		     intros; simpl_in_concl;
                      Auto.default_auto;
                      tclREPEAT (
                       tclTHENSEQ [apply (andb_true_intro());
                                   simplest_split ;Auto.default_auto ]
                       );
-                      fun gls -> let gl = (gls.Evd.it).Evd.evar_concl in
+                      fun gls -> let gl = pf_concl gls in
                   (* assume the goal to be eq (eq_type ...) = true *)
                         match (kind_of_term gl) with
                           | App(c,ca) -> (match (kind_of_term ca.(1)) with
@@ -703,7 +707,7 @@ let make_lb_scheme mind =
   let nparrec = mib.mind_nparams_rec in
   let lnonparrec,lnamesparrec =
     context_chop (nparams-nparrec) mib.mind_params_ctxt in
-  [|Pfedit.build_by_tactic
+  [|Pfedit.build_by_tactic (Global.env())
     (compute_lb_goal ind lnamesparrec nparrec)
     (compute_lb_tact (!lb_scheme_kind_aux()) ind lnamesparrec nparrec)|]
 
@@ -715,7 +719,8 @@ let _ = lb_scheme_kind_aux := fun () -> lb_scheme_kind
 (* Decidable equality *)
 
 let check_not_is_defined () =
-  try ignore (Coqlib.build_coq_not ()) with _ -> raise (UndefinedCst "not")
+  try ignore (Coqlib.build_coq_not ())
+  with e when Errors.noncritical e -> raise (UndefinedCst "not")
 
 (* {n=m}+{n<>m}  part  *)
 let compute_dec_goal ind lnamesparrec nparrec =
@@ -810,24 +815,11 @@ let compute_dec_tact ind lnamesparrec nparrec gsig =
         assert_by (Name freshH) (
           mkApp(sumbool(),[|eqtrue eqbnm; eqfalse eqbnm|])
 	)
-	  (tclTHEN
-	    (new_destruct false [Tacexpr.ElimOnConstr
-              (eqbnm,Rawterm.NoBindings)]
-              None
-              (None,None)
-	      None)
-	    Auto.default_auto);
+	  (tclTHEN (destruct_on eqbnm) Auto.default_auto);
         (fun gsig ->
 	  let freshH2 = fresh_id (!avoid) (id_of_string "H") gsig in
           avoid := freshH2::(!avoid);
-	  tclTHENS (
-	    new_destruct false [Tacexpr.ElimOnConstr
-                                    ((mkVar freshH),Rawterm.NoBindings)]
-                                None
-                                (None,Some (dl,Genarg.IntroOrAndPattern [
-                                    [dl,Genarg.IntroAnonymous];
-                                    [dl,Genarg.IntroIdentifier freshH2]])) None
-	  ) [
+	  tclTHENS (destruct_on_using (mkVar freshH) freshH2) [
 	    (* left *)
 	    tclTHENSEQ [
 	      simplest_left;
@@ -850,10 +842,10 @@ let compute_dec_tact ind lnamesparrec nparrec gsig =
                   Auto.default_auto
 		]);
 	      Equality.general_rewrite_bindings_in true
-	                      all_occurrences false
+	                      all_occurrences true false
                               (List.hd !avoid)
                               ((mkVar (List.hd (List.tl !avoid))),
-                                Rawterm.NoBindings
+                                Glob_term.NoBindings
                               )
                               true;
               Equality.discr_tac false None
@@ -870,7 +862,7 @@ let make_eq_decidability mind =
   let nparrec = mib.mind_nparams_rec in
   let lnonparrec,lnamesparrec =
     context_chop (nparams-nparrec) mib.mind_params_ctxt in
-  [|Pfedit.build_by_tactic
+  [|Pfedit.build_by_tactic (Global.env())
     (compute_dec_goal ind lnamesparrec nparrec)
     (compute_dec_tact ind lnamesparrec nparrec)|]
 

@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -11,8 +11,6 @@
    Author: Matthieu Sozeau
    Institution: LRI, CNRS UMR 8623 - University Paris Sud
 *)
-
-(* $Id: SetoidTactics.v 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 Require Import Coq.Classes.Morphisms Coq.Classes.Morphisms_Prop.
 Require Export Coq.Classes.RelationClasses Coq.Relations.Relation_Definitions.
@@ -148,7 +146,7 @@ Tactic Notation "setoid_replace" constr(x) "with" constr(y)
 
 Require Import Coq.Program.Tactics.
 
-Open Local Scope signature_scope.
+Local Open Scope signature_scope.
 
 Ltac red_subst_eq_morphism concl :=
   match concl with

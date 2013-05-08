@@ -1,14 +1,12 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
 (*i camlp4deps: "parsing/grammar.cma parsing/q_constr.cmo" i*)
-
-(* $Id: hipattern.ml4 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Pp
 open Util
@@ -21,7 +19,6 @@ open Reductionops
 open Inductiveops
 open Evd
 open Environ
-open Proof_trees
 open Clenv
 open Pattern
 open Matching
@@ -67,9 +64,12 @@ let is_non_recursive_type t = op2bool (match_with_non_recursive_type t)
 
 (* Test dependencies *)
 
+(* NB: we consider also the let-in case in the following function,
+   since they may appear in types of inductive constructors (see #2629) *)
+
 let rec has_nodep_prod_after n c =
   match kind_of_term c with
-    | Prod (_,_,b) ->
+    | Prod (_,_,b) | LetIn (_,_,_,b) ->
 	( n>0 || not (dependent (mkRel 1) b))
 	&& (has_nodep_prod_after (n-1) b)
     | _            -> true
@@ -98,7 +98,7 @@ let match_with_one_constructor style allow_rec t =
 	      (decompose_prod_n_assum mib.mind_nparams mip.mind_nf_lc.(0)))) in
 	  if
 	    List.for_all
-	      (fun (_,b,c) -> b=None && c = mkRel mib.mind_nparams) ctx
+	      (fun (_,b,c) -> b=None && isRel c && destRel c = mib.mind_nparams) ctx
 	  then
 	    Some (hdapp,args)
 	  else None
@@ -145,7 +145,7 @@ let is_tuple t =
 let test_strict_disjunction n lc =
   array_for_all_i (fun i c ->
     match (prod_assum (snd (decompose_prod_n_assum n c))) with
-    | [_,None,c] -> c = mkRel (n - i)
+    | [_,None,c] -> isRel c && destRel c = (n - i)
     | _ -> false) 0 lc
 
 let match_with_disjunction ?(strict=false) t =
@@ -154,8 +154,9 @@ let match_with_disjunction ?(strict=false) t =
   | Ind ind  ->
       let car = mis_constr_nargs ind in
       let (mib,mip) = Global.lookup_inductive ind in
-      if array_for_all (fun ar -> ar = 1) car &&
-	not (mis_is_recursive (ind,mib,mip))
+      if array_for_all (fun ar -> ar = 1) car
+        && not (mis_is_recursive (ind,mib,mip))
+        && (mip.mind_nrealargs = 0)
       then
 	if strict then
 	  if test_strict_disjunction mib.mind_nparams mip.mind_nf_lc then
@@ -357,7 +358,10 @@ let coq_jmeq_pattern = lazy PATTERN [ %coq_jmeq_ref ?X1 ?X2 ?X3 ?X4 ]
 let coq_eq_true_pattern = lazy PATTERN [ %coq_eq_true_ref ?X1 ]
 
 let match_eq eqn eq_pat =
-  let pat = try Lazy.force eq_pat with _ -> raise PatternMatchingFailure in
+  let pat =
+    try Lazy.force eq_pat
+    with e when Errors.noncritical e -> raise PatternMatchingFailure
+  in
   match matches pat eqn with
     | [(m1,t);(m2,x);(m3,y)] ->
 	assert (m1 = meta1 & m2 = meta2 & m3 = meta3);
@@ -426,6 +430,7 @@ let dest_nf_eq gls eqn =
 (* Patterns "(existS ?1 ?2 ?3 ?4)" and "(existT ?1 ?2 ?3 ?4)" *)
 let coq_ex_pattern_gen ex = lazy PATTERN [ %ex ?X1 ?X2 ?X3 ?X4 ]
 let coq_existT_pattern = coq_ex_pattern_gen coq_existT_ref
+let coq_exist_pattern = coq_ex_pattern_gen coq_exist_ref
 
 let match_sigma ex ex_pat =
   match matches (Lazy.force ex_pat) ex with
@@ -437,7 +442,8 @@ let match_sigma ex ex_pat =
 
 let find_sigma_data_decompose ex = (* fails with PatternMatchingFailure *)
   first_match (match_sigma ex)
-    [coq_existT_pattern, build_sigma_type]
+    [coq_existT_pattern, build_sigma_type;
+     coq_exist_pattern, build_sigma]
 
 (* Pattern "(sig ?1 ?2)" *)
 let coq_sig_pattern = lazy PATTERN [ %coq_sig_ref ?X1 ?X2 ]

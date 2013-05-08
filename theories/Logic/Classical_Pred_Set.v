@@ -1,12 +1,13 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: Classical_Pred_Set.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
+(* File created for Coq V5.10.14b, Oct 1995, by duplication of
+   Classical_Pred_Type.v *)
 
 (** This file is obsolete, use Classical_Pred_Type.v via Classical.v
 instead *)

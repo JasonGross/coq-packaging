@@ -1,20 +1,16 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: nbtermdn.mli 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
-(*i*)
 open Term
 open Pattern
 open Libnames
-(*i*)
 
-(* Named, bounded-depth, term-discrimination nets. *)
+(** Named, bounded-depth, term-discrimination nets. *)
 module Make :
   functor (Y:Map.OrderedType) ->
 sig

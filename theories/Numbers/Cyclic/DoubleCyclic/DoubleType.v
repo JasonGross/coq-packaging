@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -8,14 +8,12 @@
 (*            Benjamin Gregoire, Laurent Thery, INRIA, 2007             *)
 (************************************************************************)
 
-(*i $Id: DoubleType.v 14641 2011-11-06 11:59:10Z herbelin $ i*)
-
 Set Implicit Arguments.
 
 Require Import ZArith.
 Local Open Scope Z_scope.
 
-Definition base digits := Zpower 2 (Zpos digits).
+Definition base digits := Z.pow 2 (Zpos digits).
 
 Section Carry.
 
@@ -55,7 +53,7 @@ Section Zn2Z.
 
 End Zn2Z.
 
-Implicit Arguments W0 [znz].
+Arguments W0 [znz].
 
 (** From a cyclic representation [w], we iterate the [zn2z] construct
     [n] times, gaining the type of binary trees of depth at most [n],

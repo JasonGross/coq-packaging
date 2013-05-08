@@ -1,12 +1,10 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2011     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
-
-(* $Id: heads.ml 14641 2011-11-06 11:59:10Z herbelin $ *)
 
 open Pp
 open Util
@@ -90,7 +88,7 @@ let kind_of_head env t =
   | Sort _ | Ind _ | Prod _ -> RigidHead RigidType
   | Cast (c,_,_) -> aux k l c b
   | Lambda (_,_,c) when l = [] -> assert (not b); aux (k+1) [] c b
-  | Lambda (_,_,c) -> aux (k+1) (List.tl l) (subst1 (List.hd l) c) b
+  | Lambda (_,_,c) -> aux k (List.tl l) (subst1 (List.hd l) c) b
   | LetIn _ -> assert false
   | Meta _ | Evar _ -> NotImmediatelyComputableHead
   | App (c,al) -> aux k (Array.to_list al @ l) c b
@@ -150,7 +148,7 @@ let cache_head o =
 let subst_head_approximation subst = function
   | RigidHead (RigidParameter cst) as k ->
       let cst,c = subst_con subst cst in
-      if c = mkConst cst then
+      if isConst c && eq_constant (destConst c) cst then
         (* A change of the prefix of the constant *)
         k
       else
@@ -169,7 +167,9 @@ let discharge_head (_,(ref,k)) =
 let rebuild_head (ref,k) =
   (ref, compute_head ref)
 
-let (inHead, _) =
+type head_obj = evaluable_global_reference * head_approximation
+
+let inHead : head_obj -> obj =
   declare_object {(default_object "HEAD") with
     cache_function = cache_head;
     load_function = load_head;
