@@ -1194,10 +1194,9 @@ let filter_candidates evd evk filter candidates =
 
 let closure_of_filter evd evk filter =
   let evi = Evd.find_undefined evd evk in
-  let vars = collect_vars (evar_concl evi) in
-  let ids = List.map pi1 (evar_context evi) in
-  let test id b = b || Idset.mem id vars in
-  let newfilter = List.map2 test ids filter in
+  let vars = collect_vars (nf_evar evd (evar_concl evi)) in
+  let test (id,c,_) b = b || Idset.mem id vars || c <> None in
+  let newfilter = List.map2 test (evar_context evi) filter in
   if newfilter = evar_filter evi then None else Some newfilter
 
 let restrict_hyps evd evk filter candidates =
@@ -1352,9 +1351,14 @@ let rec is_constrainable_in k (ev,(fv_rels,fv_ids) as g) t =
   let f,args = decompose_app_vect t in
   match kind_of_term f with
   | Construct (ind,_) ->
-      let nparams = (fst (Global.lookup_inductive ind)).Declarations.mind_nparams in
-      let params,_ = array_chop nparams args in
-      array_for_all (is_constrainable_in k g) params
+      let nparams =
+        (fst (Global.lookup_inductive ind)).Declarations.mind_nparams
+      in
+      if nparams > Array.length args
+      then true (* We don't try to be more clever *)
+      else
+        let params,_ = array_chop nparams args in
+        array_for_all (is_constrainable_in k g) params
   | Ind _ -> array_for_all (is_constrainable_in k g) args
   | Prod (_,t1,t2) -> is_constrainable_in k g t1 && is_constrainable_in k g t2
   | Evar (ev',_) -> ev' <> ev (*If ev' needed, one may also try to restrict it*)
@@ -1442,7 +1446,7 @@ let check_evar_instance evd evk1 body conv_algo =
   (* FIXME: The body might be ill-typed when this is called from w_merge *)
   let ty =
     try Retyping.get_type_of evenv evd body
-    with _ -> error "Ill-typed evar instance"
+    with e when Errors.noncritical e -> error "Ill-typed evar instance"
   in
   let evd,b = conv_algo evenv evd Reduction.CUMUL ty evi.evar_concl in
   if b then evd else
@@ -1492,7 +1496,10 @@ let solve_candidates conv_algo env evd (evk,argsv as ev) rhs =
           (filter_compatible_candidates conv_algo env evd evi args rhs) l in
       match l' with
       | [] -> error_cannot_unify env evd (mkEvar ev, rhs)
-      | [c,evd] -> Evd.define evk c evd
+      | [c,evd] ->
+          (* solve_candidates might have been called recursively in the mean *)
+          (* time and the evar been solved by the filtering process *)
+          if Evd.is_undefined evd evk then Evd.define evk c evd else evd
       | l when List.length l < List.length l' ->
           let candidates = List.map fst l in
           restrict_evar evd evk None (Some candidates)
@@ -1643,7 +1650,7 @@ let rec invert_definition conv_algo choose env evd (evk,argsv as ev) rhs =
                   map_constr_with_full_binders (fun d (env,k) -> push_rel d env, k+1)
 	            imitate envk t in
                 t::l
-              with _ -> l in
+              with e when Errors.noncritical e -> l in
             (match candidates with
             | [x] -> x
             | _ ->

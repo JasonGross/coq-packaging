@@ -237,7 +237,7 @@ let parse_format (loc,str) =
       | _ -> error "Box closed without being opened in format."
     else
       error "Empty format."
-  with e ->
+  with e when Errors.noncritical e ->
     Loc.raise loc e
 
 (***********************)
@@ -277,6 +277,9 @@ let split_notation_string str =
 
 let out_nt = function NonTerminal x -> x | _ -> assert false
 
+let msg_expected_form_of_recursive_notation =
+  "In the notation, the special symbol \"..\" must occur in\na configuration of the form \"x symbs .. symbs y\"."
+
 let rec find_pattern nt xl = function
   | Break n as x :: l, Break n' :: l' when n=n' ->
       find_pattern nt (x::xl) (l,l')
@@ -289,13 +292,14 @@ let rec find_pattern nt xl = function
   | _, Break s :: _ | Break s :: _, _ ->
       error ("A break occurs on one side of \"..\" but not on the other side.")
   | _, [] ->
-      error ("The special symbol \"..\" must occur in a configuration of the form\n\"x symbs .. symbs y\".")
+      error msg_expected_form_of_recursive_notation
   | ((SProdList _ | NonTerminal _) :: _), _ | _, (SProdList _ :: _) ->
       anomaly "Only Terminal or Break expected on left, non-SProdList on right"
 
 let rec interp_list_parser hd = function
   | [] -> [], List.rev hd
   | NonTerminal id :: tl when id = ldots_var ->
+      if hd = [] then error msg_expected_form_of_recursive_notation;
       let hd = List.rev hd in
       let ((x,y,sl),tl') = find_pattern (List.hd hd) [] (List.tl hd,tl) in
       let xyl,tl'' = interp_list_parser [] tl' in
@@ -337,7 +341,8 @@ let rec raw_analyze_notation_tokens = function
 let is_numeral symbs =
   match List.filter (function Break _ -> false | _ -> true) symbs with
   | ([Terminal "-"; Terminal x] | [Terminal x]) ->
-      (try let _ = Bigint.of_string x in true with _ -> false)
+      (try let _ = Bigint.of_string x in true
+       with e when Errors.noncritical e -> false)
   | _ ->
       false
 
@@ -995,7 +1000,7 @@ let inNotation : notation_obj -> obj =
 let with_lib_stk_protection f x =
   let fs = Lib.freeze () in
   try let a = f x in Lib.unfreeze fs; a
-  with e -> Lib.unfreeze fs; raise e
+  with reraise -> Lib.unfreeze fs; raise reraise
 
 let with_syntax_protection f x =
   with_lib_stk_protection

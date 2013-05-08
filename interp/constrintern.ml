@@ -650,7 +650,7 @@ let intern_var genv (ltacvars,ntnvars) namedctx loc id =
 	let scopes = find_arguments_scope ref in
 	Dumpglob.dump_reference loc "<>" (string_of_qualid (Decls.variable_secpath id)) "var";
 	GRef (loc, ref), impls, scopes, []
-      with _ ->
+      with e when Errors.noncritical e ->
 	(* [id] a goal variable *)
 	GVar (loc,id), [], [], []
 
@@ -716,7 +716,7 @@ let intern_applied_reference intern env namedctx lvar args = function
       try
 	let r,args2 = intern_non_secvar_qualid loc qid intern env lvar args in
 	find_appl_head_data r, args2
-      with e ->
+      with e when Errors.noncritical e ->
 	(* Extra allowance for non globalizing functions *)
 	if !interning_grammar || env.unb then
 	  (GVar (loc,id), [], [], []),args
@@ -969,15 +969,15 @@ let sort_fields mode loc l completer =
 		    | [] -> anomaly "Number of projections mismatch"
 		    | (_, regular)::tm ->
 		       let boolean = not regular in
-		       if ConstRef name = global_reference_of_reference refer
-		       then
+                       (match global_reference_of_reference refer with
+                       | ConstRef name' when eq_constant name name' ->
 			 if boolean && mode then
 			   user_err_loc (loc, "", str"No local fields allowed in a record construction.")
 			 else build_patt b tm (i + 1) (i, snd acc) (* we found it *)
-		       else
+                       | _ ->
 			  build_patt b tm (if boolean&&mode then i else i + 1)
 			    (if boolean && mode then acc
-			     else fst acc, (i, ConstRef name) :: snd acc))
+			     else fst acc, (i, ConstRef name) :: snd acc)))
 	      | None :: b-> (* we don't want anonymous fields *)
 		 if mode then
 		   user_err_loc (loc, "", str "This record contains anonymous fields.")
@@ -1009,7 +1009,7 @@ let sort_fields mode loc l completer =
 			 (loc, "",
 			  str "This record contains fields of different records.")
 		   | (i, a) :: b->
-		       if glob_refer = a
+		       if eq_gr glob_refer a
 		       then (i,List.rev_append acc l)
 		       else add_patt b ((i,a)::acc)
 	         in
