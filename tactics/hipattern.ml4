@@ -64,9 +64,12 @@ let is_non_recursive_type t = op2bool (match_with_non_recursive_type t)
 
 (* Test dependencies *)
 
+(* NB: we consider also the let-in case in the following function,
+   since they may appear in types of inductive constructors (see #2629) *)
+
 let rec has_nodep_prod_after n c =
   match kind_of_term c with
-    | Prod (_,_,b) ->
+    | Prod (_,_,b) | LetIn (_,_,_,b) ->
 	( n>0 || not (dependent (mkRel 1) b))
 	&& (has_nodep_prod_after (n-1) b)
     | _            -> true
@@ -355,7 +358,10 @@ let coq_jmeq_pattern = lazy PATTERN [ %coq_jmeq_ref ?X1 ?X2 ?X3 ?X4 ]
 let coq_eq_true_pattern = lazy PATTERN [ %coq_eq_true_ref ?X1 ]
 
 let match_eq eqn eq_pat =
-  let pat = try Lazy.force eq_pat with _ -> raise PatternMatchingFailure in
+  let pat =
+    try Lazy.force eq_pat
+    with e when Errors.noncritical e -> raise PatternMatchingFailure
+  in
   match matches pat eqn with
     | [(m1,t);(m2,x);(m3,y)] ->
 	assert (m1 = meta1 & m2 = meta2 & m3 = meta3);

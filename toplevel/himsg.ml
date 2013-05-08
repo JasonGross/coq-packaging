@@ -28,6 +28,8 @@ open Logic
 open Printer
 open Glob_term
 open Evd
+open Libnames
+open Declarations
 
 let pr_lconstr c = quote (pr_lconstr c)
 let pr_lconstr_env e c = quote (pr_lconstr_env e c)
@@ -307,7 +309,7 @@ let explain_ill_formed_rec_body env err names i fixenv vdefj =
       let fixenv = make_all_name_different fixenv in
       let pvd = pr_lconstr_env fixenv vdefj.(i).uj_val in
 	str"Recursive definition is:" ++ spc () ++ pvd ++ str "."
-    with _ -> mt ())
+    with e when Errors.noncritical e -> mt ())
 
 let explain_ill_typed_rec_body env sigma i names vdefj vargs =
   let vdefj = jv_nf_evar sigma vdefj in
@@ -542,8 +544,11 @@ let explain_not_match_error = function
     str "types given to " ++ str (string_of_id id) ++ str " differ"
   | NotConvertibleBodyField ->
     str "the body of definitions differs"
-  | NotConvertibleTypeField ->
-    str "types differ"
+  | NotConvertibleTypeField (env, typ1, typ2) ->
+    str "expected type" ++ spc ()  ++
+    quote (Printer.safe_pr_lconstr_env env typ2) ++ spc () ++
+    str "but found type" ++ spc () ++
+    quote (Printer.safe_pr_lconstr_env env typ1)
   | NotSameConstructorNamesField ->
     str "constructor names differ"
   | NotSameInductiveNameInBlockField ->

@@ -137,20 +137,21 @@ let insert_pat_alias loc p = function
 let extern_evar loc n l =
   if !print_evar_arguments then CEvar (loc,n,l) else CEvar (loc,n,None)
 
-let debug_global_reference_printer =
-  ref (fun _ -> failwith "Cannot print a global reference")
+(** We allow customization of the global_reference printer.
+    For instance, in the debugger the tables of global references
+    may be inaccurate *)
+
+let default_extern_reference loc vars r =
+  Qualid (loc,shortest_qualid_of_global vars r)
+
+let my_extern_reference = ref default_extern_reference
+
+let set_extern_reference f = my_extern_reference := f
+let get_extern_reference () = !my_extern_reference
+
+let extern_reference loc vars l = !my_extern_reference loc vars l
 
 let in_debugger = ref false
-
-let set_debug_global_reference_printer f =
-  debug_global_reference_printer := f
-
-let extern_reference loc vars r =
-  if !in_debugger then
-    (* Debugger does not have the tables of global reference at hand *)
-    !debug_global_reference_printer loc r
-  else
-    Qualid (loc,shortest_qualid_of_global vars r)
 
 
 (************************************************************************)
@@ -303,10 +304,10 @@ let make_notation_gen loc ntn mknot mkprim destprim l =
 	match decompose_notation_key ntn, l with
 	| [Terminal "-"; Terminal x], [] ->
 	    (try mkprim (loc, Numeral (Bigint.neg (Bigint.of_string x)))
-	     with _ -> mknot (loc,ntn,[]))
+	     with e when Errors.noncritical e -> mknot (loc,ntn,[]))
 	| [Terminal x], [] ->
 	    (try mkprim (loc, Numeral (Bigint.of_string x))
-	     with _ -> mknot (loc,ntn,[]))
+	     with e when Errors.noncritical e -> mknot (loc,ntn,[]))
 	| _ ->
 	    mknot (loc,ntn,l)
 
@@ -816,12 +817,14 @@ and extern_symbol (tmp_scope,scopes as allscopes) vars t = function
                 match f with
                 | GRef (_,ref) ->
 	          let subscopes =
-		    try list_skipn n (find_arguments_scope ref) with _ -> [] in
+		    try list_skipn n (find_arguments_scope ref)
+                    with e when Errors.noncritical e -> [] in
 	          let impls =
 		    let impls =
 		      select_impargs_size
 		        (List.length args) (implicits_of_global ref) in
-		    try list_skipn n impls with _ -> [] in
+		    try list_skipn n impls
+                    with e when Errors.noncritical e -> [] in
                   subscopes,impls
                 | _ ->
                   [], [] in

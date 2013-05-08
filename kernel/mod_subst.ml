@@ -83,13 +83,14 @@ let string_of_hint = function
   | Equiv kn -> string_of_kn kn
 
 let debug_string_of_delta resolve =
-  let kn_to_string kn hint s =
-    s^", "^(string_of_kn kn)^"=>"^(string_of_hint hint)
+  let kn_to_string kn hint l =
+    (string_of_kn kn ^ "=>" ^ string_of_hint hint) :: l
   in
-  let mp_to_string mp mp' s =
-    s^", "^(string_of_mp mp)^"=>"^(string_of_mp mp')
+  let mp_to_string mp mp' l =
+    (string_of_mp mp ^ "=>" ^ string_of_mp mp') :: l
   in
-  Deltamap.fold mp_to_string kn_to_string resolve ""
+  let l = Deltamap.fold mp_to_string kn_to_string resolve [] in
+  String.concat ", " (List.rev l)
 
 let list_contents sub =
   let one_pair (mp,reso) = (string_of_mp mp,debug_string_of_delta reso) in
@@ -173,7 +174,7 @@ let solve_delta_kn resolve kn =
 
 let kn_of_delta resolve kn =
   try solve_delta_kn resolve kn
-  with _ -> kn
+  with e when Errors.noncritical e -> kn
 
 let constant_of_delta_kn resolve kn =
   constant_of_kn_equiv kn (kn_of_delta resolve kn)
@@ -182,7 +183,7 @@ let gen_of_delta resolve x kn fix_can =
   try
     let new_kn = solve_delta_kn resolve kn in
     if kn == new_kn then x else fix_can new_kn
-  with _ -> x
+  with e when Errors.noncritical e -> x
 
 let constant_of_delta resolve con =
   let kn = user_con con in
@@ -223,8 +224,10 @@ let constant_of_delta_with_inline resolve con =
   let kn1,kn2 = canonical_con con,user_con con in
   try find_inline_of_delta kn2 resolve
   with Not_found ->
-    try find_inline_of_delta kn1 resolve
-    with Not_found -> None
+    if kn1 == kn2 then None
+    else
+      try find_inline_of_delta kn1 resolve
+      with Not_found -> None
 
 let subst_mp0 sub mp = (* 's like subst *)
  let rec aux mp =
@@ -272,7 +275,9 @@ type sideconstantsubst =
   | Canonical
 
 let gen_subst_mp f sub mp1 mp2 =
-  match subst_mp0 sub mp1, subst_mp0 sub mp2 with
+  let o1 = subst_mp0 sub mp1 in
+  let o2 = if mp1 == mp2 then o1 else subst_mp0 sub mp2 in
+  match o1, o2 with
     | None, None -> raise No_subst
     | Some (mp',resolve), None -> User, (f mp' mp2), resolve
     | None, Some (mp',resolve) -> Canonical, (f mp1 mp'), resolve

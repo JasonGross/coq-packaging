@@ -404,7 +404,8 @@ let rec canonize_name c =
 let build_subst uf subst =
   Array.map (fun i ->
 	       try term uf i
-	       with _ -> anomaly "incomplete matching") subst
+	       with e when Errors.noncritical e ->
+                 anomaly "incomplete matching") subst
 
 let rec inst_pattern subst = function
     PVar i ->
@@ -730,9 +731,7 @@ let __eps__ = id_of_string "_eps_"
 let new_state_var typ state =
   let id = pf_get_new_id __eps__ state.gls in
   let {it=gl ; sigma=sigma} = state.gls in
-  let new_hyps =
-    Environ.push_named_context_val (id,None,typ) (Goal.V82.hyps sigma gl) in
-  let gls = Goal.V82.new_goal_with sigma gl new_hyps in
+  let gls = Goal.V82.new_goal_with sigma gl [id,None,typ] in
     state.gls<- gls;
     id
 

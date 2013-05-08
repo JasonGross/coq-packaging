@@ -368,14 +368,14 @@ let explain_locate_library_error qid = function
 let try_locate_absolute_library dir =
   try
     locate_absolute_library dir
-  with e ->
+  with e when Errors.noncritical e ->
     explain_locate_library_error (qualid_of_dirpath dir) e
 
 let try_locate_qualified_library (loc,qid) =
   try
     let (_,dir,f) = locate_qualified_library (Flags.is_verbose()) qid in
     dir,f
-  with e ->
+  with e when Errors.noncritical e ->
     explain_locate_library_error qid e
 
 
@@ -398,20 +398,20 @@ let fetch_opaque_table (f,pos,digest) =
   try
     let ch = System.with_magic_number_check raw_intern_library f in
     seek_in ch pos;
-    if System.marshal_in ch <> digest then failwith "File changed!";
-    let table = (System.marshal_in ch : LightenLibrary.table) in
+    if System.marshal_in f ch <> digest then failwith "File changed!";
+    let table = (System.marshal_in f ch : LightenLibrary.table) in
     close_in ch;
     table
-  with _ ->
+  with e when Errors.noncritical e ->
     error
       ("The file "^f^" is inaccessible or has changed,\n" ^
        "cannot load some opaque constant bodies in it.\n")
 
 let intern_from_file f =
   let ch = System.with_magic_number_check raw_intern_library f in
-  let lmd = System.marshal_in ch in
+  let lmd = System.marshal_in f ch in
   let pos = pos_in ch in
-  let digest = System.marshal_in ch in
+  let digest = System.marshal_in f ch in
   let table = lazy (fetch_opaque_table (f,pos,digest)) in
   register_library_filename lmd.md_name f;
   let library = mk_library lmd table digest in
@@ -655,7 +655,8 @@ let save_library_to dir f =
     System.marshal_out ch di;
     System.marshal_out ch table;
     close_out ch
-  with e -> warning ("Removed file "^f'); close_out ch; Sys.remove f'; raise e
+  with reraise ->
+    warning ("Removed file "^f'); close_out ch; Sys.remove f'; raise reraise
 
 (************************************************************************)
 (*s Display the memory use of a library. *)

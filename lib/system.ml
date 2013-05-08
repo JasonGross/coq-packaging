@@ -140,7 +140,8 @@ let exclude_search_in_dirname f = skipped_dirnames := f :: !skipped_dirnames
 
 let ok_dirname f =
   f <> "" && f.[0] <> '.' && not (List.mem f !skipped_dirnames) &&
-  try ignore (check_ident f); true with _ -> false
+  try ignore (check_ident f); true
+  with e when e <> Sys.Break -> false
 
 let all_subdirs ~unix_path:root =
   let l = ref [] in
@@ -223,17 +224,22 @@ let file_readable_p name =
   try access name [R_OK];true with Unix_error (_, _, _) -> false
 
 let open_trapping_failure name =
-  try open_out_bin name with _ -> error ("Can't open " ^ name)
+  try open_out_bin name
+  with e when e <> Sys.Break -> error ("Can't open " ^ name)
 
 let try_remove filename =
   try Sys.remove filename
-  with _ -> msgnl (str"Warning: " ++ str"Could not remove file " ++
-                   str filename ++ str" which is corrupted!" )
+  with e when e <> Sys.Break ->
+    msgnl (str"Warning: " ++ str"Could not remove file " ++
+             str filename ++ str" which is corrupted!" )
 
 let marshal_out ch v = Marshal.to_channel ch v []
-let marshal_in ch =
+let marshal_in filename ch =
   try Marshal.from_channel ch
-  with End_of_file -> error "corrupted file: reached end of file"
+  with
+    | End_of_file -> error "corrupted file: reached end of file"
+    | Failure _ (* e.g. "truncated object" *) ->
+        error (filename ^ " is corrupted, try to rebuild it.")
 
 exception Bad_magic_number of string
 
@@ -259,14 +265,14 @@ let extern_intern ?(warn=true) magic suffix =
       try
         marshal_out channel val_0;
         close_out channel
-      with e ->
-	begin try_remove filename; raise e end
+      with reraise ->
+	begin try_remove filename; raise reraise end
     with Sys_error s -> error ("System error: " ^ s)
   and intern_state paths name =
     try
       let _,filename = find_file_in_path ~warn paths (make_suffix name suffix) in
       let channel = raw_intern filename in
-      let v = marshal_in channel in
+      let v = marshal_in filename channel in
       close_in channel;
       v
     with Sys_error s ->
