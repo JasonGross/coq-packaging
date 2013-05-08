@@ -1,8 +1,9 @@
-coq (8.4pl2dfsg-1) UNRELEASED; urgency=low
+coq (8.4pl2dfsg-1) unstable; urgency=low
 
   * New upstream release
+  * Upload to unstable
 
- -- Stéphane Glondu <glondu@debian.org>  Wed, 08 May 2013 17:47:25 +0200
+ -- Stéphane Glondu <glondu@debian.org>  Wed, 08 May 2013 18:10:14 +0200
 
 coq (8.4pl1dfsg-1) experimental; urgency=low
 
