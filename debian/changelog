@@ -1,3 +1,10 @@
+coq (8.4pl2dfsg-2) experimental; urgency=low
+
+  * Compile with OCaml >= 4
+  * Update Vcs-*
+
+ -- Stéphane Glondu <glondu@debian.org>  Fri, 26 Jul 2013 14:17:30 +0200
+
 coq (8.4pl2dfsg-1) unstable; urgency=low
 
   * New upstream release
