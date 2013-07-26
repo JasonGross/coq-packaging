@@ -18,8 +18,8 @@ Build-Depends:
  texlive-latex-extra,
  hevea (>= 1.10-7)
 Homepage: http://coq.inria.fr/
-Vcs-Browser: http://git.debian.org/?p=pkg-ocaml-maint/packages/coq.git
-Vcs-Git: git://git.debian.org/git/pkg-ocaml-maint/packages/coq.git
+Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-ocaml-maint/packages/coq.git
+Vcs-Git: git://anonscm.debian.org/pkg-ocaml-maint/packages/coq.git
 
 Package: coq
 Architecture: any
