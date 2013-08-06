@@ -22,7 +22,7 @@ ADDPREF := COQINSTALLPREFIX=$(COQPREF) OLDROOT=
 
 PACKAGES := $(shell dh_listpackages)
 
-COQ_VERSION := 8.4pl2
+COQ_VERSION := trunk
 COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
 
 CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
@@ -76,10 +76,12 @@ override_dh_auto_test:
 override_dh_auto_install:
 	$(MAKE) $(ADDPREF) install
 	find debian/tmp -regextype posix-awk \
-	  -regex '.*\.(cm[xi]|cmxa|[ao])$$' \
+	  -regex '.*\.(cm[xi]|cmx[as]|[ao])$$' \
 	  >> debian/libcoq-ocaml-dev.install
 	find debian/tmp -name '*.vo' -printf '%P\n' \
 	  >> debian/coq-theories.install
+	find debian/tmp -name '*.cma' -printf '%P\n' \
+	  >> debian/libcoq-ocaml.install
 
 .PHONY: override_dh_install
 override_dh_install:
