@@ -1,3 +1,10 @@
+coq (8.4pl2dfsg-3) experimental; urgency=low
+
+  * Compile with OCaml 4.01.0
+  * Disable micromega tests on Hurd (because of missing lockf)
+
+ -- Stéphane Glondu <glondu@debian.org>  Fri, 22 Nov 2013 14:38:00 +0100
+
 coq (8.4pl2dfsg-2) experimental; urgency=low
 
   * Compile with OCaml >= 4
