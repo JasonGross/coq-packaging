@@ -270,13 +270,13 @@ let eval_call coqtop (c:'a Ide_intf.call) =
   let xml = Xml_parser.parse p (Xml_parser.SChannel coqtop.cout) in
   (Ide_intf.to_answer xml c : 'a Interface.value)
 
-let interp coqtop ?(raw=false) ?(verbose=true) s =
-  eval_call coqtop (Ide_intf.interp (raw,verbose,s))
+let interp coqtop ?(raw=false) ?(verbose=true) i s =
+  eval_call coqtop (Ide_intf.interp (i,raw,verbose,s))
 let rewind coqtop i = eval_call coqtop (Ide_intf.rewind i)
 let inloadpath coqtop s = eval_call coqtop (Ide_intf.inloadpath s)
 let mkcases coqtop s = eval_call coqtop (Ide_intf.mkcases s)
-let status coqtop = eval_call coqtop Ide_intf.status
-let hints coqtop = eval_call coqtop Ide_intf.hints
+let status coqtop = eval_call coqtop (Ide_intf.status ())
+let hints coqtop = eval_call coqtop (Ide_intf.hints ())
 
 module PrintOpt =
 struct
@@ -308,8 +308,8 @@ end
 
 let goals coqtop =
   let () = PrintOpt.enforce_hack coqtop in
-  eval_call coqtop Ide_intf.goals
+  eval_call coqtop (Ide_intf.goals ())
 
 let evars coqtop =
   let () = PrintOpt.enforce_hack coqtop in
-  eval_call coqtop Ide_intf.evars
+  eval_call coqtop (Ide_intf.evars ())

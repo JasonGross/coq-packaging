@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(*i $Id: ConstructiveEpsilon.v 15714 2012-08-08 18:54:37Z herbelin $ i*)
+(*i $Id: ConstructiveEpsilon.v 12112 2009-04-28 15:47:34Z herbelin $ i*)
 
 (** This provides with a proof of the constructive form of definite
 and indefinite descriptions for Sigma^0_1-formulas (hereafter called

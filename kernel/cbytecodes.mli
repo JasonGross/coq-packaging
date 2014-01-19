@@ -6,7 +6,7 @@
 (*         *       GNU Lesser General Public License Version 2.1        *)
 (************************************************************************)
 
-(* $Id: cbytecodes.mli 15714 2012-08-08 18:54:37Z herbelin $ *)
+(* $Id$ *)
 
 open Names
 open Term
