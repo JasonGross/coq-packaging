@@ -300,7 +300,7 @@ let it_destRLambda_or_LetIn_names n c =
 	  let a = GVar (dl,x) in
 	  aux (n-1) (Name x :: nal)
             (match c with
-              | GApp (loc,p,l) -> GApp (loc,c,l@[a])
+              | GApp (loc,p,l) -> GApp (loc,p,l@[a])
               | _ -> (GApp (dl,c,[a])))
   in aux n [] c
 
@@ -481,7 +481,7 @@ and share_names isgoal n l avoid env c t =
         share_names isgoal (n-1) ((Name id,Explicit,None,t')::l) avoid env appc c'
     (* If built with the f/n notation: we renounce to share names *)
     | _ ->
-        if n>0 then warning "Detyping.detype: cannot factorize fix enough";
+        if n>0 then msg_warn "Detyping.detype: cannot factorize fix enough";
         let c = detype isgoal avoid env c in
         let t = detype isgoal avoid env t in
         (List.rev l,c,t)
