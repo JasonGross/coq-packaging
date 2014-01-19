@@ -22,7 +22,7 @@ ADDPREF := COQINSTALLPREFIX=$(COQPREF) OLDROOT=
 
 PACKAGES := $(shell dh_listpackages)
 
-COQ_VERSION := 8.4pl2
+COQ_VERSION := 8.4pl3
 COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
 
 CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
