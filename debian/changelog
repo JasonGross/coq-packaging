@@ -1,3 +1,9 @@
+coq (8.5~git) experimental; urgency=low
+
+  * Make it 8.5 for numbering.
+
+ -- Edward Z. Yang <ezyang@cs.stanford.edu>  Wed, 02 Apr 2014 02:22:43 -0700
+
 coq (8.4pl2dfsg-2) experimental; urgency=low
 
   * Compile with OCaml >= 4
