@@ -25,11 +25,11 @@ PACKAGES := $(shell dh_listpackages)
 COQ_VERSION := trunk
 COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
 
-CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
-  --configdir /etc/xdg/coq \
-  --emacslib /usr/share/emacs/site-lisp/coq \
-  --browser "/usr/bin/x-www-browser %s &" \
-  --with-doc no --coqrunbyteflags "-dllib -lcoqrun"
+CONFIGUREOPTS := -arch Linux -prefix /usr -mandir /usr/share/man \
+  -configdir /etc/xdg/coq \
+  -emacslib /usr/share/emacs/site-lisp/coq \
+  -browser "/usr/bin/x-www-browser %s &" \
+  -with-doc no -vmbyteflags "-dllib,-lcoqrun"
 
 export OCAMLINIT_SED += \
   -e 's%@CoqVersion@%$(COQ_VERSION)%' \
