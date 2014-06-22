@@ -70,7 +70,6 @@ endif
 
 .PHONY: override_dh_auto_test
 override_dh_auto_test:
-	$(MAKE) validate VERBOSE=1
 
 .PHONY: override_dh_auto_install
 override_dh_auto_install:
