@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -19,6 +19,17 @@ open Recordops
 open Evarutil
 open Libnames
 open Evd
+
+let debug_unification = ref (false)
+let _ = Goptions.declare_bool_option {
+  Goptions.optsync = true; Goptions.optdepr = false;
+  Goptions.optname =
+    "Print states sended to Evarconv unification";
+  Goptions.optkey = ["Debug";"Unification"];
+  Goptions.optread = (fun () -> !debug_unification);
+  Goptions.optwrite = (fun a -> debug_unification:=a);
+}
+
 
 type flex_kind_of_term =
   | Rigid of constr
@@ -210,6 +221,13 @@ and evar_eqappr_x ?(rhs_is_already_stuck = false)
   in
 
   (* Evar must be undefined since we have flushed evars *)
+  let () = if !debug_unification then
+	     let open Pp in
+	     let pr_state (tm,l) =
+	       h 0 (Termops.print_constr tm ++ str "|" ++ cut ()
+		    ++ prlist_with_sep pr_semicolon
+				       (fun x -> hov 1 (Termops.print_constr x)) l) in
+	     pp (v 0 (pr_state appr1 ++ cut () ++ pr_state appr2 ++ cut ()) ++ fnl ()) in
   match (flex_kind_of_term term1 l1, flex_kind_of_term term2 l2) with
     | Flexible (sp1,al1 as ev1), Flexible (sp2,al2 as ev2) ->
 	let f1 i =

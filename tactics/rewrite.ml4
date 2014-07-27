@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -277,7 +277,7 @@ let decompose_applied_relation env sigma flags orig (c,l) left2right =
 
 open Tacinterp
 let decompose_applied_relation_expr env sigma flags (is, (c,l)) left2right =
-  let sigma, cbl = Tacinterp.interp_open_constr_with_bindings is env sigma (c,l) in
+  let sigma, cbl = Tacinterp.interp_open_constr_with_bindings false is env sigma (c,l) in
     decompose_applied_relation env sigma flags (Some (is, (c,l))) cbl left2right
 
 let rewrite_db = "rewrite"

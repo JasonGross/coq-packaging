@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -913,7 +913,7 @@ let build_and_l l =
       | App(_,_) -> 
 	let (f,_) = decompose_app t in 
 	eq_constr f (well_founded ())
-      | _ -> assert false
+      | _ -> false
   in
   let compare t1 t2 = 
     let b1,b2= is_well_founded t1,is_well_founded t2 in 

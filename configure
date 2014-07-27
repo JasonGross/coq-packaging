@@ -6,7 +6,7 @@
 # 
 ##################################
 
-VERSION=8.4pl3
+VERSION=8.4pl4
 VOMAGIC=08400
 STATEMAGIC=58400
 DATE=`LC_ALL=C LANG=C date +"%B %Y"`
@@ -111,7 +111,7 @@ coq_debug_flag_opt=
 coq_profile_flag=
 coq_annotate_flag=
 best_compiler=opt
-cflags="-fno-defer-pop -Wall -Wno-unused"
+cflags="-Wall -Wno-unused"
 natdynlink=yes
 
 local=false

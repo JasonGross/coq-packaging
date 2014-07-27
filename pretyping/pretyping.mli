@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -93,11 +93,11 @@ sig
   (**/**)
   (** Internal of Pretyping... *)
   val pretype :
-    type_constraint -> env -> evar_map ref ->
+    bool -> type_constraint -> env -> evar_map ref ->
     ltac_var_map -> glob_constr -> unsafe_judgment
 
   val pretype_type :
-    val_constraint -> env -> evar_map ref ->
+    bool -> val_constraint -> env -> evar_map ref ->
     ltac_var_map -> glob_constr -> unsafe_type_judgment
 
   val pretype_gen :

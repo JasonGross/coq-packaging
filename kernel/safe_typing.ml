@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -406,7 +406,7 @@ let end_module l restype senv =
   in
   let newenv = oldsenv.env in
   let newenv = set_engagement_opt senv.engagement newenv in
-  let senv'= {senv with env=newenv} in
+  let senv'= {senv with env = newenv; univ = cst} in
   let senv' =
     List.fold_left
       (fun env (_,mb) -> full_add_module mb env) 

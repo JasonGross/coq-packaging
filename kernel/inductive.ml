@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -296,18 +296,20 @@ let is_correct_arity env c pj ind specif params =
             try conv env a1 a1'
             with NotConvertible -> raise (LocalArity None) in
           srec (push_rel (na1,None,a1) env) t ar' (union_constraints u univ)
-      | Prod (_,a1,a2), [] -> (* whnf of t was not needed here! *)
-          let ksort = match kind_of_term (whd_betadeltaiota env a2) with
-            | Sort s -> family_of_sort s
-	    | _ -> raise (LocalArity None) in
-	  let dep_ind = build_dependent_inductive ind specif params in
-          let univ =
-            try conv env a1 dep_ind
-            with NotConvertible -> raise (LocalArity None) in
-	  check_allowed_sort ksort specif;
-	  union_constraints u univ
+      (* The last Prod domain is the type of the scrutinee *)
+      | Prod (na1,a1,a2), [] -> (* whnf of t was not needed here! *)
+	 let env' = push_rel (na1,None,a1) env in
+	 let ksort = match kind_of_term (whd_betadeltaiota env' a2) with
+       | Sort s -> family_of_sort s
+       | _ -> raise (LocalArity None) in
+	 let dep_ind = build_dependent_inductive ind specif params in
+	 let univ =
+           try conv env a1 dep_ind
+           with NotConvertible -> raise (LocalArity None) in
+	 check_allowed_sort ksort specif;
+	 union_constraints u univ
       | _, (_,Some _,_ as d)::ar' ->
-	  srec (push_rel d env) (lift 1 pt') ar' u
+	 srec (push_rel d env) (lift 1 pt') ar' u
       | _ ->
 	  raise (LocalArity None)
   in
@@ -895,12 +897,12 @@ let check_one_cofix env nbfix def deftype =
 	      raise (CoFixGuardError (env,RecCallInTypeOfAbstraction a))
 
 	| CoFix (j,(_,varit,vdefs as recdef)) ->
-            if (List.for_all (noccur_with_meta n nbfix) args)
+            if List.for_all (noccur_with_meta n nbfix) args
             then
-              let nbfix = Array.length vdefs in
-	      if (array_for_all (noccur_with_meta n nbfix) varit) then
+	      if array_for_all (noccur_with_meta n nbfix) varit then
+		let nbfix = Array.length vdefs in
 		let env' = push_rec_types recdef env in
-		(Array.iter (check_rec_call env' alreadygrd (n+1) vlra) vdefs;
+		(Array.iter (check_rec_call env' alreadygrd (n+nbfix) vlra) vdefs;
 		 List.iter (check_rec_call env alreadygrd n vlra) args)
               else
 		raise (CoFixGuardError (env,RecCallInTypeOfDef c))

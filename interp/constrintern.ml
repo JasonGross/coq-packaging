@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -1116,7 +1116,7 @@ let check_projection isproj nargs r =
       (try
 	let n = Recordops.find_projection_nparams ref + 1 in
 	if nargs <> n then
-	  user_err_loc (loc,"",str "Projection has not the right number of explicit parameters.");
+	  user_err_loc (loc,"",str "Projection does not have the right number of explicit parameters.");
       with Not_found ->
 	user_err_loc
 	(loc,"",pr_global_env Idset.empty ref ++ str " is not a registered projection."))
