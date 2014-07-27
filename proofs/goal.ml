@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -155,7 +155,7 @@ module Refinable = struct
     let j = Environ.make_judge t my_type in
     let tycon = Evarutil.mk_tycon_type typ in
     let (new_defs,j') = 
-      Coercion.Default.inh_conv_coerce_to (Util.dummy_loc) env !rdefs j tycon 
+      Coercion.Default.inh_conv_coerce_to true (Util.dummy_loc) env !rdefs j tycon 
     in
     rdefs := new_defs;
     j'.Environ.uj_val 

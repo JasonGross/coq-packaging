@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -198,7 +198,7 @@ let merge_occurrences loc cl = function
 
 GEXTEND Gram
   GLOBAL: simple_tactic constr_with_bindings quantified_hypothesis
-  bindings red_expr int_or_var open_constr casted_open_constr
+  bindings red_expr int_or_var open_constr casted_open_constr open_constr_wTC
   simple_intropattern;
 
   int_or_var:
@@ -217,6 +217,9 @@ GEXTEND Gram
       | id = METAIDENT -> MetaId (loc,id) ] ]
   ;
   open_constr:
+    [ [ c = constr -> ((),c) ] ]
+  ;
+  open_constr_wTC:
     [ [ c = constr -> ((),c) ] ]
   ;
   casted_open_constr:

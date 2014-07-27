@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -414,7 +414,7 @@ GEXTEND Gram
 	  VernacRequireFrom (export, None, filename)
       | IDENT "Import"; qidl = LIST1 global -> VernacImport (false,qidl)
       | IDENT "Export"; qidl = LIST1 global -> VernacImport (true,qidl)
-      | IDENT "Include"; e = module_expr_inl; l = LIST0 ext_module_expr ->
+      | IDENT "Include"; e = module_type_inl; l = LIST0 ext_module_expr ->
 	  VernacInclude(e::l)
       | IDENT "Include"; "Type"; e = module_type_inl; l = LIST0 ext_module_type ->
 	  Flags.if_verbose
@@ -842,6 +842,7 @@ GEXTEND Gram
          -> PrintCoercionPaths (s,t)
       | IDENT "Canonical"; IDENT "Projections" -> PrintCanonicalConversions
       | IDENT "Tables" -> PrintTables
+      | IDENT "Options" -> PrintTables (* A Synonymous to Tables *)
       | IDENT "Hint" -> PrintHintGoal
       | IDENT "Hint"; qid = smart_global -> PrintHint qid
       | IDENT "Hint"; "*" -> PrintHintDb
