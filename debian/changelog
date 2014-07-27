@@ -1,3 +1,9 @@
+coq (8.4pl4dfsg-1) UNRELEASED; urgency=medium
+
+  * New upstream release
+
+ -- Stéphane Glondu <glondu@debian.org>  Sun, 27 Jul 2014 10:03:03 +0200
+
 coq (8.4pl3dfsg-1) unstable; urgency=medium
 
   * New upstream release
