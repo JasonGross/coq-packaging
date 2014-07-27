@@ -1,11 +1,11 @@
-coq (8.4pl4dfsg-1) UNRELEASED; urgency=medium
+coq (8.4pl4dfsg-1) unstable; urgency=medium
 
   * New upstream release (Closes: #755953)
   * Switch debian/copyright to Format 1.0
   * Bump Standards-Version to 3.9.5
   * Bump debhelper compat level to 9
 
- -- Stéphane Glondu <glondu@debian.org>  Sun, 27 Jul 2014 10:03:03 +0200
+ -- Stéphane Glondu <glondu@debian.org>  Sun, 27 Jul 2014 15:25:03 +0200
 
 coq (8.4pl3dfsg-1) unstable; urgency=medium
 
