@@ -6,6 +6,7 @@ usr/bin/coq-tex*
 usr/bin/coqtop*
 usr/bin/coqwc*
 usr/bin/gallina*
+usr/bin/coqworkmgr*
 usr/lib/coq/plugins/micromega/csdpcert
 usr/lib/coq/tools/coqdoc/coqdoc.css
 usr/lib/coq/tools/coqdoc/coqdoc.sty
