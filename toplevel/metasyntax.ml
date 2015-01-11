@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -851,7 +851,7 @@ let check_rule_productivity l =
     error "A recursive notation must start with at least one symbol."
 
 let is_not_printable = function
-  | AVar _ -> warning "This notation will not be used for printing as it is bound to a \nsingle variable"; true
+  | AVar _ -> msg_warn "This notation will not be used for printing as it is bound to a \nsingle variable"; true
   | _ -> false
 
 let find_precedence lev etyps symbols =
@@ -909,7 +909,7 @@ let remove_curly_brackets l =
             (match next' with
               | Terminal "}" as t2 :: l'' as l1 ->
                   if l <> l0 or l' <> l1 then
-                    warning "Skipping spaces inside curly brackets";
+                    msg_warn "Skipping spaces inside curly brackets";
                   if deb & l'' = [] then [t1;x;t2] else begin
                     check_curly_brackets_notation_exists ();
                     x :: aux false l''

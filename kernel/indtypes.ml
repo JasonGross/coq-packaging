@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -42,7 +42,7 @@ type inductive_error =
   | SameNamesTypes of identifier
   | SameNamesConstructors of identifier
   | SameNamesOverlap of identifier list
-  | NotAnArity of identifier
+  | NotAnArity of env * constr
   | BadEntry
   | LargeNonPropInductiveNotInType
 
@@ -254,7 +254,10 @@ let typecheck_inductive env mie =
   let ind_min_levels = inductive_levels arities inds in
   let inds, cst =
     array_fold_map2' (fun ((id,full_arity,ar_level),cn,info,lc,_) lev cst ->
-      let sign, s = dest_arity env full_arity in
+      let sign, s =
+        try dest_arity env full_arity
+        with NotArity -> raise (InductiveError (NotAnArity (env, full_arity)))
+      in
       let status,cst = match s with
       | Type u when ar_level <> None (* Explicitly polymorphic *)
             && no_upper_constraints u cst ->

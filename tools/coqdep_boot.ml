@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -26,7 +26,7 @@ let rec parse = function
        (* To solve conflict (e.g. same filename in kernel and checker)
           we allow to state an explicit order *)
        add_dir add_known r [];
-       norecdir_list:=r::!norecdir_list;
+       norec_dirs:=r::!norec_dirs;
        parse ll
   | f :: ll -> treat_file None f; parse ll
   | [] -> ()

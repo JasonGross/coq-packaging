@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -116,6 +116,7 @@ val msgnl : std_ppcmds -> unit
 val msgerr : std_ppcmds -> unit
 val msgerrnl : std_ppcmds -> unit
 val msg_warning : std_ppcmds -> unit
+val msg_warn : string -> unit
 
 (** Same specific display in emacs as warning, but without the "Warning:" **)
 val msg_debug : std_ppcmds -> unit

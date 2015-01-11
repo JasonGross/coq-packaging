@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -1180,17 +1180,28 @@ let invert_invertible_arg fullenv evd aliases k (evk,argsv) args' =
  * such that "hyps' |- ?e : T"
  *)
 
-let filter_candidates evd evk filter candidates =
-  let evi = Evd.find_undefined evd evk in
-  let candidates = match candidates with
-  | None -> evi.evar_candidates
-  | Some _ -> candidates in
-  match candidates,filter with
-  | None,_ | _, None -> candidates
-  | Some l, Some filter ->
+let filter_effective_candidates evi filter candidates =
+  match filter with
+  | None -> candidates
+  | Some filter ->
       let ids = List.map pi1 (list_filter_with filter (evar_context evi)) in
-      Some (List.filter (fun a ->
-        list_subset (Idset.elements (collect_vars a)) ids) l)
+      List.filter (fun a -> list_subset (Idset.elements (collect_vars a)) ids)
+        candidates
+
+let filter_candidates evd evk filter candidates_update =
+  let evi = Evd.find_undefined evd evk in
+  let candidates = match candidates_update with
+  | None -> evi.evar_candidates
+  | Some _ -> candidates_update
+  in
+  match candidates with
+  | None -> None
+  | Some l ->
+      let l' = filter_effective_candidates evi filter l in
+      if List.length l = List.length l' && candidates_update = None then
+        None
+      else
+        Some l'
 
 let closure_of_filter evd evk filter =
   let evi = Evd.find_undefined evd evk in
@@ -1530,6 +1541,7 @@ let solve_candidates conv_algo env evd (evk,argsv as ev) rhs =
 
 exception NotInvertibleUsingOurAlgorithm of constr
 exception NotEnoughInformationToProgress of (identifier * evar_projection) list
+exception NotEnoughInformationEvarEvar of constr
 exception OccurCheckIn of evar_map * constr
 
 let rec invert_definition conv_algo choose env evd (evk,argsv as ev) rhs =
@@ -1608,7 +1620,8 @@ let rec invert_definition conv_algo choose env evd (evk,argsv as ev) rhs =
         with
         | EvarSolvedOnTheFly (evd,t) -> evdref:=evd; imitate envk t
         | CannotProject filter' ->
-	  assert !progress;
+          if not !progress then
+            raise (NotEnoughInformationEvarEvar t);
 	  (* Make the virtual left evar real *)
 	  let ty = get_type_of env' !evdref t in
 	  let (evd,evar'',ev'') =
@@ -1714,6 +1727,8 @@ and evar_define conv_algo ?(choose=false) env evd (evk,argsv as ev) rhs =
   with
     | NotEnoughInformationToProgress sols ->
 	postpone_non_unique_projection env evd ev sols rhs
+    | NotEnoughInformationEvarEvar t ->
+        add_conv_pb (Reduction.CONV,env,mkEvar ev,t) evd
     | NotInvertibleUsingOurAlgorithm t ->
 	error_not_clean env evd evk t (evar_source evk evd)
     | OccurCheckIn (evd,rhs) ->

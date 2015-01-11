@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -1075,7 +1075,7 @@ let fold_constr_expr_with_binders g f n acc = function
 	fold_local_binders g f n'
 	  (fold_local_binders g f n acc t lb) c lb) l acc
   | CCoFix (loc,_,_) ->
-      Pp.warning "Capture check in multiple binders not done"; acc
+      Pp.msg_warn "Capture check in multiple binders not done"; acc
 
 let free_vars_of_constr_expr c =
   let rec aux bdvars l = function

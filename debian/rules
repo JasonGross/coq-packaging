@@ -36,13 +36,13 @@ export OCAMLINIT_SED += \
   -e 's%@CoqABI@%$(COQ_ABI)%'
 
 %:
-	+dh --with ocaml $@
+	+dh $@ --with ocaml
 
 # There is already a file named "build" in upstream sources, so the
 # above rule is never called. We make it explicitly a phony rule here.
 .PHONY: build
 build:
-	+dh --with ocaml $@
+	+dh $@ --with ocaml
 
 .PHONY: override_dh_auto_configure
 override_dh_auto_configure:

@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -248,11 +248,11 @@ Fixpoint interpret3 t fv {struct t}: R :=
 End nsatz1.
 
 Ltac equality_to_goal H x y:=
-  let h := fresh "nH" in
   (* eliminate trivial  hypotheses, but it takes time!:
+  let h := fresh "nH" in
     (assert (h:equality x y);
     [solve [cring] | clear H; clear h])
-  || *) (try generalize (@psos_r1 _ _ _ _ _ _ _ _ _ _ _ x y H); clear H)
+  || *) try (generalize (@psos_r1 _ _ _ _ _ _ _ _ _ _ _ x y H); clear H)
 .
 
 Ltac equalities_to_goal :=

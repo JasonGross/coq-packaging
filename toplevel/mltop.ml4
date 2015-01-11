@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -117,7 +117,7 @@ let dir_ml_load s =
 let dir_ml_use s =
   match !load with
     | WithTop t -> t.use_file s
-    | _ -> warning "Cannot access the ML compiler"
+    | _ -> msg_warn "Cannot access the ML compiler"
 
 (* Adds a path to the ML paths *)
 let add_ml_dir s =

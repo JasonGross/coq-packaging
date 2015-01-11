@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -134,7 +134,8 @@ val interp_hyp :  interp_sign -> goal sigma -> identifier located -> identifier
 
 val interp_bindings : interp_sign -> Environ.env -> Evd.evar_map -> glob_constr_and_expr Glob_term.bindings -> Evd.evar_map * constr Glob_term.bindings
 
-val interp_open_constr_with_bindings : interp_sign -> Environ.env -> Evd.evar_map -> 
+(* first arguments mean wTC (with type classes resolution) *)
+val interp_open_constr_with_bindings : bool -> interp_sign -> Environ.env -> Evd.evar_map -> 
   glob_constr_and_expr Glob_term.with_bindings -> Evd.evar_map * constr Glob_term.with_bindings
 
 (** Initial call for interpretation *)

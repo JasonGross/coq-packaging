@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -19,6 +19,17 @@ open Recordops
 open Evarutil
 open Libnames
 open Evd
+
+let debug_unification = ref (false)
+let _ = Goptions.declare_bool_option {
+  Goptions.optsync = true; Goptions.optdepr = false;
+  Goptions.optname =
+    "Print states sended to Evarconv unification";
+  Goptions.optkey = ["Debug";"Unification"];
+  Goptions.optread = (fun () -> !debug_unification);
+  Goptions.optwrite = (fun a -> debug_unification:=a);
+}
+
 
 type flex_kind_of_term =
   | Rigid of constr
@@ -197,7 +208,26 @@ let rec evar_conv_x ts env evd pbty term1 term2 =
 
 and evar_eqappr_x ?(rhs_is_already_stuck = false)
   ts env evd pbty (term1,l1 as appr1) (term2,l2 as appr2) =
+
+  let eta env evd onleft term l term' l' =
+    assert (l = []);
+    let (na,c,body) = destLambda term in
+    let c = nf_evar evd c in
+    let env' = push_rel (na,None,c) env in
+    let appr1 = evar_apprec ts env' evd [] body in
+    let appr2 = (lift 1 term', List.map (lift 1) l' @ [mkRel 1]) in
+    if onleft then evar_eqappr_x ts env' evd CONV appr1 appr2
+    else evar_eqappr_x ts env' evd CONV appr2 appr1
+  in
+
   (* Evar must be undefined since we have flushed evars *)
+  let () = if !debug_unification then
+	     let open Pp in
+	     let pr_state (tm,l) =
+	       h 0 (Termops.print_constr tm ++ str "|" ++ cut ()
+		    ++ prlist_with_sep pr_semicolon
+				       (fun x -> hov 1 (Termops.print_constr x)) l) in
+	     pp (v 0 (pr_state appr1 ++ cut () ++ pr_state appr2 ++ cut ()) ++ fnl ()) in
   match (flex_kind_of_term term1 l1, flex_kind_of_term term2 l2) with
     | Flexible (sp1,al1 as ev1), Flexible (sp2,al2 as ev2) ->
 	let f1 i =
@@ -382,6 +412,9 @@ and evar_eqappr_x ?(rhs_is_already_stuck = false)
 	  solve_simple_eqn (evar_conv_x ts) env evd
 	    (position_problem true pbty,ev1,t2)
         | None ->
+          if isLambda term2 then
+            eta env evd false term2 l2 term1 l1
+          else
 	  (* Postpone the use of an heuristic *)
 	  add_conv_pb (pbty,env,applist appr1,applist appr2) evd,
 	  true)
@@ -396,6 +429,9 @@ and evar_eqappr_x ?(rhs_is_already_stuck = false)
 	  solve_simple_eqn (evar_conv_x ts) env evd
 	    (position_problem false pbty,ev2,t1)
         | None ->
+          if isLambda term1 then
+            eta env evd true term1 l1 term2 l2
+          else
 	  (* Postpone the use of an heuristic *)
 	  add_conv_pb (pbty,env,applist appr1,applist appr2) evd,
 	  true)
@@ -408,7 +444,11 @@ and evar_eqappr_x ?(rhs_is_already_stuck = false)
 	  match eval_flexible_term ts env flex1 with
 	    | Some v1 ->
 		evar_eqappr_x ts env i pbty (evar_apprec ts env i l1 v1) appr2
-	    | None -> (i,false)
+	    | None ->
+                if isLambda term2 then
+                  eta env i false term2 l2 term1 l1
+                else
+                  (i,false)
 	in
 	ise_try evd [f3; f4]
 
@@ -420,28 +460,20 @@ and evar_eqappr_x ?(rhs_is_already_stuck = false)
 	  match eval_flexible_term ts env flex2 with
 	    | Some v2 ->
 		evar_eqappr_x ts env i pbty appr1 (evar_apprec ts env i l2 v2)
-	    | None -> (i,false)
+	    | None ->
+                if isLambda term1 then
+                  eta env i true term1 l1 term2 l2
+                else
+                  (i,false)
 	in
 	ise_try evd [f3; f4]
 
     (* Eta-expansion *)
     | Rigid c1, _ when isLambda c1 ->
-	assert (l1 = []);
-	let (na,c1,c'1) = destLambda c1 in
-        let c = nf_evar evd c1 in
-	let env' = push_rel (na,None,c) env in
-        let appr1 = evar_apprec ts env' evd [] c'1 in
-	let appr2 = (lift 1 term2, List.map (lift 1) l2 @ [mkRel 1]) in
-	evar_eqappr_x ts env' evd CONV appr1 appr2
+        eta env evd true term1 l1 term2 l2
 
     | _, Rigid c2 when isLambda c2 ->
-	assert (l2 = []);
-	let (na,c2,c'2) = destLambda c2 in
-        let c = nf_evar evd c2 in
-	let env' = push_rel (na,None,c) env in
-	let appr1 = (lift 1 term1, List.map (lift 1) l1 @ [mkRel 1]) in
-        let appr2 = evar_apprec ts env' evd [] c'2 in
-	evar_eqappr_x ts env' evd CONV appr1 appr2
+        eta env evd false term2 l2 term1 l1
 
     | Rigid c1, Rigid c2 -> begin
         match kind_of_term c1, kind_of_term c2 with
@@ -582,15 +614,21 @@ let choose_less_dependent_instance evk evd term args =
   if subst' = [] then evd, false else
   Evd.define evk (mkVar (fst (List.hd subst'))) evd, true
 
-let apply_on_subterm f c t =
+let apply_on_subterm evdref f c t =
   let rec applyrec (k,c as kc) t =
     (* By using eq_constr, we make an approximation, for instance, we *)
     (* could also be interested in finding a term u convertible to t *)
     (* such that c occurs in u *)
     if eq_constr c t then f k
     else
-      map_constr_with_binders_left_to_right (fun d (k,c) -> (k+1,lift 1 c))
-	applyrec kc t
+      match kind_of_term t with
+      | Evar (evk,args) when Evd.is_undefined !evdref evk ->
+          let ctx = evar_filtered_context (Evd.find_undefined !evdref evk) in
+          let g (_,b,_) a = if b = None then applyrec kc a else a in
+          mkEvar (evk, Array.of_list (List.map2 g ctx (Array.to_list args)))
+      | _ ->
+        map_constr_with_binders_left_to_right (fun d (k,c) -> (k+1,lift 1 c))
+	  applyrec kc t
   in
   applyrec (0,c) t
 
@@ -598,7 +636,8 @@ let filter_possible_projections c ty ctxt args =
   let fv1 = free_rels c in
   let fv2 = collect_vars c in
   let tyvars = collect_vars ty in
-  List.map2 (fun (id,_,_) a ->
+  List.map2 (fun (id,b,_) a ->
+    b <> None ||
     a == c ||
     (* Here we make an approximation, for instance, we could also be *)
     (* interested in finding a term u convertible to c such that a occurs *)
@@ -670,7 +709,7 @@ let second_order_matching ts env_rhs evd (evk,args) argoccs rhs =
         evdref := evd;
         evsref := (fst (destEvar ev),evty)::!evsref;
         ev in
-      set_holes evdref (apply_on_subterm set_var c rhs) subst
+      set_holes evdref (apply_on_subterm evdref set_var c rhs) subst
   | [] -> rhs in
 
   let subst = make_subst (ctxt,args,argoccs) in

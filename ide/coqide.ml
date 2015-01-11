@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -868,11 +868,9 @@ object(self)
       prerr_endline "Send_to_coq starting now";
       (* It's important here to work with [ct] and not [!mycoqtop], otherwise
          we could miss a restart of coqtop and continue sending it orders. *)
-      match Coq.interp ct ~verbose phrase with
+      match Coq.interp ct ~verbose 0 phrase with
         | Interface.Fail (l,str) -> sync display_error (l,str); None
         | Interface.Good msg -> sync display_output msg; Some Safe
-          (* TODO: Restore someday the access to Decl_mode.get_damon_flag,
-	     and also detect the use of admit, and then return Unsafe *)
     with
       | End_of_file -> (* Coqtop has died, let's trigger a reset_initial. *)
         raise RestartCoqtop
@@ -890,9 +888,10 @@ object(self)
       end
     in
     try
-      match Coq.interp !mycoqtop ~raw:true ~verbose:false phrase with
+      match Coq.interp !mycoqtop ~raw:true ~verbose:false 0 phrase with
       | Interface.Fail (_, err) -> sync display_error err
-      | Interface.Good msg -> sync self#insert_message msg
+      | Interface.Good msg ->
+	sync self#insert_message msg
     with
     | End_of_file -> raise RestartCoqtop
     | e -> sync display_error (Printexc.to_string e)
@@ -1256,7 +1255,7 @@ object(self)
 	  | Interface.Good true -> ()
 	  | Interface.Good false ->
 	    let cmd = Printf.sprintf "Add LoadPath \"%s\". "  dir in
-	    match Coq.interp ct cmd with
+	    match Coq.interp ct 0 cmd with
 	      | Interface.Fail (l,str) ->
 		self#set_message ("Couln't add loadpath:\n"^str)
 	      | Interface.Good _ -> ()

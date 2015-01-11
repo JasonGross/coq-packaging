@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -271,7 +271,7 @@ let declare_congr_scheme ind =
     then
       ignore (define_individual_scheme congr_scheme_kind KernelVerbose None ind)
     else
-      warning "Cannot build congruence scheme because eq is not found"
+      msg_warn "Cannot build congruence scheme because eq is not found"
   end
 
 let declare_sym_scheme ind =

@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -205,10 +205,10 @@ let pr_var_decl env (id,c,typ) =
     | None ->  (mt ())
     | Some c ->
 	(* Force evaluation *)
-	let pb = pr_lconstr_env env c in
+	let pb = pr_lconstr_core true env c in
 	let pb = if isCast c then surround pb else pb in
 	(str" := " ++ pb ++ cut () ) in
-  let pt = pr_ltype_env env typ in
+  let pt = pr_ltype_core true env typ in
   let ptyp = (str" : " ++ pt) in
   (pr_id id ++ hov 0 (pbody ++ ptyp))
 
@@ -217,10 +217,10 @@ let pr_rel_decl env (na,c,typ) =
     | None -> mt ()
     | Some c ->
 	(* Force evaluation *)
-	let pb = pr_lconstr_env env c in
+	let pb = pr_lconstr_core true env c in
 	let pb = if isCast c then surround pb else pb in
 	(str":=" ++ spc () ++ pb ++ spc ()) in
-  let ptyp = pr_ltype_env env typ in
+  let ptyp = pr_ltype_core true env typ in
   match na with
   | Anonymous -> hov 0 (str"<>" ++ spc () ++ pbody ++ str":" ++ spc () ++ ptyp)
   | Name id -> hov 0 (pr_id id ++ spc () ++ pbody ++ str":" ++ spc () ++ ptyp)
@@ -571,7 +571,7 @@ let pr_prim_rule = function
       (str"fix " ++ pr_id f ++ str"/" ++ int n)
 
   | FixRule (f,n,others,j) ->
-      if j<>0 then warning "Unsupported printing of \"fix\"";
+      if j<>0 then msg_warn "Unsupported printing of \"fix\"";
       let rec print_mut = function
 	| (f,n,ar)::oth ->
            pr_id f ++ str"/" ++ int n ++ str" : " ++ pr_lconstr ar ++ print_mut oth
@@ -583,7 +583,7 @@ let pr_prim_rule = function
       (str"cofix " ++ pr_id f)
 
   | Cofix (f,others,j) ->
-      if j<>0 then warning "Unsupported printing of \"fix\"";
+      if j<>0 then msg_warn "Unsupported printing of \"fix\"";
       let rec print_mut = function
 	| (f,ar)::oth ->
 	  (pr_id f ++ str" : " ++ pr_lconstr ar ++ print_mut oth)

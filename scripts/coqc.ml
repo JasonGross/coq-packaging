@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -57,18 +57,16 @@ let check_module_name s =
 let rec make_compilation_args = function
   | [] -> []
   | file :: fl ->
-      let dirname = Filename.dirname file in
-      let basename = Filename.basename file in
-      let modulename =
-        if Filename.check_suffix basename ".v" then
-          Filename.chop_suffix basename ".v"
+      let name_no_suffix =
+        if Filename.check_suffix file ".v" then
+          Filename.chop_suffix file ".v"
         else
-          basename
+          file
       in
+      let modulename = Filename.basename name_no_suffix  in
       check_module_name modulename;
-      let file = Filename.concat dirname modulename in
       (if !verbose then "-compile-verbose" else "-compile")
-      :: file :: (make_compilation_args fl)
+      :: name_no_suffix :: (make_compilation_args fl)
 
 (* compilation of files [files] with command [command] and args [args] *)
 
@@ -120,7 +118,7 @@ let parse_args () =
         parse (cfiles,args) rem
 
     | ("-?"|"-h"|"-H"|"-help"|"--help") :: _ -> usage ()
-    | ("-outputstate"|"-inputstate"|"-is"
+    | ("-outputstate"|"-inputstate"|"-is"|"-exclude-dir"
       |"-load-vernac-source"|"-l"|"-load-vernac-object"
       |"-load-ml-source"|"-require"|"-load-ml-object"
       |"-init-file"|"-dump-glob"|"-compat"|"-coqlib" as o) :: rem ->

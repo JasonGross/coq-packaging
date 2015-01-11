@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -56,12 +56,14 @@ let section_segment_of_reference = function
   | _ -> []
 
 let discharge_rename_args = function
-  | _, (ReqGlobal (c, names), _) ->
-     let c' = pop_global_reference c in
-     let vars = section_segment_of_reference c in
-     let var_names = List.map (fun (id, _,_,_) -> Name id) vars in
-     let names' = List.map (fun l -> var_names @ l) names in
-     Some (ReqGlobal (c', names), (c', names'))
+  | _, (ReqGlobal (c, names), _ as req) ->
+     (try 
+       let vars = section_segment_of_reference c in
+       let c' = pop_global_reference c in
+       let var_names = List.map (fun (id, _,_,_) -> Name id) vars in
+       let names' = List.map (fun l -> var_names @ l) names in
+       Some (ReqGlobal (c', names), (c', names'))
+     with Not_found -> Some req)
   | _ -> None
 
 let rebuild_rename_args x = x

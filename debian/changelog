@@ -4,6 +4,35 @@ coq (8.5~git) experimental; urgency=low
 
  -- Edward Z. Yang <ezyang@cs.stanford.edu>  Wed, 02 Apr 2014 02:22:43 -0700
 
+coq (8.4pl4dfsg-1) unstable; urgency=medium
+
+  * New upstream release (Closes: #755953)
+  * Switch debian/copyright to Format 1.0
+  * Bump Standards-Version to 3.9.5
+  * Bump debhelper compat level to 9
+
+ -- Stéphane Glondu <glondu@debian.org>  Sun, 27 Jul 2014 15:25:03 +0200
+
+coq (8.4pl3dfsg-1) unstable; urgency=medium
+
+  * New upstream release
+  * Update README.Debian (Closes: #680248)
+
+ -- Stéphane Glondu <glondu@debian.org>  Sun, 19 Jan 2014 16:16:36 +0100
+
+coq (8.4pl2dfsg-4) unstable; urgency=low
+
+  * Upload to unstable
+
+ -- Stéphane Glondu <glondu@debian.org>  Tue, 03 Dec 2013 19:54:49 +0100
+
+coq (8.4pl2dfsg-3) experimental; urgency=low
+
+  * Compile with OCaml 4.01.0
+  * Disable micromega tests on Hurd (because of missing lockf)
+
+ -- Stéphane Glondu <glondu@debian.org>  Fri, 22 Nov 2013 14:38:00 +0100
+
 coq (8.4pl2dfsg-2) experimental; urgency=low
 
   * Compile with OCaml >= 4

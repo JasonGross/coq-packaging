@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -11,7 +11,8 @@ val option_noglob : bool ref
 val option_slash : bool ref
 val option_natdynlk : bool ref
 val option_mldep : string option ref
-val norecdir_list : string list ref
+val norec_dirs : string list ref
+val norec_dirnames : string list ref
 val suffixe : string ref
 type dir = string option
 val ( // ) : string -> string -> string

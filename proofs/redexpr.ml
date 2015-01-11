@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -22,8 +22,10 @@ open Libobject
 open Summary
 
 (* call by value normalisation function using the virtual machine *)
-let cbv_vm env _ c =
-  let ctyp = (fst (Typeops.infer env c)).Environ.uj_type in
+let cbv_vm env sigma c =
+  let ctyp = Retyping.get_type_of env sigma c in
+  if Termops.occur_meta_or_existential c then
+    error "vm_compute does not support existential variables.";
   Vnorm.cbv_vm env c ctyp
 
 

@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -656,7 +656,7 @@ let strip s =
 
 let terminal s =
   let s = strip s in
-  if s = "" then failwith "empty token";
+  if s = "" then Util.error "empty token.";
   if is_ident_not_keyword s then IDENT s
   else if is_number s then INT s
   else KEYWORD s

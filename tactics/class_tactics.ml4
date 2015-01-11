@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -276,7 +276,7 @@ let make_hints g st only_classes sign =
     (PathEmpty, []) sign
   in Hint_db.add_list hintlist (Hint_db.empty st true)
 
-let autogoal_hints_cache : (Environ.named_context_val * hint_db) option ref = ref None
+let autogoal_hints_cache : (bool * Environ.named_context_val * hint_db) option ref = ref None
 let freeze () = !autogoal_hints_cache
 let unfreeze v = autogoal_hints_cache := v
 let init () = autogoal_hints_cache := None
@@ -293,9 +293,11 @@ let make_autogoal_hints =
   fun only_classes ?(st=full_transparent_state) g ->
     let sign = pf_filtered_hyps g in
       match freeze () with
-      | Some (sign', hints) when Environ.eq_named_context_val sign sign' -> hints
+      | Some (onlyc, sign', hints) 
+	  when onlyc = only_classes && 
+	    Environ.eq_named_context_val sign sign' -> hints
       | _ -> let hints = make_hints g st only_classes (Environ.named_context_of_val sign) in
-	  unfreeze (Some (sign, hints)); hints
+	  unfreeze (Some (only_classes, sign, hints)); hints
 	  
 let lift_tactic tac (f : goal list sigma -> autoinfo -> autogoal list sigma) : 'a tac =
   { skft = fun sk fk {it = gl,hints; sigma=s} ->

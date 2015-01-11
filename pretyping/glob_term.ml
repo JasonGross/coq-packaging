@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -337,27 +337,6 @@ let loc_of_glob_constr = function
 
 (**********************************************************************)
 (* Conversion from glob_constr to cases pattern, if possible            *)
-
-let rec cases_pattern_of_glob_constr na = function
-  | GVar (loc,id) when na<>Anonymous ->
-      (* Unable to manage the presence of both an alias and a variable *)
-      raise Not_found
-  | GVar (loc,id) -> PatVar (loc,Name id)
-  | GHole (loc,_) -> PatVar (loc,na)
-  | GRef (loc,ConstructRef cstr) ->
-      PatCstr (loc,cstr,[],na)
-  | GApp (loc,GRef (_,ConstructRef (ind,_ as cstr)),args) ->
-      let mib,_ = Global.lookup_inductive ind in
-      let nparams = mib.Declarations.mind_nparams in
-      if nparams > List.length args then
-        user_err_loc (loc,"",Pp.str "Invalid notation for pattern.");
-      let params,args = list_chop nparams args in
-      List.iter (function GHole _ -> ()
-	| _ -> user_err_loc (loc,"",Pp.str"Invalid notation for pattern."))
-        params;
-      let args = List.map (cases_pattern_of_glob_constr Anonymous) args in
-      PatCstr (loc,cstr,args,na)
-  | _ -> raise Not_found
 
 let rec cases_pattern_of_glob_constr na = function
   | GVar (loc,id) when na<>Anonymous ->

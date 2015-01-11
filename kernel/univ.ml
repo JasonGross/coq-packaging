@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -161,7 +161,7 @@ let type0_univ = Atom UniverseLevel.Set
 
 let is_type0_univ = function
   | Atom UniverseLevel.Set -> true
-  | Max ([UniverseLevel.Set], []) -> warning "Non canonical Set"; true
+  | Max ([UniverseLevel.Set], []) -> msg_warn "Non canonical Set"; true
   | u -> false
 
 let is_univ_variable = function

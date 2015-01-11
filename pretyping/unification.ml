@@ -1,6 +1,6 @@
 (************************************************************************)
 (*  v      *   The Coq Proof Assistant  /  The Coq Development Team     *)
-(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2012     *)
+(* <O___,, *   INRIA - CNRS - LIX - LRI - PPS - Copyright 1999-2014     *)
 (*   \VV/  **************************************************************)
 (*    //   *      This file is distributed under the terms of the       *)
 (*         *       GNU Lesser General Public License Version 2.1        *)
@@ -386,9 +386,12 @@ let unify_0_with_initial_metas (sigma,ms,es as subst) conv_at_top env cv_pb flag
 	| Meta k, _
             when not (dependent cM cN) (* helps early trying alternatives *) ->
             if wt && flags.check_applied_meta_types then
-              (let tyM = Typing.meta_type sigma k in
-               let tyN = get_type_of curenv sigma cN in
-               check_compatibility curenv substn tyM tyN);
+              (try
+                 let tyM = Typing.meta_type sigma k in
+                 let tyN = get_type_of curenv sigma cN in
+                 check_compatibility curenv substn tyM tyN
+               with Anomaly _ (* Hack *) ->
+                 (* Renounce, maybe metas/evars prevents typing *) ());
 	    (* Here we check that [cN] does not contain any local variables *)
 	    if nb = 0 then
               sigma,(k,cN,snd (extract_instance_status pb))::metasubst,evarsubst
@@ -400,9 +403,12 @@ let unify_0_with_initial_metas (sigma,ms,es as subst) conv_at_top env cv_pb flag
 	| _, Meta k
             when not (dependent cN cM) (* helps early trying alternatives *) ->
             if wt && flags.check_applied_meta_types then
-              (let tyM = get_type_of curenv sigma cM in
-               let tyN = Typing.meta_type sigma k in
-               check_compatibility curenv substn tyM tyN);
+              (try
+                 let tyM = get_type_of curenv sigma cM in
+                 let tyN = Typing.meta_type sigma k in
+                 check_compatibility curenv substn tyM tyN
+               with Anomaly _ (* Hack *) ->
+                 (* Renounce, maybe metas/evars prevents typing *) ());
 	    (* Here we check that [cM] does not contain any local variables *)
 	    if nb = 0 then
               (sigma,(k,cM,fst (extract_instance_status pb))::metasubst,evarsubst)
@@ -788,7 +794,7 @@ let is_mimick_head ts f =
 
 let try_to_coerce env evd c cty tycon =
   let j = make_judge c cty in
-  let (evd',j') = inh_conv_coerce_rigid_to dummy_loc env evd j tycon in
+  let (evd',j') = inh_conv_coerce_rigid_to true dummy_loc env evd j tycon in
   let evd' = Evarconv.consider_remaining_unif_problems env evd' in
   let evd' = Evd.map_metas_fvalue (nf_evar evd') evd' in
     (evd',j'.uj_val)
