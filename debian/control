@@ -1,4 +1,4 @@
-Source: coq
+Source: coq-v8.3
 Section: math
 Priority: optional
 Maintainer: Debian OCaml Maintainers <debian-ocaml-maint@lists.debian.org>
@@ -20,25 +20,25 @@ Homepage: http://coq.inria.fr/
 Vcs-Browser: http://git.debian.org/?p=pkg-ocaml-maint/packages/coq.git
 Vcs-Git: git://git.debian.org/git/pkg-ocaml-maint/packages/coq.git
 
-Package: coq
+Package: coq-v8.3
 Architecture: any
 Depends:
- coq-theories (= ${source:Version}),
+ coq-theories-v8.3 (= ${source:Version}),
  emacsen-common,
  ${ocaml:Depends},
  ${shlibs:Depends},
  ${misc:Depends}
-Provides: coq-${F:CoqABI}
-Recommends: coqide | proofgeneral
+Provides: coq-v8.3-${F:CoqABI}
+Recommends: coqide-v8.3 | proofgeneral
 Suggests:
  ocaml-nox,
  proofgeneral,
  ledit | readline-editor,
- libcoq-ocaml-dev,
+ libcoq-ocaml-dev-v8.3,
  why (>= 2.19),
- coq-doc
-Breaks: coq-libs (<< 8.2.pl1)
-Replaces: coq-libs (<< 8.2.pl1)
+ coq-doc-v8.3
+Breaks: coq-libs-v8.3 (<< 8.2.pl1)
+Replaces: coq-libs-v8.3 (<< 8.2.pl1)
 Description: proof assistant for higher-order logic (toplevel and compiler)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
@@ -51,10 +51,10 @@ Description: proof assistant for higher-order logic (toplevel and compiler)
  edited using emacs and xemacs. This requires the proofgeneral
  package to be installed.
 
-Package: coqide
+Package: coqide-v8.3
 Architecture: any
 Depends:
- coq (= ${binary:Version}),
+ coq-v8.3 (= ${binary:Version}),
  ${ocaml:Depends},
  ${shlibs:Depends},
  ${misc:Depends}
@@ -66,12 +66,12 @@ Description: proof assistant for higher-order logic (gtk interface)
  This package provides CoqIde, a graphical user interface for
  developing proofs.
 
-Package: coq-theories
+Package: coq-theories-v8.3
 Architecture: all
-Depends: coq-${F:CoqABI}, ${misc:Depends}
-Recommends: coq (>= 8.0)
-Breaks: coq-doc (<= 8.0pl1.0-2), coq-libs (<< 8.2.pl1)
-Replaces: coq-libs (<< 8.2.pl1)
+Depends: coq-v8.3-${F:CoqABI}, ${misc:Depends}
+Recommends: coq-v8.3 (>= 8.0)
+Breaks: coq-doc-v8.3 (<= 8.0pl1.0-2), coq-libs-v8.3 (<< 8.2.pl1)
+Replaces: coq-libs-v8.3 (<< 8.2.pl1)
 Description: proof assistant for higher-order logic (theories)
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
@@ -80,7 +80,7 @@ Description: proof assistant for higher-order logic (theories)
  This package provides existing theories that new proofs can be
  based upon, including theories of arithmetic and Boolean values.
 
-Package: libcoq-ocaml
+Package: libcoq-ocaml-v8.3
 Section: ocaml
 Architecture: any
 Depends:
@@ -88,8 +88,8 @@ Depends:
  ${shlibs:Depends},
  ${misc:Depends}
 Provides: ${ocaml:Provides}
-Breaks: coq (<< 8.3~), libcoq-ocaml-dev (<< 8.3~), coq-libs
-Replaces: coq (<< 8.3~), libcoq-ocaml-dev (<< 8.3~), coq-libs
+Breaks: coq-v8.3 (<< 8.3~), libcoq-ocaml-dev-v8.3 (<< 8.3~), coq-libs-v8.3
+Replaces: coq-v8.3 (<< 8.3~), libcoq-ocaml-dev-v8.3 (<< 8.3~), coq-libs-v8.3
 Description: runtime libraries for Coq
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal
@@ -97,17 +97,17 @@ Description: runtime libraries for Coq
  .
  This package provides runtime libraries for Coq.
 
-Package: libcoq-ocaml-dev
+Package: libcoq-ocaml-dev-v8.3
 Section: ocaml
 Architecture: any
 Depends:
- coq (= ${binary:Version}),
+ coq-v8.3 (= ${binary:Version}),
  ${ocaml:Depends},
  ${shlibs:Depends},
  ${misc:Depends}
 Provides: ${ocaml:Provides}
-Breaks: coq (<< 8.2-1+dfsg-1), coq-libs (<< 8.2.pl1)
-Replaces: coq (<< 8.2-1+dfsg-1), coq-libs (<< 8.2.pl1)
+Breaks: coq-v8.3 (<< 8.2-1+dfsg-1), coq-libs-v8.3 (<< 8.2.pl1)
+Replaces: coq-v8.3 (<< 8.2-1+dfsg-1), coq-libs-v8.3 (<< 8.2.pl1)
 Description: development libraries and tools for Coq
  Coq is a proof assistant for higher-order logic, which allows the
  development of computer programs consistent with their formal

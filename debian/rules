@@ -22,8 +22,8 @@ ADDPREF := COQINSTALLPREFIX=$(COQPREF) OLDROOT=
 
 PACKAGES := $(shell dh_listpackages)
 
-COQ_VERSION := 8.3pl4
-COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
+COQ_VERSION := 8.3
+COQ_ABI := v$(COQ_VERSION)+$(OCAML_ABI)
 
 CONFIGUREOPTS := --arch Linux --prefix /usr --mandir /usr/share/man \
   --emacslib /usr/share/emacs/site-lisp/coq \
@@ -62,7 +62,7 @@ else
 endif
 # Check that $(COQ_VERSION) has the right value
 	ACTUAL_COQ_VERSION="$$(./bin/coqc --version | awk '/version/{print $$6}')"; \
-	if [ "$$ACTUAL_COQ_VERSION" != "$(COQ_VERSION)" ]; then \
+	if [[ "$$ACTUAL_COQ_VERSION" != $(COQ_VERSION)* ]]; then \
 	  echo "Please set COQ_VERSION to $$ACTUAL_COQ_VERSION in debian/rules"; \
 	  exit 2; \
 	fi
@@ -76,9 +76,9 @@ override_dh_auto_install:
 	$(MAKE) $(ADDPREF) install
 	find debian/tmp -regextype posix-awk \
 	  -regex '.*\.(cm[xi]|cmxa|[ao])$$' \
-	  >> debian/libcoq-ocaml-dev.install
+	  >> debian/libcoq-ocaml-dev-v8.3.install
 	find debian/tmp -name '*.vo' -printf '%P\n' \
-	  >> debian/coq-theories.install
+	  >> debian/coq-theories-v8.3.install
 
 .PHONY: override_dh_install
 override_dh_install:
