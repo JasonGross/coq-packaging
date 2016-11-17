@@ -1,3 +1,9 @@
+coq (trunk~git) experimental; urgency=low
+
+  * Make it trunk for numbering.
+
+ -- Jason S. Gross <jgross@mit.edu>  Thu, 17 Nov 2016 12:59:09 -0500
+
 coq (8.6~git) experimental; urgency=low
 
   * Make it 8.6 for numbering.
