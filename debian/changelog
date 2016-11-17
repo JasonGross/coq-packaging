@@ -1,4 +1,4 @@
-coq (trunk~git) experimental; urgency=low
+coq (8.trunk~git) experimental; urgency=low
 
   * Make it trunk for numbering.
 
