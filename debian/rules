@@ -93,6 +93,8 @@ override_dh_install:
 
 .PHONY: override_dh_gencontrol
 override_dh_gencontrol:
+	dh_listpackages # wtf is going on with PACKAGES not containing coq-theories?
+	ls debian
 	for u in $(PACKAGES); do \
 	  echo 'F:OCamlABI=$(OCAML_ABI)' >> debian/$$u.substvars; \
 	  echo 'F:CoqABI=$(COQ_ABI)' >> debian/$$u.substvars; \
