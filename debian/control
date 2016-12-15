@@ -25,7 +25,7 @@ Vcs-Git: git://anonscm.debian.org/pkg-ocaml-maint/packages/coq.git
 Package: coq
 Architecture: any
 Depends:
- coq-theories (= ${source:Version}),
+ coq-theories (= ${binary:Version}),
  emacsen-common,
  ${ocaml:Depends},
  ${shlibs:Depends},
@@ -69,7 +69,7 @@ Description: proof assistant for higher-order logic (gtk interface)
  developing proofs.
 
 Package: coq-theories
-Architecture: all
+Architecture: any
 Depends: coq-${F:CoqABI}, ${misc:Depends}
 Recommends: coq (>= 8.0)
 Breaks: coq-doc (<= 8.0pl1.0-2), coq-libs (<< 8.2.pl1)
