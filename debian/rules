@@ -74,7 +74,6 @@ override_dh_auto_test:
 .PHONY: override_dh_auto_install
 override_dh_auto_install:
 	$(MAKE) $(ADDPREF) install
-	cat debian/coq.install.in
 	find debian/tmp -regextype posix-awk \
 	  -regex '.*\.(cm[xio]|cmxa|[ao])$$' \
 	  | grep -v 'grammar/compat5.cmo' \
