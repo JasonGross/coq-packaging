@@ -1,3 +1,9 @@
+coq (8.master~git) experimental; urgency=medium
+
+  * Make it master for numbering
+
+ -- Jason Gross <jgross@mit.edu>  Thu, 06 Jul 2017 17:33:30 -0400
+
 coq (8.trunk~git) experimental; urgency=low
 
   * Make it trunk for numbering.
