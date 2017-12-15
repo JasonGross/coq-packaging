@@ -116,5 +116,5 @@ Description: development libraries and tools for Coq
  development of computer programs consistent with their formal
  specification. It is developed using Objective Caml and Camlp5.
  .
- This package provides coqmktop, and libraries needed to develop
- OCaml-side extensions to Coq.
+ This package provide libraries needed to develop OCaml-side
+ extensions to Coq.
