@@ -14,7 +14,7 @@ Build-Depends:
  ocaml-best-compilers,
  ocaml-findlib,
  camlp5 (>= 5.12-2~),
- liblablgtk2-ocaml-dev (>= 2.14),
+ liblablgtk2-ocaml-dev (>= 2.18.3),
  liblablgtksourceview2-ocaml-dev,
  texlive-latex-extra,
  hevea (>= 1.10-7)
