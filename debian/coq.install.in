@@ -7,6 +7,9 @@ usr/bin/coqtop*
 usr/bin/coqwc*
 usr/bin/gallina*
 usr/bin/coqworkmgr*
+usr/bin/coqproofworker*
+usr/bin/coqqueryworker*
+usr/bin/coqtacticworker*
 usr/lib/coq/plugins/micromega/csdpcert
 usr/lib/coq/tools/coqdoc/coqdoc.css
 usr/lib/coq/tools/coqdoc/coqdoc.sty
