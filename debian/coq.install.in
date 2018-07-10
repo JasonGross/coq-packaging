@@ -5,7 +5,6 @@ usr/bin/coq_makefile*
 usr/bin/coq-tex*
 usr/bin/coqtop*
 usr/bin/coqwc*
-usr/bin/gallina*
 usr/bin/coqworkmgr*
 usr/bin/coqproofworker*
 usr/bin/coqqueryworker*
@@ -26,7 +25,6 @@ usr/share/man/man1/coq_makefile*
 usr/share/man/man1/coq-tex*
 usr/share/man/man1/coqtop*
 usr/share/man/man1/coqwc*
-usr/share/man/man1/gallina*
 usr/share/texmf/tex/latex/misc/coqdoc.sty
 debian/coq.xpm                          usr/share/pixmaps
 debian/coqvars.mk                       usr/share/coq
