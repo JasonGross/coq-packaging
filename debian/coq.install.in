@@ -17,7 +17,6 @@ usr/lib/coq/tools/TimeFileMaker.py
 usr/lib/coq/tools/make-both-time-files.py
 usr/lib/coq/tools/make-one-time-file.py
 usr/lib/coq/tools/make-both-single-timing-files.py
-usr/share/emacs/site-lisp/coq/
 usr/share/man/man1/coqc*
 usr/share/man/man1/coqdep*
 usr/share/man/man1/coqdoc*
