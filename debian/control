@@ -10,10 +10,10 @@ Standards-Version: 3.9.5
 Build-Depends:
  debhelper (>= 9),
  dh-ocaml (>= 0.9.5~),
- ocaml-nox (>= 4),
+ ocaml-nox (>= 4.02.3),
  ocaml-best-compilers,
- ocaml-findlib (>= 1.4),
- camlp5 (>= 5.12-2~),
+ ocaml-findlib (>= 1.4.1),
+ camlp5 (>= 6.06),
  liblablgtk2-ocaml-dev (>= 2.18.3),
  liblablgtksourceview2-ocaml-dev,
  texlive-latex-extra,
@@ -38,7 +38,8 @@ Suggests:
  ledit | readline-editor,
  libcoq-ocaml-dev,
  why (>= 2.19),
- coq-doc
+ coq-doc,
+ python
 Breaks: coq-libs (<< 8.2.pl1)
 Replaces: coq-libs (<< 8.2.pl1)
 Description: proof assistant for higher-order logic (toplevel and compiler)
