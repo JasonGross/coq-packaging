@@ -14,8 +14,8 @@ Build-Depends:
  ocaml-best-compilers,
  ocaml-findlib (>= 1.4.1),
  camlp5 (>= 6.06),
- liblablgtk2-ocaml-dev (>= 2.18.3),
- liblablgtksourceview2-ocaml-dev,
+ liblablgtk3-ocaml-dev,
+ liblablgtksourceview3-ocaml-dev,
  texlive-latex-extra,
  hevea (>= 1.10-7)
 Homepage: http://coq.inria.fr/
