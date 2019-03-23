@@ -74,6 +74,7 @@ override_dh_auto_test:
 .PHONY: override_dh_auto_install
 override_dh_auto_install:
 	$(MAKE) $(ADDPREF) install
+	rm -f /usr/bin/coqidetop /usr/bin/coqidetop.opt /usr/share/man/man1/coqide.1 # https://github.com/coq/coq/issues/9820
 	find debian/tmp -regextype posix-awk \
 	  -regex '.*\.(cm[xio]|cmxa|[ao])$$' \
 	  >> debian/libcoq-ocaml-dev.install
