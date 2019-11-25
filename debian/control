@@ -13,7 +13,6 @@ Build-Depends:
  ocaml-nox (>= 4.05.0),
  ocaml-best-compilers,
  ocaml-findlib (>= 1.4.1),
- camlp5 (>= 6.06),
  texlive-latex-extra,
  hevea (>= 1.10-7)
 Homepage: http://coq.inria.fr/
