@@ -1,3 +1,9 @@
+coq (8.11~git) UNRELEASED; urgency=medium
+
+  * Make it 8.11 for numbering
+
+ -- Jason Gross <jgross@mit.edu>  Sun, 24 Nov 2019 20:54:20 -0500
+
 coq (8.master~git) experimental; urgency=medium
 
   * Make it master for numbering
