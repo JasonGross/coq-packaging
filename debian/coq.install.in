@@ -11,6 +11,7 @@ usr/bin/coqqueryworker*
 usr/bin/coqtacticworker*
 usr/bin/coqpp*
 usr/bin/votour*
+use/bin/ocamllibdep*
 usr/lib/coq/revision
 usr/lib/coq/plugins/micromega/csdpcert
 usr/lib/coq/tools/coqdoc/coqdoc.css
