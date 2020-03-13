@@ -45,9 +45,7 @@ build:
 
 .PHONY: override_dh_auto_configure
 override_dh_auto_configure:
-	ocamlfind query num
 	./configure $(CONFIGUREOPTS)
-
 
 .PHONY: override_dh_auto_build
 override_dh_auto_build:
