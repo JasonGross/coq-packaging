@@ -45,6 +45,7 @@ build:
 
 .PHONY: override_dh_auto_configure
 override_dh_auto_configure:
+	ocamlfind query -format "%v" lablgtk3 || true
 	./configure $(CONFIGUREOPTS)
 
 .PHONY: override_dh_auto_build
