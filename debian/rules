@@ -29,7 +29,8 @@ CONFIGUREOPTS := -arch Linux -prefix /usr -mandir /usr/share/man \
   -configdir /etc/xdg/coq \
   -emacslib /usr/share/emacs/site-lisp/coq \
   -browser "/usr/bin/x-www-browser %s &" \
-  -with-doc no -vmbyteflags "-dllib,-lcoqrun"
+  -with-doc no -vmbyteflags "-dllib,-lcoqrun" \
+  -coqide no
 
 export OCAMLINIT_SED += \
   -e 's%@CoqVersion@%$(COQ_VERSION)%' \
@@ -74,6 +75,7 @@ override_dh_auto_test:
 .PHONY: override_dh_auto_install
 override_dh_auto_install:
 	$(MAKE) $(ADDPREF) install
+	rm -f debian/tmp/usr/bin/coqidetop debian/tmp/usr/bin/coqidetop.opt debian/tmp/usr/share/man/man1/coqide.1 # https://github.com/coq/coq/issues/9820
 	find debian/tmp -regextype posix-awk \
 	  -regex '.*\.(cm[xio]|cmxa|[ao])$$' \
 	  >> debian/libcoq-ocaml-dev.install
@@ -88,7 +90,6 @@ override_dh_auto_install:
 .PHONY: override_dh_install
 override_dh_install:
 	dh_install --fail-missing
-	cp debian/coq.xpm debian/coqide/usr/share/pixmaps/coqide.xpm
 
 .PHONY: override_dh_gencontrol
 override_dh_gencontrol:
