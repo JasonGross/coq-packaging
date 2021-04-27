@@ -13,6 +13,7 @@ Build-Depends:
  ocaml-nox (>= 4.05.0),
  ocaml-best-compilers,
  ocaml-findlib (>= 1.8.0),
+ dune (>= 2.5.1),
  libzarith-ocaml-dev (>= 1.10),
  texlive-latex-extra,
  hevea (>= 1.10-7)
