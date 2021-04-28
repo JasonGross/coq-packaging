@@ -57,7 +57,7 @@ ifeq ($(BUILDCACHE),)
 # timeout because of lack of output)
 
 	$(MAKE) world STRIP=true
-	$(MAKE) DOC_TARGETS=$(HTMLDOC) $(HTMLDOC)
+	$(MAKE) _build/default/install/$(HTMLDOC)
 else
 	rsync -a --exclude=debian --exclude=.git $(BUILDCACHE)/ .
 endif
