@@ -15,8 +15,6 @@ export VERBOSE=1
 
 include /usr/share/ocaml/ocamlvars.mk
 
-HTMLDOC := doc/stdlib/html/index.html
-
 COQPREF := $(CURDIR)/debian/tmp
 ADDPREF := COQINSTALLPREFIX=$(COQPREF) OLDROOT=
 
@@ -57,7 +55,7 @@ ifeq ($(BUILDCACHE),)
 # timeout because of lack of output)
 
 	$(MAKE) world STRIP=true
-	$(MAKE) _build/default/install/$(HTMLDOC)
+	$(MAKE) doc-html
 else
 	rsync -a --exclude=debian --exclude=.git $(BUILDCACHE)/ .
 endif
