@@ -15,8 +15,8 @@ export VERBOSE=1
 
 include /usr/share/ocaml/ocamlvars.mk
 
-COQPREF := $(CURDIR)/debian/tmp
-ADDPREF := COQINSTALLPREFIX=$(COQPREF) OLDROOT=
+DESTDIR := $(CURDIR)/debian/tmp
+ADDPREF := DESTDIR=$(DESTDIR)
 
 PACKAGES := $(shell dh_listpackages)
 
