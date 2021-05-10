@@ -20,7 +20,7 @@ ADDPREF := DESTDIR=$(DESTDIR)
 
 PACKAGES := $(shell dh_listpackages)
 
-COQ_VERSION := v8.13
+COQ_VERSION := v8.14
 COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
 
 CONFIGUREOPTS := -arch Linux -prefix /usr -mandir /usr/share/man \
