@@ -74,7 +74,7 @@ override_dh_auto_install:
 	$(MAKE) $(ADDPREF) install
 	rm -f debian/tmp/usr/bin/coqidetop debian/tmp/usr/bin/coqidetop.opt debian/tmp/usr/share/man/man1/coqide.1 # https://github.com/coq/coq/issues/9820
 	find debian/tmp -regextype posix-awk \
-	  -regex '.*\.(cm[xio]|cmxa|[ao])$$' \
+	  -regex '.*\.(cm[xiot]|cmxa|cmti|mli|ml|[ao])$$' \
 	  >> debian/libcoq-ocaml-dev.install
 	find debian/tmp -regextype posix-awk \
 	  -regex '.*\.(vo|vos|v|glob)$$' -printf '%P\n' \
