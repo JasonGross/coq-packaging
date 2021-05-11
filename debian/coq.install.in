@@ -26,6 +26,8 @@ usr/lib/coq-core/tools/make-one-time-file.py
 usr/lib/coq-core/tools/make-both-single-timing-files.py
 usr/doc/coq-core/README.md
 usr/doc/coq-core/LICENSE
+usr/doc/coqide-server/README.md
+usr/doc/coqide-server/LICENSE
 usr/share/man/man1/coqc*
 usr/share/man/man1/coqdep*
 usr/share/man/man1/coqdoc*

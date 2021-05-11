@@ -6,9 +6,4 @@ usr/share/coq/coq_style.xml
 usr/share/coq/coq.lang
 usr/share/coq/coq-ssreflect.lang
 usr/share/doc/coq/FAQ-CoqIde
-usr/doc/coqide-server/README.md
-usr/doc/coqide-server/LICENSE
-usr/lib/coqide-server/META
-usr/lib/coqide-server/opam
-usr/lib/coqide-server/dune
 debian/coqide.desktop    usr/share/applications
