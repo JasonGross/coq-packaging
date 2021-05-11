@@ -73,7 +73,7 @@ override_dh_auto_test:
 override_dh_auto_install:
 	$(MAKE) $(ADDPREF) install
 	find debian/tmp -regextype posix-awk \
-	  -regex '.*\.(cm[xio]|cmxa|[ao])$$' \
+	  -regex '.*\.(cm[xiot]|cmxa|cmti|mli|ml|[ao])$$' \
 	  >> debian/libcoq-ocaml-dev.install
 	find debian/tmp -regextype posix-awk \
 	  -regex '.*\.(vo|vos|v|glob)$$' -printf '%P\n' \
