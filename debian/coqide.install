@@ -5,5 +5,4 @@ usr/share/coq/default.bindings
 usr/share/coq/coq_style.xml
 usr/share/coq/coq.lang
 usr/share/coq/coq-ssreflect.lang
-usr/share/doc/coq/FAQ-CoqIde
 debian/coqide.desktop    usr/share/applications
