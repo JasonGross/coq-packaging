@@ -3,5 +3,5 @@ usr/lib/coq-core/META
 usr/lib/coq-core
 usr/lib/coqide-server/META
 usr/lib/coqide-server/opam
-usr/lib/coqide-server/dune
+usr/lib/coqide-server/dune-package
 # *.cma files will be added here
