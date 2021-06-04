@@ -35,6 +35,6 @@ usr/share/man/man1/coq_makefile*
 usr/share/man/man1/coq-tex*
 usr/share/man/man1/coqtop*
 usr/share/man/man1/coqwc*
-usr/share/coq-core/texmf/tex/latex/misc/coqdoc.sty  usr/share/texmf/tex/latex/misc/coqdoc.sty
+usr/share/texmf/tex/latex/misc/coqdoc.sty
 debian/coq.xpm                          usr/share/pixmaps
 debian/coqvars.mk                       usr/share/coq
