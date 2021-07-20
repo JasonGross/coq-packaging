@@ -12,7 +12,6 @@ usr/bin/coqtacticworker*
 usr/bin/coqpp*
 usr/bin/ocamllibdep
 usr/bin/votour*
-usr/bin/fake_ide*
 usr/bin/csdpcert*
 usr/bin/coqidetop*
 usr/bin/coqnative*
