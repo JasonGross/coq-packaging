@@ -26,7 +26,7 @@ COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
 CONFIGUREOPTS := -arch Linux -prefix /usr -mandir /usr/share/man \
   -configdir /etc/xdg/coq \
   -browser "/usr/bin/x-www-browser %s &" \
-  -with-doc no -vmbyteflags "-dllib,-lcoqrun"
+  -with-doc no
 
 export OCAMLINIT_SED += \
   -e 's%@CoqVersion@%$(COQ_VERSION)%' \
