@@ -25,7 +25,6 @@ COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
 
 CONFIGUREOPTS := -arch Linux -prefix /usr -mandir /usr/share/man \
   -configdir /etc/xdg/coq \
-  -docdir /usr/share/doc \
   -browser "/usr/bin/x-www-browser %s &" \
   -with-doc no
 

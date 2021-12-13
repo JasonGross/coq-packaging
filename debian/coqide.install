@@ -8,8 +8,8 @@ usr/share/coq/coq-ssreflect.lang
 usr/lib/coqide/META
 usr/lib/coqide/dune-package
 usr/lib/coqide/opam
-usr/share/doc/coqide/odoc-pages/index.mld
-usr/share/doc/coqide/LICENSE
-usr/share/doc/coqide/README.md
-usr/share/doc/coqide/FAQ
+usr/doc/coqide/odoc-pages/index.mld  usr/share/doc/coqide/odoc-pages/index.mld
+usr/doc/coqide/LICENSE   usr/share/doc/coqide/LICENSE
+usr/doc/coqide/README.md usr/share/doc/coqide/README.md
+usr/doc/coqide/FAQ       usr/share/doc/coqide/FAQ
 debian/coqide.desktop    usr/share/applications
