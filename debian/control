@@ -14,6 +14,7 @@ Build-Depends:
  ocaml-best-compilers,
  ocaml-findlib (>= 1.8.0),
  dune (>= 2.5.1),
+ libfindlib-ocaml-dev (>= 1.8.0),
  libzarith-ocaml-dev (>= 1.10),
  texlive-latex-extra,
  hevea (>= 1.10-7)
