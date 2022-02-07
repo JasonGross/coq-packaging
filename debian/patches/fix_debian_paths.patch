@@ -1,0 +1,987 @@
+Description: use Debian paths everywhere
+Author: first written by B.Barenblat in 2019, updated by J.Puydt in 2021
+Forwarded: not-needed
+
+--- coq.orig/tools/make-one-time-file.py
++++ coq/tools/make-one-time-file.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!/usr/bin/python3
+ import sys
+ from TimeFileMaker import *
+ 
+--- coq.orig/dev/tools/update-compat.py
++++ coq/dev/tools/update-compat.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!/usr/bin/python3
+ import os, re, sys, subprocess
+ from io import open
+ 
+@@ -305,7 +305,7 @@
+ 
+ def update_test_suite_run(**args):
+     contents = get_file(TEST_SUITE_RUN_PATH)
+-    new_contents = r'''#!/usr/bin/env bash
++    new_contents = r'''#!/bin/bash
+ 
+ # allow running this script from any directory by basing things on where the script lives
+ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+--- coq.orig/dev/bench/bench.sh
++++ coq/dev/bench/bench.sh
+@@ -1,4 +1,4 @@
+-#! /usr/bin/env bash
++#! /bin/bash
+ 
+ # ASSUMPTIONS:
+ # - the OPAM packages, specified by the user, are topologically sorted wrt. to the dependency relationship.
+--- coq.orig/dev/bench/render_results
++++ coq/dev/bench/render_results
+@@ -1,4 +1,4 @@
+-#! /usr/bin/env ocaml
++#! /usr/bin/ocaml
+ 
+ (* ASSUMPTIONS:
+    - the 1-st command line argument (working directory):
+--- coq.orig/dev/bench/sort-by-deps
++++ coq/dev/bench/sort-by-deps
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env ocaml
++#!/usr/bin/ocaml
+ 
+ let get_pkg_name arg =
+   List.nth (String.split_on_char ':' arg) 0
+--- coq.orig/dev/bench/sort-by-deps.sh
++++ coq/dev/bench/sort-by-deps.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ program_name="$0"
+ program_path=$(readlink -f "${program_name%/*}")
+--- coq.orig/dev/bench/timelog2html
++++ coq/dev/bench/timelog2html
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env lua5.1
++#!/usr/bin/lua5.1
+ 
+ args = {...}
+ 
+--- coq.orig/dev/ci/ci-aac_tactics.sh
++++ coq/dev/ci/ci-aac_tactics.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-argosy.sh
++++ coq/dev/ci/ci-argosy.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-basic-overlay.sh
++++ coq/dev/ci/ci-basic-overlay.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # This is the list of repositories used by the CI scripts, unless overridden
+ # by a call to the "overlay" function in ci-common
+--- coq.orig/dev/ci/ci-bbv.sh
++++ coq/dev/ci/ci-bbv.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-bedrock2.sh
++++ coq/dev/ci/ci-bedrock2.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-bignums.sh
++++ coq/dev/ci/ci-bignums.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-color.sh
++++ coq/dev/ci/ci-color.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-common.sh
++++ coq/dev/ci/ci-common.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -xe
+ 
+--- coq.orig/dev/ci/ci-coq_dpdgraph.sh
++++ coq/dev/ci/ci-coq_dpdgraph.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-coq_performance_tests.sh
++++ coq/dev/ci/ci-coq_performance_tests.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-coq_tools.sh
++++ coq/dev/ci/ci-coq_tools.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-coqhammer.sh
++++ coq/dev/ci/ci-coqhammer.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-coqprime.sh
++++ coq/dev/ci/ci-coqprime.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-coqtail.sh
++++ coq/dev/ci/ci-coqtail.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-coquelicot.sh
++++ coq/dev/ci/ci-coquelicot.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-corn.sh
++++ coq/dev/ci/ci-corn.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-cross_crypto.sh
++++ coq/dev/ci/ci-cross_crypto.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-deriving.sh
++++ coq/dev/ci/ci-deriving.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-elpi.sh
++++ coq/dev/ci/ci-elpi.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-engine_bench.sh
++++ coq/dev/ci/ci-engine_bench.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-equations.sh
++++ coq/dev/ci/ci-equations.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-ext_lib.sh
++++ coq/dev/ci/ci-ext_lib.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-fiat_crypto.sh
++++ coq/dev/ci/ci-fiat_crypto.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-fiat_crypto_legacy.sh
++++ coq/dev/ci/ci-fiat_crypto_legacy.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-fiat_crypto_ocaml.sh
++++ coq/dev/ci/ci-fiat_crypto_ocaml.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-fiat_parsers.sh
++++ coq/dev/ci/ci-fiat_parsers.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-flocq.sh
++++ coq/dev/ci/ci-flocq.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-fourcolor.sh
++++ coq/dev/ci/ci-fourcolor.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-gappa.sh
++++ coq/dev/ci/ci-gappa.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-geocoq.sh
++++ coq/dev/ci/ci-geocoq.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-hott.sh
++++ coq/dev/ci/ci-hott.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-iris.sh
++++ coq/dev/ci/ci-iris.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-math_classes.sh
++++ coq/dev/ci/ci-math_classes.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-mathcomp.sh
++++ coq/dev/ci/ci-mathcomp.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-mczify.sh
++++ coq/dev/ci/ci-mczify.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-menhir.sh
++++ coq/dev/ci/ci-menhir.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-metacoq.sh
++++ coq/dev/ci/ci-metacoq.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-mtac2.sh
++++ coq/dev/ci/ci-mtac2.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-oddorder.sh
++++ coq/dev/ci/ci-oddorder.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-paramcoq.sh
++++ coq/dev/ci/ci-paramcoq.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-perennial.sh
++++ coq/dev/ci/ci-perennial.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-quickchick.sh
++++ coq/dev/ci/ci-quickchick.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-reduction_effects.sh
++++ coq/dev/ci/ci-reduction_effects.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-relation_algebra.sh
++++ coq/dev/ci/ci-relation_algebra.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-rewriter.sh
++++ coq/dev/ci/ci-rewriter.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-sf.sh
++++ coq/dev/ci/ci-sf.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-simple_io.sh
++++ coq/dev/ci/ci-simple_io.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-stdlib2.sh
++++ coq/dev/ci/ci-stdlib2.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-tlc.sh
++++ coq/dev/ci/ci-tlc.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-unicoq.sh
++++ coq/dev/ci/ci-unicoq.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-unimath.sh
++++ coq/dev/ci/ci-unimath.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-verdi_raft.sh
++++ coq/dev/ci/ci-verdi_raft.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-vscoq.sh
++++ coq/dev/ci/ci-vscoq.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-vst.sh
++++ coq/dev/ci/ci-vst.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/ci/ci-wrapper.sh
++++ coq/dev/ci/ci-wrapper.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # Use this script to preserve the exit code of $CI_SCRIPT when piping
+ # it to `tee time-of-build.log`.  We have a separate script, because
+--- coq.orig/dev/ci/nix/shell
++++ coq/dev/ci/nix/shell
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env sh
++#!/usr/bin/sh
+ 
+ ## This file should be run from the root of the Coq source tree
+ 
+--- coq.orig/dev/dune-dbg.in
++++ coq/dev/dune-dbg.in
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # Run in a proper install dune env.
+ case $1 in
+--- coq.orig/dev/lint-commits.sh
++++ coq/dev/lint-commits.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # A script to check prettyness for a range of commits
+ set -e
+--- coq.orig/dev/lint-repository.sh
++++ coq/dev/lint-repository.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # A script to check prettyness over the repository.
+ 
+--- coq.orig/dev/shim/dune
++++ coq/dev/shim/dune
+@@ -6,7 +6,7 @@
+  (action
+   (with-stdout-to coqtop-prelude
+    (progn
+-    (echo "#!/usr/bin/env bash\n")
++    (echo "#!/bin/bash\n")
+     (bash "echo '\"$(dirname \"$0\")\"/%{bin:coqtop} -coqlib \"$(dirname \"$0\")/%{project_root}\" \"$@\"'")
+     (run chmod +x %{targets})))))
+ 
+@@ -18,7 +18,7 @@
+  (action
+   (with-stdout-to coqc-prelude
+    (progn
+-    (echo "#!/usr/bin/env bash\n")
++    (echo "#!/bin/bash\n")
+     (bash "echo '\"$(dirname \"$0\")\"/%{bin:coqc} -coqlib \"$(dirname \"$0\")\"/%{project_root} \"$@\"'")
+     (run chmod +x %{targets})))))
+ 
+@@ -54,7 +54,7 @@
+  (action
+   (with-stdout-to %{targets}
+    (progn
+-    (echo "#!/usr/bin/env bash\n")
++    (echo "#!/bin/bash\n")
+     (bash "echo '\"$(dirname \"$0\")\"/%{bin:coqtop.byte} -coqlib \"$(dirname \"$0\")\"/%{project_root} \"$@\"'")
+     (run chmod +x %{targets})))))
+ 
+@@ -75,6 +75,6 @@
+  (action
+   (with-stdout-to coqide-prelude
+    (progn
+-    (echo "#!/usr/bin/env bash\n")
++    (echo "#!/bin/bash\n")
+     (bash "echo '\"$(dirname \"$0\")\"/%{bin:coqide} -coqlib \"$(dirname \"$0\")\"/%{project_root} \"$@\"'")
+     (run chmod +x %{targets})))))
+--- coq.orig/dev/tools/backport-pr.sh
++++ coq/dev/tools/backport-pr.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/dev/tools/check-eof-newline.sh
++++ coq/dev/tools/check-eof-newline.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # Usage: check-eof-newline.sh [--fix] FILES...
+ # Detect missing end of file newlines for FILES.
+--- coq.orig/dev/tools/check-overlays.sh
++++ coq/dev/tools/check-overlays.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ for f in $(git ls-files "dev/ci/user-overlays/")
+ do
+--- coq.orig/dev/tools/check-owners-pr.sh
++++ coq/dev/tools/check-owners-pr.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env sh
++#!/usr/bin/sh
+ 
+ usage() {
+     { echo "usage: $0 PR [ARGS]..."
+--- coq.orig/dev/tools/check-owners.sh
++++ coq/dev/tools/check-owners.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # Determine CODEOWNERS of the files given in argument
+ # For a given commit range:
+--- coq.orig/dev/tools/create_overlays.sh
++++ coq/dev/tools/create_overlays.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # TODO:
+ #
+--- coq.orig/dev/tools/generate-release-changelog.sh
++++ coq/dev/tools/generate-release-changelog.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ set -o pipefail
+--- coq.orig/dev/tools/github-check-prs.py
++++ coq/dev/tools/github-check-prs.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!/usr/bin/python3
+ 
+ # Requires PyGithub https://pypi.python.org/pypi/PyGithub, for instance
+ # debian package: python3-github
+--- coq.orig/dev/tools/list-contributors.sh
++++ coq/dev/tools/list-contributors.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ # For compat with OSX which has a non-gnu sed which doesn't support -z
+ SED=`(which gsed || which sed) 2> /dev/null`
+ 
+--- coq.orig/dev/tools/make_git_revision.sh
++++ coq/dev/tools/make_git_revision.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ if [ -x `which git` ] && [ -d .git ] || git rev-parse --git-dir > /dev/null 2>&1
+ then
+--- coq.orig/dev/tools/merge-pr.sh
++++ coq/dev/tools/merge-pr.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ set -o pipefail
+--- coq.orig/dev/tools/notify-upstream-pins.sh
++++ coq/dev/tools/notify-upstream-pins.sh
+@@ -1,5 +1,5 @@
+ 
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # Script to notify upstreams that we need a tag to put in a platform/installer
+ 
+--- coq.orig/dev/tools/pin-ci.sh
++++ coq/dev/tools/pin-ci.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # Use this script to pin the commit used by the developments tracked by the CI
+ 
+--- coq.orig/doc/stdlib/make-library-index
++++ coq/doc/stdlib/make-library-index
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # Instantiate links to library files in index template
+ 
+--- coq.orig/doc/tools/coqrst/notations/fontsupport.py
++++ coq/doc/tools/coqrst/notations/fontsupport.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python2
++#!/usr/bin/python2
+ # -*- coding: utf-8 -*-
+ ##########################################################################
+ ##         #   The Coq Proof Assistant / The Coq Development Team       ##
+--- coq.orig/doc/tools/coqrst/regen_readme.py
++++ coq/doc/tools/coqrst/regen_readme.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!/usr/bin/python3
+ # -*- coding: utf-8 -*-
+ 
+ """Rebuild sphinx/README.rst from sphinx/README.template.rst."""
+--- coq.orig/test-suite/coq-makefile/camldep/run.sh
++++ coq/test-suite/coq-makefile/camldep/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ export PATH=$COQBIN:$PATH
+--- coq.orig/test-suite/coq-makefile/findlib-package-unpacked/run.sh
++++ coq/test-suite/coq-makefile/findlib-package-unpacked/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ . ../template/init.sh
+ mv src/test_plugin.mlpack src/test_plugin.mllib
+--- coq.orig/test-suite/coq-makefile/local-late-extension/run.sh
++++ coq/test-suite/coq-makefile/local-late-extension/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ . ../template/path-init.sh
+ 
+--- coq.orig/test-suite/coq-makefile/missing-install/run.sh
++++ coq/test-suite/coq-makefile/missing-install/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ . ../template/init.sh
+ 
+--- coq.orig/test-suite/coq-makefile/native1/run.sh
++++ coq/test-suite/coq-makefile/native1/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ if ! command -v ocamlopt; then
+     echo "Skipped: no ocamlopt"
+--- coq.orig/test-suite/coq-makefile/native2/run.sh
++++ coq/test-suite/coq-makefile/native2/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ if ! command -v ocamlopt; then
+     echo "Skipped: no ocamlopt"
+--- coq.orig/test-suite/coq-makefile/native3/run.sh
++++ coq/test-suite/coq-makefile/native3/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ if ! command -v ocamlopt; then
+     echo "Skipped: no ocamlopt"
+--- coq.orig/test-suite/coq-makefile/native4/run.sh
++++ coq/test-suite/coq-makefile/native4/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ if ! command -v ocamlopt; then
+     echo "Skipped: no ocamlopt"
+--- coq.orig/test-suite/coq-makefile/timing/precomputed-time-tests/001-correct-diff-sorting-order/run.sh
++++ coq/test-suite/coq-makefile/timing/precomputed-time-tests/001-correct-diff-sorting-order/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -x
+ set -e
+--- coq.orig/test-suite/coq-makefile/timing/precomputed-time-tests/002-single-file-sorting/run.sh
++++ coq/test-suite/coq-makefile/timing/precomputed-time-tests/002-single-file-sorting/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -x
+ set -e
+--- coq.orig/test-suite/coq-makefile/timing/precomputed-time-tests/003-non-utf8/run.sh
++++ coq/test-suite/coq-makefile/timing/precomputed-time-tests/003-non-utf8/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -x
+ set -e
+--- coq.orig/test-suite/coq-makefile/timing/precomputed-time-tests/004-per-file-fuzz/run.sh
++++ coq/test-suite/coq-makefile/timing/precomputed-time-tests/004-per-file-fuzz/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -x
+ set -e
+--- coq.orig/test-suite/coq-makefile/timing/precomputed-time-tests/005-correct-diff-sorting-order-mem/run.sh
++++ coq/test-suite/coq-makefile/timing/precomputed-time-tests/005-correct-diff-sorting-order-mem/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -x
+ set -e
+--- coq.orig/test-suite/coq-makefile/timing/precomputed-time-tests/006-zero-before/run.sh
++++ coq/test-suite/coq-makefile/timing/precomputed-time-tests/006-zero-before/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -x
+ set -e
+--- coq.orig/test-suite/coq-makefile/timing/precomputed-time-tests/007-no-output-sync/run.sh
++++ coq/test-suite/coq-makefile/timing/precomputed-time-tests/007-no-output-sync/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -x
+ set -e
+--- coq.orig/test-suite/coq-makefile/timing/precomputed-time-tests/run.sh
++++ coq/test-suite/coq-makefile/timing/precomputed-time-tests/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -x
+ set -e
+--- coq.orig/test-suite/misc/11170.sh
++++ coq/test-suite/misc/11170.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/test-suite/misc/13330.sh
++++ coq/test-suite/misc/13330.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ $coqc misc/13330/bug_13330.v
+ R=$?
+--- coq.orig/test-suite/misc/7704.sh
++++ coq/test-suite/misc/7704.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/test-suite/misc/changelog.sh
++++ coq/test-suite/misc/changelog.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ found=
+ for config in ../config/coq_config.py ../_build/default/config/coq_config.py; do
+--- coq.orig/test-suite/misc/coq_environment.sh
++++ coq/test-suite/misc/coq_environment.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ export COQBIN=$BIN
+ export PATH=$COQBIN:$PATH
+--- coq.orig/test-suite/misc/coq_makefile_destination_of.sh
++++ coq/test-suite/misc/coq_makefile_destination_of.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ export COQBIN=$BIN
+ export PATH=$COQBIN:$PATH
+--- coq.orig/test-suite/misc/coqc_dash_o.sh
++++ coq/test-suite/misc/coqc_dash_o.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ DOUT=misc/tmp_coqc_dash_o/
+ OUT=${DOUT}coqc_dash_o.vo
+--- coq.orig/test-suite/misc/coqtop_print-mod-uid.sh
++++ coq/test-suite/misc/coqtop_print-mod-uid.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ export COQBIN=$BIN
+ export PATH=$COQBIN:$PATH
+--- coq.orig/test-suite/misc/non-marshalable-state.sh
++++ coq/test-suite/misc/non-marshalable-state.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/test-suite/misc/poly-capture-global-univs.sh
++++ coq/test-suite/misc/poly-capture-global-univs.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/test-suite/misc/quotation_token.sh
++++ coq/test-suite/misc/quotation_token.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/test-suite/misc/redirect_printing.sh
++++ coq/test-suite/misc/redirect_printing.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ $coqc misc/redirect_printing.v
+ diff -u redirect_test.out misc/redirect_printing.out
+--- coq.orig/test-suite/misc/side-eff-leak-univs.sh
++++ coq/test-suite/misc/side-eff-leak-univs.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -e
+ 
+--- coq.orig/test-suite/misc/universes/build_all_stdlib.sh
++++ coq/test-suite/misc/universes/build_all_stdlib.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ echo "Require $(find ../../../theories ../../../plugins -type f -name "*.v" | \
+         sed 's/^.*\/theories\///' | sed 's/^.*\/plugins\///' | sed 's/\.v$//' | sed 's/\//./g') ."
+--- coq.orig/test-suite/misc/vio_checking.sh
++++ coq/test-suite/misc/vio_checking.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ set -ex
+ 
+--- coq.orig/test-suite/report.sh
++++ coq/test-suite/report.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # save failed logs to logs/, then print failure information
+ # returns failure code if any failed logs exist
+--- coq.orig/test-suite/tools/update-compat/run.sh
++++ coq/test-suite/tools/update-compat/run.sh
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env bash
++#!/bin/bash
+ 
+ # allow running this script from any directory by basing things on where the script lives
+ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+--- coq.orig/tools/make-both-single-timing-files.py
++++ coq/tools/make-both-single-timing-files.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!/usr/bin/python3
+ from TimeFileMaker import *
+ 
+ if __name__ == '__main__':
+--- coq.orig/tools/make-both-time-files.py
++++ coq/tools/make-both-time-files.py
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python3
++#!/usr/bin/python3
+ from TimeFileMaker import *
+ 
+ if __name__ == '__main__':
