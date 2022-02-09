@@ -1,8 +1,8 @@
-usr/lib/stublibs/dllcoqrun_stubs.so @OCamlDllDir@
-usr/lib/coq-core/META
-usr/lib/coq-core/opam
-usr/lib/coq-core/dune-package
-usr/lib/coqide-server/META
-usr/lib/coqide-server/opam
-usr/lib/coqide-server/dune-package
+usr/lib/ocaml/coq/stublibs/dllcoqrun_stubs.so @OCamlDllDir@
+usr/lib/ocaml/coq/coq-core/META
+usr/lib/ocaml/coq/coq-core/opam
+usr/lib/ocaml/coq/coq-core/dune-package
+usr/lib/ocaml/coq/coqide-server/META
+usr/lib/ocaml/coq/coqide-server/opam
+usr/lib/ocaml/coq/coqide-server/dune-package
 # *.cma files will be added here
