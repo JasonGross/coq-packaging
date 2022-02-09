@@ -83,6 +83,8 @@ override_dh_auto_install:
 	  >> debian/libcoq-ocaml.install
 	find debian/tmp -name '*.cmxs' -printf '%P\n' \
 	  >> debian/libcoq-ocaml.install
+	mkdir -p debian/tmp/usr/lib/ocaml
+	(cd debian/tmp/usr/lib/ocaml && ln -s ../coq-core)
 
 .PHONY: override_dh_install
 override_dh_install:
