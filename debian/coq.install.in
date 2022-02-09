@@ -15,14 +15,14 @@ usr/bin/votour*
 usr/bin/csdpcert*
 usr/bin/coqidetop*
 usr/bin/coqnative*
-usr/lib/coq-core/revision
-usr/lib/coq-core/tools/coqdoc/coqdoc.css
-usr/lib/coq-core/tools/coqdoc/coqdoc.sty
-usr/lib/coq-core/tools/CoqMakefile.in
-usr/lib/coq-core/tools/TimeFileMaker.py
-usr/lib/coq-core/tools/make-both-time-files.py
-usr/lib/coq-core/tools/make-one-time-file.py
-usr/lib/coq-core/tools/make-both-single-timing-files.py
+usr/lib/ocaml/coq/coq-core/revision
+usr/lib/ocaml/coq/coq-core/tools/coqdoc/coqdoc.css
+usr/lib/ocaml/coq/coq-core/tools/coqdoc/coqdoc.sty
+usr/lib/ocaml/coq/coq-core/tools/CoqMakefile.in
+usr/lib/ocaml/coq/coq-core/tools/TimeFileMaker.py
+usr/lib/ocaml/coq/coq-core/tools/make-both-time-files.py
+usr/lib/ocaml/coq/coq-core/tools/make-one-time-file.py
+usr/lib/ocaml/coq/coq-core/tools/make-both-single-timing-files.py
 usr/doc/coq-core/README.md              usr/share/doc/coq-core/README.md
 usr/doc/coq-core/LICENSE                usr/share/doc/coq-core/LICENSE
 usr/doc/coqide-server/README.md         usr/share/doc/coqide-server/README.md

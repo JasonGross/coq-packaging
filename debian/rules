@@ -20,11 +20,12 @@ ADDPREF := DESTDIR=$(DESTDIR)
 
 PACKAGES := $(shell dh_listpackages)
 
-COQ_VERSION := v8.14
+COQ_VERSION := v8.16
 COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
 
 CONFIGUREOPTS := -arch Linux -prefix /usr -mandir /usr/share/man \
   -configdir /etc/xdg/coq \
+  -libdir=/usr/lib/ocaml/coq \
   -docdir /usr/doc \
   -browser "/usr/bin/x-www-browser %s &" \
   -with-doc no
