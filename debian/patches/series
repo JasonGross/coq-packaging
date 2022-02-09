@@ -1,6 +1,2 @@
-fix_debian_paths.patch
-testsuite-bytecode
-remove-heavy-tests.patch
-remove-tests-that-need-coqlib.patch
-remove-bytecode-failing-tests.patch
-find_timing_scripts.patch
+0001-test-suite-success-Nsatz.v-comment-out-Ceva.patch
+0002-Disable-micromega-tests-on-Hurd.patch
