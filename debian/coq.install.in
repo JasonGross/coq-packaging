@@ -15,6 +15,7 @@ usr/bin/votour*
 usr/bin/csdpcert*
 usr/bin/coqidetop*
 usr/bin/coqnative*
+usr/lib/ocaml/coq-core
 usr/lib/coq-core/revision
 usr/lib/coq-core/tools/coqdoc/coqdoc.css
 usr/lib/coq-core/tools/coqdoc/coqdoc.sty
