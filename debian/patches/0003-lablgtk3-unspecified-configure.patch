@@ -1,0 +1,30 @@
+diff --git a/tools/configure/configure.ml b/tools/configure/configure.ml
+index 6f4787269b..8827dec69b 100644
+--- a/tools/configure/configure.ml
++++ b/tools/configure/configure.ml
+@@ -715,14 +715,17 @@ let get_lablgtkdir () =
+ 
+ let check_lablgtk_version () =
+   let v, _ = tryrun camlexec.find ["query"; "-format"; "%v"; "lablgtk3"] in
+-  try
+-    let vl = numeric_prefix_list v in
+-    let vn = List.map int_of_string vl in
+-    if vn < [3; 1; 0] then
+-      (false, v)
+-    else
+-      (true, v)
+-  with _ -> (false, v)
++  if String.equal v "[unspecified]" then
++    (true, v)
++  else
++    try
++      let vl = numeric_prefix_list v in
++      let vn = List.map int_of_string vl in
++      if vn < [3; 1; 0] then
++        (false, v)
++      else
++        (true, v)
++    with _ -> (false, v)
+ 
+ let pr_ide = function No -> "no" | Byte -> "only bytecode" | Opt -> "native"
+ 
