@@ -55,7 +55,7 @@ ifeq ($(BUILDCACHE),)
 # timeout because of lack of output)
 
 	$(MAKE) world STRIP=true
-	$(MAKE) doc-stdlib-html
+	$(MAKE) stdlib-html
 else
 	rsync -a --exclude=debian --exclude=.git $(BUILDCACHE)/ .
 endif
