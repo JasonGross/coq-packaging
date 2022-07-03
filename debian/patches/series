@@ -1,4 +1,3 @@
-testsuite-bytecode
 remove-heavy-tests.patch
 remove-tests-that-need-coqlib.patch
 remove-bytecode-failing-tests.patch
