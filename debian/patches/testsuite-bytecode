@@ -1,0 +1,16 @@
+Author:     Hugo Herbelin <Hugo.Herbelin@inria.fr>
+AuthorDate: Sat Apr 11 17:52:28 2020 +0200
+Upstream-commit 7a84ca84bba8dbdaaf40ddad479e5485172a6f23
+Description: Fix export of byte architecture flag to test-suite.
+
+--- coq.orig/Makefile.build
++++ coq/Makefile.build
+@@ -269,7 +269,7 @@
+ 
+ test-suite: world
+ 	$(MAKE) $(MAKE_TSOPTS) clean
+-	$(MAKE) $(MAKE_TSOPTS) all
++	$(MAKE) OPT=-$(BEST) $(MAKE_TSOPTS) all
+ 
+ ###########################################################################
+ # Compilation of .v files
