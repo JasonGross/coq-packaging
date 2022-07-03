@@ -5,3 +5,4 @@ remove-tests-that-need-coqlib.patch
 remove-bytecode-failing-tests.patch
 find_timing_scripts.patch
 fix_typo.patch
+lablgtk3-unspecified-configure.patch

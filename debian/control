@@ -9,8 +9,8 @@ Uploaders:
  Stéphane Glondu <glondu@debian.org>
 Standards-Version: 4.6.1
 Build-Depends:
- bash (>= 5.0),
- debhelper-compat (= 13),
+ bash,
+ debhelper-compat (>= 9),
  dh-coq,
  dh-exec,
  dh-ocaml (>= 0.9.5~),
@@ -19,12 +19,10 @@ Build-Depends:
  ocaml-nox (>= 4.05),
  ocaml-native-compilers,
  ocaml-findlib (>= 1.8.0),
- camlp5 (>= 6.14),
- liblablgtk3-ocaml-dev,
- liblablgtksourceview3-ocaml-dev (>= 3.0~beta8),
- libnum-ocaml-dev,
- libounit-ocaml-dev,
- libzarith-ocaml-dev,
+ libfindlib-ocaml-dev (>= 1.8.0),
+ libzarith-ocaml-dev (>= 1.10),
+ liblablgtk3-ocaml-dev (>= 3.1.2),
+ liblablgtksourceview3-ocaml-dev (>= 3.1.2),
  python3,
  rsync,
  tex-common
