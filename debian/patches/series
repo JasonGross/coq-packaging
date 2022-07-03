@@ -1,4 +1,3 @@
-fix_debian_paths.patch
 testsuite-bytecode
 remove-heavy-tests.patch
 remove-tests-that-need-coqlib.patch
