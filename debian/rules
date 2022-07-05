@@ -17,7 +17,7 @@ export OCAMLINIT_SED += \
   -e 's%@CoqABI@%$(COQ_ABI)%'
 
 %:
-	+dh $@ --with coq,ocaml,python3
+	+dh $@ --with ocaml
 
 override_dh_auto_configure:
 	./configure -prefix=/usr -libdir=/usr/lib/ocaml/coq -mandir=/usr/share/man
