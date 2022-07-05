@@ -947,7 +947,7 @@ Forwarded: not-needed
 -Lemma Z_rem_unique : forall a b q r : Z, 0 <= a -> 0 <= r < b -> a = b * q + r -> r = Z.rem a b. Proof. intros; nia. Qed.
 -Lemma Z_rem_wd : Morphisms.Proper (Morphisms.respectful Z.eq (Morphisms.respectful Z.eq Z.eq)) Z.rem. Proof. intros; nia. Qed.
 -*)
---- coq.orig/test-suite/bugs/closed/bug_4544.v
+--- coq.orig/test-suite/bugs/bug_4544.v
 +++ /dev/null
 @@ -1,1010 +0,0 @@
 -(* -*- mode: coq; coq-prog-args: ("-nois" "-indices-matter" "-R" "." "Top" "-top" "bug_oog_looping_rewrite_01") -*- *)
