@@ -10,8 +10,7 @@ Uploaders:
 Standards-Version: 4.6.1
 Build-Depends:
  bash,
- debhelper-compat (>= 9),
- dh-coq,
+ debhelper (>= 9),
  dh-exec,
  dh-ocaml (>= 0.9.5~),
  dh-python,
