@@ -20,7 +20,7 @@ Forwarded: Debian-specific
 --- coq.orig/tools/make-both-single-timing-files.py
 +++ coq/tools/make-both-single-timing-files.py
 @@ -1,4 +1,7 @@
- #!/usr/bin/python3
+ #!/usr/bin/env python3
 +
 +import sys
 +sys.path.insert(1, '/usr/lib/coq-core/tools')
@@ -30,7 +30,7 @@ Forwarded: Debian-specific
 --- coq.orig/tools/make-both-time-files.py
 +++ coq/tools/make-both-time-files.py
 @@ -1,4 +1,6 @@
- #!/usr/bin/python3
+ #!/usr/bin/env python3
 +import sys
 +sys.path.insert(1, '/usr/lib/coq-core/tools')
  from TimeFileMaker import *
@@ -39,7 +39,7 @@ Forwarded: Debian-specific
 --- coq.orig/tools/make-one-time-file.py
 +++ coq/tools/make-one-time-file.py
 @@ -1,5 +1,6 @@
- #!/usr/bin/python3
+ #!/usr/bin/env python3
  import sys
 +sys.path.insert(1, '/usr/lib/coq-core/tools')
  from TimeFileMaker import *
