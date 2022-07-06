@@ -14,7 +14,7 @@ Build-Depends:
  dh-exec,
  dh-ocaml (>= 0.9.5~),
  dh-python,
- ocaml-dune,
+ ocaml-dune (>= 2.9),
  ocaml-nox (>= 4.05),
  ocaml-native-compilers,
  ocaml-findlib (>= 1.8.0),
