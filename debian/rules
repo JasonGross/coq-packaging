@@ -83,7 +83,7 @@ override_dh_auto_install:
 # to make dh-exec work
 override_dh_install:
 	chmod +x debian/coq.install debian/coqide.install
-	dh_install --sourcedir=$(CURDIR)/debian/tmp --fail-missing
+	dh_install --fail-missing
 
 override_dh_gencontrol:
 	for u in $(PACKAGES); do \
