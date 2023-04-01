@@ -1,8 +1,8 @@
-coq (8.master~git) experimental; urgency=medium
+coq (8.17~git) UNRELEASED; urgency=medium
 
-  * Make it master for numbering
+  * Make it 8.17 for numbering
 
- -- Jason Gross <jgross@mit.edu>  Tue, 05 Jul 2022 19:51:14 -0400
+ -- Jason Gross <jgross@mit.edu>  Sat, 01 Apr 2023 11:09:35 -0700
 
 coq (8.15.2+dfsg-2) unstable; urgency=medium
 
