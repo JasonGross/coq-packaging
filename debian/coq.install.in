@@ -15,6 +15,7 @@ usr/bin/coqworkmgr*
 usr/bin/csdpcert*
 usr/bin/ocamllibdep*
 usr/bin/votour*
+usr/lib/ocaml/stublibs/dllcoq_perf_stubs.so
 usr/lib/ocaml/coq-core/tools/CoqMakefile.in
 usr/lib/ocaml/coq-core/tools/TimeFileMaker.py
 usr/lib/ocaml/coq-core/tools/coqdoc/
