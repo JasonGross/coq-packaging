@@ -7,7 +7,7 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 
 include /usr/share/ocaml/ocamlvars.mk
 
-COQ_VERSION := master
+COQ_VERSION := v8.18
 COQ_ABI := $(COQ_VERSION)+$(OCAML_ABI)
 
 PACKAGES := $(shell dh_listpackages)
