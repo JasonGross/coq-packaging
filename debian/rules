@@ -21,6 +21,7 @@ export OCAMLINIT_SED += \
 
 override_dh_auto_configure:
 	ocamlfind query -format "%v" lablgtk3 || true
+	ocamlc -config || true
 	./configure -prefix=/usr -libdir=/usr/lib/ocaml/coq -mandir=/usr/share/man
 	make dunestrap
 
