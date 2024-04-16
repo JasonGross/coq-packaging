@@ -1,3 +1,7 @@
 usr/lib/ocaml/coq-core/META
 usr/lib/ocaml/stublibs/dllcoqrun_stubs.so @OCamlDllDir@
+usr/lib/ocaml/coq-core/dev/ml_toplevel/include
+usr/lib/ocaml/coq-core/dev/ml_toplevel/include_directories
+usr/lib/ocaml/coq-core/dev/ml_toplevel/include_printers
+usr/lib/ocaml/coq-core/dev/ml_toplevel/include_utilities
 # *.cmo and *.cmxs files are added by debian/rules
